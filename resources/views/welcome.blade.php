@@ -49,87 +49,142 @@
     </style>
 </head>
 
-<body class="font-sans antialiased bg-gray-50">
+<body x-data="{ signupOpen: false, loginOpen: false }" class="font-sans antialiased bg-gray-50">
+
     <!-- Navigation -->
-<nav class="fixed top-0 left-0 w-full z-50 bg-white bg-opacity-95 backdrop-blur-md shadow-sm border-b border-gray-100">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16">
-            <div class="flex items-center">
-                <!-- Logo -->
-                <div class="shrink-0 flex items-center">
-                    <a href="{{ route('home') }}" class="text-2xl font-bold text-gray-900">
-                        EventSphere
-                    </a>
-                </div>
+    <nav class="fixed top-0 left-0 w-full z-50 bg-white bg-opacity-95 backdrop-blur-md shadow-sm border-b border-gray-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <!-- Logo -->
+                    <div class="shrink-0 flex items-center">
+                        <a href="{{ route('home') }}" class="text-2xl font-bold text-gray-900">EventSphere</a>
+                    </div>
 
-                <!-- Navigation Links -->
-                <div class="hidden space-x-8 sm:-my-px sm:ml-10 sm:flex">
-                    <x-nav-link href="{{ route('events.index') }}" :active="request()->routeIs('events.*')">
-                        Discover Events
-                    </x-nav-link>
-                    <x-nav-link href="{{ route('voting.index') }}" :active="request()->routeIs('voting.*')">
-                        Active Votes
-                    </x-nav-link>
-                    <x-nav-link href="{{ route('organizers.index') }}" :active="request()->routeIs('organizers.*')">
-                        For Organizers
-                    </x-nav-link>
+                    <!-- Navigation Links -->
+                    <div class="hidden space-x-8 sm:-my-px sm:ml-10 sm:flex">
+                        <x-nav-link href="{{ route('events.index') }}" :active="request()->routeIs('events.*')">Discover Events</x-nav-link>
+                        <x-nav-link href="{{ route('voting.index') }}" :active="request()->routeIs('voting.*')">Active Votes</x-nav-link>
+                        <x-nav-link href="{{ route('organizers.index') }}" :active="request()->routeIs('organizers.*')">For Organizers</x-nav-link>
 
-                    <!-- More Dropdown -->
-                    <div class="relative" x-data="{ open: false }">
-                        <button
-                            @click="open = !open"
-                            class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none transition duration-150 ease-in-out"
-                            :class="{ 'border-blue-500 text-gray-900': open }"
-                        >
-                            More
-                            <svg class="ml-1 -mr-0.5 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                            </svg>
-                        </button>
+                        <!-- More Dropdown -->
+                        <div class="relative" x-data="{ open: false }">
+                            <button @click="open = !open"
+                                class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none transition duration-150 ease-in-out"
+                                :class="{ 'border-blue-500 text-gray-900': open }">
+                                More
+                                <svg class="ml-1 -mr-0.5 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                </svg>
+                            </button>
 
-                        <div
-                            x-show="open"
-                            x-transition:enter="transition ease-out duration-200"
-                            x-transition:enter-start="transform opacity-0 scale-95"
-                            x-transition:enter-end="transform opacity-100 scale-100"
-                            x-transition:leave="transition ease-in duration-75"
-                            x-transition:leave-start="transform opacity-100 scale-100"
-                            x-transition:leave-end="transform opacity-0 scale-95"
-                            class="origin-top-left absolute left-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
-                            @click.away="open = false"
-                        >
-                            <div class="py-1">
-                                <a href="{{ route('about') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">About Us</a>
-                                <a href="{{ route('contact') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Contact</a>
-                                <a href="{{ route('help') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Help Center</a>
-                                <div class="border-t border-gray-100 my-1"></div>
-                                <a href="{{ route('privacy') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Privacy Policy</a>
-                                <a href="{{ route('terms') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Terms of Service</a>
+                            <div x-show="open" x-transition class="origin-top-left absolute left-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
+                                 @click.away="open = false">
+                                <div class="py-1">
+                                    <a href="{{ route('about') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">About Us</a>
+                                    <a href="{{ route('contact') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Contact</a>
+                                    <a href="{{ route('help') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Help Center</a>
+                                    <div class="border-t border-gray-100 my-1"></div>
+                                    <a href="{{ route('privacy') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Privacy Policy</a>
+                                    <a href="{{ route('terms') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Terms of Service</a>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="flex items-center">
-                <!-- Smart Search -->
-                <div class="hidden sm:flex items-center mr-4">
-                    <smart-search></smart-search>
+                <div class="flex items-center">
+                    <!-- Smart Search -->
+                    <div class="hidden sm:flex items-center mr-4"><smart-search></smart-search></div>
+
+                    <!-- Authentication Links -->
+                    @auth
+                        <livewire:navigation.user-dropdown />
+                    @else
+                        <div class="hidden sm:flex sm:items-center sm:ml-6 space-x-4">
+                            <button @click="loginOpen = true" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700">Log in</button>
+                            <button @click="signupOpen = true" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Sign up</button>
+                        </div>
+                    @endauth
                 </div>
-
-                <!-- Authentication Links -->
-                @auth
-                    <livewire:navigation.user-dropdown />
-                @else
-                    <div class="hidden sm:flex sm:items-center sm:ml-6 space-x-4">
-                        <a href="{{ route('login') }}" class="text-gray-600 hover:text-gray-900">Log in</a>
-                        <a href="{{ route('register') }}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Sign up</a>
-                    </div>
-                @endauth
             </div>
         </div>
+    </nav>
+
+    <!-- Sign Up Modal -->
+    <div x-show="signupOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6 relative">
+            <button @click="signupOpen = false" class="absolute top-2 right-2 text-gray-500 hover:text-gray-700">&times;</button>
+
+            <h2 class="text-xl font-semibold mb-4">Register</h2>
+
+            <x-validation-errors class="mb-4" />
+
+            <form method="POST" action="{{ route('register') }}">
+                @csrf
+                <div class="mb-4">
+                    <x-label for="name" value="Name" />
+                    <x-input id="name" type="text" name="name" :value="old('name')" required autofocus class="w-full mt-1" />
+                </div>
+                <div class="mb-4">
+                    <x-label for="email" value="Email" />
+                    <x-input id="email" type="email" name="email" :value="old('email')" required class="w-full mt-1" />
+                </div>
+                <div class="mb-4">
+                    <x-label for="password" value="Password" />
+                    <x-input id="password" type="password" name="password" required class="w-full mt-1" />
+                </div>
+                <div class="mb-4">
+                    <x-label for="password_confirmation" value="Confirm Password" />
+                    <x-input id="password_confirmation" type="password" name="password_confirmation" required class="w-full mt-1" />
+                </div>
+                <div class="flex justify-end">
+                    <x-button class="ml-2">Register</x-button>
+                </div>
+            </form>
+        </div>
     </div>
-</nav>
+
+    <!-- Login Modal -->
+    <div x-show="loginOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6 relative">
+            <button @click="loginOpen = false" class="absolute top-2 right-2 text-gray-500 hover:text-gray-700">&times;</button>
+
+            <h2 class="text-xl font-semibold mb-4">Log in</h2>
+
+            <x-validation-errors class="mb-4" />
+
+            @if (session('status'))
+                <div class="mb-4 font-medium text-sm text-green-600">{{ session('status') }}</div>
+            @endif
+
+            <form method="POST" action="{{ route('login') }}">
+                @csrf
+                <div class="mb-4">
+                    <x-label for="email" value="{{ __('Email') }}" />
+                    <x-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus autocomplete="username" />
+                </div>
+                <div class="mb-4">
+                    <x-label for="password" value="{{ __('Password') }}" />
+                    <x-input id="password" class="block mt-1 w-full" type="password" name="password" required autocomplete="current-password" />
+                </div>
+                <div class="mb-4 flex items-center">
+                    <x-checkbox id="remember_me" name="remember" />
+                    <label for="remember_me" class="ms-2 text-sm text-gray-600">{{ __('Remember me') }}</label>
+                </div>
+                <div class="flex items-center justify-end mt-4">
+                    @if (Route::has('password.request'))
+                        <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('password.request') }}">
+                            {{ __('Forgot your password?') }}
+                        </a>
+                    @endif
+                    <x-button class="ml-4">{{ __('Log in') }}</x-button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
 
 <!-- Page Content Wrapper -->
 <div class="pt-20">
