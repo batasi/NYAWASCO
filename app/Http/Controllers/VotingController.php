@@ -7,6 +7,7 @@ use App\Models\VotingContest;
 use App\Models\VotingCategory;
 use App\Models\Vote;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 
 class VotingController extends Controller
 {
@@ -51,7 +52,7 @@ class VotingController extends Controller
 
     public function show(VotingContest $contest)
     {
-        if (!$contest->is_active && !Auth::user()?->can('view_inactive_voting')) {
+        if (!$contest->is_active && !Gate::allows('view_inactive_voting')) {
             abort(404);
         }
 

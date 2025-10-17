@@ -104,7 +104,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 //  ORGANIZER ROUTES
 // =====================================================
 
-Route::middleware(['auth', 'verified', 'role:organizer'])->prefix('organizer')->group(function () {
+Route::middleware(['auth', 'verified'])->prefix('organizer')->group(function () {
     Route::get('/dashboard', [OrganizerController::class, 'dashboard'])->name('organizer.dashboard');
 
     // Event Management
@@ -133,18 +133,20 @@ Route::middleware(['auth', 'verified', 'role:organizer'])->prefix('organizer')->
 //  ADMIN ROUTES
 // =====================================================
 
-Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->group(function () {
-    Route::view('/dashboard', 'admin.dashboard', ['title' => 'Admin Dashboard - EventSphere'])->name('admin.dashboard');
-    Route::view('/users', 'admin.users', ['title' => 'User Management - EventSphere'])->name('admin.users');
-    Route::view('/events', 'admin.events', ['title' => 'Event Management - EventSphere'])->name('admin.events');
-    Route::view('/voting', 'admin.voting', ['title' => 'Voting Management - EventSphere'])->name('admin.voting');
+Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
+    Route::get('dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth'])
+    ->name('dashboard.admin');
+    Route::view('/users', 'admin.users', ['title' => 'EventSphere'])->name('admin.users');
+    Route::view('/events', 'admin.events', ['title' => 'EventSphere'])->name('admin.events');
+    Route::view('/voting', 'admin.voting', ['title' => 'EventSphere'])->name('admin.voting');
 });
 
 // =====================================================
 //  VENDOR ROUTES
 // =====================================================
 
-Route::middleware(['auth', 'verified', 'role:vendor'])->prefix('vendor')->group(function () {
+Route::middleware(['auth', 'verified'])->prefix('vendor')->group(function () {
     Route::view('/dashboard', 'vendor.dashboard', ['title' => 'Vendor Dashboard - EventSphere'])->name('vendor.dashboard');
     Route::view('/services', 'vendor.services', ['title' => 'My Services - EventSphere'])->name('vendor.services');
     Route::view('/bookings', 'vendor.bookings', ['title' => 'Bookings - EventSphere'])->name('vendor.bookings');

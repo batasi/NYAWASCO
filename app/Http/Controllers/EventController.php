@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Event;
 use App\Models\EventCategory;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 
 class EventController extends Controller
 {
@@ -41,13 +42,13 @@ class EventController extends Controller
             'title' => "{$category->name} Events - EventSphere"
         ]);
     }
-
     public function show(Event $event)
     {
-        if (!$event->is_active && !Auth::user()?->can('view_inactive_events')) {
+        if (!$event->is_active && !Gate::allows('view_inactive_events')) {
             abort(404);
         }
 
+        $event->load(['organizer', 'tickets', 'category', 'vendorServices']);
         $event->load(['organizer', 'tickets', 'category', 'vendorServices']);
 
         return view('events.show', [

@@ -45,7 +45,7 @@
             <!-- Organizer Dashboard (if organizer) -->
             @if($user->isOrganizer())
                 <a
-                    href="{{ route('organizer.dashboard') }}"
+                    href="{{ route('dashboard.organizer') }}"
                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     @click="open = false"
                 >
@@ -56,7 +56,7 @@
             <!-- Admin Dashboard (if admin) -->
             @if($user->isAdmin())
                 <a
-                    href="{{ route('admin.dashboard') }}"
+                    href="{{ route('dashboard.admin') }}"
                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     @click="open = false"
                 >

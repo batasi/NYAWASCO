@@ -13,13 +13,26 @@ use App\Models\Vote;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
+use App\Models\User;
+use Illuminate\Routing\Controller as BaseController;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Foundation\Bus\DispatchesJobs;
+use Illuminate\Foundation\Validation\ValidatesRequests;
 
-class OrganizerController extends Controller
+class OrganizerController extends BaseController
 {
+    use AuthorizesRequests, DispatchesJobs, ValidatesRequests;
+
+
+    public function __construct()
+    {
+        $this->middleware(['auth', 'verified']);
+        $this->middleware('role:organizer')->except(['index', 'show']);
+    }
 
     public function index()
     {
-        $organizers = \App\Models\User::where('role', 'organizer')
+        $organizers = User::where('role', 'organizer')
             ->where('is_active', true)
             ->withCount(['organizedEvents', 'organizedVotingContests'])
             ->paginate(12);
@@ -32,7 +45,7 @@ class OrganizerController extends Controller
 
     public function show($id)
     {
-        $organizer = \App\Models\User::where('role', 'organizer')
+        $organizer = User::where('role', 'organizer')
             ->where('is_active', true)
             ->with(['profile'])
             ->withCount(['organizedEvents', 'organizedVotingContests'])
@@ -134,6 +147,9 @@ class OrganizerController extends Controller
 
     public function createEvent()
     {
+
+        $this->authorize('create', Event::class);
+
         $categories = EventCategory::where('is_active', true)->get();
 
         return view('organizer.events.create', [
@@ -144,6 +160,9 @@ class OrganizerController extends Controller
 
     public function storeEvent(Request $request)
     {
+
+        $this->authorize('create', Event::class);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'category_id' => 'required|exists:event_categories,id',
@@ -257,7 +276,7 @@ class OrganizerController extends Controller
     // Voting Management Methods
     public function voting()
     {
-        $contests = VotingContest::where('organizer_id', auth()->id())
+        $contests = VotingContest::where('organizer_id', Auth::id())
             ->with(['category', 'nominees'])
             ->latest()
             ->paginate(10);

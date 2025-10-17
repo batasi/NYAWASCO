@@ -8,6 +8,7 @@ use App\Models\VotingContest;
 use App\Models\TicketPurchase;
 use App\Models\Vote;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Notifications\DatabaseNotification;
 
 class DashboardController extends Controller
 {
@@ -148,31 +149,39 @@ class DashboardController extends Controller
             'total_votes' => Vote::where('user_id', $user->id)->count(),
         ];
     }
-
     public function notifications()
     {
-        $notifications = Auth::user()->notifications()->paginate(20);
+        $user = Auth::user();
+        $notifications = DatabaseNotification::where('notifiable_type', \App\Models\User::class)
+            ->where('notifiable_id', $user->id)
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
 
         return view('dashboard.notifications', [
             'notifications' => $notifications,
+
             'title' => 'My Notifications - EventSphere'
         ]);
     }
-
     public function markNotificationAsRead($id)
     {
-        $notification = Auth::user()->notifications()->where('id', $id)->first();
+        $user = Auth::user();
+        $notification = DatabaseNotification::where('notifiable_type', \App\Models\User::class)
+            ->where('notifiable_id', $user->id)
+            ->where('id', $id)
+            ->first();
 
         if ($notification) {
             $notification->markAsRead();
         }
-
-        return back()->with('success', 'Notification marked as read.');
     }
-
     public function markAllNotificationsAsRead()
     {
-        Auth::user()->unreadNotifications->markAsRead();
+        $user = Auth::user();
+        DatabaseNotification::where('notifiable_type', \App\Models\User::class)
+            ->where('notifiable_id', $user->id)
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
 
         return back()->with('success', 'All notifications marked as read.');
     }

@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Event;
 use App\Models\VotingContest;
 use App\Models\Organizer;
+use App\Models\OrganizerProfile;
 
 class SearchController extends Controller
 {
@@ -45,7 +46,7 @@ class SearchController extends Controller
             ->orderBy('end_date', 'asc')
             ->get();
 
-        $organizers = Organizer::with(['user'])
+        $organizers = OrganizerProfile::with(['user'])
             ->where('is_active', true)
             ->where(function ($q) use ($query) {
                 $q->where('name', 'like', "%{$query}%")

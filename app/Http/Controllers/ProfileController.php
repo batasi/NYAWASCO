@@ -7,13 +7,17 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
+use App\Models\User;
 
 class ProfileController extends Controller
 {
     public function edit()
     {
-        $user = Auth::user();
-        $user->load('profile');
+        $user = User::with('profile')->find(Auth::id());
+
+        if (! $user) {
+            $user = Auth::user();
+        }
 
         return view('profile.edit', [
             'user' => $user,
@@ -21,8 +25,10 @@ class ProfileController extends Controller
         ]);
     }
 
+
     public function update(Request $request)
     {
+        /** @var \App\Models\User $user */
         $user = Auth::user();
 
         $validated = $request->validate([
@@ -56,15 +62,17 @@ class ProfileController extends Controller
         if ($request->filled('new_password')) {
             $validated['password'] = Hash::make($validated['new_password']);
         }
-
         // Remove password fields if not changing password
         if (!$request->filled('current_password')) {
             unset($validated['current_password'], $validated['new_password'], $validated['new_password_confirmation']);
         }
 
-        $user->update($validated);
+        // Persist validated user attributes using fill() + save() to ensure the method exists
+        $user->fill($validated);
+        $user->save();
 
         // Update or create profile
+        $this->updateProfile($request, $user);
         $this->updateProfile($request, $user);
 
         return back()->with('success', 'Profile updated successfully!');
@@ -141,6 +149,8 @@ class ProfileController extends Controller
 
     public function updatePreferences(Request $request)
     {
+        /** @var \App\Models\User $user */
+
         $validated = $request->validate([
             'email_notifications' => 'boolean',
             'sms_notifications' => 'boolean',
@@ -149,7 +159,12 @@ class ProfileController extends Controller
             'voting_updates' => 'boolean',
         ]);
 
-        $user = auth()->user();
+        // Ensure we have an Eloquent User instance (so ->update() exists)
+        $user = User::find(Auth::id());
+        if (! $user) {
+            return back()->withErrors(['user' => 'Authenticated user not found.']);
+        }
+
         $user->update([
             'preferences' => array_merge($user->preferences ?? [], $validated)
         ]);
@@ -166,6 +181,7 @@ class ProfileController extends Controller
 
     public function updateSecurity(Request $request)
     {
+        /** @var \App\Models\User $user */
         $user = Auth::user();
 
         $validated = $request->validate([
@@ -182,7 +198,9 @@ class ProfileController extends Controller
 
     public function activity()
     {
-        $user = auth()->user();
+          /** @var \App\Models\User $user */
+
+        $user = Auth::user();
 
         $activities = [
             'ticket_purchases' => $user->ticketPurchases()

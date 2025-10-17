@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Admin Dashboard - EventSphere')
+@section('title', 'EventSphere')
 
 @section('content')
 <div class="min-h-screen bg-gray-50">
