@@ -149,3 +149,5 @@ Route::middleware(['auth', 'verified', 'role:vendor'])->prefix('vendor')->group(
     Route::view('/services', 'vendor.services', ['title' => 'My Services - EventSphere'])->name('vendor.services');
     Route::view('/bookings', 'vendor.bookings', ['title' => 'Bookings - EventSphere'])->name('vendor.bookings');
 });
+
+
