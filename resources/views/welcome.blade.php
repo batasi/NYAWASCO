@@ -65,7 +65,9 @@
                     <div class="hidden space-x-8 sm:-my-px sm:ml-10 sm:flex">
                         <x-nav-link href="{{ route('events.index') }}" :active="request()->routeIs('events.*')">Discover Events</x-nav-link>
                         <x-nav-link href="{{ route('voting.index') }}" :active="request()->routeIs('voting.*')">Active Votes</x-nav-link>
-                        <x-nav-link href="{{ route('organizers.index') }}" :active="request()->routeIs('organizers.*')">For Organizers</x-nav-link>
+
+                        <!-- For Organizers triggers signup -->
+                        <button @click="signupOpen = true" class="text-gray-500 hover:text-gray-700 text-sm font-medium">For Organizers</button>
 
                         <!-- More Dropdown -->
                         <div class="relative" x-data="{ open: false }">
@@ -138,8 +140,13 @@
                     <x-label for="password_confirmation" value="Confirm Password" />
                     <x-input id="password_confirmation" type="password" name="password_confirmation" required class="w-full mt-1" />
                 </div>
-                <div class="flex justify-end">
+
+                <div class="flex justify-between items-center">
                     <x-button class="ml-2">Register</x-button>
+                    <span class="text-sm text-gray-600">
+                        Already have an account?
+                        <button type="button" @click="signupOpen = false; loginOpen = true" class="text-blue-600 hover:underline">Log in</button>
+                    </span>
                 </div>
             </form>
         </div>
@@ -172,19 +179,21 @@
                     <x-checkbox id="remember_me" name="remember" />
                     <label for="remember_me" class="ms-2 text-sm text-gray-600">{{ __('Remember me') }}</label>
                 </div>
-                <div class="flex items-center justify-end mt-4">
+                <div class="flex justify-between items-center mt-4">
                     @if (Route::has('password.request'))
                         <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('password.request') }}">
                             {{ __('Forgot your password?') }}
                         </a>
                     @endif
+                    <span class="text-sm text-gray-600">
+                        Don't have an account?
+                        <button type="button" @click="loginOpen = false; signupOpen = true" class="text-blue-600 hover:underline">Sign up</button>
+                    </span>
                     <x-button class="ml-4">{{ __('Log in') }}</x-button>
                 </div>
             </form>
         </div>
     </div>
-
-
 
 <!-- Page Content Wrapper -->
 <div class="pt-20">

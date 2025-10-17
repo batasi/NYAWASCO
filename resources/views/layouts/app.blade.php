@@ -23,7 +23,7 @@
         main { min-height: calc(100vh - 200px); }
     </style>
 </head>
-<body x-data="{ signupOpen: false }" class="font-sans antialiased bg-gray-50">
+<body x-data="{ signupOpen: false, loginOpen: false }" class="font-sans antialiased bg-gray-50">
 
     <!-- Navigation -->
     <nav class="fixed top-0 left-0 w-full z-50 bg-white bg-opacity-95 backdrop-blur-md shadow-sm border-b border-gray-100">
@@ -39,7 +39,9 @@
                     <div class="hidden space-x-8 sm:-my-px sm:ml-10 sm:flex">
                         <x-nav-link href="{{ route('events.index') }}" :active="request()->routeIs('events.*')">Discover Events</x-nav-link>
                         <x-nav-link href="{{ route('voting.index') }}" :active="request()->routeIs('voting.*')">Active Votes</x-nav-link>
-                        <x-nav-link href="{{ route('organizers.index') }}" :active="request()->routeIs('organizers.*')">For Organizers</x-nav-link>
+
+                        <!-- For Organizers triggers signup -->
+                        <button @click="signupOpen = true" class="text-gray-500 hover:text-gray-700 text-sm font-medium">For Organizers</button>
 
                         <!-- More Dropdown -->
                         <div class="relative" x-data="{ open: false }">
@@ -76,10 +78,8 @@
                         <livewire:navigation.user-dropdown />
                     @else
                         <div class="hidden sm:flex sm:items-center sm:ml-6 space-x-4">
-                            <a href="{{ route('login') }}" class="text-gray-600 hover:text-gray-900">Log in</a>
-                            <button @click="signupOpen = true" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-                                Sign up
-                            </button>
+                            <button @click="loginOpen = true" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700">Log in</button>
+                            <button @click="signupOpen = true" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Sign up</button>
                         </div>
                     @endauth
                 </div>
@@ -98,29 +98,112 @@
 
             <form method="POST" action="{{ route('register') }}">
                 @csrf
-
                 <div class="mb-4">
                     <x-label for="name" value="Name" />
                     <x-input id="name" type="text" name="name" :value="old('name')" required autofocus class="w-full mt-1" />
                 </div>
-
                 <div class="mb-4">
                     <x-label for="email" value="Email" />
                     <x-input id="email" type="email" name="email" :value="old('email')" required class="w-full mt-1" />
                 </div>
-
                 <div class="mb-4">
                     <x-label for="password" value="Password" />
                     <x-input id="password" type="password" name="password" required class="w-full mt-1" />
                 </div>
-
                 <div class="mb-4">
                     <x-label for="password_confirmation" value="Confirm Password" />
                     <x-input id="password_confirmation" type="password" name="password_confirmation" required class="w-full mt-1" />
                 </div>
 
-                <div class="flex justify-end">
+                <div class="flex justify-between items-center">
                     <x-button class="ml-2">Register</x-button>
+                    <span class="text-sm text-gray-600">
+                        Already have an account?
+                        <button type="button" @click="signupOpen = false; loginOpen = true" class="text-blue-600 hover:underline">Log in</button>
+                    </span>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div x-show="loginOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6 relative">
+            <button @click="loginOpen = false" class="absolute top-2 right-2 text-gray-500 hover:text-gray-700">&times;</button>
+
+            <h2 class="text-xl font-semibold mb-4">Log in</h2>
+
+            <x-validation-errors class="mb-4" />
+
+            @if (session('status'))
+                <div class="mb-4 font-medium text-sm text-green-600">{{ session('status') }}</div>
+            @endif
+
+            <form method="POST" action="{{ route('login') }}">
+                @csrf
+                <div class="mb-4">
+                    <x-label for="email" value="{{ __('Email') }}" />
+                    <x-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus autocomplete="username" />
+                </div>
+                <div class="mb-4">
+                    <x-label for="password" value="{{ __('Password') }}" />
+                    <x-input id="password" class="block mt-1 w-full" type="password" name="password" required autocomplete="current-password" />
+                </div>
+                <div class="mb-4 flex items-center">
+                    <x-checkbox id="remember_me" name="remember" />
+                    <label for="remember_me" class="ms-2 text-sm text-gray-600">{{ __('Remember me') }}</label>
+                </div>
+                <div class="flex justify-between items-center mt-4">
+                    @if (Route::has('password.request'))
+                        <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('password.request') }}">
+                            {{ __('Forgot your password?') }}
+                        </a>
+                    @endif
+                    <span class="text-sm text-gray-600">
+                        Don't have an account?
+                        <button type="button" @click="loginOpen = false; signupOpen = true" class="text-blue-600 hover:underline">Sign up</button>
+                    </span>
+                    <x-button class="ml-4">{{ __('Log in') }}</x-button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- Login Modal -->
+    <div x-show="loginOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6 relative">
+            <button @click="loginOpen = false" class="absolute top-2 right-2 text-gray-500 hover:text-gray-700">&times;</button>
+
+            <h2 class="text-xl font-semibold mb-4">Log in</h2>
+
+            <x-validation-errors class="mb-4" />
+
+            @if (session('status'))
+                <div class="mb-4 font-medium text-sm text-green-600">{{ session('status') }}</div>
+            @endif
+
+            <form method="POST" action="{{ route('login') }}">
+                @csrf
+                <div class="mb-4">
+                    <x-label for="email" value="{{ __('Email') }}" />
+                    <x-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus autocomplete="username" />
+                </div>
+                <div class="mb-4">
+                    <x-label for="password" value="{{ __('Password') }}" />
+                    <x-input id="password" class="block mt-1 w-full" type="password" name="password" required autocomplete="current-password" />
+                </div>
+                <div class="mb-4 flex items-center">
+                    <x-checkbox id="remember_me" name="remember" />
+                    <label for="remember_me" class="ms-2 text-sm text-gray-600">{{ __('Remember me') }}</label>
+                </div>
+                <div class="flex items-center justify-end mt-4">
+                    @if (Route::has('password.request'))
+                        <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('password.request') }}">
+                            {{ __('Forgot your password?') }}
+                        </a>
+                    @endif
+                    <x-button class="ml-4">{{ __('Log in') }}</x-button>
                 </div>
             </form>
         </div>
