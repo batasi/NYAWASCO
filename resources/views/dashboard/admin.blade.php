@@ -18,11 +18,11 @@
                 </div>
                 <div class="mt-4 flex md:mt-0 md:ml-4 space-x-3">
                     <a href="{{ route('admin.users') }}"
-                       class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                         Manage Users
                     </a>
                     <a href="{{ route('admin.events') }}"
-                       class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                         Manage Events
                     </a>
                 </div>
@@ -146,38 +146,38 @@
                 </div>
                 <div class="divide-y divide-gray-200">
                     @if($recent_users->count() > 0)
-                        @foreach($recent_users as $user)
-                            <div class="p-6 hover:bg-gray-50 transition duration-150 ease-in-out">
-                                <div class="flex items-center space-x-4">
-                                    @if($user->avatar)
-                                        <img src="{{ Storage::url($user->avatar) }}"
-                                             alt="{{ $user->name }}"
-                                             class="h-10 w-10 rounded-full object-cover">
-                                    @else
-                                        <div class="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                                            <span class="text-sm font-medium text-gray-600">
-                                                {{ strtoupper(substr($user->name, 0, 1)) }}
-                                            </span>
-                                        </div>
-                                    @endif
-                                    <div class="flex-1 min-w-0">
-                                        <p class="text-sm font-medium text-gray-900 truncate">{{ $user->name }}</p>
-                                        <p class="text-sm text-gray-500 truncate">{{ $user->email }}</p>
-                                    </div>
-                                    <div class="flex-shrink-0">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                    @foreach($recent_users as $user)
+                    <div class="p-6 hover:bg-gray-50 transition duration-150 ease-in-out">
+                        <div class="flex items-center space-x-4">
+                            @if($user->avatar)
+                            <img src="{{ Storage::url($user->avatar) }}"
+                                alt="{{ $user->name }}"
+                                class="h-10 w-10 rounded-full object-cover">
+                            @else
+                            <div class="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                <span class="text-sm font-medium text-gray-600">
+                                    {{ strtoupper(substr($user->name, 0, 1)) }}
+                                </span>
+                            </div>
+                            @endif
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-900 truncate">{{ $user->name }}</p>
+                                <p class="text-sm text-gray-500 truncate">{{ $user->email }}</p>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
                                             {{ $user->role === 'admin' ? 'bg-red-100 text-red-800' :
                                                ($user->role === 'organizer' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800') }}">
-                                            {{ ucfirst($user->role) }}
-                                        </span>
-                                    </div>
-                                </div>
+                                    {{ ucfirst($user->role) }}
+                                </span>
                             </div>
-                        @endforeach
-                    @else
-                        <div class="p-6 text-center">
-                            <p class="text-sm text-gray-500">No users found.</p>
                         </div>
+                    </div>
+                    @endforeach
+                    @else
+                    <div class="p-6 text-center">
+                        <p class="text-sm text-gray-500">No users found.</p>
+                    </div>
                     @endif
                 </div>
             </div>

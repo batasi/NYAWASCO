@@ -14,15 +14,15 @@ use App\Http\Controllers\OrganizerController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\Api\LiveActivityController;
 use App\Http\Controllers\Api\SearchApiController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\RoleController;
+use Spatie\Permission\Models\Role;
 
-
-// =====================================================
-//  AUTHENTICATION & EMAIL VERIFICATION ROUTES
-// =====================================================
-
-// ---------------------------
-// Jetstream-Compatible Email Verification Routes
-// ---------------------------
+/*
+|--------------------------------------------------------------------------
+| EMAIL VERIFICATION (JETSTREAM / FORTIFY)
+|--------------------------------------------------------------------------
+*/
 
 Route::get('/email/verify', function () {
     return view('auth.verify-email');
@@ -30,19 +30,19 @@ Route::get('/email/verify', function () {
 
 Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
     $request->fulfill();
-
     return redirect()->intended('/dashboard');
 })->middleware(['auth', 'signed'])->name('verification.verify');
 
 Route::post('/email/verification-notification', function (Request $request) {
     $request->user()->sendEmailVerificationNotification();
-
     return back()->with('status', 'verification-link-sent');
 })->middleware(['auth', 'throttle:6,1'])->name('verification.send');
 
-// =====================================================
-//  PUBLIC ROUTES
-// =====================================================
+/*
+|--------------------------------------------------------------------------
+| PUBLIC ROUTES
+|--------------------------------------------------------------------------
+*/
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
@@ -55,20 +55,24 @@ Route::get('/voting', [VotingController::class, 'index'])->name('voting.index');
 Route::get('/voting/{contest}', [VotingController::class, 'show'])->name('voting.show');
 Route::get('/voting/category/{category}', [VotingController::class, 'byCategory'])->name('voting.byCategory');
 
+// Conditional Organizer Modal Logic (Frontend handles redirection if not authenticated)
 Route::get('/organizers', [OrganizerController::class, 'index'])->name('organizers.index');
 Route::get('/organizers/{organizer}', [OrganizerController::class, 'show'])->name('organizers.show');
 
 Route::get('/search', [SearchController::class, 'index'])->name('search.index');
 
+// Static Pages
 Route::view('/about', 'static.about', ['title' => 'About Us - EventSphere'])->name('about');
 Route::view('/contact', 'static.contact', ['title' => 'Contact Us - EventSphere'])->name('contact');
 Route::view('/privacy', 'static.privacy', ['title' => 'Privacy Policy - EventSphere'])->name('privacy');
 Route::view('/terms', 'static.terms', ['title' => 'Terms of Service - EventSphere'])->name('terms');
 Route::view('/help', 'static.help', ['title' => 'Help Center - EventSphere'])->name('help');
 
-// =====================================================
-//  API ROUTES
-// =====================================================
+/*
+|--------------------------------------------------------------------------
+| PUBLIC API ROUTES
+|--------------------------------------------------------------------------
+*/
 
 Route::prefix('api')->group(function () {
     Route::get('/live-activities', [LiveActivityController::class, 'index'])->name('api.live-activities');
@@ -77,9 +81,11 @@ Route::prefix('api')->group(function () {
     Route::get('/voting/featured', [VotingController::class, 'featured'])->name('api.voting.featured');
 });
 
-// =====================================================
-//  AUTHENTICATED USER ROUTES
-// =====================================================
+/*
+|--------------------------------------------------------------------------
+| AUTHENTICATED USER ROUTES
+|--------------------------------------------------------------------------
+*/
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -100,11 +106,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/my-votes', [VotingController::class, 'myVotes'])->name('voting.myVotes');
 });
 
-// =====================================================
-//  ORGANIZER ROUTES
-// =====================================================
+/*
+|--------------------------------------------------------------------------
+| ORGANIZER ROUTES (ROLE-BASED)
+|--------------------------------------------------------------------------
+*/
 
-Route::middleware(['auth', 'verified'])->prefix('organizer')->group(function () {
+Route::middleware(['auth', 'verified', 'role:organizer'])->prefix('organizer')->group(function () {
     Route::get('/dashboard', [OrganizerController::class, 'dashboard'])->name('organizer.dashboard');
 
     // Event Management
@@ -129,27 +137,46 @@ Route::middleware(['auth', 'verified'])->prefix('organizer')->group(function () 
     Route::get('/analytics/voting/{contest}', [OrganizerController::class, 'votingAnalytics'])->name('organizer.analytics.voting');
 });
 
-// =====================================================
-//  ADMIN ROUTES
-// =====================================================
+/*
+|--------------------------------------------------------------------------
+| ADMIN ROUTES (ROLE-BASED)
+|--------------------------------------------------------------------------
+*/
 
-Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
-    Route::get('dashboard', [DashboardController::class, 'index'])
-    ->middleware(['auth'])
-    ->name('dashboard.admin');
-    Route::view('/users', 'admin.users', ['title' => 'EventSphere'])->name('admin.users');
-    Route::view('/events', 'admin.events', ['title' => 'EventSphere'])->name('admin.events');
-    Route::view('/voting', 'admin.voting', ['title' => 'EventSphere'])->name('admin.voting');
+Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // Views
+    Route::view('/users', 'admin.users', ['title' => 'User Management - EventSphere'])->name('users.view');
+    Route::view('/events', 'admin.events', ['title' => 'Event Management - EventSphere'])->name('events.view');
+    Route::view('/voting', 'admin.voting', ['title' => 'Voting Management - EventSphere'])->name('voting.view');
+
+    // User Management
+    Route::get('users', [UserController::class, 'index'])->name('users');
+    Route::get('users/data', [UserController::class, 'getUsers'])->name('users.data');
+    Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
+    Route::post('users', [UserController::class, 'store'])->name('users.store');
+    Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
+    Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+    Route::get('users/{user}/perms', [UserController::class, 'getPermissions'])->name('users.perms');
+    Route::post('users/{user}/status', [UserController::class, 'toggleStatus'])->name('users.status');
+
+    // Role Management
+    Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
+    Route::get('roles/{role}', [RoleController::class, 'show'])->name('roles.show');
+    Route::post('roles', [RoleController::class, 'store'])->name('roles.store');
+    Route::put('roles/{role}', [RoleController::class, 'update'])->name('roles.update');
+    Route::get('roles/{role}/perms', [RoleController::class, 'getPermissions'])->name('roles.perms');
 });
 
-// =====================================================
-//  VENDOR ROUTES
-// =====================================================
+/*
+|--------------------------------------------------------------------------
+| VENDOR ROUTES (ROLE-BASED)
+|--------------------------------------------------------------------------
+*/
 
-Route::middleware(['auth', 'verified'])->prefix('vendor')->group(function () {
+Route::middleware(['auth', 'verified', 'role:vendor'])->prefix('vendor')->group(function () {
     Route::view('/dashboard', 'vendor.dashboard', ['title' => 'Vendor Dashboard - EventSphere'])->name('vendor.dashboard');
-    Route::view('/services', 'vendor.services', ['title' => 'My Services - EventSphere'])->name('vendor.services');
-    Route::view('/bookings', 'vendor.bookings', ['title' => 'Bookings - EventSphere'])->name('vendor.bookings');
+    Route::view('/services', 'vendor.services', ['title' => 'Vendor Services - EventSphere'])->name('vendor.services');
+    Route::view('/bookings', 'vendor.bookings', ['title' => 'Vendor Bookings - EventSphere'])->name('vendor.bookings');
 });
-
-

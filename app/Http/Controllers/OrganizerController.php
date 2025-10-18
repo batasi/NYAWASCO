@@ -123,7 +123,7 @@ class OrganizerController extends BaseController
             ->take(5)
             ->get();
 
-        return view('organizer.dashboard', [
+        return view('dashboard.organizer', [
             'stats' => $stats,
             'recentTicketSales' => $recentTicketSales,
             'upcomingEvents' => $upcomingEvents,
@@ -147,12 +147,9 @@ class OrganizerController extends BaseController
 
     public function createEvent()
     {
-
-        $this->authorize('create', Event::class);
-
         $categories = EventCategory::where('is_active', true)->get();
 
-        return view('organizer.events.create', [
+        return view('organizers.create', [
             'categories' => $categories,
             'title' => 'Create New Event - EventSphere'
         ]);

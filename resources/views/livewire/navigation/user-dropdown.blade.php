@@ -1,8 +1,7 @@
 <div class="relative" x-data="{ open: false }">
     <button
         @click="open = !open"
-        class="flex items-center text-sm font-medium text-gray-500 hover:text-gray-700 focus:outline-none transition duration-150 ease-in-out"
-    >
+        class="flex items-center text-sm font-medium text-gray-500 hover:text-gray-700 focus:outline-none transition duration-150 ease-in-out">
         <div>{{ $user->name }}</div>
         <div class="ml-1">
             <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
@@ -21,15 +20,13 @@
         x-transition:leave-end="transform opacity-0 scale-95"
         class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
         style="display: none;"
-        @click.away="open = false"
-    >
+        @click.away="open = false">
         <div class="py-1">
             <!-- Dashboard -->
             <a
                 href="{{ route('dashboard') }}"
                 class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                @click="open = false"
-            >
+                @click="open = false">
                 Dashboard
             </a>
 
@@ -37,31 +34,29 @@
             <a
                 href="{{ route('profile.edit') }}"
                 class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                @click="open = false"
-            >
+                @click="open = false">
                 Profile
             </a>
 
             <!-- Organizer Dashboard (if organizer) -->
             @if($user->isOrganizer())
-                <a
-                    href="{{ url('dashboard.organizer') }}"
-                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    @click="open = false"
-                >
-                    Organizer Dashboard
-                </a>
+            <a
+                href="{{ route('organizer.dashboard') }}"
+                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                @click="open = false">
+                Organizer Dashboard
+            </a>
             @endif
+
 
             <!-- Admin Dashboard (if admin) -->
             @if($user->isAdmin())
-                <a
-                    href="{{ route('dashboard.admin') }}"
-                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    @click="open = false"
-                >
-                    Admin Dashboard
-                </a>
+            <a
+                href="{{ route('dashboard.admin') }}"
+                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                @click="open = false">
+                Admin Dashboard
+            </a>
             @endif
 
             <!-- Divider -->
@@ -73,8 +68,7 @@
                 <button
                     type="submit"
                     class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    @click="open = false"
-                >
+                    @click="open = false">
                     Log Out
                 </button>
             </form>
