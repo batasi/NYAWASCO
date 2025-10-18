@@ -143,23 +143,29 @@ Route::middleware(['auth', 'verified', 'role:organizer'])->prefix('organizer')->
 |--------------------------------------------------------------------------
 */
 
+
 Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    // Dashboard
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Views
-    Route::view('/users', 'admin.users', ['title' => 'User Management - EventSphere'])->name('users.view');
-    Route::view('/events', 'admin.events', ['title' => 'Event Management - EventSphere'])->name('events.view');
-    Route::view('/voting', 'admin.voting', ['title' => 'Voting Management - EventSphere'])->name('voting.view');
-
-    // User Management
-    Route::get('users', [UserController::class, 'index'])->name('users');
-    Route::get('users/data', [UserController::class, 'getUsers'])->name('users.data');
-    Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
+    // User Management Routes
+    Route::get('users', [UserController::class, 'usersIndex'])->name('users');
+    Route::get('users/data', [UserController::class, 'getUsersData'])->name('users.data');
+    Route::get('users/create', [UserController::class, 'create'])->name('users.create');
     Route::post('users', [UserController::class, 'store'])->name('users.store');
+    Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
+    Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
     Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
     Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
-    Route::get('users/{user}/perms', [UserController::class, 'getPermissions'])->name('users.perms');
+
+    // User Permissions & Status
+    Route::get('users/{user}/permissions', [UserController::class, 'getPermissions'])->name('users.permissions');
+    Route::post('users/{user}/permissions', [UserController::class, 'updatePermissions'])->name('users.permissions.update');
     Route::post('users/{user}/status', [UserController::class, 'toggleStatus'])->name('users.status');
+
+    // Other admin views
+    Route::view('/events', 'admin.events', ['title' => 'Event Management - EventSphere'])->name('events.view');
+    Route::view('/voting', 'admin.voting', ['title' => 'Voting Management - EventSphere'])->name('voting.view');
 
     // Role Management
     Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
@@ -168,7 +174,6 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
     Route::put('roles/{role}', [RoleController::class, 'update'])->name('roles.update');
     Route::get('roles/{role}/perms', [RoleController::class, 'getPermissions'])->name('roles.perms');
 });
-
 /*
 |--------------------------------------------------------------------------
 | VENDOR ROUTES (ROLE-BASED)

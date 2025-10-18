@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,6 +11,7 @@
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 
     <!-- Styles -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -18,11 +20,20 @@
     @livewireStyles
 
     <style>
-        [x-cloak] { display: none !important; }
-        html { scroll-behavior: smooth; }
-        main { min-height: calc(100vh - 200px); }
+        [x-cloak] {
+            display: none !important;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        main {
+            min-height: calc(100vh - 200px);
+        }
     </style>
 </head>
+
 <body x-data="{ signupOpen: false, loginOpen: false, intendedUrl: '{{ route('organizers.index') }}' }" class="font-sans antialiased bg-gray-50">
 
     <!-- Navigation -->
@@ -40,19 +51,18 @@
                         <x-nav-link href="{{ route('events.index') }}" :active="request()->routeIs('events.*')">Discover Events</x-nav-link>
                         <x-nav-link href="{{ route('voting.index') }}" :active="request()->routeIs('voting.*')">Active Votes</x-nav-link>
 
-                      <!-- For Organizers -->
-                    <button
-                        @click="
+                        <!-- For Organizers -->
+                        <button
+                            @click="
                             @guest
                                 signupOpen = true
                             @else
                                 window.location.href = '{{ route('organizers.index') }}'
                             @endguest
                         "
-                        class="text-gray-500 hover:text-gray-700 text-sm font-medium"
-                    >
-                        For Organizers
-                    </button>
+                            class="text-gray-500 hover:text-gray-700 text-sm font-medium">
+                            For Organizers
+                        </button>
 
 
                         <!-- More Dropdown -->
@@ -62,12 +72,12 @@
                                 :class="{ 'border-blue-500 text-gray-900': open }">
                                 More
                                 <svg class="ml-1 -mr-0.5 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
                                 </svg>
                             </button>
 
                             <div x-show="open" x-transition class="origin-top-left absolute left-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
-                                 @click.away="open = false">
+                                @click.away="open = false">
                                 <div class="py-1">
                                     <a href="{{ route('about') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">About Us</a>
                                     <a href="{{ route('contact') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Contact</a>
@@ -87,12 +97,12 @@
 
                     <!-- Authentication Links -->
                     @auth
-                        <livewire:navigation.user-dropdown />
+                    <livewire:navigation.user-dropdown />
                     @else
-                        <div class="hidden sm:flex sm:items-center sm:ml-6 space-x-4">
-                            <button @click="loginOpen = true" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700">Log in</button>
-                            <button @click="signupOpen = true" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Sign up</button>
-                        </div>
+                    <div class="hidden sm:flex sm:items-center sm:ml-6 space-x-4">
+                        <button @click="loginOpen = true" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700">Log in</button>
+                        <button @click="signupOpen = true" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Sign up</button>
+                    </div>
                     @endauth
                 </div>
             </div>
@@ -148,7 +158,7 @@
             <x-validation-errors class="mb-4" />
 
             @if (session('status'))
-                <div class="mb-4 font-medium text-sm text-green-600">{{ session('status') }}</div>
+            <div class="mb-4 font-medium text-sm text-green-600">{{ session('status') }}</div>
             @endif
 
             <form method="POST" action="{{ route('login') }}">
@@ -167,9 +177,9 @@
                 </div>
                 <div class="flex justify-between items-center mt-4">
                     @if (Route::has('password.request'))
-                        <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('password.request') }}">
-                            {{ __('Forgot your password?') }}
-                        </a>
+                    <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('password.request') }}">
+                        {{ __('Forgot your password?') }}
+                    </a>
                     @endif
                     <span class="text-sm text-gray-600">
                         Don't have an account?
@@ -226,6 +236,9 @@
         </div>
     </footer>
 
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
     <!-- Livewire Scripts -->
     @livewireScripts
     <!-- Alpine.js -->
@@ -233,4 +246,5 @@
     <!-- Additional Scripts -->
     @stack('scripts')
 </body>
+
 </html>

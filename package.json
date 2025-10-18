@@ -19,6 +19,8 @@
         "vite": "^7.0.7"
     },
     "dependencies": {
+        "datatables.net": "^2.3.4",
+        "datatables.net-bs5": "^2.3.4",
         "vue": "^3.5.22"
     }
 }
