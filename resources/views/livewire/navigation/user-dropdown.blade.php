@@ -52,7 +52,11 @@
             <!-- Admin Dashboard (if admin) -->
             @if($user->isAdmin())
             <a
+<<<<<<< Updated upstream
                 href="{{ route('admin.dashboard') }}"
+=======
+                href="{{ url('dashboard.admin') }}"
+>>>>>>> Stashed changes
                 class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                 @click="open = false">
                 Admin Dashboard
