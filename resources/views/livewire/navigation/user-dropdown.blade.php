@@ -45,7 +45,7 @@
             <!-- Organizer Dashboard (if organizer) -->
             @if($user->isOrganizer())
                 <a
-                    href="{{ route('dashboard.organizer') }}"
+                    href="{{ url('dashboard.organizer') }}"
                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     @click="open = false"
                 >

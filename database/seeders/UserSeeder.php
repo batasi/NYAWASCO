@@ -16,6 +16,7 @@ class UserSeeder extends Seeder
             'email' => 'admin@eventsphere.com',
             'password' => Hash::make('password'),
             'email_verified_at' => now(),
+            'role' => 'admin',
         ]);
         $admin->assignRole('admin');
 
@@ -26,12 +27,14 @@ class UserSeeder extends Seeder
                 'email' => 'events@eventpro.com',
                 'password' => Hash::make('password'),
                 'email_verified_at' => now(),
+                'role' => 'organizer',
             ],
             [
                 'name' => 'City Events Ltd',
                 'email' => 'info@cityevents.com',
                 'password' => Hash::make('password'),
                 'email_verified_at' => now(),
+                'role' => 'organizer',
             ],
         ];
 
@@ -46,6 +49,7 @@ class UserSeeder extends Seeder
             'email' => 'catering@example.com',
             'password' => Hash::make('password'),
             'email_verified_at' => now(),
+            'role' => 'vendor',
         ]);
         $vendor->assignRole('vendor');
 
@@ -56,6 +60,7 @@ class UserSeeder extends Seeder
                 'email' => "user{$i}@example.com",
                 'password' => Hash::make('password'),
                 'email_verified_at' => now(),
+                'role' => 'attendee',
             ]);
             $user->assignRole('attendee');
         }
