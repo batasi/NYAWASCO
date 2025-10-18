@@ -6,10 +6,10 @@
 <div class="min-h-screen bg-gray-50 py-12">
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-            <h1 class="text-3xl font-bold text-gray-900 mb-6">About EventSphere</h1>
+            <h1 class="text-3xl font-bold text-gray-900 mb-6">About Javent</h1>
             <div class="prose prose-blue max-w-none">
                 <p class="text-lg text-gray-600 mb-6">
-                    EventSphere is your complete universe for events, ticketing, and community engagement.
+                    Javent is your complete universe for events, ticketing, and community engagement.
                     We connect organizers with attendees and provide powerful tools for creating unforgettable experiences.
                 </p>
 

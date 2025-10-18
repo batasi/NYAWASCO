@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>EventSphere</title>
+    <title>Javent</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -49,7 +49,7 @@
     </style>
 </head>
 
-<body x-data="{ signupOpen: false, loginOpen: false }" class="font-sans antialiased bg-gray-50">
+<body x-data="{ signupOpen: false, loginOpen: false, intendedUrl: '{{ route('organizers.index') }}' }" class="font-sans antialiased bg-gray-50">
 
     <!-- Navigation -->
     <nav class="fixed top-0 left-0 w-full z-50 bg-white bg-opacity-95 backdrop-blur-md shadow-sm border-b border-gray-100">
@@ -58,7 +58,7 @@
                 <div class="flex items-center">
                     <!-- Logo -->
                     <div class="shrink-0 flex items-center">
-                        <a href="{{ route('home') }}" class="text-2xl font-bold text-gray-900">EventSphere</a>
+                        <a href="{{ route('home') }}" class="text-2xl font-bold text-gray-900">Javent</a>
                     </div>
 
                     <!-- Navigation Links -->
@@ -66,8 +66,20 @@
                         <x-nav-link href="{{ route('events.index') }}" :active="request()->routeIs('events.*')">Discover Events</x-nav-link>
                         <x-nav-link href="{{ route('voting.index') }}" :active="request()->routeIs('voting.*')">Active Votes</x-nav-link>
 
-                        <!-- For Organizers triggers signup -->
-                        <button @click="signupOpen = true" class="text-gray-500 hover:text-gray-700 text-sm font-medium">For Organizers</button>
+                      <!-- For Organizers -->
+                    <button
+                        @click="
+                            @guest
+                                signupOpen = true
+                            @else
+                                window.location.href = '{{ route('organizers.index') }}'
+                            @endguest
+                        "
+                        class="text-gray-500 hover:text-gray-700 text-sm font-medium"
+                    >
+                        For Organizers
+                    </button>
+
 
                         <!-- More Dropdown -->
                         <div class="relative" x-data="{ open: false }">
@@ -213,7 +225,7 @@
         <!-- Intelligent Feed Section -->
         <section class="mb-16">
             <div class="flex justify-between items-center mb-8">
-                <h2 class="text-3xl font-bold text-gray-900">Your EventSphere Feed</h2>
+                <h2 class="text-3xl font-bold text-gray-900">Your Events and Voting Feed</h2>
                 <div class="flex space-x-2">
                     <button class="filter-btn px-4 py-2 rounded-lg border border-gray-300 hover:border-blue-500" data-filter="all">
                         All Activities
@@ -239,7 +251,7 @@
 
         <!-- Dual-Path How It Works Section -->
         <section class="mb-16">
-            <h2 class="text-3xl font-bold text-center text-gray-900 mb-12">How EventSphere Works</h2>
+            <h2 class="text-3xl font-bold text-center text-gray-900 mb-12">How Javent Works</h2>
             <div class="grid md:grid-cols-2 gap-8">
                 <!-- For Attendees Column -->
                 <div class="bg-white rounded-2xl shadow-lg p-8 ticket-gradient text-white">
@@ -327,7 +339,7 @@
                             <p class="text-gray-600 text-sm">Event Attendee</p>
                         </div>
                     </div>
-                    <p class="text-gray-700">"Booking tickets through EventSphere is so seamless. The QR check-in made entry a breeze!"</p>
+                    <p class="text-gray-700">"Booking tickets through Javent is so seamless. The QR check-in made entry a breeze!"</p>
                 </div>
                 <div class="bg-white p-6 rounded-2xl shadow-lg">
                     <div class="flex items-center mb-4">
@@ -351,7 +363,7 @@
                             <p class="text-gray-600 text-sm">Music Festival Director</p>
                         </div>
                     </div>
-                    <p class="text-gray-700">"From ticketing to vendor management, EventSphere handles everything. A game-changer!"</p>
+                    <p class="text-gray-700">"From ticketing to vendor management, Javent handles everything. A game-changer!"</p>
                 </div>
             </div>
         </section>
@@ -362,7 +374,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grid md:grid-cols-4 gap-8">
                 <div>
-                    <h3 class="text-xl font-bold mb-4">EventSphere</h3>
+                    <h3 class="text-xl font-bold mb-4">Javent</h3>
                     <p class="text-gray-400">Your complete universe for events, ticketing, and community engagement.</p>
                 </div>
                 <div>
@@ -401,7 +413,7 @@
                 </div>
             </div>
             <div class="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-                <p>&copy; 2024 EventSphere. All rights reserved.</p>
+                <p>&copy; 2025 JavaPA LTD. All rights reserved.</p>
             </div>
         </div>
     </footer>

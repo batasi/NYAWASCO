@@ -12,12 +12,12 @@
 
                 <h2 class="text-2xl font-semibold text-gray-900 mt-8 mb-4">1. Acceptance of Terms</h2>
                 <p class="text-gray-600 mb-4">
-                    By accessing and using EventSphere, you accept and agree to be bound by the terms and provision of this agreement.
+                    By accessing and using Javent, you accept and agree to be bound by the terms and provision of this agreement.
                 </p>
 
                 <h2 class="text-2xl font-semibold text-gray-900 mt-8 mb-4">2. Use License</h2>
                 <p class="text-gray-600 mb-4">
-                    Permission is granted to temporarily use EventSphere for personal, non-commercial transitory viewing only.
+                    Permission is granted to temporarily use Javent for personal, non-commercial transitory viewing only.
                 </p>
 
                 <h2 class="text-2xl font-semibold text-gray-900 mt-8 mb-4">3. User Accounts</h2>

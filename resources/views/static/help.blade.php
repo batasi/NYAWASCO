@@ -9,7 +9,7 @@
             <h1 class="text-3xl font-bold text-gray-900 mb-6">Help Center</h1>
             <div class="prose prose-blue max-w-none">
                 <p class="text-lg text-gray-600 mb-8">
-                    Find answers to common questions and learn how to make the most of EventSphere.
+                    Find answers to common questions and learn how to make the most of Javent.
                 </p>
 
                 <div class="space-y-6">
@@ -21,7 +21,7 @@
                                 <p class="text-gray-600">Click the "Sign Up" button in the top navigation and follow the registration process.</p>
                             </div>
                             <div>
-                                <h3 class="font-semibold text-gray-900">Is EventSphere free to use?</h3>
+                                <h3 class="font-semibold text-gray-900">Is Javent free to use?</h3>
                                 <p class="text-gray-600">Yes, creating an account and browsing events is completely free. Event organizers may charge for tickets.</p>
                             </div>
                         </div>

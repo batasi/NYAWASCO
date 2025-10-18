@@ -31,7 +31,7 @@
                                 </svg>
                                 <div>
                                     <h3 class="font-semibold text-gray-900">Email</h3>
-                                    <p class="text-gray-600">support@eventsphere.com</p>
+                                    <p class="text-gray-600">support@javent.com</p>
                                 </div>
                             </div>
                             <div class="flex items-start">

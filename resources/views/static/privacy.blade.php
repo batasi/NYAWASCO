@@ -40,7 +40,7 @@
 
                 <h2 class="text-2xl font-semibold text-gray-900 mt-8 mb-4">6. Contact Us</h2>
                 <p class="text-gray-600">
-                    If you have any questions about this Privacy Policy, please contact us at privacy@eventsphere.com.
+                    If you have any questions about this Privacy Policy, please contact us at privacy@javent.com.
                 </p>
             </div>
         </div>

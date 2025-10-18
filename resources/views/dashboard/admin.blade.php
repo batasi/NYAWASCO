@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'EventSphere')
+@section('title', 'Javent')
 
 @section('content')
 <div class="min-h-screen bg-gray-50">
@@ -13,7 +13,7 @@
                         Admin Dashboard
                     </h1>
                     <p class="mt-2 text-lg text-gray-600">
-                        Manage the EventSphere platform.
+                        Manage the Javent platform.
                     </p>
                 </div>
                 <div class="mt-4 flex md:mt-0 md:ml-4 space-x-3">

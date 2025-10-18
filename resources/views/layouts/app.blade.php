@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>EventSphere</title>
+    <title>Javent</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -23,7 +23,7 @@
         main { min-height: calc(100vh - 200px); }
     </style>
 </head>
-<body x-data="{ signupOpen: false, loginOpen: false }" class="font-sans antialiased bg-gray-50">
+<body x-data="{ signupOpen: false, loginOpen: false, intendedUrl: '{{ route('organizers.index') }}' }" class="font-sans antialiased bg-gray-50">
 
     <!-- Navigation -->
     <nav class="fixed top-0 left-0 w-full z-50 bg-white bg-opacity-95 backdrop-blur-md shadow-sm border-b border-gray-100">
@@ -32,7 +32,7 @@
                 <div class="flex items-center">
                     <!-- Logo -->
                     <div class="shrink-0 flex items-center">
-                        <a href="{{ route('home') }}" class="text-2xl font-bold text-gray-900">EventSphere</a>
+                        <a href="{{ route('home') }}" class="text-2xl font-bold text-gray-900">Javent</a>
                     </div>
 
                     <!-- Navigation Links -->
@@ -40,8 +40,20 @@
                         <x-nav-link href="{{ route('events.index') }}" :active="request()->routeIs('events.*')">Discover Events</x-nav-link>
                         <x-nav-link href="{{ route('voting.index') }}" :active="request()->routeIs('voting.*')">Active Votes</x-nav-link>
 
-                        <!-- For Organizers triggers signup -->
-                        <button @click="signupOpen = true" class="text-gray-500 hover:text-gray-700 text-sm font-medium">For Organizers</button>
+                      <!-- For Organizers -->
+                    <button
+                        @click="
+                            @guest
+                                signupOpen = true
+                            @else
+                                window.location.href = '{{ route('organizers.index') }}'
+                            @endguest
+                        "
+                        class="text-gray-500 hover:text-gray-700 text-sm font-medium"
+                    >
+                        For Organizers
+                    </button>
+
 
                         <!-- More Dropdown -->
                         <div class="relative" x-data="{ open: false }">
@@ -169,46 +181,6 @@
         </div>
     </div>
 
-
-    <!-- Login Modal -->
-    <div x-show="loginOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-        <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6 relative">
-            <button @click="loginOpen = false" class="absolute top-2 right-2 text-gray-500 hover:text-gray-700">&times;</button>
-
-            <h2 class="text-xl font-semibold mb-4">Log in</h2>
-
-            <x-validation-errors class="mb-4" />
-
-            @if (session('status'))
-                <div class="mb-4 font-medium text-sm text-green-600">{{ session('status') }}</div>
-            @endif
-
-            <form method="POST" action="{{ route('login') }}">
-                @csrf
-                <div class="mb-4">
-                    <x-label for="email" value="{{ __('Email') }}" />
-                    <x-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus autocomplete="username" />
-                </div>
-                <div class="mb-4">
-                    <x-label for="password" value="{{ __('Password') }}" />
-                    <x-input id="password" class="block mt-1 w-full" type="password" name="password" required autocomplete="current-password" />
-                </div>
-                <div class="mb-4 flex items-center">
-                    <x-checkbox id="remember_me" name="remember" />
-                    <label for="remember_me" class="ms-2 text-sm text-gray-600">{{ __('Remember me') }}</label>
-                </div>
-                <div class="flex items-center justify-end mt-4">
-                    @if (Route::has('password.request'))
-                        <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('password.request') }}">
-                            {{ __('Forgot your password?') }}
-                        </a>
-                    @endif
-                    <x-button class="ml-4">{{ __('Log in') }}</x-button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <!-- Page Content -->
     <main class="pt-20">
         @yield('content')
@@ -219,7 +191,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grid md:grid-cols-4 gap-8">
                 <div>
-                    <h3 class="text-xl font-bold mb-4">EventSphere</h3>
+                    <h3 class="text-xl font-bold mb-4">Javent</h3>
                     <p class="text-gray-400">Your complete universe for events, ticketing, and community engagement.</p>
                 </div>
                 <div>
@@ -249,7 +221,7 @@
                 </div>
             </div>
             <div class="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-                <p>&copy; 2024 EventSphere. All rights reserved.</p>
+                <p>&copy; 2025 JavaPA LTD. All rights reserved.</p>
             </div>
         </div>
     </footer>

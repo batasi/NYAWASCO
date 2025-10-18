@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Vendor Dashboard - EventSphere')
+@section('title', 'Javent')
 
 @section('content')
 <div class="min-h-screen bg-gray-50">
