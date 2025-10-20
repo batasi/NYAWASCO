@@ -63,7 +63,7 @@ class DashboardController extends Controller
             'total_events' => Event::count(),
             'total_voting_contests' => VotingContest::count(),
             'total_ticket_sales' => TicketPurchase::where('status', 'paid')->count(),
-            'recent_users' => \App\Models\User::latest()->take(10)->get(),
+            'recent_users' => \App\Models\User::latest()->paginate(10),
             'pending_approvals' => Event::where('status', 'draft')->count() +
                 VotingContest::where('requires_approval', true)->count(),
         ];

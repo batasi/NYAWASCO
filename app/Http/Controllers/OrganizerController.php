@@ -35,7 +35,7 @@ class OrganizerController extends BaseController
         $organizers = User::where('role', 'organizer')
             ->where('is_active', true)
             ->withCount(['organizedEvents', 'organizedVotingContests'])
-            ->paginate(12);
+            ->paginate(10);
 
         return view('organizers.index', [
             'organizers' => $organizers,
