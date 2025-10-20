@@ -26,6 +26,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'phone',
         'bio',
         'avatar',
+        'google_id',
         'is_active',
         'preferences',
         'current_team_id',

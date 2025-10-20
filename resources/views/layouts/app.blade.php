@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+@php
+use Illuminate\Support\Facades\Route;
+@endphp
+
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 
 <head>
@@ -137,7 +141,16 @@
                     <x-input id="password_confirmation" type="password" name="password_confirmation" required class="w-full mt-1" />
                 </div>
 
-                <div class="flex justify-between items-center">
+                <!-- Continue with Google -->
+                <div class="mt-4">
+                    <a href="{{ route('google.login') }}"
+                        class="inline-flex items-center justify-center w-full px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 transition">
+                        <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" class="w-5 h-5 mr-2">
+                        Continue with Google
+                    </a>
+                </div>
+
+                <div class="flex justify-between items-center mt-4">
                     <x-button class="ml-2">Register</x-button>
                     <span class="text-sm text-gray-600">
                         Already have an account?
@@ -175,6 +188,16 @@
                     <x-checkbox id="remember_me" name="remember" />
                     <label for="remember_me" class="ms-2 text-sm text-gray-600">{{ __('Remember me') }}</label>
                 </div>
+
+                <!-- Continue with Google -->
+                <div class="mt-4">
+                    <a href="{{ route('google.login') }}"
+                        class="inline-flex items-center justify-center w-full px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 transition">
+                        <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" class="w-5 h-5 mr-2">
+                        Continue with Google
+                    </a>
+                </div>
+
                 <div class="flex justify-between items-center mt-4">
                     @if (Route::has('password.request'))
                     <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('password.request') }}">
@@ -190,6 +213,7 @@
             </form>
         </div>
     </div>
+
 
     <!-- Page Content -->
     <main class="pt-20">

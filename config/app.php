@@ -151,7 +151,13 @@ return [
         App\Providers\AppServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
         Yajra\DataTables\DataTablesServiceProvider::class,
+        Laravel\Socialite\SocialiteServiceProvider::class,
 
+    ],
+
+
+    'aliases' => [
+        'Socialite' => Laravel\Socialite\Facades\Socialite::class,
     ],
 
 

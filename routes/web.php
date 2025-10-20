@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\SearchApiController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\RoleController;
 use Spatie\Permission\Models\Role;
+use App\Http\Controllers\Auth\GoogleController;
 
 /*
 |--------------------------------------------------------------------------
@@ -185,3 +186,7 @@ Route::middleware(['auth', 'verified', 'role:vendor'])->prefix('vendor')->group(
     Route::view('/services', 'vendor.services', ['title' => 'Vendor Services - EventSphere'])->name('vendor.services');
     Route::view('/bookings', 'vendor.bookings', ['title' => 'Vendor Bookings - EventSphere'])->name('vendor.bookings');
 });
+
+
+Route::get('auth/google', [GoogleController::class, 'redirectToGoogle'])->name('google.login');
+Route::get('auth/google/callback', [GoogleController::class, 'handleGoogleCallback']);

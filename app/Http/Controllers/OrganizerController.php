@@ -15,13 +15,12 @@ use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use Illuminate\Routing\Controller as BaseController;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Bus\DispatchesJobs;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 
 class OrganizerController extends BaseController
 {
-    use AuthorizesRequests, DispatchesJobs, ValidatesRequests;
+    use DispatchesJobs, ValidatesRequests;
 
 
     public function __construct()
@@ -158,8 +157,6 @@ class OrganizerController extends BaseController
     public function storeEvent(Request $request)
     {
 
-        $this->authorize('create', Event::class);
-
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'category_id' => 'required|exists:event_categories,id',
@@ -206,7 +203,6 @@ class OrganizerController extends BaseController
 
     public function editEvent(Event $event)
     {
-        $this->authorize('update', $event);
 
         $categories = EventCategory::where('is_active', true)->get();
 
@@ -219,7 +215,6 @@ class OrganizerController extends BaseController
 
     public function updateEvent(Request $request, Event $event)
     {
-        $this->authorize('update', $event);
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -262,7 +257,6 @@ class OrganizerController extends BaseController
 
     public function destroyEvent(Event $event)
     {
-        $this->authorize('delete', $event);
 
         $event->delete();
 
@@ -356,7 +350,6 @@ class OrganizerController extends BaseController
 
     public function editVoting(VotingContest $contest)
     {
-        $this->authorize('update', $contest);
 
         $categories = VotingCategory::where('is_active', true)->get();
         $contest->load('nominees');
@@ -370,7 +363,6 @@ class OrganizerController extends BaseController
 
     public function updateVoting(Request $request, VotingContest $contest)
     {
-        $this->authorize('update', $contest);
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -397,7 +389,6 @@ class OrganizerController extends BaseController
 
     public function destroyVoting(VotingContest $contest)
     {
-        $this->authorize('delete', $contest);
 
         $contest->delete();
 
@@ -467,7 +458,6 @@ class OrganizerController extends BaseController
 
     public function eventAnalytics(Event $event)
     {
-        $this->authorize('view', $event);
 
         $ticketSales = TicketPurchase::where('event_id', $event->id)
             ->where('status', 'paid')
@@ -507,7 +497,6 @@ class OrganizerController extends BaseController
 
     public function votingAnalytics(VotingContest $contest)
     {
-        $this->authorize('view', $contest);
 
         $voteDistribution = $contest->nominees()
             ->withCount('votes')

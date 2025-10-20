@@ -66,19 +66,18 @@
                         <x-nav-link href="{{ route('events.index') }}" :active="request()->routeIs('events.*')">Discover Events</x-nav-link>
                         <x-nav-link href="{{ route('voting.index') }}" :active="request()->routeIs('voting.*')">Active Votes</x-nav-link>
 
-                      <!-- For Organizers -->
-                    <button
-                        @click="
+                        <!-- For Organizers -->
+                        <button
+                            @click="
                             @guest
                                 signupOpen = true
                             @else
                                 window.location.href = '{{ route('organizers.index') }}'
                             @endguest
                         "
-                        class="text-gray-500 hover:text-gray-700 text-sm font-medium"
-                    >
-                        For Organizers
-                    </button>
+                            class="text-gray-500 hover:text-gray-700 text-sm font-medium">
+                            For Organizers
+                        </button>
 
 
                         <!-- More Dropdown -->
@@ -88,12 +87,12 @@
                                 :class="{ 'border-blue-500 text-gray-900': open }">
                                 More
                                 <svg class="ml-1 -mr-0.5 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
                                 </svg>
                             </button>
 
                             <div x-show="open" x-transition class="origin-top-left absolute left-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
-                                 @click.away="open = false">
+                                @click.away="open = false">
                                 <div class="py-1">
                                     <a href="{{ route('about') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">About Us</a>
                                     <a href="{{ route('contact') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Contact</a>
@@ -113,12 +112,12 @@
 
                     <!-- Authentication Links -->
                     @auth
-                        <livewire:navigation.user-dropdown />
+                    <livewire:navigation.user-dropdown />
                     @else
-                        <div class="hidden sm:flex sm:items-center sm:ml-6 space-x-4">
-                            <button @click="loginOpen = true" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700">Log in</button>
-                            <button @click="signupOpen = true" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Sign up</button>
-                        </div>
+                    <div class="hidden sm:flex sm:items-center sm:ml-6 space-x-4">
+                        <button @click="loginOpen = true" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700">Log in</button>
+                        <button @click="signupOpen = true" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Sign up</button>
+                    </div>
                     @endauth
                 </div>
             </div>
@@ -153,7 +152,16 @@
                     <x-input id="password_confirmation" type="password" name="password_confirmation" required class="w-full mt-1" />
                 </div>
 
-                <div class="flex justify-between items-center">
+                <!-- Continue with Google -->
+                <div class="mt-4">
+                    <a href="{{ route('google.login') }}"
+                        class="inline-flex items-center justify-center w-full px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 transition">
+                        <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" class="w-5 h-5 mr-2">
+                        Continue with Google
+                    </a>
+                </div>
+
+                <div class="flex justify-between items-center mt-4">
                     <x-button class="ml-2">Register</x-button>
                     <span class="text-sm text-gray-600">
                         Already have an account?
@@ -174,7 +182,7 @@
             <x-validation-errors class="mb-4" />
 
             @if (session('status'))
-                <div class="mb-4 font-medium text-sm text-green-600">{{ session('status') }}</div>
+            <div class="mb-4 font-medium text-sm text-green-600">{{ session('status') }}</div>
             @endif
 
             <form method="POST" action="{{ route('login') }}">
@@ -191,12 +199,21 @@
                     <x-checkbox id="remember_me" name="remember" />
                     <label for="remember_me" class="ms-2 text-sm text-gray-600">{{ __('Remember me') }}</label>
                 </div>
+
+                <!-- Continue with Google -->
+                <div class="mt-4">
+                    <a href="{{ route('google.login') }}"
+                        class="inline-flex items-center justify-center w-full px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 transition">
+                        <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" class="w-5 h-5 mr-2">
+                        Continue with Google
+                    </a>
+                </div>
+
                 <div class="flex justify-between items-center mt-4">
-                    @if (Route::has('password.request'))
-                        <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('password.request') }}">
-                            {{ __('Forgot your password?') }}
-                        </a>
-                    @endif
+                    <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        href="{{ route('password.request') }}">
+                        {{ __('Forgot your password?') }}
+                    </a>
                     <span class="text-sm text-gray-600">
                         Don't have an account?
                         <button type="button" @click="loginOpen = false; signupOpen = true" class="text-blue-600 hover:underline">Sign up</button>
@@ -207,10 +224,11 @@
         </div>
     </div>
 
-<!-- Page Content Wrapper -->
-<div class="pt-20">
-    {{-- Main content goes here --}}
-</div>
+
+    <!-- Page Content Wrapper -->
+    <div class="pt-20">
+        {{-- Main content goes here --}}
+    </div>
 
     <!-- Live Pulse Widget -->
     <live-pulse-widget></live-pulse-widget>
