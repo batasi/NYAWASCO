@@ -12,65 +12,35 @@ class Event extends Model
 
     protected $fillable = [
         'organizer_id',
-        'category_id',
-        'name',
-        'slug',
+        'title',
         'description',
-        'short_description',
-        'featured_image',
-        'gallery_images',
-        'venue_name',
-        'address',
-        'city',
-        'state',
-        'country',
-        'postal_code',
-        'latitude',
-        'longitude',
+        'location',
         'start_date',
         'end_date',
-        'registration_start',
-        'registration_end',
-        'max_attendees',
-        'price',
-        'currency',
-        'is_free',
-        'is_featured',
+        'ticket_price',
+        'capacity',
         'is_active',
-        'requires_approval',
         'status',
-        'tags',
-        'metadata',
-        'views_count',
-        'bookmarks_count',
+        'banner_image',
     ];
 
     protected $casts = [
         'start_date' => 'datetime',
         'end_date' => 'datetime',
-        'registration_start' => 'datetime',
-        'registration_end' => 'datetime',
-        'price' => 'decimal:2',
-        'is_free' => 'boolean',
-        'is_featured' => 'boolean',
+        'ticket_price' => 'decimal:2',
         'is_active' => 'boolean',
-        'requires_approval' => 'boolean',
-        'gallery_images' => 'array',
-        'tags' => 'array',
-        'metadata' => 'array',
-        'latitude' => 'decimal:8',
-        'longitude' => 'decimal:8',
+        'capacity' => 'integer',
+    ];
+
+    protected $attributes = [
+        'status' => 'draft',
+        'is_active' => true,
     ];
 
     // Relationships
     public function organizer()
     {
         return $this->belongsTo(User::class, 'organizer_id');
-    }
-
-    public function category()
-    {
-        return $this->belongsTo(EventCategory::class);
     }
 
     public function tickets()
@@ -83,69 +53,74 @@ class Event extends Model
         return $this->hasMany(TicketPurchase::class);
     }
 
+    public function bookings()
+    {
+        return $this->morphMany(Booking::class, 'bookable');
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(EventCategory::class);
+    }
+
     // Scopes
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
     }
 
-    public function scopeFeatured($query)
-    {
-        return $query->where('is_featured', true)->where('is_active', true);
-    }
-
     public function scopeUpcoming($query)
     {
-        return $query->where('start_date', '>=', now());
+        return $query->where('start_date', '>', now());
     }
 
-    public function scopePublished($query)
+    public function scopeOngoing($query)
     {
-        return $query->where('status', 'published');
+        return $query->where('start_date', '<=', now())
+            ->where('end_date', '>=', now());
     }
 
-    public function scopeByLocation($query, $city = null, $country = null)
+    public function scopePast($query)
     {
-        if ($city) {
-            $query->where('city', 'like', "%{$city}%");
-        }
-        if ($country) {
-            $query->where('country', 'like', "%{$country}%");
-        }
-        return $query;
+        return $query->where('end_date', '<', now());
     }
 
-    // Methods
+    public function scopeApproved($query)
+    {
+        return $query->where('status', 'approved');
+    }
+
+    public function scopeDraft($query)
+    {
+        return $query->where('status', 'draft');
+    }
+
+    // Helper Methods
     public function getTotalTicketsSoldAttribute()
     {
         return $this->ticketPurchases()->where('status', 'paid')->sum('quantity');
     }
 
+    public function getTotalRevenueAttribute()
+    {
+        return $this->ticketPurchases()->where('status', 'paid')->sum('final_amount');
+    }
+
     public function getAvailableTicketsAttribute()
     {
-        if (is_null($this->max_attendees)) {
-            return null; // Unlimited
-        }
-        return max(0, $this->max_attendees - $this->total_tickets_sold);
+        return $this->capacity - $this->total_tickets_sold;
     }
 
     public function isSoldOut()
     {
-        if (is_null($this->max_attendees)) {
-            return false;
-        }
-        return $this->total_tickets_sold >= $this->max_attendees;
+        return $this->available_tickets <= 0;
     }
 
-    public function isRegistrationOpen()
+    public function canPurchaseTickets()
     {
-        $now = now();
-        return $this->registration_start <= $now &&
-            (is_null($this->registration_end) || $this->registration_end >= $now);
-    }
-
-    public function incrementViews()
-    {
-        $this->increment('views_count');
+        return $this->is_active &&
+            $this->status === 'approved' &&
+            !$this->isSoldOut() &&
+            $this->start_date > now();
     }
 }

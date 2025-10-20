@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+@php
+use Illuminate\Support\Facades\Route;
+@endphp
+
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 
 <head>
@@ -63,22 +67,28 @@
 
                     <!-- Navigation Links -->
                     <div class="hidden space-x-8 sm:-my-px sm:ml-10 sm:flex">
-                        <x-nav-link href="{{ route('events.index') }}" :active="request()->routeIs('events.*')">Discover Events</x-nav-link>
-                        <x-nav-link href="{{ route('voting.index') }}" :active="request()->routeIs('voting.*')">Active Votes</x-nav-link>
+                        <x-nav-link href="{{ route('events.index') }}" :active="request()->routeIs('events.*')">
+                            Discover Events
+                        </x-nav-link>
 
-                        <!-- For Organizers -->
-                        <button
-                            @click="
-                            @guest
-                                signupOpen = true
-                            @else
-                                window.location.href = '{{ route('organizers.index') }}'
-                            @endguest
-                        "
-                            class="text-gray-500 hover:text-gray-700 text-sm font-medium">
-                            For Organizers
-                        </button>
+                        <x-nav-link href="{{ route('voting.index') }}" :active="request()->routeIs('voting.*')">
+                            Active Votes
+                        </x-nav-link>
 
+                        <!-- Admin-only Links -->
+                        @auth
+                        @if(auth()->user()->hasRole('admin'))
+                        <x-nav-link href="{{ route('organizers.index') }}" :active="request()->routeIs('organizers.*')">
+                            Organizers
+                        </x-nav-link>
+                        <x-nav-link href="{{ route('admin.attendees.index') }}" :active="request()->routeIs('admin.attendees.*')">
+                            Attendees
+                        </x-nav-link>
+                        <x-nav-link href="{{ route('admin.vendors.index') }}" :active="request()->routeIs('admin.vendors.*')">
+                            Vendors
+                        </x-nav-link>
+                        @endif
+                        @endauth
 
                         <!-- More Dropdown -->
                         <div class="relative" x-data="{ open: false }" x-cloak>
@@ -113,17 +123,24 @@
                     </div>
                 </div>
 
+                <!-- Right Side (Search + Auth) -->
                 <div class="flex items-center">
                     <!-- Smart Search -->
-                    <div class="hidden sm:flex items-center mr-4"><smart-search></smart-search></div>
+                    <div class="hidden sm:flex items-center mr-4">
+                        <smart-search></smart-search>
+                    </div>
 
                     <!-- Authentication Links -->
                     @auth
                     <livewire:navigation.user-dropdown />
                     @else
                     <div class="hidden sm:flex sm:items-center sm:ml-6 space-x-4">
-                        <button @click="loginOpen = true" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700">Log in</button>
-                        <button @click="signupOpen = true" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Sign up</button>
+                        <button @click="loginOpen = true" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700">
+                            Log in
+                        </button>
+                        <button @click="signupOpen = true" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                            Sign up
+                        </button>
                     </div>
                     @endauth
                 </div>
@@ -131,105 +148,368 @@
         </div>
     </nav>
 
+
     <!-- Sign Up Modal -->
-    <div x-show="signupOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-        <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6 relative">
-            <button @click="signupOpen = false" class="absolute top-2 right-2 text-gray-500 hover:text-gray-700">&times;</button>
+    <div x-show="signupOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto relative">
+            <button @click="signupOpen = false" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 z-10">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
 
-            <h2 class="text-xl font-semibold mb-4">Register</h2>
+            <div class="p-6">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">Create Your Account</h2>
 
-            <x-validation-errors class="mb-4" />
+                <x-validation-errors class="mb-4" />
 
-            <form method="POST" action="{{ route('register') }}">
-                @csrf
-                <div class="mb-4">
-                    <x-label for="name" value="Name" />
-                    <x-input id="name" type="text" name="name" :value="old('name')" required autofocus class="w-full mt-1" />
-                </div>
-                <div class="mb-4">
-                    <x-label for="email" value="Email" />
-                    <x-input id="email" type="email" name="email" :value="old('email')" required class="w-full mt-1" />
-                </div>
-                <div class="mb-4">
-                    <x-label for="password" value="Password" />
-                    <x-input id="password" type="password" name="password" required class="w-full mt-1" />
-                </div>
-                <div class="mb-4">
-                    <x-label for="password_confirmation" value="Confirm Password" />
-                    <x-input id="password_confirmation" type="password" name="password_confirmation" required class="w-full mt-1" />
-                </div>
+                <form method="POST" action="{{ route('register') }}" id="registrationForm">
+                    @csrf
+
+                    <!-- Basic Information -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <x-label for="name" value="Full Name *" />
+                            <x-input id="name" type="text" name="name" :value="old('name')" required autofocus class="w-full mt-1" />
+                        </div>
+                        <div>
+                            <x-label for="email" value="Email Address *" />
+                            <x-input id="email" type="email" name="email" :value="old('email')" required class="w-full mt-1" />
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <x-label for="phone" value="Phone Number" />
+                        <x-input id="phone" type="tel" name="phone" :value="old('phone')" class="w-full mt-1" />
+                    </div>
+
+                    <!-- Role Selection -->
+                    <div class="mb-6">
+                        <x-label for="role" value="I want to register as *" />
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
+                            <label class="relative">
+                                <input type="radio" name="role" value="attendee" class="sr-only peer" {{ old('role') == 'attendee' ? 'checked' : '' }} required>
+                                <div class="p-4 border-2 border-gray-200 rounded-lg cursor-pointer transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:border-gray-300">
+                                    <div class="text-center">
+                                        <svg class="w-8 h-8 mx-auto mb-2 text-gray-600 peer-checked:text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                        </svg>
+                                        <span class="font-medium text-gray-900 peer-checked:text-blue-900">Attendee</span>
+                                        <p class="text-xs text-gray-500 mt-1">Join events & vote</p>
+                                    </div>
+                                </div>
+                            </label>
+                            <label class="relative">
+                                <input type="radio" name="role" value="organizer" class="sr-only peer" {{ old('role') == 'organizer' ? 'checked' : '' }}>
+                                <div class="p-4 border-2 border-gray-200 rounded-lg cursor-pointer transition-all peer-checked:border-green-500 peer-checked:bg-green-50 hover:border-gray-300">
+                                    <div class="text-center">
+                                        <svg class="w-8 h-8 mx-auto mb-2 text-gray-600 peer-checked:text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                        </svg>
+                                        <span class="font-medium text-gray-900 peer-checked:text-green-900">Organizer</span>
+                                        <p class="text-xs text-gray-500 mt-1">Create events & contests</p>
+                                    </div>
+                                </div>
+                            </label>
+                            <label class="relative">
+                                <input type="radio" name="role" value="vendor" class="sr-only peer" {{ old('role') == 'vendor' ? 'checked' : '' }}>
+                                <div class="p-4 border-2 border-gray-200 rounded-lg cursor-pointer transition-all peer-checked:border-purple-500 peer-checked:bg-purple-50 hover:border-gray-300">
+                                    <div class="text-center">
+                                        <svg class="w-8 h-8 mx-auto mb-2 text-gray-600 peer-checked:text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                        </svg>
+                                        <span class="font-medium text-gray-900 peer-checked:text-purple-900">Vendor</span>
+                                        <p class="text-xs text-gray-500 mt-1">Offer services</p>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Attendee Specific Fields -->
+                    <div id="attendeeFields" class="hidden mt-4 space-y-4 p-4 bg-blue-50 rounded-lg">
+                        <h3 class="text-lg font-semibold text-blue-900">Attendee Information</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <x-label for="occupation" value="Occupation" />
+                                <x-input id="occupation" type="text" name="occupation" :value="old('occupation')" class="w-full mt-1" />
+                            </div>
+                            <div>
+                                <x-label for="institution" value="Institution/Company" />
+                                <x-input id="institution" type="text" name="institution" :value="old('institution')" class="w-full mt-1" />
+                            </div>
+                        </div>
+                        <div>
+                            <x-label for="membership_number" value="Membership Number (Optional)" />
+                            <x-input id="membership_number" type="text" name="membership_number" :value="old('membership_number')" class="w-full mt-1" />
+                        </div>
+                        <div>
+                            <x-label for="attendee_type" value="Attendee Type" />
+                            <select id="attendee_type" name="attendee_type" class="block w-full mt-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm">
+                                <option value="">Select Type</option>
+                                <option value="voter" {{ old('attendee_type') == 'voter' ? 'selected' : '' }}>Voter</option>
+                                <option value="event-goer" {{ old('attendee_type') == 'event-goer' ? 'selected' : '' }}>Event Goer</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Organizer Specific Fields -->
+                    <div id="organizerFields" class="hidden mt-4 space-y-4 p-4 bg-green-50 rounded-lg">
+                        <h3 class="text-lg font-semibold text-green-900">Organizer Information</h3>
+                        <div>
+                            <x-label for="company_name" value="Company Name" />
+                            <x-input id="company_name" type="text" name="company_name" :value="old('company_name')" class="w-full mt-1" />
+                        </div>
+                        <div>
+                            <x-label for="website" value="Website" />
+                            <x-input id="website" type="url" name="website" :value="old('website')" class="w-full mt-1" />
+                        </div>
+                        <div>
+                            <x-label for="about" value="About Your Organization" />
+                            <textarea id="about" name="about" rows="3" class="block w-full mt-1 border-gray-300 focus:border-green-500 focus:ring-green-500 rounded-md shadow-sm">{{ old('about') }}</textarea>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <x-label for="address" value="Business Address" />
+                                <x-input id="address" type="text" name="address" :value="old('address')" class="w-full mt-1" />
+                            </div>
+                            <div>
+                                <x-label for="city" value="City" />
+                                <x-input id="city" type="text" name="city" :value="old('city')" class="w-full mt-1" />
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <x-label for="state" value="State/Region" />
+                                <x-input id="state" type="text" name="state" :value="old('state')" class="w-full mt-1" />
+                            </div>
+                            <div>
+                                <x-label for="country" value="Country" />
+                                <x-input id="country" type="text" name="country" :value="old('country')" class="w-full mt-1" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Vendor Specific Fields -->
+                    <div id="vendorFields" class="hidden mt-4 space-y-4 p-4 bg-purple-50 rounded-lg">
+                        <h3 class="text-lg font-semibold text-purple-900">Vendor Information</h3>
+                        <div>
+                            <x-label for="business_name" value="Business Name" />
+                            <x-input id="business_name" type="text" name="business_name" :value="old('business_name')" class="w-full mt-1" />
+                        </div>
+                        <div>
+                            <x-label for="contact_number" value="Business Contact Number" />
+                            <x-input id="contact_number" type="tel" name="contact_number" :value="old('contact_number')" class="w-full mt-1" />
+                        </div>
+                        <div>
+                            <x-label for="services_offered" value="Services Offered" />
+                            <textarea id="services_offered" name="services_offered" rows="3" class="block w-full mt-1 border-gray-300 focus:border-purple-500 focus:ring-purple-500 rounded-md shadow-sm" placeholder="Describe the services you offer...">{{ old('services_offered') }}</textarea>
+                        </div>
+                    </div>
+
+                    <!-- Password Fields -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                        <div>
+                            <x-label for="password" value="Password *" />
+                            <x-input id="password" type="password" name="password" required class="w-full mt-1" />
+                        </div>
+                        <div>
+                            <x-label for="password_confirmation" value="Confirm Password *" />
+                            <x-input id="password_confirmation" type="password" name="password_confirmation" required class="w-full mt-1" />
+                        </div>
+                    </div>
+
+                    @if (Laravel\Jetstream\Jetstream::hasTermsAndPrivacyPolicyFeature())
+                    <div class="mt-4">
+                        <label class="flex items-center">
+                            <x-checkbox name="terms" id="terms" required />
+                            <span class="ms-2 text-sm text-gray-600">
+                                {!! __('I agree to the :terms_of_service and :privacy_policy', [
+                                'terms_of_service' => '<a target="_blank" href="'.route('terms.show').'" class="underline text-sm text-gray-600 hover:text-gray-900">'.__('Terms of Service').'</a>',
+                                'privacy_policy' => '<a target="_blank" href="'.route('policy.show').'" class="underline text-sm text-gray-600 hover:text-gray-900">'.__('Privacy Policy').'</a>',
+                                ]) !!}
+                            </span>
+                        </label>
+                    </div>
+                    @endif
+
+                    <div class="mt-6">
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200">
+                            Create Account
+                        </button>
+                    </div>
+                </form>
 
                 <!-- Continue with Google -->
-                <div class="mt-4">
-                    <a href="{{ route('google.login') }}"
-                        class="inline-flex items-center justify-center w-full px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 transition">
-                        <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" class="w-5 h-5 mr-2">
-                        Continue with Google
-                    </a>
+                <div class="mt-6">
+                    <div class="relative">
+                        <div class="absolute inset-0 flex items-center">
+                            <div class="w-full border-t border-gray-300"></div>
+                        </div>
+                        <div class="relative flex justify-center text-sm">
+                            <span class="px-2 bg-white text-gray-500">Or continue with</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <a href="{{ route('google.login') }}"
+                            class="inline-flex items-center justify-center w-full px-4 py-3 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition shadow-sm">
+                            <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" class="w-5 h-5 mr-3">
+                            Continue with Google
+                        </a>
+                    </div>
                 </div>
 
-                <div class="flex justify-between items-center mt-4">
-                    <x-button class="ml-2">Register</x-button>
+                <div class="mt-6 text-center">
                     <span class="text-sm text-gray-600">
                         Already have an account?
-                        <button type="button" @click="signupOpen = false; loginOpen = true" class="text-blue-600 hover:underline">Log in</button>
+                        <button type="button" @click="signupOpen = false; loginOpen = true" class="text-blue-600 hover:underline font-medium">
+                            Log in
+                        </button>
                     </span>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 
     <!-- Login Modal -->
-    <div x-show="loginOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-        <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6 relative">
-            <button @click="loginOpen = false" class="absolute top-2 right-2 text-gray-500 hover:text-gray-700">&times;</button>
+    <div x-show="loginOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-md relative">
+            <button @click="loginOpen = false" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
 
-            <h2 class="text-xl font-semibold mb-4">Log in</h2>
+            <div class="p-6">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">Welcome Back</h2>
 
-            <x-validation-errors class="mb-4" />
+                <x-validation-errors class="mb-4" />
 
-            @if (session('status'))
-            <div class="mb-4 font-medium text-sm text-green-600">{{ session('status') }}</div>
-            @endif
-
-            <form method="POST" action="{{ route('login') }}">
-                @csrf
-                <div class="mb-4">
-                    <x-label for="email" value="{{ __('Email') }}" />
-                    <x-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus autocomplete="username" />
+                @if (session('status'))
+                <div class="mb-4 font-medium text-sm text-green-600 bg-green-50 p-3 rounded-lg">
+                    {{ session('status') }}
                 </div>
-                <div class="mb-4">
-                    <x-label for="password" value="{{ __('Password') }}" />
-                    <x-input id="password" class="block mt-1 w-full" type="password" name="password" required autocomplete="current-password" />
-                </div>
-                <div class="mb-4 flex items-center">
-                    <x-checkbox id="remember_me" name="remember" />
-                    <label for="remember_me" class="ms-2 text-sm text-gray-600">{{ __('Remember me') }}</label>
-                </div>
+                @endif
+
+                <form method="POST" action="{{ route('login') }}">
+                    @csrf
+                    <div class="mb-4">
+                        <x-label for="login_email" value="Email Address" />
+                        <x-input id="login_email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus autocomplete="email" />
+                    </div>
+                    <div class="mb-4">
+                        <x-label for="login_password" value="Password" />
+                        <x-input id="login_password" class="block mt-1 w-full" type="password" name="password" required autocomplete="current-password" />
+                    </div>
+                    <div class="mb-4 flex items-center justify-between">
+                        <label class="flex items-center">
+                            <x-checkbox id="remember_me" name="remember" />
+                            <span class="ms-2 text-sm text-gray-600">Remember me</span>
+                        </label>
+                        @if (Route::has('password.request'))
+                        <a class="text-sm text-blue-600 hover:underline" href="{{ route('password.request') }}">
+                            Forgot password?
+                        </a>
+                        @endif
+                    </div>
+
+                    <div class="mb-6">
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200">
+                            Log In
+                        </button>
+                    </div>
+                </form>
 
                 <!-- Continue with Google -->
-                <div class="mt-4">
-                    <a href="{{ route('google.login') }}"
-                        class="inline-flex items-center justify-center w-full px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 transition">
-                        <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" class="w-5 h-5 mr-2">
-                        Continue with Google
-                    </a>
+                <div class="mt-6">
+                    <div class="relative">
+                        <div class="absolute inset-0 flex items-center">
+                            <div class="w-full border-t border-gray-300"></div>
+                        </div>
+                        <div class="relative flex justify-center text-sm">
+                            <span class="px-2 bg-white text-gray-500">Or continue with</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <a href="{{ route('google.login') }}"
+                            class="inline-flex items-center justify-center w-full px-4 py-3 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition shadow-sm">
+                            <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" class="w-5 h-5 mr-3">
+                            Continue with Google
+                        </a>
+                    </div>
                 </div>
 
-                <div class="flex justify-between items-center mt-4">
-                    <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                        href="{{ route('password.request') }}">
-                        {{ __('Forgot your password?') }}
-                    </a>
+                <div class="mt-6 text-center">
                     <span class="text-sm text-gray-600">
                         Don't have an account?
-                        <button type="button" @click="loginOpen = false; signupOpen = true" class="text-blue-600 hover:underline">Sign up</button>
+                        <button type="button" @click="loginOpen = false; signupOpen = true" class="text-blue-600 hover:underline font-medium">
+                            Sign up
+                        </button>
                     </span>
-                    <x-button class="ml-4">{{ __('Log in') }}</x-button>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Role selection functionality for signup modal
+            const roleInputs = document.querySelectorAll('input[name="role"]');
+            const attendeeFields = document.getElementById('attendeeFields');
+            const organizerFields = document.getElementById('organizerFields');
+            const vendorFields = document.getElementById('vendorFields');
+
+            function showRoleFields(role) {
+                // Hide all fields first
+                attendeeFields.classList.add('hidden');
+                organizerFields.classList.add('hidden');
+                vendorFields.classList.add('hidden');
+
+                // Show fields based on selected role
+                switch (role) {
+                    case 'attendee':
+                        attendeeFields.classList.remove('hidden');
+                        break;
+                    case 'organizer':
+                        organizerFields.classList.remove('hidden');
+                        break;
+                    case 'vendor':
+                        vendorFields.classList.remove('hidden');
+                        break;
+                }
+            }
+
+            // Add event listeners to role radio buttons
+            roleInputs.forEach(input => {
+                input.addEventListener('change', function() {
+                    showRoleFields(this.value);
+                });
+            });
+
+            // Show fields based on initial value (for form validation errors)
+            const initialRole = document.querySelector('input[name="role"]:checked');
+            if (initialRole) {
+                showRoleFields(initialRole.value);
+            }
+
+            // Handle modal transitions
+            const signupModal = document.querySelector('[x-show="signupOpen"]');
+            const loginModal = document.querySelector('[x-show="loginOpen"]');
+
+            // Close modals when clicking outside
+            [signupModal, loginModal].forEach(modal => {
+                if (modal) {
+                    modal.addEventListener('click', function(e) {
+                        if (e.target === this) {
+                            this.style.display = 'none';
+                        }
+                    });
+                }
+            });
+        });
+    </script>
 
 
     <!-- Page Content Wrapper -->

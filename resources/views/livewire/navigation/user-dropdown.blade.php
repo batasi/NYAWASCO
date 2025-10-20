@@ -39,7 +39,7 @@
             </a>
 
             <!-- Organizer Dashboard (if organizer) -->
-            @if($user->isOrganizer())
+            @if($user->hasRole('organizer'))
             <a
                 href="{{ route('organizer.dashboard') }}"
                 class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -48,12 +48,20 @@
             </a>
             @endif
 
+            <!-- Vendor Dashboard (if vendor) -->
+            @if($user->hasRole('vendor'))
+            <a
+                href="{{ route('vendor.dashboard') }}"
+                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                @click="open = false">
+                Vendor Dashboard
+            </a>
+            @endif
 
             <!-- Admin Dashboard (if admin) -->
-            @if($user->isAdmin())
+            @if($user->hasRole('admin'))
             <a
                 href="{{ route('admin.dashboard') }}"
-                href="{{ url('dashboard.admin') }}"
                 class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                 @click="open = false">
                 Admin Dashboard

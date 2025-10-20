@@ -25,18 +25,28 @@ class Ticket extends Model
 
     protected $casts = [
         'price' => 'decimal:2',
+        'quantity_available' => 'integer',
+        'quantity_sold' => 'integer',
+        'max_per_order' => 'integer',
         'sale_start_date' => 'datetime',
         'sale_end_date' => 'datetime',
         'is_active' => 'boolean',
         'metadata' => 'array',
     ];
 
+    protected $attributes = [
+        'quantity_sold' => 0,
+        'max_per_order' => 10,
+        'is_active' => true,
+    ];
+
+    // Relationships
     public function event()
     {
         return $this->belongsTo(Event::class);
     }
 
-    public function purchases()
+    public function ticketPurchases()
     {
         return $this->hasMany(TicketPurchase::class);
     }
@@ -49,19 +59,29 @@ class Ticket extends Model
 
     public function scopeAvailable($query)
     {
-        return $query->where(function ($q) {
-            $q->whereNull('quantity_available')
-                ->orWhereRaw('quantity_available > quantity_sold');
+        return $query->where('quantity_available', '>', 0)
+            ->orWhereNull('quantity_available');
+    }
+
+    public function scopeOnSale($query)
+    {
+        $now = now();
+        return $query->where(function ($q) use ($now) {
+            $q->whereNull('sale_start_date')
+                ->orWhere('sale_start_date', '<=', $now);
+        })->where(function ($q) use ($now) {
+            $q->whereNull('sale_end_date')
+                ->orWhere('sale_end_date', '>=', $now);
         });
     }
 
-    // Methods
+    // Helper Methods
     public function getAvailableQuantityAttribute()
     {
         if (is_null($this->quantity_available)) {
-            return null; // Unlimited
+            return null; // Unlimited tickets
         }
-        return max(0, $this->quantity_available - $this->quantity_sold);
+        return $this->quantity_available - $this->quantity_sold;
     }
 
     public function isAvailable()
@@ -79,10 +99,19 @@ class Ticket extends Model
             return false;
         }
 
-        if (!is_null($this->available_quantity) && $this->available_quantity <= 0) {
+        return is_null($this->available_quantity) || $this->available_quantity > 0;
+    }
+
+    public function canPurchase($quantity = 1)
+    {
+        if (!$this->isAvailable()) {
             return false;
         }
 
-        return true;
+        if ($quantity > $this->max_per_order) {
+            return false;
+        }
+
+        return is_null($this->available_quantity) || $this->available_quantity >= $quantity;
     }
 }

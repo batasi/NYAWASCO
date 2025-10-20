@@ -14,42 +14,66 @@ class Nominee extends Model
         'name',
         'bio',
         'photo',
+        'affiliation',
         'position',
         'votes_count',
         'is_active',
-        'metadata',
     ];
 
     protected $casts = [
+        'votes_count' => 'integer',
+        'position' => 'integer',
         'is_active' => 'boolean',
-        'metadata' => 'array',
     ];
 
-    public function contest()
+    protected $attributes = [
+        'votes_count' => 0,
+        'position' => 0,
+        'is_active' => true,
+    ];
+
+    // Relationships
+    public function votingContest()
     {
         return $this->belongsTo(VotingContest::class, 'voting_contest_id');
     }
 
     public function votes()
     {
-        return $this->hasMany(Vote::class);
+        return $this->hasMany(Vote::class, 'nominee_id');
     }
 
+    public function votePurchases()
+    {
+        return $this->hasMany(VotePurchase::class);
+    }
+
+    // Scopes
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
     }
 
-    public function scopeByPosition($query)
+    public function scopeOrdered($query)
     {
         return $query->orderBy('position')->orderBy('name');
     }
 
+    public function scopeLeading($query)
+    {
+        return $query->orderByDesc('votes_count');
+    }
+
+    // Helper Methods
+    public function incrementVotes($count = 1)
+    {
+        $this->increment('votes_count', $count);
+        $this->votingContest->increment('total_votes', $count);
+    }
+
     public function getVotePercentageAttribute()
     {
-        if ($this->contest->total_votes === 0) {
-            return 0;
-        }
-        return ($this->votes_count / $this->contest->total_votes) * 100;
+        $totalVotes = $this->votingContest->total_votes;
+        return $totalVotes > 0 ? round(($this->votes_count / $totalVotes) * 100, 2) : 0;
     }
 }

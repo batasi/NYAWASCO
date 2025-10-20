@@ -18,6 +18,8 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\RoleController;
 use Spatie\Permission\Models\Role;
 use App\Http\Controllers\Auth\GoogleController;
+use App\Http\Controllers\Admin\AttendeeController;
+use App\Http\Controllers\Admin\VendorController;
 
 /*
 |--------------------------------------------------------------------------
@@ -144,49 +146,84 @@ Route::middleware(['auth', 'verified', 'role:organizer'])->prefix('organizer')->
 |--------------------------------------------------------------------------
 */
 
-
 Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     // Dashboard
-    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('dashboard', [UserController::class, 'index'])->name('dashboard');
 
     // User Management Routes
-    Route::get('users', [UserController::class, 'usersIndex'])->name('users');
-    Route::get('users/data', [UserController::class, 'getUsersData'])->name('users.data');
-    Route::get('users/create', [UserController::class, 'create'])->name('users.create');
-    Route::post('users', [UserController::class, 'store'])->name('users.store');
-    Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
-    Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
-    Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
-    Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+    Route::prefix('users')->name('users.')->group(function () {
+        Route::get('/', [UserController::class, 'usersIndex'])->name('index');
+        Route::get('/data', [UserController::class, 'getUsersData'])->name('data');
+        Route::get('/create', [UserController::class, 'create'])->name('create');
+        Route::post('/', [UserController::class, 'store'])->name('store');
+        Route::get('/{user}', [UserController::class, 'show'])->name('show');
+        Route::get('/{user}/edit', [UserController::class, 'edit'])->name('edit');
+        Route::put('/{user}', [UserController::class, 'update'])->name('update');
+        Route::delete('/{user}', [UserController::class, 'destroy'])->name('destroy');
 
-    // User Permissions & Status
-    Route::get('users/{user}/permissions', [UserController::class, 'getPermissions'])->name('users.permissions');
-    Route::post('users/{user}/permissions', [UserController::class, 'updatePermissions'])->name('users.permissions.update');
-    Route::post('users/{user}/status', [UserController::class, 'toggleStatus'])->name('users.status');
-
-    // Other admin views
-    Route::view('/events', 'admin.events', ['title' => 'Event Management - EventSphere'])->name('events.view');
-    Route::view('/voting', 'admin.voting', ['title' => 'Voting Management - EventSphere'])->name('voting.view');
+        // User Permissions & Status
+        Route::get('/{user}/permissions', [UserController::class, 'getPermissions'])->name('permissions');
+        Route::post('/{user}/permissions', [UserController::class, 'updatePermissions'])->name('permissions.update');
+        Route::post('/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('toggle-status');
+        Route::post('/{user}/toggle-verification', [UserController::class, 'toggleVerification'])->name('toggle-verification');
+        Route::get('/{user}/stats', [UserController::class, 'getUserStats'])->name('stats');
+    });
 
     // Role Management
-    Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
-    Route::get('roles/{role}', [RoleController::class, 'show'])->name('roles.show');
-    Route::post('roles', [RoleController::class, 'store'])->name('roles.store');
-    Route::put('roles/{role}', [RoleController::class, 'update'])->name('roles.update');
-    Route::get('roles/{role}/perms', [RoleController::class, 'getPermissions'])->name('roles.perms');
+    Route::prefix('roles')->name('roles.')->group(function () {
+        Route::get('/', [RoleController::class, 'index'])->name('index');
+        Route::get('/{role}', [RoleController::class, 'show'])->name('show');
+        Route::post('/', [RoleController::class, 'store'])->name('store');
+        Route::put('/{role}', [RoleController::class, 'update'])->name('update');
+        Route::get('/{role}/permissions', [RoleController::class, 'getPermissions'])->name('permissions');
+    });
+
+    Route::get('/attendees', [AttendeeController::class, 'index'])->name('attendees.index');
+    Route::get('/attendees/{id}', [AttendeeController::class, 'show'])->name('attendees.show');
+    Route::get('/attendees/{userId}/ticket-purchases', [AttendeeController::class, 'ticketPurchases'])->name('attendees.ticket-purchases');
+    Route::get('/admin/attendees/data', [AttendeeController::class, 'getAttendeesData'])->name('attendees.data');
+    Route::get('/admin/attendees/stats', [AttendeeController::class, 'getAttendeesStats'])->name('attendees.stats');
+
+    // Vendor Management
+    Route::prefix('vendors')->name('vendors.')->group(function () {
+        // List all vendors
+        Route::get('/', [VendorController::class, 'index'])->name('index');
+
+        Route::get('/data', [VendorController::class, 'getVendorsData'])->name('data');
+        Route::get('/stats', [VendorController::class, 'getVendorsStats'])->name('stats');
+        Route::get('/{id}/details', [VendorController::class, 'getVendorDetails'])->name('details');
+
+        // Optional: dashboard route for vendor admin overview
+        Route::get('/dashboard', [VendorController::class, 'dashboard'])->name('dashboard');
+    });
+
+
+    // Other admin management views
+    Route::prefix('management')->name('management.')->group(function () {
+        Route::view('/events', 'admin.events', ['title' => 'Event Management - EventSphere'])->name('events');
+        Route::view('/voting', 'admin.voting', ['title' => 'Voting Management - EventSphere'])->name('voting');
+        Route::view('/tickets', 'admin.tickets', ['title' => 'Ticket Management - EventSphere'])->name('tickets');
+        Route::view('/analytics', 'admin.analytics', ['title' => 'Analytics - EventSphere'])->name('analytics');
+    });
 });
+
 /*
 |--------------------------------------------------------------------------
 | VENDOR ROUTES (ROLE-BASED)
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'verified', 'role:vendor'])->prefix('vendor')->group(function () {
-    Route::view('/dashboard', 'vendor.dashboard', ['title' => 'Vendor Dashboard - EventSphere'])->name('vendor.dashboard');
-    Route::view('/services', 'vendor.services', ['title' => 'Vendor Services - EventSphere'])->name('vendor.services');
-    Route::view('/bookings', 'vendor.bookings', ['title' => 'Vendor Bookings - EventSphere'])->name('vendor.bookings');
+Route::middleware(['auth', 'verified', 'role:vendor'])->prefix('vendor')->name('vendor.')->group(function () {
+    Route::get('/dashboard', [VendorController::class, 'index'])->name('dashboard');
+    Route::view('/services', 'vendor.services')->name('services');
+    Route::view('/bookings', 'vendor.bookings')->name('bookings');
 });
 
+/*
+|--------------------------------------------------------------------------
+| AUTHENTICATION ROUTES
+|--------------------------------------------------------------------------
+*/
 
 Route::get('auth/google', [GoogleController::class, 'redirectToGoogle'])->name('google.login');
 Route::get('auth/google/callback', [GoogleController::class, 'handleGoogleCallback']);

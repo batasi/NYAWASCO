@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class VotingCategory extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'name',
@@ -21,15 +22,35 @@ class VotingCategory extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
+        'sort_order' => 'integer',
     ];
 
-    public function contests()
+    protected $attributes = [
+        'color' => '#8B5CF6',
+        'is_active' => true,
+        'sort_order' => 0,
+    ];
+
+    // Relationships
+    public function votingContests()
     {
         return $this->hasMany(VotingContest::class);
     }
 
+    // Scopes
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function scopeOrdered($query)
+    {
+        return $query->orderBy('sort_order')->orderBy('name');
+    }
+
+    // Helper Methods
+    public function getContestsCountAttribute()
+    {
+        return $this->votingContests()->count();
     }
 }

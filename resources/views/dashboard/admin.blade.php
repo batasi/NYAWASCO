@@ -46,6 +46,7 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <!-- Enhanced Stats Cards -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+
             <!-- Total Users -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-md">
                 <div class="p-5">
@@ -53,7 +54,8 @@
                         <div class="flex-shrink-0">
                             <div class="h-12 w-12 rounded-lg bg-blue-50 flex items-center justify-center">
                                 <svg class="h-6 w-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm6 0h-6v-1a6 6 0 019-5.197" />
                                 </svg>
                             </div>
                         </div>
@@ -65,100 +67,115 @@
                 </div>
                 <div class="bg-gray-50 px-5 py-3">
                     <div class="text-sm">
-                        <a href="{{ route('admin.users') }}" class="font-medium text-blue-600 hover:text-blue-700 transition-colors duration-200 flex items-center">
+                        <a href="{{ route('admin.attendees.index') }}"
+                            class="font-medium text-blue-600 hover:text-blue-700 transition-colors duration-200 flex items-center">
                             View all users
                             <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 5l7 7-7 7"></path>
                             </svg>
                         </a>
                     </div>
                 </div>
             </div>
 
-            <!-- Total Events -->
+            <!-- Organizers -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-md">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="h-12 w-12 rounded-lg bg-indigo-50 flex items-center justify-center">
+                                <svg class="h-6 w-6 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="ml-4 flex-1">
+                            <dt class="text-sm font-medium text-gray-500 truncate">Organizers</dt>
+                            <dd class="text-2xl font-semibold text-gray-900">{{ $total_organizers ?? 0 }}</dd>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-5 py-3">
+                    <div class="text-sm">
+                        <a href="{{ route('organizers.index') }}"
+                            class="font-medium text-indigo-600 hover:text-indigo-700 transition-colors duration-200 flex items-center">
+                            Manage organizers
+                            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attendees -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-md">
                 <div class="p-5">
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
                             <div class="h-12 w-12 rounded-lg bg-green-50 flex items-center justify-center">
                                 <svg class="h-6 w-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M17 20h5V8H2v12h5m10 0a2 2 0 01-2 2H9a2 2 0 01-2-2m10 0v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4" />
                                 </svg>
                             </div>
                         </div>
                         <div class="ml-4 flex-1">
-                            <dt class="text-sm font-medium text-gray-500 truncate">Total Events</dt>
-                            <dd class="text-2xl font-semibold text-gray-900">{{ $total_events }}</dd>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Attendees</dt>
+                            <dd class="text-2xl font-semibold text-gray-900">{{ $total_attendees ?? 0 }}</dd>
                         </div>
                     </div>
                 </div>
                 <div class="bg-gray-50 px-5 py-3">
                     <div class="text-sm">
-                        <a href="" class="font-medium text-green-600 hover:text-green-700 transition-colors duration-200 flex items-center">
-                            View all events
+                        <a href="{{ route('admin.attendees.index') }}"
+                            class="font-medium text-green-600 hover:text-green-700 transition-colors duration-200 flex items-center">
+                            View all attendees
                             <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 5l7 7-7 7"></path>
                             </svg>
                         </a>
                     </div>
                 </div>
             </div>
 
-            <!-- Voting Contests -->
+            <!-- Vendors -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-md">
                 <div class="p-5">
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
-                            <div class="h-12 w-12 rounded-lg bg-purple-50 flex items-center justify-center">
-                                <svg class="h-6 w-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            <div class="h-12 w-12 rounded-lg bg-yellow-50 flex items-center justify-center">
+                                <svg class="h-6 w-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M3 7h18M5 7V5a2 2 0 012-2h10a2 2 0 012 2v2m-2 4v9a2 2 0 01-2 2H9a2 2 0 01-2-2v-9m10 0H7" />
                                 </svg>
                             </div>
                         </div>
                         <div class="ml-4 flex-1">
-                            <dt class="text-sm font-medium text-gray-500 truncate">Voting Contests</dt>
-                            <dd class="text-2xl font-semibold text-gray-900">{{ $total_voting_contests }}</dd>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Vendors</dt>
+                            <dd class="text-2xl font-semibold text-gray-900">{{ $total_vendors ?? 0 }}</dd>
                         </div>
                     </div>
                 </div>
                 <div class="bg-gray-50 px-5 py-3">
                     <div class="text-sm">
-                        <a href="" class="font-medium text-purple-600 hover:text-purple-700 transition-colors duration-200 flex items-center">
-                            View all contests
+                        <a href="{{ route('admin.vendors.index') }}"
+                            class="font-medium text-yellow-600 hover:text-yellow-700 transition-colors duration-200 flex items-center">
+                            View all vendors
                             <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 5l7 7-7 7"></path>
                             </svg>
                         </a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Ticket Sales -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-md">
-                <div class="p-5">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0">
-                            <div class="h-12 w-12 rounded-lg bg-amber-50 flex items-center justify-center">
-                                <svg class="h-6 w-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"></path>
-                                </svg>
-                            </div>
-                        </div>
-                        <div class="ml-4 flex-1">
-                            <dt class="text-sm font-medium text-gray-500 truncate">Ticket Sales</dt>
-                            <dd class="text-2xl font-semibold text-gray-900">{{ $total_ticket_sales }}</dd>
-                        </div>
-                    </div>
-                </div>
-                <div class="bg-gray-50 px-5 py-3">
-                    <div class="text-sm">
-                        <span class="font-medium text-gray-600">
-                            Total platform sales
-                        </span>
                     </div>
                 </div>
             </div>
         </div>
+
 
         <!-- Users Table Section -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8">

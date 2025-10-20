@@ -31,49 +31,45 @@ class OrganizerController extends BaseController
 
     public function index()
     {
-        $organizers = User::where('role', 'organizer')
+        $organizers = User::role('organizer')
             ->where('is_active', true)
-            ->withCount(['organizedEvents', 'organizedVotingContests'])
+            ->withCount(['events', 'votingContests'])
             ->paginate(10);
 
         return view('organizers.index', [
             'organizers' => $organizers,
-            'title' => 'Event Organizers - EventSphere'
+            'title' => 'EventSphere',
         ]);
     }
 
     public function show($id)
     {
         $organizer = User::where('role', 'organizer')
+            ->where('id', $id)
             ->where('is_active', true)
-            ->with(['profile'])
-            ->withCount(['organizedEvents', 'organizedVotingContests'])
-            ->findOrFail($id);
+            ->withCount(['events', 'votingContests'])
+            ->firstOrFail();
 
         $events = Event::where('organizer_id', $organizer->id)
             ->where('is_active', true)
-            ->where('start_date', '>=', now())
             ->with('category')
-            ->orderBy('start_date')
+            ->latest()
             ->paginate(6);
 
         $votingContests = VotingContest::where('organizer_id', $organizer->id)
             ->where('is_active', true)
-            ->where(function ($query) {
-                $query->where('end_date', '>=', now())
-                    ->orWhereNull('end_date');
-            })
             ->with('category')
-            ->orderBy('end_date', 'asc')
+            ->latest()
             ->paginate(6);
 
         return view('organizers.show', [
             'organizer' => $organizer,
             'events' => $events,
             'votingContests' => $votingContests,
-            'title' => "{$organizer->name} - EventSphere Organizer"
+            'title' => $organizer->company_name . ' - EventSphere',
         ]);
     }
+
 
     public function dashboard()
     {

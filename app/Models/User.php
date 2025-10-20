@@ -6,90 +6,115 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
+use Laravel\Fortify\TwoFactorAuthenticatable;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
-    use HasApiTokens, HasFactory, Notifiable, HasRoles;
+    use HasFactory, Notifiable, HasRoles, TwoFactorAuthenticatable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'name',
         'email',
         'password',
-        'role', // legacy field if needed for simple role checks
+        'role',
         'phone',
         'bio',
         'avatar',
-        'google_id',
         'is_active',
         'preferences',
-        'current_team_id',
-        'profile_photo_path',
+        // Organizer fields
+        'company_name',
+        'company_logo',
+        'website',
+        'about',
+        'address',
+        'city',
+        'state',
+        'country',
+        'postal_code',
+        'latitude',
+        'longitude',
+        'tax_id',
+        'business_registration_number',
+        'social_links',
+        'business_hours',
+        // Vendor fields
+        'business_name',
+        'contact_number',
+        'services_offered',
+        // Statistics
+        'total_events',
+        'total_voting_contests',
+        'total_attendees',
+        'total_revenue',
+        // Verification & rating
+        'is_verified',
+        'is_featured',
+        'rating',
+        // Voting fields
+        'can_vote',
+        'total_votes_cast',
+        'total_amount_spent',
+        'last_vote_at',
+        'voting_preferences',
+        // Attendee fields
+        'occupation',
+        'institution',
+        'membership_number',
+        'attendee_type',
+        // OAuth
+        'google_id',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
-        'two_factor_recovery_codes',
         'two_factor_secret',
+        'two_factor_recovery_codes',
+        'two_factor_confirmed_at',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'password' => 'hashed',
-        'preferences' => 'array',
         'is_active' => 'boolean',
+        'is_verified' => 'boolean',
+        'is_featured' => 'boolean',
+        'can_vote' => 'boolean',
+        'social_links' => 'array',
+        'business_hours' => 'array',
+        'preferences' => 'array',
+        'voting_preferences' => 'array',
+        'total_revenue' => 'decimal:2',
+        'total_amount_spent' => 'decimal:2',
+        'latitude' => 'decimal:8',
+        'longitude' => 'decimal:8',
+        'last_vote_at' => 'datetime',
     ];
 
-    /**
-     * The accessors to append to the model's array form.
-     *
-     * @var array<int, string>
-     */
-    protected $appends = [
-        'profile_photo_url',
-    ];
-
-    protected $guard_name = 'web';
-
-    // ---------------------------
     // Relationships
-    // ---------------------------
 
-    public function profile()
+
+    public function eventsAttending()
     {
-        return $this->hasOne(Profile::class);
+        return $this->hasManyThrough(
+            Event::class,
+            TicketPurchase::class,
+            'user_id', // Foreign key on ticket_purchases table
+            'id', // Foreign key on events table
+            'id', // Local key on users table
+            'event_id' // Local key on ticket_purchases table
+        )->where('ticket_purchases.status', 'paid');
     }
 
-    public function organizedEvents()
+    public function events()
     {
         return $this->hasMany(Event::class, 'organizer_id');
     }
 
-    public function organizedVotingContests()
+    public function votingContests()
     {
         return $this->hasMany(VotingContest::class, 'organizer_id');
-    }
-
-    public function ticketPurchases()
-    {
-        return $this->hasMany(TicketPurchase::class);
     }
 
     public function votes()
@@ -97,47 +122,97 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Vote::class);
     }
 
-    // ---------------------------
+    public function votePurchases()
+    {
+        return $this->hasMany(VotePurchase::class);
+    }
+
+    public function ticketPurchases()
+    {
+        return $this->hasMany(TicketPurchase::class);
+    }
+
+    public function bookings()
+    {
+        return $this->hasMany(Booking::class);
+    }
+
     // Scopes
-    // ---------------------------
+    public function scopeOrganizers($query)
+    {
+        return $query->where('role', 'organizer');
+    }
+
+    public function scopeVendors($query)
+    {
+        return $query->where('role', 'vendor');
+    }
+
+    public function scopeAttendees($query)
+    {
+        return $query->where('role', 'attendee');
+    }
 
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
     }
 
-    // ---------------------------
-    // Role Helpers (optional)
-    // ---------------------------
-
-    public function isAdmin(): bool
+    public function scopeVerified($query)
     {
-        return $this->hasRole('admin');
+        return $query->where('is_verified', true);
     }
 
-    public function isOrganizer(): bool
+    public function scopeCanVote($query)
     {
-        return $this->hasRole('organizer');
+        return $query->where('can_vote', true);
     }
 
-    public function isVendor(): bool
+    // Helper Methods
+    public function isOrganizer()
     {
-        return $this->hasRole('vendor');
+        return $this->role === 'organizer';
     }
 
-    public function isAttendee(): bool
+    public function isVendor()
     {
-        return $this->hasRole('attendee');
+        return $this->role === 'vendor';
     }
 
-    // ---------------------------
-    // Accessors
-    // ---------------------------
-
-    public function getProfilePhotoUrlAttribute(): string
+    public function isAttendee()
     {
-        return $this->profile_photo_path
-            ? asset('storage/' . $this->profile_photo_path)
-            : asset('default-avatar.png');
+        return $this->role === 'attendee';
+    }
+
+    public function isAdmin()
+    {
+        return $this->role === 'admin';
+    }
+
+    public function getProfileCompletionAttribute()
+    {
+        $filledFields = 0;
+        $totalFields = 0;
+
+        $profileFields = [
+            'name',
+            'email',
+            'phone',
+            'bio',
+            'avatar',
+            // Organizer specific
+            'company_name',
+            'website',
+            'address'
+        ];
+
+        foreach ($profileFields as $field) {
+            $totalFields++;
+            if (!empty($this->$field)) {
+                $filledFields++;
+            }
+        }
+
+        return $totalFields > 0 ? round(($filledFields / $totalFields) * 100) : 0;
     }
 }

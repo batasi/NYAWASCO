@@ -11,17 +11,21 @@ class Vote extends Model
 
     protected $fillable = [
         'user_id',
-        'voting_contest_id',
+        'contest_id',
         'nominee_id',
+        'voted_at',
         'ip_address',
-        'user_agent',
-        'metadata',
     ];
 
     protected $casts = [
-        'metadata' => 'array',
+        'voted_at' => 'datetime',
     ];
 
+    protected $attributes = [
+        'voted_at' => null,
+    ];
+
+    // Relationships
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -29,7 +33,7 @@ class Vote extends Model
 
     public function contest()
     {
-        return $this->belongsTo(VotingContest::class, 'voting_contest_id');
+        return $this->belongsTo(VotingContest::class, 'contest_id');
     }
 
     public function nominee()
@@ -37,22 +41,30 @@ class Vote extends Model
         return $this->belongsTo(Nominee::class);
     }
 
-    protected static function booted()
+    // Scopes
+    public function scopeRecent($query, $hours = 24)
     {
-        static::created(function ($vote) {
-            // Update nominee votes count
-            $vote->nominee->increment('votes_count');
+        return $query->where('created_at', '>=', now()->subHours($hours));
+    }
 
-            // Update contest total votes
-            $vote->contest->increment('total_votes');
+    // Helper Methods
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($vote) {
+            if (!$vote->voted_at) {
+                $vote->voted_at = now();
+            }
         });
 
-        static::deleted(function ($vote) {
-            // Update nominee votes count
-            $vote->nominee->decrement('votes_count');
+        static::created(function ($vote) {
+            // Increment nominee votes count
+            $vote->nominee->incrementVotes();
 
-            // Update contest total votes
-            $vote->contest->decrement('total_votes');
+            // Update user voting statistics
+            $vote->user->increment('total_votes_cast');
+            $vote->user->update(['last_vote_at' => now()]);
         });
     }
 }

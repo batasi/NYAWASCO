@@ -35,7 +35,19 @@ class VotingContest extends Model
         'is_active' => 'boolean',
         'is_featured' => 'boolean',
         'requires_approval' => 'boolean',
+        'max_votes_per_user' => 'integer',
+        'total_votes' => 'integer',
+        'views_count' => 'integer',
         'metadata' => 'array',
+    ];
+
+    protected $attributes = [
+        'is_active' => true,
+        'is_featured' => false,
+        'requires_approval' => false,
+        'max_votes_per_user' => 1,
+        'total_votes' => 0,
+        'views_count' => 0,
     ];
 
     // Relationships
@@ -51,12 +63,12 @@ class VotingContest extends Model
 
     public function nominees()
     {
-        return $this->hasMany(Nominee::class);
+        return $this->hasMany(Nominee::class, 'voting_contest_id');
     }
 
     public function votes()
     {
-        return $this->hasMany(Vote::class);
+        return $this->hasMany(Vote::class, 'contest_id');
     }
 
     // Scopes
@@ -67,7 +79,7 @@ class VotingContest extends Model
 
     public function scopeFeatured($query)
     {
-        return $query->where('is_featured', true)->where('is_active', true);
+        return $query->where('is_featured', true);
     }
 
     public function scopeOngoing($query)
@@ -79,32 +91,37 @@ class VotingContest extends Model
             });
     }
 
+    public function scopeUpcoming($query)
+    {
+        return $query->where('start_date', '>', now());
+    }
+
     public function scopeEnded($query)
     {
         return $query->where('end_date', '<', now());
     }
 
-    // Methods
+    // Helper Methods
     public function isOngoing()
     {
         $now = now();
         return $this->start_date <= $now &&
-            (is_null($this->end_date) || $this->end_date >= $now);
+            (!$this->end_date || $this->end_date >= $now);
     }
 
-    public function hasEnded()
+    public function isUpcoming()
+    {
+        return $this->start_date > now();
+    }
+
+    public function isEnded()
     {
         return $this->end_date && $this->end_date < now();
     }
 
-    public function userCanVote(User $user)
+    public function canVote()
     {
-        if (!$this->isOngoing()) {
-            return false;
-        }
-
-        $userVotesCount = $this->votes()->where('user_id', $user->id)->count();
-        return $userVotesCount < $this->max_votes_per_user;
+        return $this->is_active && $this->isOngoing();
     }
 
     public function incrementViews()
@@ -114,6 +131,6 @@ class VotingContest extends Model
 
     public function getLeadingNominee()
     {
-        return $this->nominees()->orderBy('votes_count', 'desc')->first();
+        return $this->nominees()->orderByDesc('votes_count')->first();
     }
 }

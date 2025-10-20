@@ -36,9 +36,17 @@ class TicketPurchase extends Model
         'tax_amount' => 'decimal:2',
         'fee_amount' => 'decimal:2',
         'final_amount' => 'decimal:2',
-        'attendee_info' => 'array',
+        'quantity' => 'integer',
         'paid_at' => 'datetime',
         'cancelled_at' => 'datetime',
+        'attendee_info' => 'array',
+    ];
+
+    protected $attributes = [
+        'tax_amount' => 0.00,
+        'fee_amount' => 0.00,
+        'currency' => 'KES',
+        'status' => 'pending',
     ];
 
     // Relationships
@@ -68,27 +76,44 @@ class TicketPurchase extends Model
         return $query->where('status', 'pending');
     }
 
+    public function scopeCancelled($query)
+    {
+        return $query->where('status', 'cancelled');
+    }
+
+    public function scopeRefunded($query)
+    {
+        return $query->where('status', 'refunded');
+    }
+
     public function scopeRecent($query, $days = 30)
     {
         return $query->where('created_at', '>=', now()->subDays($days));
     }
 
-    // Methods
-    public function markAsPaid()
+    // Helper Methods
+    public function markAsPaid($paymentMethod = null, $paymentId = null)
     {
         $this->update([
             'status' => 'paid',
             'paid_at' => now(),
+            'payment_method' => $paymentMethod,
+            'payment_id' => $paymentId,
         ]);
 
         // Update ticket sold count
         $this->ticket->increment('quantity_sold', $this->quantity);
     }
 
-    public function generateQRCode()
+    public function cancel()
     {
-        // This would generate a QR code for the ticket
-        return "TICKET-{$this->order_number}-" . md5($this->id . $this->created_at);
+        $this->update([
+            'status' => 'cancelled',
+            'cancelled_at' => now(),
+        ]);
+
+        // Decrement ticket sold count
+        $this->ticket->decrement('quantity_sold', $this->quantity);
     }
 
     public function isPaid()
@@ -96,8 +121,21 @@ class TicketPurchase extends Model
         return $this->status === 'paid';
     }
 
+    public function isPending()
+    {
+        return $this->status === 'pending';
+    }
+
     public function isCancelled()
     {
         return $this->status === 'cancelled';
+    }
+
+    public function generateOrderNumber()
+    {
+        if (!$this->order_number) {
+            $this->order_number = 'TKT-' . strtoupper(uniqid());
+        }
+        return $this->order_number;
     }
 }
