@@ -20,6 +20,7 @@ use Spatie\Permission\Models\Role;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Admin\AttendeeController;
 use App\Http\Controllers\Admin\VendorController;
+use App\Http\Controllers\VotingCategoryController;
 
 /*
 |--------------------------------------------------------------------------
@@ -133,6 +134,10 @@ Route::middleware(['auth', 'verified', 'role:organizer'])->prefix('organizer')->
     Route::get('/voting/{contest}/edit', [OrganizerController::class, 'editVoting'])->name('organizer.voting.edit');
     Route::put('/voting/{contest}', [OrganizerController::class, 'updateVoting'])->name('organizer.voting.update');
     Route::delete('/voting/{contest}', [OrganizerController::class, 'destroyVoting'])->name('organizer.voting.destroy');
+    Route::post('/voting/store', [VotingController::class, 'store'])->name('voting.store');
+    Route::post('/categories/store', [VotingCategoryController::class, 'store'])
+        ->name('categories.store')
+        ->middleware('auth');
 
     // Analytics
     Route::get('/analytics', [OrganizerController::class, 'analytics'])->name('organizer.analytics');
