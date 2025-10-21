@@ -6,12 +6,17 @@ use Illuminate\Http\Request;
 use App\Models\VotingContest;
 use App\Models\VotingCategory;
 use App\Models\Vote;
+use App\Models\Nominee;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 
 class VotingController extends Controller
 {
-    // List active contests (existing code, preserved and slightly cleaned)
+    // ---------------------------
+    // Public Views
+    // ---------------------------
+
     public function index()
     {
         $contests = VotingContest::with(['nominees', 'category', 'organizer'])
@@ -32,7 +37,6 @@ class VotingController extends Controller
         ]);
     }
 
-    // Filter by category
     public function byCategory(VotingCategory $category)
     {
         $contests = VotingContest::with(['nominees', 'organizer'])
@@ -52,7 +56,6 @@ class VotingController extends Controller
         ]);
     }
 
-    // Show one contest
     public function show(VotingContest $contest)
     {
         if (!$contest->is_active && !Gate::allows('view_inactive_voting')) {
@@ -75,7 +78,6 @@ class VotingController extends Controller
         ]);
     }
 
-    // Cast a vote
     public function vote(Request $request, VotingContest $contest)
     {
         if (!$contest->is_active) {
@@ -94,7 +96,6 @@ class VotingController extends Controller
             return redirect()->route('login')->with('error', 'Please login to vote.');
         }
 
-        // Enforce per-user vote limit for this contest
         $userVotesCount = Vote::where('user_id', Auth::id())
             ->where('voting_contest_id', $contest->id)
             ->count();
@@ -103,7 +104,6 @@ class VotingController extends Controller
             return back()->with('error', 'You have reached the maximum number of votes for this contest.');
         }
 
-        // Optional: prevent duplicate same-nominee votes (if desired)
         $existingSameNominee = Vote::where('user_id', Auth::id())
             ->where('voting_contest_id', $contest->id)
             ->where('nominee_id', $validated['nominee_id'])
@@ -113,7 +113,6 @@ class VotingController extends Controller
             return back()->with('error', 'You have already voted for this nominee in this contest.');
         }
 
-        // Create vote
         Vote::create([
             'user_id' => Auth::id(),
             'voting_contest_id' => $contest->id,
@@ -122,17 +121,11 @@ class VotingController extends Controller
             'ip_address' => $request->ip(),
         ]);
 
-        // Update cached counters (nominee and contest). Use DB events or queue in production.
         $contest->increment('total_votes');
-
-        // If nominee model has votes_count cached, increment it via relation
-        // $nominee = $contest->nominees()->where('id', $validated['nominee_id'])->first();
-        // if ($nominee) { $nominee->increment('votes_count'); }
 
         return back()->with('success', 'Your vote has been cast successfully!');
     }
 
-    // Show votes by the authenticated user
     public function myVotes()
     {
         if (!Auth::check()) {
@@ -150,7 +143,6 @@ class VotingController extends Controller
         ]);
     }
 
-    // Featured contests JSON (keeps original behavior)
     public function featured()
     {
         $contests = VotingContest::with(['nominees', 'category'])
@@ -168,10 +160,9 @@ class VotingController extends Controller
     }
 
     // ---------------------------
-    // Admin / Organizer actions
+    // Organizer/Admin Functions
     // ---------------------------
 
-    // Show create form (organizers/admins only)
     public function create()
     {
         if (!Auth::check() || !Gate::allows('create_voting')) {
@@ -188,7 +179,6 @@ class VotingController extends Controller
         ]);
     }
 
-    // Store contest (organizers/admins only)
     public function store(Request $request)
     {
         if (!Auth::check() || !Gate::allows('create_voting')) {
@@ -205,8 +195,12 @@ class VotingController extends Controller
             'requires_approval' => 'nullable|boolean',
             'is_active' => 'nullable|boolean',
             'is_featured' => 'nullable|boolean',
+            'nominees.*.name' => 'nullable|string|max:255',
+            'nominees.*.photo' => 'nullable|image|max:2048',
+            'nominees.*.description' => 'nullable|string|max:500',
         ]);
 
+        // Create Contest
         $contest = VotingContest::create([
             'title' => $validated['title'],
             'category_id' => $validated['category_id'],
@@ -222,10 +216,29 @@ class VotingController extends Controller
             'organizer_id' => Auth::id(),
         ]);
 
-        return redirect()->route('voting.index')->with('success', "Voting contest '{$contest->title}' created successfully.");
+        // Create nominees
+        if ($request->has('nominees')) {
+            foreach ($request->nominees as $nomineeData) {
+                if (!empty($nomineeData['name'])) {
+                    $photoPath = null;
+                    if (isset($nomineeData['photo']) && $nomineeData['photo'] instanceof \Illuminate\Http\UploadedFile) {
+                        $photoPath = $nomineeData['photo']->store('nominee_photos', 'public');
+                    }
+
+                    Nominee::create([
+                        'voting_contest_id' => $contest->id,
+                        'name' => $nomineeData['name'],
+                        'photo' => $photoPath,
+                        'description' => $nomineeData['description'] ?? null,
+                        'votes_count' => 0,
+                    ]);
+                }
+            }
+        }
+
+        return redirect()->route('voting.index')->with('success', "Voting contest '{$contest->title}' created successfully with nominees.");
     }
 
-    // Edit form
     public function edit($id)
     {
         if (!Auth::check() || !Gate::allows('edit_voting')) {
@@ -238,7 +251,6 @@ class VotingController extends Controller
         return view('voting.edit', compact('contest', 'categories'));
     }
 
-    // Update contest
     public function update(Request $request, $id)
     {
         if (!Auth::check() || !Gate::allows('edit_voting')) {
@@ -274,7 +286,6 @@ class VotingController extends Controller
         return redirect()->route('voting.index')->with('success', 'Contest updated successfully.');
     }
 
-    // Delete contest
     public function destroy($id)
     {
         if (!Auth::check() || !Gate::allows('delete_voting')) {

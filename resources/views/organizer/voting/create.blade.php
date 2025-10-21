@@ -31,16 +31,16 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('voting.store') }}">
+            <form method="POST" action="{{ route('voting.store') }}" enctype="multipart/form-data">
                 @csrf
 
+                {{-- Contest Info --}}
                 <div class="mb-4">
                     <label for="title" class="block text-gray-700 font-medium mb-2">Contest Title</label>
                     <input id="title" name="title" value="{{ old('title') }}" required
                         class="w-full border-gray-300 rounded-md px-3 py-2" placeholder="Best Male Artist 2025">
                 </div>
 
-                {{-- Category Selection --}}
                 <div class="mb-4">
                     <label for="category_id" class="block text-gray-700 font-medium mb-2">Category</label>
                     <div class="flex gap-2">
@@ -113,6 +113,37 @@
                     </label>
                 </div>
 
+                {{-- === NOMINEES SECTION === --}}
+                <div class="mb-6 border-t pt-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Add Nominees</h3>
+
+                    <div id="nomineesWrapper">
+                        <div class="nominee-item grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div>
+                                <label class="block text-gray-700 text-sm font-medium mb-1">Nominee Name</label>
+                                <input type="text" name="nominees[0][name]" required
+                                    class="w-full border-gray-300 rounded-md px-3 py-2" placeholder="Nominee Name">
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 text-sm font-medium mb-1">Photo (optional)</label>
+                                <input type="file" name="nominees[0][photo]"
+                                    class="w-full border-gray-300 rounded-md px-3 py-2">
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 text-sm font-medium mb-1">Description (optional)</label>
+                                <input type="text" name="nominees[0][description]"
+                                    class="w-full border-gray-300 rounded-md px-3 py-2" placeholder="Short description">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="button" id="addNomineeBtn"
+                        class="mt-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
+                        + Add Another Nominee
+                    </button>
+                </div>
+
+                {{-- Buttons --}}
                 <div class="flex justify-end">
                     <a href="{{ route('voting.index') }}"
                         class="mr-3 inline-block px-4 py-2 border rounded-md text-gray-700 bg-gray-100">
@@ -127,7 +158,7 @@
     </div>
 </div>
 
-{{-- Modal for Adding Category --}}
+{{-- Category Modal --}}
 <div id="categoryModal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-50">
     <div class="bg-white rounded-lg shadow-lg w-96 p-6">
         <h2 class="text-xl font-bold mb-4">Add New Category</h2>
@@ -138,13 +169,11 @@
                 <input type="text" id="categoryName" name="name" placeholder="Enter category name"
                     class="w-full border-gray-300 rounded-md px-3 py-2" required>
             </div>
-
             <div class="mb-4">
                 <label class="block text-gray-700 font-medium mb-1">Color (optional)</label>
                 <input type="color" id="categoryColor" name="color" value="#8B5CF6"
                     class="w-16 h-10 border rounded-md">
             </div>
-
             <div class="flex justify-end">
                 <button type="button" id="cancelCategoryBtn"
                     class="mr-2 px-4 py-2 bg-gray-200 rounded-md">Cancel</button>
@@ -155,9 +184,48 @@
     </div>
 </div>
 
-{{-- Category Modal Script --}}
+{{-- JS --}}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Add Nominee rows dynamically
+    let nomineeIndex = 1;
+    const addNomineeBtn = document.getElementById('addNomineeBtn');
+    const nomineesWrapper = document.getElementById('nomineesWrapper');
+
+    addNomineeBtn.addEventListener('click', function() {
+        const newNominee = document.createElement('div');
+        newNominee.classList.add('nominee-item', 'grid', 'grid-cols-1', 'md:grid-cols-3', 'gap-4', 'mb-4');
+        newNominee.innerHTML = `
+            <div>
+                <label class="block text-gray-700 text-sm font-medium mb-1">Nominee Name</label>
+                <input type="text" name="nominees[${nomineeIndex}][name]" required
+                    class="w-full border-gray-300 rounded-md px-3 py-2" placeholder="Nominee Name">
+            </div>
+            <div>
+                <label class="block text-gray-700 text-sm font-medium mb-1">Photo (optional)</label>
+                <input type="file" name="nominees[${nomineeIndex}][photo]"
+                    class="w-full border-gray-300 rounded-md px-3 py-2">
+            </div>
+            <div class="flex items-end justify-between">
+                <div class="flex-1">
+                    <label class="block text-gray-700 text-sm font-medium mb-1">Description (optional)</label>
+                    <input type="text" name="nominees[${nomineeIndex}][description]"
+                        class="w-full border-gray-300 rounded-md px-3 py-2" placeholder="Short description">
+                </div>
+                <button type="button" class="ml-3 px-3 py-1 bg-red-600 text-white rounded-md removeNomineeBtn">X</button>
+            </div>
+        `;
+        nomineesWrapper.appendChild(newNominee);
+        nomineeIndex++;
+    });
+
+    nomineesWrapper.addEventListener('click', function(e) {
+        if (e.target.classList.contains('removeNomineeBtn')) {
+            e.target.closest('.nominee-item').remove();
+        }
+    });
+
+    // Modal scripts for category (same as before)
     const modal = document.getElementById('categoryModal');
     const addBtn = document.getElementById('addCategoryBtn');
     const cancelBtn = document.getElementById('cancelCategoryBtn');
@@ -165,43 +233,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     addBtn.addEventListener('click', () => modal.classList.remove('hidden'));
     cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
-
-    form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const name = document.getElementById('categoryName').value;
-        const color = document.getElementById('categoryColor').value;
-
-        fetch("{{ route('voting-category.store') }}", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            },
-            body: JSON.stringify({ name, color })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const select = document.getElementById('category_id');
-                const option = document.createElement('option');
-                option.value = data.category.id;
-                option.textContent = data.category.name;
-                option.selected = true;
-                select.appendChild(option);
-
-                modal.classList.add('hidden');
-                form.reset();
-                alert('Category added successfully!');
-            } else {
-                alert('Error: ' + (data.message || 'Failed to add category'));
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Something went wrong');
-        });
-    });
 });
 </script>
-
 @endsection
