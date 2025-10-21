@@ -8,9 +8,6 @@ use Illuminate\Support\Str;
 
 class VotingCategoryController extends Controller
 {
-    /**
-     * Store a newly created voting category via AJAX or form submission.
-     */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -18,25 +15,18 @@ class VotingCategoryController extends Controller
             'color' => 'nullable|string|max:20',
         ]);
 
-        // Create the new category
         $category = VotingCategory::create([
             'name' => $validated['name'],
             'slug' => Str::slug($validated['name']),
-            'color' => $validated['color'] ?? '#8B5CF6', // Default purple tone
+            'color' => $validated['color'] ?? '#8B5CF6',
             'is_active' => true,
-            'sort_order' => VotingCategory::max('sort_order') + 1,
+            'sort_order' => (VotingCategory::max('sort_order') ?? 0) + 1,
         ]);
 
-        // Return JSON response for AJAX requests
-        if ($request->expectsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Category created successfully!',
-                'category' => $category,
-            ]);
-        }
-
-        // Fallback redirect for normal form submission
-        return redirect()->back()->with('success', 'Category created successfully!');
+        return response()->json([
+            'success' => true,
+            'message' => 'Category created successfully!',
+            'category' => $category,
+        ]);
     }
 }

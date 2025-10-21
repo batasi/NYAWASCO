@@ -136,8 +136,9 @@ Route::middleware(['auth', 'verified', 'role:organizer'])->prefix('organizer')->
     Route::delete('/voting/{contest}', [OrganizerController::class, 'destroyVoting'])->name('organizer.voting.destroy');
     Route::post('/voting/store', [VotingController::class, 'store'])->name('voting.store');
     Route::post('/categories/store', [VotingCategoryController::class, 'store'])
-        ->name('categories.store')
-        ->middleware('auth');
+        ->name('categories.store');
+    Route::post('/organizer/voting-category/store', [VotingCategoryController::class, 'store'])
+    ->name('voting-category.store');
 
     // Analytics
     Route::get('/analytics', [OrganizerController::class, 'analytics'])->name('organizer.analytics');
