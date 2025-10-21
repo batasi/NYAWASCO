@@ -193,16 +193,16 @@
 
                                     <!-- Buttons -->
                                     <div class="mt-5 text-center">
+                                      <!-- Vote Button triggers modal -->
                                         @if($contest->isOngoing() && auth()->check() && $contest->userCanVote(auth()->user()) && !$userVote)
-                                            <form action="{{ route('voting.vote', $contest) }}" method="POST">
-                                                @csrf
-                                                <input type="hidden" name="nominee_id" value="{{ $nominee->id }}">
-                                                <button type="submit"
-                                                        class="inline-flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
-                                                    Vote
-                                                </button>
-                                            </form>
+                                            <button 
+                                                type="button"
+                                                onclick="openVoteModal('{{ $nominee->id }}', '{{ $nominee->name }}', '{{ $nominee->unique_code }}', '{{ $nominee->photo ? \Illuminate\Support\Facades\Storage::url($nominee->photo) : '' }}')"
+                                                class="inline-flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+                                                Vote
+                                            </button>
                                         @endif
+
 
                                         @if($userVote && $userVote->nominee_id == $nominee->id)
                                             <span class="inline-flex items-center justify-center w-full mt-2 px-3 py-1 rounded-md text-sm font-medium bg-green-100 text-green-800">
@@ -234,4 +234,150 @@
         </div>
     </div>
 </div>
+<!-- Vote Modal -->
+<div id="voteModal" class="hidden fixed inset-0 z-50 overflow-y-auto transition-opacity duration-300">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity" onclick="closeVoteModal()"></div>
+
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden w-full max-w-md z-50 transform transition-all scale-100">
+            <div class="p-6">
+                <div class="text-center">
+                    <img id="modalNomineePhoto" src="" alt="" class="w-24 h-24 rounded-full mx-auto object-cover ring-4 ring-purple-100">
+                    <h2 id="modalNomineeName" class="mt-4 text-2xl font-bold text-gray-900"></h2>
+                    <p id="modalNomineeCode" class="text-sm text-gray-500"></p>
+                </div>
+
+                <form id="voteForm" method="POST" action="{{ route('mpesa.stkpush') }}" class="mt-6 space-y-4">
+                     @csrf
+                    <input type="hidden" name="nominee_id" id="modalNomineeId">
+
+                    <!-- Price Info -->
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-700 font-medium">Price per Vote:</span>
+                        <span class="text-purple-700 font-semibold">KES {{ number_format($contest->price_per_vote ?? 10, 2) }}</span>
+                    </div>
+
+                    <!-- Vote Quantity -->
+                    <div>
+                        <label for="voteCount" class="block text-sm font-medium text-gray-700">Number of Votes</label>
+                        <input type="number" name="votes" id="voteCount" min="1" value="1" 
+                               class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:ring-purple-500 focus:border-purple-500">
+                    </div>
+
+                    <!-- Total -->
+                    <div class="flex justify-between items-center bg-purple-50 px-4 py-3 rounded-md">
+                        <span class="text-gray-700 font-medium">Total:</span>
+                        <span id="totalAmount" class="text-purple-700 font-bold text-lg">KES {{ number_format($contest->price_per_vote ?? 10, 2) }}</span>
+                    </div>
+
+                    <!-- Phone Number -->
+                    <div>
+                        <label for="phone" class="block text-sm font-medium text-gray-700">Phone Number (for STK Push)</label>
+                        <input type="text" name="phone" id="phone" placeholder="e.g. 07XXXXXXXX" 
+                               class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:ring-purple-500 focus:border-purple-500" required>
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button type="button" onclick="closeVoteModal()"
+                                class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                                class="px-5 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+                            Confirm & Pay
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+function openVoteModal(id, name, code, photoUrl) {
+    // Set nominee data
+    document.getElementById('modalNomineeId').value = id;
+    document.getElementById('modalNomineeName').textContent = name;
+    document.getElementById('modalNomineeCode').textContent = 'Code: ' + code;
+    document.getElementById('modalNomineePhoto').src = photoUrl || '/default-avatar.png';
+
+    // Reset form inputs
+    document.getElementById('voteCount').value = 1;
+    document.getElementById('totalAmount').textContent = 'KES {{ number_format($contest->price_per_vote ?? 10, 2) }}';
+    document.getElementById('phone').value = '';
+
+    // Show modal
+    document.getElementById('voteModal').classList.remove('hidden');
+}
+
+function closeVoteModal() {
+    document.getElementById('voteModal').classList.add('hidden');
+}
+
+// Live total update when votes change
+document.getElementById('voteCount').addEventListener('input', function() {
+    const count = parseInt(this.value) || 1;
+    const price = {{ $contest->price_per_vote ?? 10 }};
+    const total = count * price;
+    document.getElementById('totalAmount').textContent = 'KES ' + total.toLocaleString();
+});
+</script>
+
+<script>
+document.getElementById('voteForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    const form = e.target;
+    const data = {
+        nominee_id: document.getElementById('modalNomineeId').value,
+        contest_id: {{ $contest->id }},
+        votes: document.getElementById('voteCount').value,
+        
+        let phone = document.getElementById('phone').value.trim();
+
+        // Convert 07xxxxxxxx → 2547xxxxxxxx
+       // Normalize to 2547xxxxxxxx
+if (phone.startsWith('07')) {
+    phone = '254' + phone.substring(1);
+} else if (phone.startsWith('+254')) {
+    phone = phone.substring(1); // removes '+'
+} else if (phone.startsWith('254')) {
+    // already fine
+} else {
+    alert('Invalid phone number format. Use 07XXXXXXXX');
+    return;
+}
+
+        // Remove any spaces or symbols
+        phone = phone.replace(/[^0-9]/g, '');
+
+        const data = {
+            nominee_id: document.getElementById('modalNomineeId').value,
+            contest_id: {{ $contest->id }},
+            votes: document.getElementById('voteCount').value,
+            phone: phone
+        };
+
+    };
+
+    fetch(form.action, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(res => {
+        alert(res.message || 'STK Push initiated. Check your phone.');
+        closeVoteModal();
+    })
+    .catch(err => {
+        console.error(err);
+        alert('Error initiating payment. Try again.');
+    });
+});
+</script>
+
+
 @endsection
