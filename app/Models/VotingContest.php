@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Carbon\Carbon;
 
 class VotingContest extends Model
 {
@@ -102,12 +103,7 @@ class VotingContest extends Model
     }
 
     // Helper Methods
-    public function isOngoing()
-    {
-        $now = now();
-        return $this->start_date <= $now &&
-            (!$this->end_date || $this->end_date >= $now);
-    }
+ 
 
     public function isUpcoming()
     {
@@ -133,4 +129,25 @@ class VotingContest extends Model
     {
         return $this->nominees()->orderByDesc('votes_count')->first();
     }
+    public function isOngoing(): bool
+{
+    $now = Carbon::now();
+    return $this->is_active && $this->start_date <= $now && (!$this->end_date || $this->end_date >= $now);
+}
+
+public function userCanVote($user): bool
+{
+    // Make sure user is provided
+    if (!$user) {
+        return false;
+    }
+
+    // Count how many votes this user has cast in this contest
+    $voteCount = \App\Models\Vote::where('user_id', $user->id)
+        ->where('voting_contest_id', $this->id)
+        ->count();
+
+    // If below the limit, allow voting
+    return $voteCount < $this->max_votes_per_user;
+}
 }

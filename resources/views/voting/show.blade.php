@@ -86,7 +86,7 @@
                                     <!-- Nominee Photo -->
                                     <div class="flex-shrink-0">
                                         @if($nominee->photo)
-                                            <img src="{{ Storage::url($nominee->photo) }}"
+                                            <img  src="{{ \Illuminate\Support\Facades\Storage::url($nominee->photo) }}"
                                                  alt="{{ $nominee->name }}"
                                                  class="w-16 h-16 rounded-full object-cover">
                                         @else

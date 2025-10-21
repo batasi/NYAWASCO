@@ -169,7 +169,7 @@
                                 </div>
 
                                 <p class="text-gray-600 text-sm mb-4 line-clamp-2">
-                                    {{ Str::limit($contest->description, 120) }}
+                                    {{ \Illuminate\Support\Str::limit($contest->description, 120) }}
                                 </p>
 
                                 <!-- Contest Details -->
@@ -201,7 +201,7 @@
                                                 <div class="relative group">
                                                     @if($nominee->photo)
                                                         <img class="inline-block h-8 w-8 rounded-full ring-2 ring-white"
-                                                             src="{{ Storage::url($nominee->photo) }}"
+                                                             src="{{ \Illuminate\Support\Facades\Storage::url($nominee->photo) }}"
                                                              alt="{{ $nominee->name }}">
                                                     @else
                                                         <div class="inline-block h-8 w-8 rounded-full ring-2 ring-white bg-purple-500 flex items-center justify-center text-white text-xs font-bold">
