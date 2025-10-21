@@ -273,8 +273,15 @@
                     <!-- Phone Number -->
                     <div>
                         <label for="phone" class="block text-sm font-medium text-gray-700">Phone Number (for STK Push)</label>
-                        <input type="text" name="phone" id="phone" placeholder="e.g. 07XXXXXXXX" 
+                        <input type="text" name="phone" id="modalPhone" placeholder="e.g. 07XXXXXXXX" 
                                class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:ring-purple-500 focus:border-purple-500" required>
+                    </div>
+                    <!-- Feedback / progress -->
+                    <div id="voteFeedback" class="mt-4 hidden">
+                        <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                            <div id="voteProgress" class="bg-purple-600 h-2 w-0 transition-all"></div>
+                        </div>
+                        <p id="voteMessage" class="mt-2 text-center text-gray-700"></p>
                     </div>
 
                     <!-- Buttons -->
@@ -325,39 +332,53 @@ document.getElementById('voteCount').addEventListener('input', function() {
 
 <script>
 document.getElementById('voteForm').addEventListener('submit', function(e){
-    e.preventDefault();
+
+    e.preventDefault(); // prevent actual form submission
+    function showVoteError(msg, progressEl, messageEl) {
+        progressEl.style.width = '100%';
+        messageEl.textContent = msg;
+        messageEl.classList.remove('text-green-600');
+        messageEl.classList.add('text-red-500');
+    }
+
     const form = e.target;
+
+    // Normalize phone
+    let phone = document.getElementById('modalPhone').value.trim();
+    if (phone.startsWith('07')) {
+        phone = '254' + phone.substring(1);
+    } else if (phone.startsWith('+254')) {
+        phone = phone.substring(1);
+    } else if (!phone.startsWith('254')) {
+        showVoteError('Invalid phone number. Use 07XXXXXXXX format.');
+        return;
+    }
+    phone = phone.replace(/[^0-9]/g, '');
+
     const data = {
         nominee_id: document.getElementById('modalNomineeId').value,
         contest_id: {{ $contest->id }},
         votes: document.getElementById('voteCount').value,
-        
-        let phone = document.getElementById('phone').value.trim();
-
-        // Convert 07xxxxxxxx → 2547xxxxxxxx
-       // Normalize to 2547xxxxxxxx
-if (phone.startsWith('07')) {
-    phone = '254' + phone.substring(1);
-} else if (phone.startsWith('+254')) {
-    phone = phone.substring(1); // removes '+'
-} else if (phone.startsWith('254')) {
-    // already fine
-} else {
-    alert('Invalid phone number format. Use 07XXXXXXXX');
-    return;
-}
-
-        // Remove any spaces or symbols
-        phone = phone.replace(/[^0-9]/g, '');
-
-        const data = {
-            nominee_id: document.getElementById('modalNomineeId').value,
-            contest_id: {{ $contest->id }},
-            votes: document.getElementById('voteCount').value,
-            phone: phone
-        };
-
+        phone: phone
     };
+
+    // Feedback elements
+    const feedback = document.getElementById('voteFeedback');
+    const progress = document.getElementById('voteProgress');
+    const message = document.getElementById('voteMessage');
+    feedback.classList.remove('hidden');
+    progress.style.width = '0%';
+    message.textContent = 'Processing payment...';
+    message.classList.remove('text-red-500','text-green-600');
+    message.classList.add('text-gray-700');
+
+    // Animate progress bar
+    let width = 0;
+    const interval = setInterval(() => {
+        if(width >= 90) clearInterval(interval);
+        width += 10;
+        progress.style.width = width + '%';
+    }, 300);
 
     fetch(form.action, {
         method: 'POST',
@@ -369,14 +390,31 @@ if (phone.startsWith('07')) {
     })
     .then(res => res.json())
     .then(res => {
-        alert(res.message || 'STK Push initiated. Check your phone.');
-        closeVoteModal();
+        clearInterval(interval);
+        progress.style.width = '100%';
+
+        if(res.mpesa_response && res.mpesa_response.ResponseCode === "0") {
+            message.textContent = 'STK Push sent! Check your phone to complete the payment.';
+            message.classList.remove('text-red-500');
+            message.classList.add('text-green-600');
+        } else if(res.mpesa_response && res.mpesa_response.errorMessage) {
+            showVoteError(res.mpesa_response.errorMessage);
+        } else if(res.error) {
+            showVoteError(res.error);
+        } else {
+            message.textContent = 'Payment request sent. Check your phone.';
+            message.classList.remove('text-red-500');
+            message.classList.add('text-gray-700');
+        }
     })
     .catch(err => {
         console.error(err);
-        alert('Error initiating payment. Try again.');
+        showVoteError('Error initiating payment. Try again.', progress, message);
     });
+
+   
 });
+
 </script>
 
 
