@@ -151,7 +151,7 @@
                     <h2 class="text-2xl font-bold text-gray-900 mb-6">Nominees</h2>
 
                     @if($contest->nominees->count() > 0)
-                        <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                        <div class="grid gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                             @foreach($contest->nominees as $nominee)
                                 <div class="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 p-5 flex flex-col justify-between">
                                     <div>
@@ -175,26 +175,26 @@
                                                 <p class="text-gray-600 text-sm mt-1 line-clamp-2">{{ $nominee->bio }}</p>
                                             @endif
 
-                                            <div class="mt-3 flex justify-center space-x-4 text-sm text-gray-500">
+                                            <!-- <div class="mt-3 flex justify-center space-x-4 text-sm text-gray-500">
                                                 <span>{{ $nominee->votes_count }} votes</span>
                                                 @if($contest->total_votes > 0)
                                                     <span>{{ number_format($nominee->vote_percentage, 1) }}%</span>
                                                 @endif
-                                            </div>
+                                            </div> -->
 
-                                            @if($contest->total_votes > 0)
+                                            <!-- @if($contest->total_votes > 0)
                                                 <div class="mt-2 w-full bg-gray-200 rounded-full h-2">
                                                     <div class="bg-purple-600 h-2 rounded-full"
                                                         style="width: {{ $nominee->vote_percentage }}%"></div>
                                                 </div>
-                                            @endif
+                                            @endif -->
                                         </div>
                                     </div>
 
                                     <!-- Buttons -->
                                     <div class="mt-5 text-center">
                                       <!-- Vote Button triggers modal -->
-                                        @if($contest->isOngoing() && auth()->check() && $contest->userCanVote(auth()->user()) && !$userVote)
+                                        @if($contest->isOngoing() )
                                             <button 
                                                 type="button"
                                                 onclick="openVoteModal('{{ $nominee->id }}', '{{ $nominee->name }}', '{{ $nominee->unique_code }}', '{{ $nominee->photo ? \Illuminate\Support\Facades\Storage::url($nominee->photo) : '' }}')"
