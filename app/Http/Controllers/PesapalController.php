@@ -87,16 +87,16 @@ class PesapalController extends Controller
         $url = env('PESAPAL_BASE_URL') . '/api/Transactions/SubmitOrderRequest';
 
         $response = Http::withToken($token)->post($url, $payload);
-$data = $response->json();
+        $data = $response->json();
 
-Log::info('Pesapal STK Response', ['response' => $data]);
+        Log::info('Pesapal STK Response', ['response' => $data]);
 
-if (isset($data['redirect_url'])) {
-    // Redirect user to Pesapal hosted checkout page
-    return redirect()->away($data['redirect_url']);
-}
+        if (isset($data['redirect_url'])) {
+            // Redirect user to Pesapal hosted checkout page
+            return redirect()->away($data['redirect_url']);
+        }
 
-return back()->with('error', 'Failed to initiate payment. Please try again.');
+        return back()->with('error', 'Failed to initiate payment. Please try again.');
 
     }
 
@@ -109,8 +109,31 @@ return back()->with('error', 'Failed to initiate payment. Please try again.');
     
         // You could verify status here if needed
     
-        return redirect()->route('vote.thankyou')
+        return redirect()->route('voting.index')
             ->with('success', 'Payment received! Thank you for your votes.');
     }
+    public function callbackReturn(Request $request)
+    {
+        Log::info('Pesapal User Redirect received', ['query' => $request->all()]);
+
+        // Optional: confirm status from Pesapal API
+        $orderTrackingId = $request->query('OrderTrackingId');
+
+        if ($orderTrackingId) {
+            $status = $this->verifyTransaction($orderTrackingId);
+
+            if ($status === 'COMPLETED') {
+                return redirect()->route('vote.index')
+                    ->with('success', 'Payment successful! Thank you for your votes.');
+            }
+
+            return redirect()->route('voting.index')
+                ->with('info', 'Payment received but still pending confirmation.');
+        }
+
+        return redirect()->route('voting.index')
+            ->with('error', 'Unable to verify payment. Please contact support.');
+    }
+
     
 }
