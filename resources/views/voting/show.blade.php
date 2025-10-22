@@ -247,7 +247,7 @@
                     <p id="modalNomineeCode" class="text-sm text-gray-500"></p>
                 </div>
 
-                <form id="voteForm" method="POST" action="{{ route('mpesa.stkpush') }}" class="mt-6 space-y-4">
+                <form id="voteForm" method="POST" action="{{ route('pesapal.stkpush') }}" class="mt-6 space-y-4">
                      @csrf
                     <input type="hidden" name="nominee_id" id="modalNomineeId">
 

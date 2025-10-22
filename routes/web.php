@@ -22,6 +22,7 @@ use App\Http\Controllers\Admin\AttendeeController;
 use App\Http\Controllers\Admin\VendorController;
 use App\Http\Controllers\VotingCategoryController;
 use App\Http\Controllers\MpesaController;
+use App\Http\Controllers\PesapalController;
 
 /*
 |--------------------------------------------------------------------------
@@ -80,6 +81,9 @@ Route::view('/help', 'static.help', ['title' => 'Help Center - EventSphere'])->n
 */
 Route::post('/mpesa/stkpush', [MpesaController::class, 'stkPush'])->name('mpesa.stkpush');
 Route::post('/mpesa/callback', [MpesaController::class, 'callback'])->name('mpesa.callback');
+
+Route::post('/pesapal/stkpush', [PesapalController::class, 'stkPush'])->name('pesapal.stkpush');
+Route::post('/pesapal/callback', [PesapalController::class, 'callback'])->name('pesapal.callback');
 
 Route::prefix('api')->group(function () {
     Route::get('/live-activities', [LiveActivityController::class, 'index'])->name('api.live-activities');
