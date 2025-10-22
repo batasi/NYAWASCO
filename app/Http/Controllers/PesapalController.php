@@ -73,6 +73,8 @@ class PesapalController extends Controller
             'description' => 'Voting Payment',
             'callback_url' => $callback,
             'notification_id' => env('PESAPAL_NOTIFICATION_ID'),
+            'branch' => 'Online Voting',
+            'payment_method' => 'M-PESA', // 👈 force M-PESA STK push
             'billing_address' => [
                 'email_address' => 'noreply@javapa.com',
                 'phone_number' => $request->phone,
