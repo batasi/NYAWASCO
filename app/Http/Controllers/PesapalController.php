@@ -1,168 +1,102 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use App\Models\Nominee;
 
 class PesapalController extends Controller
 {
+    /**
+     * Generate access token from Pesapal.
+     */
+    private function getAccessToken()
+    {
+        $url = env('PESAPAL_BASE_URL') . '/api/Auth/RequestToken';
+
+        $response = Http::withHeaders([
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+        ])->post($url, [
+            'consumer_key' => env('PESAPAL_CONSUMER_KEY'),
+            'consumer_secret' => env('PESAPAL_CONSUMER_SECRET'),
+        ]);
+
+        if ($response->successful() && isset($response['token'])) {
+            return $response['token'];
+        }
+
+        Log::error('Pesapal Auth Error', ['response' => $response->body()]);
+        return null;
+    }
+
+    /**
+     * Register IPN (only needs to be done once).
+     */
+    public function registerIpn()
+    {
+        $token = $this->getAccessToken();
+        if (!$token) return response()->json(['error' => 'Failed to get access token']);
+
+        $url = env('PESAPAL_BASE_URL') . '/api/URLSetup/RegisterIPN';
+
+        $response = Http::withToken($token)->post($url, [
+            'url' => route('pesapal.callback'), // your callback URL
+            'ipn_notification_type' => 'POST'
+        ]);
+
+        return $response->json();
+    }
+
+    /**
+     * Initiate STK Push
+     */
     public function stkPush(Request $request)
     {
         Log::info('Pesapal STKPush endpoint hit', ['request' => $request->all()]);
 
-        $data = $request->validate([
-            'nominee_id' => 'required|integer',
-            'contest_id' => 'nullable|integer',
-            'phone'      => 'required|string',
-            'votes'      => 'required|integer|min:1',
-        ]);
-
-        $nominee = Nominee::find($data['nominee_id']);
-        if (!$nominee) {
-            return response()->json(['error' => 'Nominee not found'], 404);
+        $token = $this->getAccessToken();
+        if (!$token) {
+            return response()->json(['error' => 'Failed to get access token']);
         }
 
-        $amount = $data['votes'] * (config('voting.price_per_vote', 10));
+        $amount = (int) ($request->votes ?? 1) * 10; // Example price per vote = 10
+        $callback = route('pesapal.callback');
 
-        // Normalize phone number
-        $phone = trim($data['phone']);
-        if (str_starts_with($phone, '07')) {
-            $phone = '254' . substr($phone, 1);
-        } elseif (str_starts_with($phone, '+254')) {
-            $phone = substr($phone, 1);
-        }
-        $phone = preg_replace('/[^0-9]/', '', $phone);
+        $orderTrackingId = uniqid('order_', true);
 
-        try {
-            // 1️⃣ Request Access Token
-            $tokenRes = Http::withBasicAuth(
-                env('PESAPAL_CONSUMER_KEY'),
-                env('PESAPAL_CONSUMER_SECRET')
-            )->post(env('PESAPAL_BASE_URL') . '/Auth/RequestToken');
+        $payload = [
+            'id' => $orderTrackingId,
+            'currency' => 'KES',
+            'amount' => $amount,
+            'description' => 'Voting Payment',
+            'callback_url' => $callback,
+            'notification_id' => env('PESAPAL_NOTIFICATION_ID'),
+            'billing_address' => [
+                'email_address' => 'noreply@javapa.com',
+                'phone_number' => $request->phone,
+                'country_code' => 'KE',
+                'first_name' => 'Voter',
+                'last_name' => 'Online',
+            ]
+        ];
 
-            if (!$tokenRes->successful()) {
-                Log::error('Pesapal Token Error', ['response' => $tokenRes->body()]);
-                return response()->json(['error' => 'Failed to obtain access token'], 500);
-            }
+        $url = env('PESAPAL_BASE_URL') . '/api/Transactions/SubmitOrderRequest';
 
-            $accessToken = $tokenRes['token'];
+        $response = Http::withToken($token)->post($url, $payload);
 
-            // 2️⃣ Build Order Payload
-            $order = [
-                'id' => 'ORDER-' . uniqid(),
-                'currency' => 'KES',
-                'amount' => $amount,
-                'description' => 'Voting payment for ' . $nominee->name,
-                'callback_url' => route('pesapal.callback'),
-                'notification_id' => env('PESAPAL_NOTIFICATION_ID'),
-                'billing_address' => [
-                    'email_address' => 'user@example.com',
-                    'phone_number' => $phone,
-                    'country_code' => 'KE',
-                    'first_name' => 'Voter',
-                    'last_name' => 'User',
-                ],
-            ];
+        Log::info('Pesapal STK Response', ['response' => $response->json()]);
 
-            // 3️⃣ Submit Order
-            $response = Http::withToken($accessToken)
-                ->post(env('PESAPAL_BASE_URL') . '/Transactions/SubmitOrderRequest', $order);
-
-            Log::info('Pesapal STKPush response', ['response' => $response->json()]);
-
-            if (!$response->successful()) {
-                return response()->json(['error' => 'Payment request failed', 'details' => $response->body()], 500);
-            }
-
-            return response()->json([
-                'status' => 'pending',
-                'message' => 'STK Push sent! Check your phone to complete the payment.',
-                'nominee' => [
-                    'id' => $nominee->id,
-                    'name' => $nominee->name,
-                    'code' => $nominee->code,
-                ],
-                'votes' => $data['votes'],
-                'total_amount' => $amount,
-                'pesapal_response' => $response->json(),
-            ]);
-
-        } catch (\Throwable $e) {
-            Log::error('Pesapal Error', ['message' => $e->getMessage()]);
-            return response()->json(['error' => 'Pesapal request failed: ' . $e->getMessage()], 500);
-        }
+        return $response->json();
     }
 
- 
+    /**
+     * Handle Pesapal callback (payment status notification).
+     */
     public function callback(Request $request)
-{
-    Log::info('Pesapal Callback:', $request->all());
-    $trackingId = $request->query('pesapal_transaction_tracking_id');
-    $merchantRef = $request->query('pesapal_merchant_reference');
-
-    // Step 1: Query payment status from PesaPal API
-    $response = Http::withHeaders([
-        'Accept' => 'application/json',
-        'Authorization' => 'Bearer ' . $this->getAccessToken(),
-    ])->get("https://pay.pesapal.com/v3/api/Transactions/GetTransactionStatus?orderTrackingId={$trackingId}");
-
-    if ($response->ok()) {
-        $data = $response->json();
-
-        // Step 2: Update your records
-        $status = $data['status'];
-
-        if ($status === 'COMPLETED') {
-            // mark sale/invoice as paid
-            Sale::where('reference', $merchantRef)->update(['status' => 'Paid']);
-        } elseif ($status === 'FAILED') {
-            Sale::where('reference', $merchantRef)->update(['status' => 'Failed']);
-        }
-
-        // Step 3: Optionally return something
-        return response()->json(['message' => 'Callback handled successfully']);
+    {
+        Log::info('Pesapal Callback received', ['data' => $request->all()]);
+        return response()->json(['status' => 'success']);
     }
-
-    return response()->json(['error' => 'Unable to verify payment'], 400);
-}
-public function registerIpn()
-{
-    $baseUrl = config('services.pesapal.base_url');
-    $key = config('services.pesapal.key');
-    $secret = config('services.pesapal.secret');
-    $ipnUrl = config('services.pesapal.notification_url');
-
-    // Step 1: Generate token
-    $tokenResponse = Http::withHeaders([
-        'Accept' => 'application/json',
-        'Content-Type' => 'application/json',
-    ])->post("$baseUrl/api/Auth/RequestToken", [
-        'consumer_key' => $key,
-        'consumer_secret' => $secret,
-    ]);
-
-    if (!$tokenResponse->successful()) {
-        return response()->json(['error' => 'Failed to get access token'], 500);
-    }
-
-    $token = $tokenResponse->json()['token'] ?? null;
-    if (!$token) {
-        return response()->json(['error' => 'No token received'], 500);
-    }
-
-    // Step 2: Register IPN
-    $ipnResponse = Http::withToken($token)
-        ->withHeaders([
-            'Accept' => 'application/json',
-            'Content-Type' => 'application/json',
-        ])
-        ->post("$baseUrl/api/URLSetup/RegisterIPN", [
-            'url' => $ipnUrl,
-            'ipn_notification_type' => 'POST',
-        ]);
-
-    return $ipnResponse->json();
-}
 }
