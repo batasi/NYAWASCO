@@ -92,7 +92,20 @@ class PesapalController extends Controller
         Log::info('Pesapal STK Response', ['response' => $data]);
 
         if (isset($data['redirect_url'])) {
-            // Redirect user to Pesapal hosted checkout page
+            // Save a pending payment before redirect
+            $payment = \App\Models\Payment::create([
+                'user_id' => auth()->id() ?? 1,
+                'voting_contest_id' => $request->contest_id ?? 1360,
+                'nominee_id' => $request->nominee_id,
+                'order_tracking_id' => $orderTrackingId,
+                'merchant_reference' => $orderTrackingId,
+                'amount' => $amount,
+                'currency' => 'KES',
+                'status' => 'PENDING',
+                'payment_method' => 'M-PESA',
+                'phone_number' => $request->phone,
+            ]);
+
             return redirect()->away($data['redirect_url']);
         }
 
@@ -170,6 +183,72 @@ class PesapalController extends Controller
             return null;
         }
     }
+    /**
+     * Handle Pesapal IPN (server-to-server notification)
+     */
+    public function ipn(Request $request)
+    {
+        Log::info('Pesapal IPN received', ['data' => $request->all()]);
 
+        $trackingId = $request->input('OrderTrackingId');
+
+        if (!$trackingId) {
+            Log::warning('Pesapal IPN missing OrderTrackingId');
+            return response()->json(['error' => 'Missing tracking ID'], 400);
+        }
+
+        // Re-confirm transaction status from Pesapal
+        $status = $this->verifyTransaction($trackingId);
+
+        if (!$status) {
+            Log::warning('Pesapal IPN failed to verify transaction', ['trackingId' => $trackingId]);
+            return response()->json(['status' => 'failed'], 500);
+        }
+
+        $payment = \App\Models\Payment::where('order_tracking_id', $trackingId)->first();
+
+        if (!$payment) {
+            Log::warning('Pesapal IPN: Payment not found', ['trackingId' => $trackingId]);
+            return response()->json(['status' => 'not_found'], 404);
+        }
+
+        // Update payment record
+        $payment->update([
+            'status' => strtoupper($status),
+            'raw_response' => $request->all(),
+        ]);
+
+        if (strtoupper($status) === 'COMPLETED') {
+            // Register vote only once
+            $exists = \App\Models\Vote::where([
+                'user_id' => $payment->user_id,
+                'voting_contest_id' => $payment->voting_contest_id,
+                'nominee_id' => $payment->nominee_id,
+            ])->exists();
+
+            if (!$exists) {
+                \App\Models\Vote::create([
+                    'user_id' => $payment->user_id,
+                    'voting_contest_id' => $payment->voting_contest_id,
+                    'nominee_id' => $payment->nominee_id,
+                    'ip_address' => $request->ip(),
+                ]);
+
+                // Increment vote counters
+                $nominee = \App\Models\Nominee::find($payment->nominee_id);
+                if ($nominee) {
+                    $nominee->increment('votes_count');
+                    $nominee->contest->increment('total_votes');
+                }
+
+                Log::info('Vote successfully recorded from IPN', [
+                    'nominee_id' => $payment->nominee_id,
+                    'contest_id' => $payment->voting_contest_id,
+                ]);
+            }
+        }
+
+        return response()->json(['status' => 'ok'], 200);
+    }
     
 }

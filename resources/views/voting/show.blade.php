@@ -250,7 +250,7 @@
                 <form id="voteForm" method="POST" action="{{ route('pesapal.stkpush') }}" class="mt-6 space-y-4">
                      @csrf
                     <input type="hidden" name="nominee_id" id="modalNomineeId">
-
+                    <input type="hidden" name="contest_id" value="{{ $contest->id }}">
                     <!-- Price Info -->
                     <div class="flex justify-between items-center">
                         <span class="text-gray-700 font-medium">Price per Vote:</span>

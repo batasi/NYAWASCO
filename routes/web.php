@@ -86,6 +86,7 @@ Route::post('/pesapal/stkpush', [PesapalController::class, 'stkPush'])->name('pe
 Route::post('/pesapal/callback', [PesapalController::class, 'callback'])->name('pesapal.callback');
 Route::get('/pesapal/register-ipn', [PesapalController::class, 'registerIpn']);
 Route::get('/pesapal/callback', [PesapalController::class, 'callbackReturn'])->name('pesapal.callback.return');
+Route::post('/pesapal/ipn', [PesapalController::class, 'ipn'])->name('pesapal.ipn');
 
 Route::prefix('api')->group(function () {
     Route::get('/live-activities', [LiveActivityController::class, 'index'])->name('api.live-activities');
