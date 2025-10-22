@@ -134,6 +134,42 @@ class PesapalController extends Controller
         return redirect()->route('voting.index')
             ->with('error', 'Unable to verify payment. Please contact support.');
     }
+    /**
+     * Verify a transaction's current status from Pesapal.
+     */
+    private function verifyTransaction($trackingId)
+    {
+        try {
+            $token = $this->getAccessToken();
+            if (!$token) {
+                Log::error('Pesapal verifyTransaction: Missing access token');
+                return null;
+            }
+
+            $url = env('PESAPAL_BASE_URL') . '/api/Transactions/GetTransactionStatus?orderTrackingId=' . $trackingId;
+
+            $response = Http::withHeaders([
+                'Accept' => 'application/json',
+                'Authorization' => 'Bearer ' . $token,
+            ])->get($url);
+
+            $data = $response->json();
+
+            Log::info('Pesapal VerifyTransaction', [
+                'trackingId' => $trackingId,
+                'response' => $data
+            ]);
+
+            // Depending on Pesapal response, this might be one of:
+            // COMPLETED, PENDING, FAILED, INVALID, etc.
+            return $data['payment_status_description'] ?? $data['status'] ?? null;
+        } catch (\Exception $e) {
+            Log::error('Pesapal verifyTransaction Exception', [
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
 
     
 }
