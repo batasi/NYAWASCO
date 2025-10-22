@@ -67,13 +67,14 @@ use Illuminate\Support\Facades\Route;
 
                     <!-- Navigation Links -->
                     <div class="hidden space-x-8 sm:-my-px sm:ml-10 sm:flex">
+                        <x-nav-link href="{{ route('voting.index') }}" :active="request()->routeIs('voting.*')">
+                            Voting Platform
+                        </x-nav-link>
                         <x-nav-link href="{{ route('events.index') }}" :active="request()->routeIs('events.*')">
                             Discover Events
                         </x-nav-link>
 
-                        <x-nav-link href="{{ route('voting.index') }}" :active="request()->routeIs('voting.*')">
-                            Active Votes
-                        </x-nav-link>
+                      
 
                         <!-- Admin-only Links -->
                         @auth
