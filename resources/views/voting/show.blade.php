@@ -271,11 +271,11 @@
                     </div>
 
                     <!-- Phone Number -->
-                    <div>
+                    <!-- <div>
                         <label for="phone" class="block text-sm font-medium text-gray-700">Phone Number (for STK Push)</label>
                         <input type="text" name="phone" id="modalPhone" placeholder="e.g. 07XXXXXXXX" 
                                class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:ring-purple-500 focus:border-purple-500" required>
-                    </div>
+                    </div> -->
                     <!-- Feedback / progress -->
                     <div id="voteFeedback" class="mt-4 hidden">
                         <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
@@ -330,7 +330,7 @@ document.getElementById('voteCount').addEventListener('input', function() {
 });
 </script>
 
-<script>
+<!-- <script>
 document.getElementById('voteForm').addEventListener('submit', function(e){
 
     e.preventDefault(); // prevent actual form submission
@@ -415,7 +415,7 @@ document.getElementById('voteForm').addEventListener('submit', function(e){
    
 });
 
-</script>
+</script> -->
 
 
 @endsection

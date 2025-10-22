@@ -87,10 +87,17 @@ class PesapalController extends Controller
         $url = env('PESAPAL_BASE_URL') . '/api/Transactions/SubmitOrderRequest';
 
         $response = Http::withToken($token)->post($url, $payload);
+$data = $response->json();
 
-        Log::info('Pesapal STK Response', ['response' => $response->json()]);
+Log::info('Pesapal STK Response', ['response' => $data]);
 
-        return $response->json();
+if (isset($data['redirect_url'])) {
+    // Redirect user to Pesapal hosted checkout page
+    return redirect()->away($data['redirect_url']);
+}
+
+return back()->with('error', 'Failed to initiate payment. Please try again.');
+
     }
 
     /**
@@ -99,6 +106,11 @@ class PesapalController extends Controller
     public function callback(Request $request)
     {
         Log::info('Pesapal Callback received', ['data' => $request->all()]);
-        return response()->json(['status' => 'success']);
+    
+        // You could verify status here if needed
+    
+        return redirect()->route('vote.thankyou')
+            ->with('success', 'Payment received! Thank you for your votes.');
     }
+    
 }
