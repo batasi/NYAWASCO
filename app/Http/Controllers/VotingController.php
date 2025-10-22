@@ -7,6 +7,7 @@ use App\Models\VotingContest;
 use App\Models\VotingCategory;
 use App\Models\Vote;
 use App\Models\Nominee;
+use App\Models\NomineeCategory;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
@@ -58,9 +59,7 @@ class VotingController extends Controller
 
     public function show(VotingContest $contest)
     {
-        if (!$contest->is_active && !Gate::allows('view_inactive_voting')) {
-            abort(404);
-        }
+       
 
         $contest->load(['nominees', 'category', 'organizer']);
 
@@ -165,25 +164,28 @@ class VotingController extends Controller
 
     public function create()
     {
-        if (!Auth::check() || !Gate::allows('create_voting')) {
-            abort(403);
-        }
+       
 
         $categories = VotingCategory::where('is_active', true)
             ->orderBy('sort_order', 'asc')
             ->get();
 
+        $nomineeCategories = NomineeCategory::all();
+
         return view('voting.create', [
             'categories' => $categories,
+            'nomineeCategories' => $nomineeCategories,
             'title' => 'Create Voting Contest'
         ]);
     }
 
     public function store(Request $request)
     {
-        if (!Auth::check() || !Gate::allows('create_voting')) {
-            abort(403);
-        }
+        $categories = VotingCategory::where('is_active', true)
+            ->orderBy('sort_order', 'asc')
+            ->get();
+
+        $nomineeCategories = NomineeCategory::all();
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -198,6 +200,9 @@ class VotingController extends Controller
             'nominees.*.name' => 'nullable|string|max:255',
             'nominees.*.photo' => 'nullable|image|max:2048',
             'nominees.*.description' => 'nullable|string|max:500',
+            'nominees.*.category_id' => 'required|exists:nominee_categories,id',
+        ], [], [
+            'nominees.*.category_id' => 'Nominee Category'
         ]);
 
         // Create Contest
@@ -230,6 +235,7 @@ class VotingController extends Controller
                         'name' => $nomineeData['name'],
                         'photo' => $photoPath,
                         'description' => $nomineeData['description'] ?? null,
+                        'category_id' => $nomineeData['category_id'],
                         'votes_count' => 0,
                     ]);
                 }
@@ -241,22 +247,18 @@ class VotingController extends Controller
 
     public function edit($id)
     {
-        if (!Auth::check() || !Gate::allows('edit_voting')) {
-            abort(403);
-        }
+       
 
         $contest = VotingContest::findOrFail($id);
         $categories = VotingCategory::where('is_active', true)->orderBy('sort_order')->get();
+        $nomineeCategories = NomineeCategory::all();
 
-        return view('voting.edit', compact('contest', 'categories'));
+        return view('voting.edit', compact('contest', 'categories', 'nomineeCategories'));
     }
 
     public function update(Request $request, $id)
     {
-        if (!Auth::check() || !Gate::allows('edit_voting')) {
-            abort(403);
-        }
-
+      
         $contest = VotingContest::findOrFail($id);
 
         $validated = $request->validate([
@@ -288,10 +290,7 @@ class VotingController extends Controller
 
     public function destroy($id)
     {
-        if (!Auth::check() || !Gate::allows('delete_voting')) {
-            abort(403);
-        }
-
+      
         $contest = VotingContest::findOrFail($id);
         $contest->delete();
 
