@@ -41,5 +41,12 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URI'),
     ],
 
+    'pesapal' => [
+        'base_url' => env('PESAPAL_BASE_URL'),
+        'key' => env('PESAPAL_CONSUMER_KEY'),
+        'secret' => env('PESAPAL_CONSUMER_SECRET'),
+        'notification_url' => env('PESAPAL_NOTIFICATION_URL'),
+        'notification_id' => env('PESAPAL_NOTIFICATION_ID'),
+    ],
 
 ];
