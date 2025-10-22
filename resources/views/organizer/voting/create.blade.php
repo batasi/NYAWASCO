@@ -118,7 +118,7 @@
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">Add Nominees</h3>
 
                     <div id="nomineesWrapper">
-                        <div class="nominee-item grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div class="nominee-item grid grid-cols-1 md:grid-cols-5 gap-4 mb-4 items-end">
                             <div>
                                 <label class="block text-gray-700 text-sm font-medium mb-1">Nominee Name</label>
                                 <input type="text" name="nominees[0][name]" required
@@ -134,6 +134,20 @@
                                 <input type="text" name="nominees[0][description]"
                                     class="w-full border-gray-300 rounded-md px-3 py-2" placeholder="Short description">
                             </div>
+                            <div class="flex items-center gap-2">
+                                <div class="flex-1">
+                                    <label class="block text-gray-700 text-sm font-medium mb-1">Category</label>
+                                    <select name="nominees[0][category_id]" required
+                                        class="w-full border-gray-300 rounded-md px-3 py-2">
+                                        <option value="">-- Select Category --</option>
+                                        @foreach($nomineeCategories as $ncat)
+                                            <option value="{{ $ncat->id }}">{{ $ncat->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <button type="button" class="px-3 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 openNomineeCatModal">+</button>
+                            </div>
+                            <button type="button" class="removeNomineeBtn text-red-600 font-bold text-lg ml-2">×</button>
                         </div>
                     </div>
 
@@ -187,14 +201,14 @@
 {{-- JS --}}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Add Nominee rows dynamically
     let nomineeIndex = 1;
     const addNomineeBtn = document.getElementById('addNomineeBtn');
     const nomineesWrapper = document.getElementById('nomineesWrapper');
 
+    // Add nominee
     addNomineeBtn.addEventListener('click', function() {
         const newNominee = document.createElement('div');
-        newNominee.classList.add('nominee-item', 'grid', 'grid-cols-1', 'md:grid-cols-3', 'gap-4', 'mb-4');
+        newNominee.classList.add('nominee-item', 'grid', 'grid-cols-1', 'md:grid-cols-5', 'gap-4', 'mb-4', 'items-end');
         newNominee.innerHTML = `
             <div>
                 <label class="block text-gray-700 text-sm font-medium mb-1">Nominee Name</label>
@@ -206,33 +220,83 @@ document.addEventListener('DOMContentLoaded', function() {
                 <input type="file" name="nominees[${nomineeIndex}][photo]"
                     class="w-full border-gray-300 rounded-md px-3 py-2">
             </div>
-            <div class="flex items-end justify-between">
-                <div class="flex-1">
-                    <label class="block text-gray-700 text-sm font-medium mb-1">Description (optional)</label>
-                    <input type="text" name="nominees[${nomineeIndex}][description]"
-                        class="w-full border-gray-300 rounded-md px-3 py-2" placeholder="Short description">
-                </div>
-                <button type="button" class="ml-3 px-3 py-1 bg-red-600 text-white rounded-md removeNomineeBtn">X</button>
+            <div>
+                <label class="block text-gray-700 text-sm font-medium mb-1">Description (optional)</label>
+                <input type="text" name="nominees[${nomineeIndex}][description]"
+                    class="w-full border-gray-300 rounded-md px-3 py-2" placeholder="Short description">
             </div>
+            <div class="flex items-center gap-2">
+                <div class="flex-1">
+                    <label class="block text-gray-700 text-sm font-medium mb-1">Category</label>
+                    <select name="nominees[${nomineeIndex}][category_id]" required
+                        class="w-full border-gray-300 rounded-md px-3 py-2">
+                        <option value="">-- Select Category --</option>
+                        @foreach($nomineeCategories as $ncat)
+                            <option value="{{ $ncat->id }}">{{ $ncat->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <button type="button" class="px-3 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 openNomineeCatModal">+</button>
+            </div>
+            <button type="button" class="removeNomineeBtn text-red-600 font-bold text-lg ml-2">×</button>
         `;
         nomineesWrapper.appendChild(newNominee);
         nomineeIndex++;
     });
 
-    nomineesWrapper.addEventListener('click', function(e) {
+    // Remove nominee
+    document.addEventListener('click', function(e) {
         if (e.target.classList.contains('removeNomineeBtn')) {
             e.target.closest('.nominee-item').remove();
         }
     });
 
-    // Modal scripts for category (same as before)
+    // Open category modal
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('openNomineeCatModal')) {
+            document.getElementById('categoryModal').classList.remove('hidden');
+        }
+    });
+
+    // Category modal logic
     const modal = document.getElementById('categoryModal');
-    const addBtn = document.getElementById('addCategoryBtn');
     const cancelBtn = document.getElementById('cancelCategoryBtn');
     const form = document.getElementById('categoryForm');
 
-    addBtn.addEventListener('click', () => modal.classList.remove('hidden'));
     cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const name = document.getElementById('categoryName').value;
+        const color = document.getElementById('categoryColor').value;
+
+        fetch("{{ route('nominee-categories.store') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ name: name, color: color })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success) {
+                const selectElements = document.querySelectorAll('select[name^="nominees"]');
+                selectElements.forEach(s => {
+                    const option = document.createElement('option');
+                    option.value = data.category.id;
+                    option.text = data.category.name;
+                    option.selected = true;
+                    s.add(option);
+                });
+                modal.classList.add('hidden');
+                form.reset();
+            } else {
+                alert('Error adding category');
+            }
+        })
+        .catch(err => console.error(err));
+    });
 });
 </script>
 @endsection

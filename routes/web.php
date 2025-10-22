@@ -21,8 +21,12 @@ use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Admin\AttendeeController;
 use App\Http\Controllers\Admin\VendorController;
 use App\Http\Controllers\VotingCategoryController;
+<<<<<<< Updated upstream
 use App\Http\Controllers\MpesaController;
 use App\Http\Controllers\PesapalController;
+=======
+use App\Http\Controllers\NomineeCategoryController;
+>>>>>>> Stashed changes
 
 /*
 |--------------------------------------------------------------------------
@@ -148,6 +152,8 @@ Route::middleware(['auth', 'verified', 'role:organizer'])->prefix('organizer')->
         ->name('categories.store');
     Route::post('/organizer/voting-category/store', [VotingCategoryController::class, 'store'])
     ->name('voting-category.store');
+
+    Route::resource('nominee-categories', NomineeCategoryController::class);
 
     // Analytics
     Route::get('/analytics', [OrganizerController::class, 'analytics'])->name('organizer.analytics');

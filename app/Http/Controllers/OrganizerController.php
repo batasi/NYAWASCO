@@ -8,6 +8,7 @@ use App\Models\VotingContest;
 use App\Models\TicketPurchase;
 use App\Models\EventCategory;
 use App\Models\VotingCategory;
+use App\Models\NomineeCategory;
 use App\Models\Nominee;
 use App\Models\Vote;
 use Illuminate\Support\Str;
@@ -277,9 +278,11 @@ class OrganizerController extends BaseController
     public function createVoting()
     {
         $categories = VotingCategory::where('is_active', true)->get();
+        $nomineeCategories = NomineeCategory::all();
 
         return view('organizer.voting.create', [
             'categories' => $categories,
+            'nomineeCategories' => $nomineeCategories,
             'title' => 'Create Voting Contest - EventSphere'
         ]);
     }
