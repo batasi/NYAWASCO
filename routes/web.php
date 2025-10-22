@@ -21,12 +21,9 @@ use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Admin\AttendeeController;
 use App\Http\Controllers\Admin\VendorController;
 use App\Http\Controllers\VotingCategoryController;
-<<<<<<< Updated upstream
 use App\Http\Controllers\MpesaController;
 use App\Http\Controllers\PesapalController;
-=======
 use App\Http\Controllers\NomineeCategoryController;
->>>>>>> Stashed changes
 
 /*
 |--------------------------------------------------------------------------

@@ -56,6 +56,13 @@
                             Featured
                         </span>
                     @endif
+                    <br>
+                    {{-- Total votes (visible only to organizer) --}}
+                    @if($contest->isOrganizer())
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-600/80 text-white">
+                            Total Votes: {{ $contest->total_votes }}
+                        </span>
+                    @endif
                 </div>
 
                 <!-- Date Info -->
@@ -175,19 +182,21 @@
                                                 <p class="text-gray-600 text-sm mt-1 line-clamp-2">{{ $nominee->bio }}</p>
                                             @endif
 
-                                            <!-- <div class="mt-3 flex justify-center space-x-4 text-sm text-gray-500">
-                                                <span>{{ $nominee->votes_count }} votes</span>
-                                                @if($contest->total_votes > 0)
-                                                    <span>{{ number_format($nominee->vote_percentage, 1) }}%</span>
-                                                @endif
-                                            </div> -->
-
-                                            <!-- @if($contest->total_votes > 0)
-                                                <div class="mt-2 w-full bg-gray-200 rounded-full h-2">
-                                                    <div class="bg-purple-600 h-2 rounded-full"
-                                                        style="width: {{ $nominee->vote_percentage }}%"></div>
+                                            @if($contest->isOrganizer())
+                                                <div class="mt-3 flex justify-center space-x-4 text-sm text-gray-500">
+                                                    <span>{{ $nominee->votes_count }} votes</span>
+                                                    @if($contest->total_votes > 0)
+                                                        <span>{{ number_format($nominee->vote_percentage, 1) }}%</span>
+                                                    @endif
                                                 </div>
-                                            @endif -->
+
+                                                @if($contest->total_votes > 0)
+                                                    <div class="mt-2 w-full bg-gray-200 rounded-full h-2">
+                                                        <div class="bg-purple-600 h-2 rounded-full"
+                                                            style="width: {{ $nominee->vote_percentage }}%"></div>
+                                                    </div>
+                                                @endif
+                                            @endif
                                         </div>
                                     </div>
 

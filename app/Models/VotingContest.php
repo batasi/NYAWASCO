@@ -130,24 +130,32 @@ class VotingContest extends Model
         return $this->nominees()->orderByDesc('votes_count')->first();
     }
     public function isOngoing(): bool
-{
-    $now = Carbon::now();
-    return $this->is_active && $this->start_date <= $now && (!$this->end_date || $this->end_date >= $now);
-}
-
-public function userCanVote($user): bool
-{
-    // Make sure user is provided
-    if (!$user) {
-        return false;
+    {
+        $now = Carbon::now();
+        return $this->is_active && $this->start_date <= $now && (!$this->end_date || $this->end_date >= $now);
     }
 
-    // Count how many votes this user has cast in this contest
-    $voteCount = \App\Models\Vote::where('user_id', $user->id)
-        ->where('voting_contest_id', $this->id)
-        ->count();
+    public function userCanVote($user): bool
+    {
+        // Make sure user is provided
+        if (!$user) {
+            return false;
+        }
 
-    // If below the limit, allow voting
-    return $voteCount < $this->max_votes_per_user;
-}
+        // Count how many votes this user has cast in this contest
+        $voteCount = \App\Models\Vote::where('user_id', $user->id)
+            ->where('voting_contest_id', $this->id)
+            ->count();
+
+        // If below the limit, allow voting
+        return $voteCount < $this->max_votes_per_user;
+    }
+
+    public function isOrganizer($userId = null)
+    {
+        $userId = $userId ?? auth()->id();
+        return $this->organizer_id === $userId;
+    }
+
+
 }
