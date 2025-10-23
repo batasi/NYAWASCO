@@ -209,7 +209,7 @@
                                     </div>
 
                                     <!-- Buttons -->
-                                    <div class="mt-5 text-center">
+                                    <div class="mt-5 text-center space-y-2">
                                         @if($contest->isOngoing())
                                             <button 
                                                 type="button"
@@ -218,6 +218,17 @@
                                                 Vote
                                             </button>
                                         @endif
+
+                                        <!-- Share Button -->
+                                        <button 
+                                            type="button"
+                                            onclick="copyShareLink('{{ $contest->id }}', '{{ $nominee->code }}', this)"
+                                            class="inline-flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-purple-600 bg-purple-50 rounded-md hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+                                            Share Voting Link
+                                        </button>
+
+                                        <!-- Tooltip -->
+                                        <span class="text-xs text-green-600 hidden" id="copied-{{ $nominee->code }}">Link copied!</span>
 
                                         @if($userVote && $userVote->nominee_id == $nominee->id)
                                             <span class="inline-flex items-center justify-center w-full mt-2 px-3 py-1 rounded-md text-sm font-medium bg-green-100 text-green-800">
@@ -229,6 +240,7 @@
                                             </span>
                                         @endif
                                     </div>
+
                                 </div>
                             @endforeach
                         </div>
@@ -345,6 +357,31 @@ document.getElementById('voteCount').addEventListener('input', function() {
     const total = count * price;
     document.getElementById('totalAmount').textContent = 'KES ' + total.toLocaleString();
 });
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    @if($autoNominee)
+        // Automatically open modal for this nominee
+        openVoteModal(
+            '{{ $autoNominee->id }}',
+            '{{ addslashes($autoNominee->name) }}',
+            '{{ $autoNominee->code }}',
+            '{{ $autoNominee->photo ? \Illuminate\Support\Facades\Storage::url($autoNominee->photo) : '' }}'
+        );
+    @endif
+});
+function copyShareLink(contestId, code, btn) {
+    const baseUrl = window.location.origin + '/voting/' + contestId + '?code=' + code;
+    navigator.clipboard.writeText(baseUrl).then(() => {
+        // Show tooltip
+        const copiedMsg = document.getElementById('copied-' + code);
+        if (copiedMsg) {
+            copiedMsg.classList.remove('hidden');
+            setTimeout(() => copiedMsg.classList.add('hidden'), 2000);
+        }
+    });
+}
+
 </script>
 
 <!-- <script>

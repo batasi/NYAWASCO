@@ -67,7 +67,10 @@ class VotingController extends Controller
                 ->where('voting_contest_id', $contest->id)
                 ->first();
         }
-    
+        $autoNominee = null;
+        if (request()->has('code')) {
+            $autoNominee = $contest->nominees()->where('code', request('code'))->first();
+        }
         // Group nominees by category
         $groupedNominees = $contest->nominees
             ->groupBy(fn($nominee) => optional($nominee->nomineeCategory)->name ?? 'Uncategorized');
@@ -75,6 +78,7 @@ class VotingController extends Controller
         return view('voting.show', [
             'contest' => $contest,
             'groupedNominees' => $groupedNominees,
+            'autoNominee' => $autoNominee,
             'userVote' => $userVote,
             'title' => "{$contest->title} - Javent",
         ]);
