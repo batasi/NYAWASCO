@@ -61,7 +61,11 @@ class PesapalController extends Controller
             return response()->json(['error' => 'Failed to get access token']);
         }
 
-        $amount = (int) ($request->votes ?? 1) * 10; // Example price per vote = 10
+        $contest = \App\Models\VotingContest::findOrFail($request->contest_id);
+        $pricePerVote = $contest->price_per_vote;
+        $votes = (int) ($request->votes ?? 1);
+        $amount = $votes * $pricePerVote;
+
         $callback = route('pesapal.callback');
 
         $orderTrackingId = uniqid('order_', true);
@@ -100,6 +104,7 @@ class PesapalController extends Controller
                 'order_tracking_id' => $data['order_tracking_id'], // ✅ use Pesapal's ID
                 'merchant_reference' => $data['merchant_reference'] ?? $orderTrackingId,
                 'amount' => $amount,
+                'votes_count' => $votes,
                 'currency' => 'KES',
                 'status' => 'PENDING',
                 'payment_method' => 'M-PESA',
@@ -218,48 +223,68 @@ class PesapalController extends Controller
     private function processSuccessfulPayment(string $trackingId, Request $request)
     {
         $payment = \App\Models\Payment::where('order_tracking_id', $trackingId)->first();
-
+    
         if (!$payment) {
             Log::warning('Payment not found during success processing', ['trackingId' => $trackingId]);
             return;
         }
-        // prevent duplicate processing
+    
+        // Prevent duplicate processing
         if ($payment->status === 'COMPLETED') {
             Log::info('Payment already processed', ['trackingId' => $trackingId]);
             return;
         }
+    
+        // --- Determine number of votes based on contest price ---
+        $contest = \App\Models\VotingContest::find($payment->voting_contest_id);
+        $votesToAdd = 1; // default fallback
+    
+        if ($contest && $contest->price_per_vote > 0) {
+            $votesToAdd = intval($payment->amount / $contest->price_per_vote);
+        }
+    
+        // --- Update payment record ---
         $payment->update([
             'status' => 'COMPLETED',
+            'votes_count' => $votesToAdd,
             'raw_response' => $request->all(),
         ]);
-        
+    
+        // --- Record vote purchase ---
         \App\Models\VotePurchase::create([
             'user_id'     => $payment->user_id,
             'nominee_id'  => $payment->nominee_id,
-            'votes_count' => 1, // assuming 1 vote per transaction; adjust if needed
+            'votes_count' => $votesToAdd,
             'amount'      => $payment->amount,
             'status'      => 'paid',
         ]);
-
-        \App\Models\Vote::create([
-            'user_id' => $payment->user_id,
-            'voting_contest_id' => $payment->voting_contest_id,
-            'nominee_id' => $payment->nominee_id,
-            'ip_address' => $request->ip(),
-        ]);
-
+    
+        // --- Record each vote ---
+        for ($i = 0; $i < $votesToAdd; $i++) {
+            \App\Models\Vote::create([
+                'user_id' => $payment->user_id,
+                'voting_contest_id' => $payment->voting_contest_id,
+                'nominee_id' => $payment->nominee_id,
+                'ip_address' => $request->ip(),
+            ]);
+        }
+    
+        // --- Update nominee and contest counts ---
         $nominee = \App\Models\Nominee::find($payment->nominee_id);
         if ($nominee) {
-            $nominee->increment('votes_count');
-            $nominee->contest->increment('total_votes');
+            $nominee->increment('votes_count', $votesToAdd);
+            if ($nominee->contest) {
+                $nominee->contest->increment('total_votes', $votesToAdd);
+            }
         }
-
-        Log::info('Vote recorded successfully via callback/IPN', [
+    
+        Log::info('Votes recorded successfully via callback/IPN', [
             'trackingId' => $trackingId,
             'nominee_id' => $payment->nominee_id,
             'contest_id' => $payment->voting_contest_id,
+            'votes_added' => $votesToAdd,
+            'amount' => $payment->amount,
         ]);
-        
-        
     }
+    
 }

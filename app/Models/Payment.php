@@ -15,6 +15,7 @@ class Payment extends Model
         'merchant_reference',
         'amount',
         'currency',
+        'votes_count',
         'status',
         'payment_method',
         'phone_number',

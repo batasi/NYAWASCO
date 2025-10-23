@@ -28,6 +28,7 @@ class VotingContest extends Model
         'total_votes',
         'views_count',
         'metadata',
+        'price_per_vote',
     ];
 
     protected $casts = [
