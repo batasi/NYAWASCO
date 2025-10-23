@@ -97,8 +97,8 @@ class PesapalController extends Controller
                 'user_id' => auth()->id() ?? 1,
                 'voting_contest_id' => $request->contest_id ?? 1360,
                 'nominee_id' => $request->nominee_id,
-                'order_tracking_id' => $orderTrackingId,
-                'merchant_reference' => $orderTrackingId,
+                'order_tracking_id' => $data['order_tracking_id'], // ✅ use Pesapal's ID
+                'merchant_reference' => $data['merchant_reference'] ?? $orderTrackingId,
                 'amount' => $amount,
                 'currency' => 'KES',
                 'status' => 'PENDING',
@@ -137,7 +137,7 @@ class PesapalController extends Controller
 
             if (strtoupper($status) === 'COMPLETED') {
                 $this->processSuccessfulPayment($orderTrackingId, $request);
-                return redirect()->route('vote.index')
+                return redirect()->route('voting.index')
                     ->with('success', 'Payment successful! Thank you for your votes.');
             }
 
@@ -223,7 +223,11 @@ class PesapalController extends Controller
             Log::warning('Payment not found during success processing', ['trackingId' => $trackingId]);
             return;
         }
-
+        // prevent duplicate processing
+        if ($payment->status === 'COMPLETED') {
+            Log::info('Payment already processed', ['trackingId' => $trackingId]);
+            return;
+        }
         $payment->update([
             'status' => 'COMPLETED',
             'raw_response' => $request->all(),
