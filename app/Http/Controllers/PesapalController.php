@@ -136,6 +136,7 @@ class PesapalController extends Controller
             $status = $this->verifyTransaction($orderTrackingId);
 
             if ($status === 'COMPLETED') {
+                $this->processSuccessfulPayment($orderTrackingId, $request);
                 return redirect()->route('vote.index')
                     ->with('success', 'Payment successful! Thank you for your votes.');
             }
@@ -197,7 +198,6 @@ class PesapalController extends Controller
             return response()->json(['error' => 'Missing tracking ID'], 400);
         }
 
-        // Re-confirm transaction status from Pesapal
         $status = $this->verifyTransaction($trackingId);
 
         if (!$status) {
@@ -205,50 +205,57 @@ class PesapalController extends Controller
             return response()->json(['status' => 'failed'], 500);
         }
 
-        $payment = \App\Models\Payment::where('order_tracking_id', $trackingId)->first();
-
-        if (!$payment) {
-            Log::warning('Pesapal IPN: Payment not found', ['trackingId' => $trackingId]);
-            return response()->json(['status' => 'not_found'], 404);
-        }
-
-        // Update payment record
-        $payment->update([
-            'status' => strtoupper($status),
-            'raw_response' => $request->all(),
-        ]);
-
         if (strtoupper($status) === 'COMPLETED') {
-            // Register vote only once
-            $exists = \App\Models\Vote::where([
-                'user_id' => $payment->user_id,
-                'voting_contest_id' => $payment->voting_contest_id,
-                'nominee_id' => $payment->nominee_id,
-            ])->exists();
-
-            if (!$exists) {
-                \App\Models\Vote::create([
-                    'user_id' => $payment->user_id,
-                    'voting_contest_id' => $payment->voting_contest_id,
-                    'nominee_id' => $payment->nominee_id,
-                    'ip_address' => $request->ip(),
-                ]);
-
-                // Increment vote counters
-                $nominee = \App\Models\Nominee::find($payment->nominee_id);
-                if ($nominee) {
-                    $nominee->increment('votes_count');
-                    $nominee->contest->increment('total_votes');
-                }
-
-                Log::info('Vote successfully recorded from IPN', [
-                    'nominee_id' => $payment->nominee_id,
-                    'contest_id' => $payment->voting_contest_id,
-                ]);
-            }
+            $this->processSuccessfulPayment($trackingId, $request);
         }
 
         return response()->json(['status' => 'ok'], 200);
     }
-    
+
+    /**
+     * Handle completed Pesapal payments and register votes
+     */
+    private function processSuccessfulPayment(string $trackingId, Request $request)
+    {
+        $payment = \App\Models\Payment::where('order_tracking_id', $trackingId)->first();
+
+        if (!$payment) {
+            Log::warning('Payment not found during success processing', ['trackingId' => $trackingId]);
+            return;
+        }
+
+        $payment->update([
+            'status' => 'COMPLETED',
+            'raw_response' => $request->all(),
+        ]);
+        
+        \App\Models\VotePurchase::create([
+            'user_id'     => $payment->user_id,
+            'nominee_id'  => $payment->nominee_id,
+            'votes_count' => 1, // assuming 1 vote per transaction; adjust if needed
+            'amount'      => $payment->amount,
+            'status'      => 'paid',
+        ]);
+
+        \App\Models\Vote::create([
+            'user_id' => $payment->user_id,
+            'voting_contest_id' => $payment->voting_contest_id,
+            'nominee_id' => $payment->nominee_id,
+            'ip_address' => $request->ip(),
+        ]);
+
+        $nominee = \App\Models\Nominee::find($payment->nominee_id);
+        if ($nominee) {
+            $nominee->increment('votes_count');
+            $nominee->contest->increment('total_votes');
+        }
+
+        Log::info('Vote recorded successfully via callback/IPN', [
+            'trackingId' => $trackingId,
+            'nominee_id' => $payment->nominee_id,
+            'contest_id' => $payment->voting_contest_id,
+        ]);
+        
+        
+    }
 }
