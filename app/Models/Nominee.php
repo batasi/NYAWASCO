@@ -82,5 +82,8 @@ class Nominee extends Model
     {
         return $this->belongsTo(NomineeCategory::class, 'nominee_category_id');
     }
-
+    public function contest()
+    {
+        return $this->belongsTo(VotingContest::class, 'voting_contest_id');
+    }
 }
