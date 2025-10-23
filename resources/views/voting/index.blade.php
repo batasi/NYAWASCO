@@ -116,7 +116,7 @@
                             <!-- Contest Image -->
                             <div class="relative h-48 bg-gradient-to-br from-purple-400 to-pink-500">
                                 @if($contest->featured_image)
-                                    <img src="{{ Storage::url($contest->featured_image) }}"
+                                    <img src="{{ \Illuminate\Support\Facades\Storage::url($contest->featured_image) }}"
                                          alt="{{ $contest->title }}"
                                          class="w-full h-full object-cover">
                                 @else

@@ -11,8 +11,10 @@ class Nominee extends Model
 
     protected $fillable = [
         'voting_contest_id',
+        'nominee_category_id',
         'name',
         'bio',
+        'code',
         'photo',
         'affiliation',
         'position',
@@ -76,4 +78,9 @@ class Nominee extends Model
         $totalVotes = $this->votingContest->total_votes;
         return $totalVotes > 0 ? round(($this->votes_count / $totalVotes) * 100, 2) : 0;
     }
+    public function nomineeCategory()
+    {
+        return $this->belongsTo(NomineeCategory::class, 'nominee_category_id');
+    }
+
 }

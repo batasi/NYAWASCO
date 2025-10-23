@@ -9,7 +9,7 @@
 <div 
     class="relative bg-gray-900 text-white"
     @if($contest->featured_image)
-        style="background-image: url('{{ Storage::url($contest->featured_image) }}'); background-size: cover; background-position: center;"
+        style="background-image: url('{{ \Illuminate\Support\Facades\Storage::url($contest->featured_image) }}'); background-size: cover; background-position: center;"
     @endif
 >
     <div class="absolute inset-0 bg-yellow bg-opacity-60"></div> <!-- dark overlay -->
@@ -155,11 +155,18 @@
             <!-- Main Content -->
             <div class="lg:col-span-4">
                 <div class="rounded-lg shadow-sm border border-gray-200 p-6">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Nominees</h2>
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">Contestants</h2>
 
-                    @if($contest->nominees->count() > 0)
-                        <div class="grid gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                            @foreach($contest->nominees as $nominee)
+                @if($groupedNominees->count() > 0)
+                    @foreach($groupedNominees as $categoryName => $nominees)
+                        <!-- Category Title -->
+                        <h3 class="text-xl font-semibold text-purple-700 mb-4 border-b pb-1">
+                            {{ $categoryName }}
+                        </h3>
+
+                        <!-- Nominees Grid -->
+                        <div class="grid gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 mb-8">
+                            @foreach($nominees as $nominee)
                                 <div class="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 p-5 flex flex-col justify-between">
                                     <div>
                                         <!-- Photo -->
@@ -178,6 +185,7 @@
                                         <!-- Info -->
                                         <div class="text-center">
                                             <h3 class="text-lg font-semibold text-gray-900">{{ $nominee->name }}</h3>
+                                            <p class="text-gray-600 text-center text-sm mt-1">Code: {{ $nominee->code ?? '' }}</p>
                                             @if($nominee->bio)
                                                 <p class="text-gray-600 text-sm mt-1 line-clamp-2">{{ $nominee->bio }}</p>
                                             @endif
@@ -202,16 +210,14 @@
 
                                     <!-- Buttons -->
                                     <div class="mt-5 text-center">
-                                      <!-- Vote Button triggers modal -->
-                                        @if($contest->isOngoing() )
+                                        @if($contest->isOngoing())
                                             <button 
                                                 type="button"
-                                                onclick="openVoteModal('{{ $nominee->id }}', '{{ $nominee->name }}', '{{ $nominee->unique_code }}', '{{ $nominee->photo ? \Illuminate\Support\Facades\Storage::url($nominee->photo) : '' }}')"
+                                                onclick="openVoteModal('{{ $nominee->id }}', '{{ $nominee->name }}', '{{ $nominee->code }}', '{{ $nominee->photo ? \Illuminate\Support\Facades\Storage::url($nominee->photo) : '' }}')"
                                                 class="inline-flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
                                                 Vote
                                             </button>
                                         @endif
-
 
                                         @if($userVote && $userVote->nominee_id == $nominee->id)
                                             <span class="inline-flex items-center justify-center w-full mt-2 px-3 py-1 rounded-md text-sm font-medium bg-green-100 text-green-800">
@@ -226,16 +232,18 @@
                                 </div>
                             @endforeach
                         </div>
-                    @else
-                        <div class="text-center py-10">
-                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
-                            </svg>
-                            <h3 class="mt-2 text-sm font-medium text-gray-900">No nominees yet</h3>
-                            <p class="mt-1 text-sm text-gray-500">Nominees will be added soon.</p>
-                        </div>
-                    @endif
+                    @endforeach
+                @else
+                    <div class="text-center py-10">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                        </svg>
+                        <h3 class="mt-2 text-sm font-medium text-gray-900">No nominees yet</h3>
+                        <p class="mt-1 text-sm text-gray-500">Nominees will be added soon.</p>
+                    </div>
+                @endif
+
                 </div>
             </div>
 

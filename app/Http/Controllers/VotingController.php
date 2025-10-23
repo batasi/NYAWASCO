@@ -59,23 +59,27 @@ class VotingController extends Controller
 
     public function show(VotingContest $contest)
     {
-       
-
-        $contest->load(['nominees', 'category', 'organizer']);
-
+        $contest->load(['nominees.nomineeCategory', 'category', 'organizer']);
+    
         $userVote = null;
         if (Auth::check()) {
             $userVote = Vote::where('user_id', Auth::id())
                 ->where('voting_contest_id', $contest->id)
                 ->first();
         }
-
+    
+        // Group nominees by category
+        $groupedNominees = $contest->nominees
+            ->groupBy(fn($nominee) => optional($nominee->nomineeCategory)->name ?? 'Uncategorized');
+    
         return view('voting.show', [
             'contest' => $contest,
+            'groupedNominees' => $groupedNominees,
             'userVote' => $userVote,
-            'title' => "{$contest->title} - EventSphere"
+            'title' => "{$contest->title} - Javent",
         ]);
     }
+    
 
     public function vote(Request $request, VotingContest $contest)
     {
