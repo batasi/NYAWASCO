@@ -28,34 +28,33 @@ class NomineeCategoryController extends Controller
     /**
      * Store a newly created nominee category in storage.
      */
-    public function store(Request $request)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'slug' => 'nullable|string|unique:nominee_categories,slug',
-            'color' => 'nullable|string|max:7', // for hex color code
+   public function store(Request $request)
+{
+    $validated = $request->validate([
+        'name' => 'required|string|max:255|unique:nominee_categories,name',
+        'color' => 'nullable|string|max:20',
+    ]);
+
+    $category = \App\Models\NomineeCategory::create([
+        'name' => $validated['name'],
+        'slug' => \Illuminate\Support\Str::slug($validated['name']),
+        'color' => $validated['color'] ?? '#8B5CF6',
+        'is_active' => true,
+    ]);
+
+    // 🔹 Always respond with JSON for AJAX requests
+    if ($request->expectsJson() || $request->ajax()) {
+        return response()->json([
+            'success' => true,
+            'message' => 'Nominee category created successfully!',
+            'category' => $category,
         ]);
-
-        $slug = $request->slug ?? Str::slug($request->name);
-
-        $category = NomineeCategory::create([
-            'name' => $request->name,
-            'slug' => $slug,
-            'color' => $request->color ?? '#8B5CF6',
-            'is_active' => true,
-        ]);
-
-        // Handle AJAX request from voting create/edit page
-        if ($request->expectsJson()) {
-            return response()->json([
-                'success' => true,
-                'category' => $category
-            ]);
-        }
-
-        return redirect()->route('nominee-categories.index')
-                         ->with('success', 'Category created successfully.');
     }
+
+    // 🔹 Fallback if user somehow submits non-AJAX form
+    return redirect()->back()->with('success', 'Nominee category created successfully!');
+}
+
 
     /**
      * Show the form for editing the specified nominee category.

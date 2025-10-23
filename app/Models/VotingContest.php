@@ -110,11 +110,14 @@ class VotingContest extends Model
         return $this->start_date > now();
     }
 
+    public function hasEnded()
+    {
+        return $this->end_date && $this->end_date < now();
+    }
     public function isEnded()
     {
         return $this->end_date && $this->end_date < now();
     }
-
     public function canVote()
     {
         return $this->is_active && $this->isOngoing();
