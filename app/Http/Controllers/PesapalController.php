@@ -135,7 +135,7 @@ class PesapalController extends Controller
         if ($orderTrackingId) {
             $status = $this->verifyTransaction($orderTrackingId);
 
-            if ($status === 'COMPLETED') {
+            if (strtoupper($status) === 'COMPLETED') {
                 $this->processSuccessfulPayment($orderTrackingId, $request);
                 return redirect()->route('vote.index')
                     ->with('success', 'Payment successful! Thank you for your votes.');
