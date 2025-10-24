@@ -1,32 +1,56 @@
-<!-- resources/views/livewire/voting-feed.blade.php -->
+
 <div>
-    <div wire:ignore class="swiper mySwiper px-4 py-6">
+@if($contests->count() > 0)
+    <div class="flex justify-between items-center mb-8">
+        <h2 class="text-3xl font-bold text-gray-900">Explore Upcoming Voting Contests</h2>
+        
+    </div>
+    <!-- Contests Carousel -->
+    <div wire:ignore class="swiper mySwiper-contests px-4 py-6">
         <div class="swiper-wrapper">
             @forelse ($contests as $contest)
-                <div class="swiper-slide">
-                    <div class="bg-white shadow-lg rounded-xl overflow-hidden hover:shadow-2xl transition duration-300">
-                        @if($contest->image)
-                            <img src="{{ Storage::url($contest->image) }}" alt="{{ $contest->title }}" class="w-full h-48 object-cover">
+                <div class="swiper-slide w-80">
+                    <div class="bg-white shadow-lg rounded-xl overflow-hidden hover:shadow-2xl transition duration-300 flex flex-col h-[360px]">
+                        {{-- Fixed Image Section --}}
+                        @if($contest->featured_image)
+                            <div class="h-40 w-full bg-gray-100 flex items-center justify-center">
+                                <img src="{{ \Illuminate\Support\Facades\Storage::url($contest->featured_image) }}" 
+                                     alt="{{ $contest->title }}" 
+                                     class="max-h-full max-w-full object-contain">
+                            </div>
                         @else
-                            <div class="w-full h-48 bg-gray-200 flex items-center justify-center text-gray-400">
+                            <div class="h-40 w-full bg-gray-200 flex items-center justify-center text-gray-400">
                                 No Image
                             </div>
                         @endif
 
-                        <div class="p-4">
-                            <h3 class="text-lg font-semibold text-gray-800 mb-2">{{ $contest->title }}</h3>
-                            <p class="text-gray-600 text-sm mb-3">
-                                Category: {{ $contest->category->name ?? 'Uncategorized' }}
-                            </p>
+                        {{-- Content Section --}}
+                        <div class="flex-1 p-4 flex flex-col justify-between">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-800 mb-1 line-clamp-1">
+                                    {{ $contest->title }}
+                                </h3>
+                                <p class="text-gray-600 text-sm mb-2">
+                                    Category: {{ $contest->category->name ?? 'Uncategorized' }}
+                                </p>
 
-                            <ul class="text-sm text-gray-700 space-y-1 mb-3">
-                                @foreach ($contest->nominees as $nominee)
-                                    <li>• {{ $nominee->name }}</li>
-                                @endforeach
-                            </ul>
+                                @if($contest->start_date)
+                                    <p class="text-xs text-gray-500 mb-1">
+                                        Starts: {{ $contest->start_date->format('M d, Y h:i A') }}
+                                    </p>
+                                @endif
+                                @if($contest->end_date)
+                                    <p class="text-xs text-gray-500 mb-2">
+                                        Ends: {{ $contest->end_date->format('M d, Y h:i A') }}
+                                    </p>
+                                @endif
+                            </div>
 
-                            <p class="text-xs text-gray-500">
-                                Ends: {{ $contest->end_date ? $contest->end_date->format('M d, Y') : 'Ongoing' }}
+                            {{-- Countdown --}}
+                            <p class="text-sm text-indigo-600 font-medium countdown mt-2"
+                               data-start="{{ $contest->start_date }}"
+                               data-end="{{ $contest->end_date }}">
+                                <!-- JS will inject countdown here -->
                             </p>
                         </div>
                     </div>
@@ -36,17 +60,64 @@
             @endforelse
         </div>
 
-        <!-- Pagination + Navigation -->
         <div class="swiper-pagination mt-4"></div>
         <div class="swiper-button-prev"></div>
         <div class="swiper-button-next"></div>
     </div>
-
-    @if ($contests->count() >= $perPage)
-        <div class="text-center mt-6">
-            <button wire:click="loadMore" class="px-6 py-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition">
-                Load More
-            </button>
-        </div>
     @endif
 </div>
+
+<!-- Swiper + Countdown JS -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    new Swiper('.mySwiper-contests', {
+        slidesPerView: 1,
+        spaceBetween: 16,
+        loop: true,
+        pagination: {
+            el: '.mySwiper-contests .swiper-pagination',
+            clickable: true,
+        },
+        navigation: {
+            nextEl: '.mySwiper-contests .swiper-button-next',
+            prevEl: '.mySwiper-contests .swiper-button-prev',
+        },
+        breakpoints: {
+            768: { slidesPerView: 2 },
+            1024: { slidesPerView: 3 },
+        },
+    });
+
+    // Countdown logic
+    function updateCountdowns() {
+        document.querySelectorAll('.countdown').forEach(el => {
+            const start = new Date(el.dataset.start);
+            const end = new Date(el.dataset.end);
+            const now = new Date();
+
+            let label = '';
+            let distance = 0;
+
+            if (now < start) {
+                label = 'Starts in ';
+                distance = start - now;
+            } else if (now >= start && now <= end) {
+                label = 'Ends in ';
+                distance = end - now;
+            } else {
+                el.textContent = 'Ended';
+                return;
+            }
+
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+
+            el.textContent = `${label}${days}d ${hours}h ${minutes}m`;
+        });
+    }
+
+    updateCountdowns();
+    setInterval(updateCountdowns, 60000);
+});
+</script>

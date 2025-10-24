@@ -17,21 +17,22 @@
     <homepage-hero
         :user-logged-in="{{ auth()->check() ? 'true' : 'false' }}"
         user-name="{{ auth()->user()->name ?? '' }}"></homepage-hero>
-
+      
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+
+
+
         <!-- Intelligent Feed Section -->
         <section class="mb-16">
-            <div class="flex justify-between items-center mb-8">
-                <h2 class="text-3xl font-bold text-gray-900">Your Events and Voting Feed</h2>
-              
-            </div>
+           
 
             <!-- Masonry Grid Layout -->
             <div class="masonry-grid">
+          
                 <!-- Events from Livewire -->
                 <livewire:event-feed />
-
+            
                 <!-- Voting Contests from Livewire -->
                 <livewire:voting-feed />
             </div>
@@ -77,7 +78,7 @@
                 </div>
 
                 <!-- For Organizers Column -->
-                <div class="bg-black rounded-2xl shadow-lg p-8 vote-gradient text-white">
+                <div class="bg-white rounded-2xl shadow-lg p-8 vote-gradient text-white">
                     <div class="flex items-center mb-6">
                         <div class="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center mr-4">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -159,33 +160,6 @@
 
     <!-- Livewire Scripts -->
     @livewireScripts
-    <script>
-document.addEventListener('livewire:load', function () {
-    new Swiper(".mySwiper", {
-        slidesPerView: 1,
-        spaceBetween: 20,
-        loop: true,
-        centeredSlides: true,
-        autoplay: {
-            delay: 3500,
-            disableOnInteraction: false,
-        },
-        breakpoints: {
-            640: { slidesPerView: 1 },
-            768: { slidesPerView: 2 },
-            1024: { slidesPerView: 3 },
-        },
-        pagination: {
-            el: ".swiper-pagination",
-            clickable: true,
-        },
-        navigation: {
-            nextEl: ".swiper-button-next",
-            prevEl: ".swiper-button-prev",
-        },
-    });
-});
-</script>
 
     <!-- Script for masonry grid filtering -->
     <script>
