@@ -8,19 +8,7 @@
         <h1 class="text-2xl font-bold text-gray-800 mb-2">Create Voting Contest</h1>
         <p class="text-gray-600 mb-5 text-sm">Create a contest under a category and set voting rules (start/end dates, limits).</p>
 
-        @if(session('success'))
-            <div class="mb-4 p-3 bg-green-100 text-green-700 rounded">{{ session('success') }}</div>
-        @endif
-
-        @if ($errors->any())
-            <div class="mb-4 p-3 bg-red-100 text-red-700 rounded">
-                <ul class="list-disc pl-5">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
+    
 
         <form method="POST" action="{{ route('voting.store') }}" enctype="multipart/form-data">
             @csrf
@@ -57,7 +45,7 @@
                     <textarea id="description" name="description" rows="2"
                         class="w-full border-gray-300 rounded-md px-3 py-1.5 text-sm">{{ old('description') }}</textarea>
                 </div>
-
+                
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label for="start_date" class="text-sm font-medium text-gray-700">Start Date</label>
@@ -71,30 +59,69 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
+                {{-- NEW: Contest Photo/Banner --}}
+                <div>
+                    <label for="featured_image" class="text-sm font-medium text-gray-700">Contest Photo / Banner (optional)</label>
+                    <input id="featured_image" name="featured_image" type="file" accept="image/*"
+                        class="w-full border-gray-300 rounded-md px-3 py-1.5 text-sm" onchange="previewFeaturedImage(event)">
+
+                    <!-- Preview -->
+                    <img id="featuredImagePreview" src="#" alt="Image Preview"
+                        class="mt-3 rounded-md w-48 h-32 object-cover hidden border border-gray-300">
+                </div>
+
+                {{-- NEW: Contest Amount / Fee --}}
+                <div>
+                    <label for="amount" class="text-sm font-medium text-gray-700">Amount (optional)</label>
+                    <input id="amount" name="amount" type="number" step="0.01" min="0"
+                        value="{{ old('amount') }}"
+                        class="w-full border-gray-300 rounded-md px-3 py-1.5 text-sm"
+                        placeholder="Enter amount (e.g. 5.00)">
+                    <p class="text-xs text-gray-500 mt-1">Leave empty if there's no fee for this contest.</p>
+                </div>
+
+                {{-- Max votes: keep existing input but add toggle for unlimited vs limited --}}
+                <div class="grid grid-cols-1 gap-2 mt-2">
+                    <label class="text-sm font-medium text-gray-700">Voting Limit</label>
+                    <div class="flex items-center gap-4">
+                        <label class="flex items-center text-sm">
+                            <input type="radio" name="votes_limit_type" value="limited" id="votes_limited" {{ old('votes_limit_type', 'limited') == 'limited' ? 'checked' : '' }} class="h-4 w-4 text-indigo-600 border-gray-300 rounded">
+                            <span class="ml-2">Limited</span>
+                        </label>
+                        <label class="flex items-center text-sm">
+                            <input type="radio" name="votes_limit_type" value="unlimited" id="votes_unlimited" {{ old('votes_limit_type') == 'unlimited' ? 'checked' : '' }} class="h-4 w-4 text-indigo-600 border-gray-300 rounded">
+                            <span class="ml-2">Unlimited</span>
+                        </label>
+                    </div>
+
+                    <div id="maxVotesWrapper" class="mt-2">
                         <label for="max_votes_per_user" class="text-sm font-medium text-gray-700">Max Votes Per User</label>
                         <input id="max_votes_per_user" name="max_votes_per_user" type="number" min="1"
                             value="{{ old('max_votes_per_user', 1) }}"
                             class="w-full border-gray-300 rounded-md px-3 py-1.5 text-sm">
+                        <p class="text-xs text-gray-500 mt-1">If 'Unlimited' is selected above, this value will be ignored.</p>
                     </div>
+                </div>
 
+                <div class="grid grid-cols-2 gap-3 mt-3">
                     <div class="flex items-center gap-2 mt-6">
                         <input id="is_featured" name="is_featured" type="checkbox" value="1"
                             {{ old('is_featured') ? 'checked' : '' }}
                             class="h-4 w-4 text-indigo-600 border-gray-300 rounded">
                         <label for="is_featured" class="text-gray-700 text-sm">Feature this contest</label>
                     </div>
+
+                    <div class="flex items-center gap-2 mt-6">
+                        <label class="flex items-center text-sm">
+                            <input type="checkbox" id="is_active" name="is_active" value="1"
+                                {{ old('is_active', true) ? 'checked' : '' }}
+                                class="h-4 w-4 text-indigo-600 border-gray-300 rounded">
+                            <span class="ml-2 text-gray-700">Activate contest</span>
+                        </label>
+                    </div>
                 </div>
 
-                <div class="flex flex-wrap items-center gap-4 mt-4">
-                    <label class="flex items-center text-sm">
-                        <input type="checkbox" id="is_active" name="is_active" value="1"
-                            {{ old('is_active', true) ? 'checked' : '' }}
-                            class="h-4 w-4 text-indigo-600 border-gray-300 rounded">
-                        <span class="ml-2 text-gray-700">Activate contest</span>
-                    </label>
-
+                <div class="flex flex-wrap items-center gap-4 mt-2">
                     <label class="flex items-center text-sm">
                         <input type="checkbox" id="requires_approval" name="requires_approval" value="1"
                             {{ old('requires_approval') ? 'checked' : '' }}
@@ -116,7 +143,7 @@
                         </div>
                         <div class="flex flex-col w-1/5 min-w-[120px]">
                             <label class="text-gray-700 text-sm font-medium mb-1">Photo</label>
-                            <input type="file" name="nominees[0][photo]" class="border-gray-300 rounded-md px-2 py-1 text-sm">
+                            <input type="file" name="nominees[0][photo]" accept="image/*" class="border-gray-300 rounded-md px-2 py-1 text-sm">
                         </div>
                         <div class="flex flex-col w-1/4 min-w-[150px]">
                             <label class="text-gray-700 text-sm font-medium mb-1">Description</label>
@@ -215,6 +242,53 @@
 {{-- JS --}}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // handle votes limit toggle (unlimited vs limited)
+    const votesLimitedRadio = document.getElementById('votes_limited');
+    const votesUnlimitedRadio = document.getElementById('votes_unlimited');
+    const maxVotesWrapper = document.getElementById('maxVotesWrapper');
+    const maxVotesInput = document.getElementById('max_votes_per_user');
+
+    function updateMaxVotesVisibility() {
+        if (votesUnlimitedRadio && votesUnlimitedRadio.checked) {
+            // hide/disable the numeric input
+            maxVotesWrapper.style.display = 'none';
+            if (maxVotesInput) {
+                maxVotesInput.disabled = true;
+            }
+        } else {
+            maxVotesWrapper.style.display = 'block';
+            if (maxVotesInput) {
+                maxVotesInput.disabled = false;
+            }
+        }
+    }
+
+    if (votesLimitedRadio && votesUnlimitedRadio) {
+        votesLimitedRadio.addEventListener('change', updateMaxVotesVisibility);
+        votesUnlimitedRadio.addEventListener('change', updateMaxVotesVisibility);
+        // initial state
+        updateMaxVotesVisibility();
+    }
+
+    function previewFeaturedImage(event) {
+        const file = event.target.files[0];
+        const preview = document.getElementById('featuredImagePreview');
+
+        if (file && preview) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                preview.src = e.target.result;
+                preview.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        } else if (preview) {
+            preview.src = '#';
+            preview.classList.add('hidden');
+        }
+    }
+
+
+    // Nominees add/remove logic (preserved original, with file accept added)
     let nomineeIndex = 1;
     const addNomineeBtn = document.getElementById('addNomineeBtn');
     const nomineesWrapper = document.getElementById('nomineesWrapper');
@@ -230,7 +304,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
             <div class="flex flex-col w-1/5 min-w-[120px]">
                 <label class="text-gray-700 text-sm font-medium mb-1">Photo</label>
-                <input type="file" name="nominees[${nomineeIndex}][photo]" class="border-gray-300 rounded-md px-2 py-1 text-sm">
+                <input type="file" name="nominees[${nomineeIndex}][photo]" accept="image/*" class="border-gray-300 rounded-md px-2 py-1 text-sm">
             </div>
             <div class="flex flex-col w-1/4 min-w-[150px]">
                 <label class="text-gray-700 text-sm font-medium mb-1">Description</label>
@@ -273,105 +347,118 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    cancelNomineeBtn.addEventListener('click', () => {
-        nomineeModal.classList.add('hidden');
-        nomineeModal.classList.remove('flex');
-        nomineeForm.reset();
-    });
+    if (cancelNomineeBtn) {
+        cancelNomineeBtn.addEventListener('click', () => {
+            nomineeModal.classList.add('hidden');
+            nomineeModal.classList.remove('flex');
+            if (nomineeForm) nomineeForm.reset();
+        });
+    }
 
     // AJAX nominee category submit
-    nomineeForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const name = document.getElementById('categoryName').value.trim();
-        const color = document.getElementById('categoryColor').value;
-        if(!name) return alert('Category name is required');
+    if (nomineeForm) {
+        nomineeForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const name = document.getElementById('categoryName').value.trim();
+            const color = document.getElementById('categoryColor').value;
+            if(!name) return alert('Category name is required');
 
-        fetch("{{ route('nominee-categories.store') }}", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            },
-            body: JSON.stringify({ name, color })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if(data.success) {
-                const selects = document.querySelectorAll('select[name^="nominees"]');
-                selects.forEach(s => {
-                    const opt = document.createElement('option');
-                    opt.value = data.category.id;
-                    opt.text = data.category.name;
-                    opt.selected = true;
-                    s.appendChild(opt);
-                });
-                nomineeModal.classList.add('hidden');
-                nomineeModal.classList.remove('flex');
-                nomineeForm.reset();
-            } else {
-                alert('Error adding category');
-            }
-        })
-        .catch(err => {
-            console.error(err);
-            alert('Something went wrong');
+            fetch("{{ route('nominee-categories.store') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ name, color })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    const selects = document.querySelectorAll('select[name^="nominees"]');
+                    selects.forEach(s => {
+                        const opt = document.createElement('option');
+                        opt.value = data.category.id;
+                        opt.text = data.category.name;
+                        opt.selected = true;
+                        s.appendChild(opt);
+                    });
+                    nomineeModal.classList.add('hidden');
+                    nomineeModal.classList.remove('flex');
+                    nomineeForm.reset();
+                } else {
+                    alert(data.message || 'Error adding category');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Something went wrong');
+            });
         });
-    });
+    }
 
     // Voting Category Modal open/close
     const votingModal = document.getElementById('votingCategoryModal');
     const cancelVotingBtn = document.getElementById('cancelVotingCategoryBtn');
     const votingForm = document.getElementById('votingCategoryForm');
 
-    document.getElementById('addVotingCategoryBtn').addEventListener('click', () => {
-        votingModal.classList.remove('hidden');
-        votingModal.classList.add('flex');
-    });
+    const addVotingBtn = document.getElementById('addVotingCategoryBtn');
+    if (addVotingBtn) {
+        addVotingBtn.addEventListener('click', () => {
+            votingModal.classList.remove('hidden');
+            votingModal.classList.add('flex');
+        });
+    }
 
-    cancelVotingBtn.addEventListener('click', () => {
-        votingModal.classList.add('hidden');
-        votingModal.classList.remove('flex');
-        votingForm.reset();
-    });
+    if (cancelVotingBtn) {
+        cancelVotingBtn.addEventListener('click', () => {
+            votingModal.classList.add('hidden');
+            votingModal.classList.remove('flex');
+            if (votingForm) votingForm.reset();
+        });
+    }
 
     // AJAX voting category submit
-    votingForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const name = document.getElementById('votingCategoryName').value.trim();
-        const color = document.getElementById('votingCategoryColor').value;
-        if(!name) return alert('Category name is required');
+    if (votingForm) {
+        votingForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const name = document.getElementById('votingCategoryName').value.trim();
+            const color = document.getElementById('votingCategoryColor').value;
+            if(!name) return alert('Category name is required');
 
-        fetch("{{ route('voting-category.store') }}", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            },
-            body: JSON.stringify({ name, color })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if(data.success) {
-                const select = document.getElementById('category_id');
-                const opt = document.createElement('option');
-                opt.value = data.category.id;
-                opt.text = data.category.name;
-                opt.selected = true;
-                select.appendChild(opt);
+            fetch("{{ route('voting-category.store') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ name, color })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    const select = document.getElementById('category_id');
+                    const opt = document.createElement('option');
+                    opt.value = data.category.id;
+                    opt.text = data.category.name;
+                    opt.selected = true;
+                    select.appendChild(opt);
 
-                votingModal.classList.add('hidden');
-                votingModal.classList.remove('flex');
-                votingForm.reset();
-            } else {
-                alert('Error adding voting category');
-            }
-        })
-        .catch(err => {
-            console.error(err);
-            alert('Something went wrong');
+                    votingModal.classList.add('hidden');
+                    votingModal.classList.remove('flex');
+                    votingForm.reset();
+                } else {
+                    alert(data.message || 'Error adding voting category');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Something went wrong');
+            });
         });
-    });
-
+    }
 });
+
 </script>
 @endsection
