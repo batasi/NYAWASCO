@@ -6,7 +6,7 @@
 <div class="min-h-screen bg-gray-50">
     <!-- Header Section -->
 <!-- Contest Header -->
-<div 
+<div
     class="relative bg-gray-900 text-white"
     @if($contest->featured_image)
         style="background-image: url('{{ \Illuminate\Support\Facades\Storage::url($contest->featured_image) }}'); background-size: cover; background-position: center;"
@@ -172,9 +172,12 @@
                                         <!-- Photo -->
                                         <div class="flex justify-center mb-4">
                                             @if($nominee->photo)
-                                                <img src="{{ \Illuminate\Support\Facades\Storage::url($nominee->photo) }}"
-                                                    alt="{{ $nominee->name }}"
-                                                    class="w-24 h-24 rounded-full object-cover ring-4 ring-purple-100">
+                                                <img
+                                                    src="{{ $nominee->photo
+                                                        ? \Illuminate\Support\Facades\Storage::url($nominee->photo)
+                                                        : \Illuminate\Support\Facades\Storage::url('nominees/OIP.jpg') }}"
+                                                    class="w-24 h-24 rounded-full object-cover ring-4 ring-purple-100"
+                                                />
                                             @else
                                                 <div class="w-24 h-24 rounded-full bg-purple-500 flex items-center justify-center text-white text-3xl font-bold">
                                                     {{ strtoupper(substr($nominee->name, 0, 1)) }}
@@ -211,7 +214,7 @@
                                     <!-- Buttons -->
                                     <div class="mt-5 text-center space-y-2">
                                         @if($contest->isOngoing())
-                                            <button 
+                                            <button
                                                 type="button"
                                                 onclick="openVoteModal('{{ $nominee->id }}', '{{ $nominee->name }}', '{{ $nominee->code }}', '{{ $nominee->photo ? \Illuminate\Support\Facades\Storage::url($nominee->photo) : '' }}')"
                                                 class="inline-flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
@@ -220,7 +223,7 @@
                                         @endif
 
                                         <!-- Share Button -->
-                                        <button 
+                                        <button
                                             type="button"
                                             onclick="copyShareLink('{{ $contest->id }}', '{{ $nominee->code }}', this)"
                                             class="inline-flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-purple-600 bg-purple-50 rounded-md hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
@@ -259,7 +262,7 @@
                 </div>
             </div>
 
-        
+
         </div>
     </div>
 </div>
@@ -289,7 +292,7 @@
                     <!-- Vote Quantity -->
                     <div>
                         <label for="voteCount" class="block text-sm font-medium text-gray-700">Number of Votes</label>
-                        <input type="number" name="votes" id="voteCount" min="1" value="1" 
+                        <input type="number" name="votes" id="voteCount" min="1" value="1"
                                class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:ring-purple-500 focus:border-purple-500">
                     </div>
 
@@ -302,7 +305,7 @@
                     <!-- Phone Number -->
                     <!-- <div>
                         <label for="phone" class="block text-sm font-medium text-gray-700">Phone Number (for STK Push)</label>
-                        <input type="text" name="phone" id="modalPhone" placeholder="e.g. 07XXXXXXXX" 
+                        <input type="text" name="phone" id="modalPhone" placeholder="e.g. 07XXXXXXXX"
                                class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:ring-purple-500 focus:border-purple-500" required>
                     </div> -->
                     <!-- Feedback / progress -->
@@ -366,8 +369,9 @@ document.addEventListener('DOMContentLoaded', function() {
             '{{ $autoNominee->id }}',
             '{{ addslashes($autoNominee->name) }}',
             '{{ $autoNominee->code }}',
-            '{{ $autoNominee->photo ? \Illuminate\Support\Facades\Storage::url($autoNominee->photo) : '' }}'
+            '{{ $autoNominee->photo ? \Illuminate\Support\Facades\Storage::url($autoNominee->photo) : \Illuminate\Support\Facades\Storage::url("nominees/OIP.jpg") }}'
         );
+
     @endif
 });
 function copyShareLink(contestId, code, btn) {
@@ -466,7 +470,7 @@ document.getElementById('voteForm').addEventListener('submit', function(e){
         showVoteError('Error initiating payment. Try again.', progress, message);
     });
 
-   
+
 });
 
 </script> -->
