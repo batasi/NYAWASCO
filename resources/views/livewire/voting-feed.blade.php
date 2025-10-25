@@ -3,7 +3,7 @@
 @if($contests->count() > 0)
     <div class="flex justify-between items-center mb-8">
         <h2 class="text-3xl font-bold text-gray-900">Explore Upcoming Voting Contests</h2>
-        
+
     </div>
     <!-- Contests Carousel -->
     <div wire:ignore class="swiper mySwiper-contests px-4 py-6">
@@ -14,14 +14,26 @@
                         {{-- Fixed Image Section --}}
                         @if($contest->featured_image)
                             <div class="h-40 w-full bg-gray-100 flex items-center justify-center">
-                                <img src="{{ \Illuminate\Support\Facades\Storage::url($contest->featured_image) }}" 
-                                     alt="{{ $contest->title }}" 
-                                     class="max-h-full max-w-full object-contain">
+                                   <img
+                                    src="{{ $contest->featured_image
+                                        ?  \Illuminate\Support\Facades\Storage::url($contest->featured_image)
+                                        : asset('voting-contests/banner1.jpg') }}"
+                                    alt="{{ $contest->title }}"
+                                    class="w-full h-64 object-contain rounded-lg"
+                                />
                             </div>
                         @else
-                            <div class="h-40 w-full bg-gray-200 flex items-center justify-center text-gray-400">
-                                No Image
+                            <div class="h-40 w-full bg-gray-100 flex items-center justify-center">
+
+                                <img
+                                    src="{{ $contest->featured_image
+                                        ?  \Illuminate\Support\Facades\Storage::url($contest->featured_image)
+                                        : asset('voting-contests/banner1.jpg') }}"
+                                    alt="{{ $contest->title }}"
+                                    class="w-full h-64 object-contain rounded-lg"
+                                />
                             </div>
+
                         @endif
 
                         {{-- Content Section --}}

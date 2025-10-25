@@ -3,14 +3,20 @@
 @if($events->count() > 0)
 <div class="flex justify-between items-center mb-8">
     <h2 class="text-3xl font-bold text-gray-900">Explore new Events</h2>
-    
+
 </div>
     <div wire:ignore class="swiper mySwiper-events px-4 py-6">
         <div class="swiper-wrapper">
             @forelse($events as $event)
                 <div class="swiper-slide">
                     <div class="bg-white rounded-lg shadow p-4 hover:shadow-xl transition">
-                        <img src="{{ $event->featured_image }}" alt="{{ $event->name }}" class="rounded mb-4 w-full h-40 object-contain">
+                           <img
+                                    src="{{ $event->featured_image
+                                        ?  \Illuminate\Support\Facades\Storage::url($event->featured_image)
+                                        : asset('voting-contests/banner1.jpg') }}"
+
+                                    class="w-full h-64 object-contain rounded-lg"
+                                />
                         <h3 class="font-semibold text-lg">{{ $event->name }}</h3>
                         <p class="text-sm text-gray-600">
                             {{ \Illuminate\Support\Str::limit($event->short_description ?? $event->description, 100) }}
