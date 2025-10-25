@@ -66,6 +66,11 @@ class PesapalController extends Controller
         $votes = (int) ($request->votes ?? 1);
         $amount = $votes * $pricePerVote;
 
+        $contest = \App\Models\VotingContest::findOrFail($request->contest_id);
+        $pricePerVote = $contest->price_per_vote;
+        $votes = (int) ($request->votes ?? 1);
+        $amount = $votes * $pricePerVote;
+
         $callback = route('pesapal.callback');
 
         $orderTrackingId = uniqid('order_', true);
@@ -124,9 +129,9 @@ class PesapalController extends Controller
     public function callback(Request $request)
     {
         Log::info('Pesapal Callback received', ['data' => $request->all()]);
-    
+
         // You could verify status here if needed
-    
+
         return redirect()->route('voting.index')
             ->with('success', 'Payment received! Thank you for your votes.');
     }
@@ -223,33 +228,33 @@ class PesapalController extends Controller
     private function processSuccessfulPayment(string $trackingId, Request $request)
     {
         $payment = \App\Models\Payment::where('order_tracking_id', $trackingId)->first();
-    
+
         if (!$payment) {
             Log::warning('Payment not found during success processing', ['trackingId' => $trackingId]);
             return;
         }
-    
+
         // Prevent duplicate processing
         if ($payment->status === 'COMPLETED') {
             Log::info('Payment already processed', ['trackingId' => $trackingId]);
             return;
         }
-    
+
         // --- Determine number of votes based on contest price ---
         $contest = \App\Models\VotingContest::find($payment->voting_contest_id);
         $votesToAdd = 1; // default fallback
-    
+
         if ($contest && $contest->price_per_vote > 0) {
             $votesToAdd = intval($payment->amount / $contest->price_per_vote);
         }
-    
+
         // --- Update payment record ---
         $payment->update([
             'status' => 'COMPLETED',
             'votes_count' => $votesToAdd,
             'raw_response' => $request->all(),
         ]);
-    
+
         // --- Record vote purchase ---
         \App\Models\VotePurchase::create([
             'user_id'     => $payment->user_id,
@@ -258,7 +263,7 @@ class PesapalController extends Controller
             'amount'      => $payment->amount,
             'status'      => 'paid',
         ]);
-    
+
         // --- Record each vote ---
         for ($i = 0; $i < $votesToAdd; $i++) {
             \App\Models\Vote::create([
@@ -268,7 +273,7 @@ class PesapalController extends Controller
                 'ip_address' => $request->ip(),
             ]);
         }
-    
+
         // --- Update nominee and contest counts ---
         $nominee = \App\Models\Nominee::find($payment->nominee_id);
         if ($nominee) {
@@ -277,7 +282,7 @@ class PesapalController extends Controller
                 $nominee->contest->increment('total_votes', $votesToAdd);
             }
         }
-    
+
         Log::info('Votes recorded successfully via callback/IPN', [
             'trackingId' => $trackingId,
             'nominee_id' => $payment->nominee_id,
@@ -286,5 +291,5 @@ class PesapalController extends Controller
             'amount' => $payment->amount,
         ]);
     }
-    
+
 }
