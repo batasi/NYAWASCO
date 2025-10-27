@@ -63,7 +63,7 @@
                 <div>
                     <label for="featured_image" class="text-sm font-medium text-gray-700">Contest Photo / Banner (optional)</label>
                     <input id="featured_image" name="featured_image" type="file" accept="image/*"
-                        class="w-full border-gray-300 rounded-md px-3 py-1.5 text-sm" onchange="previewFeaturedImage(event)">
+                        class="w-full border-gray-300 rounded-md px-3 py-1.5 text-sm">
 
                     <!-- Preview -->
                     <img id="featuredImagePreview" src="#" alt="Image Preview"
@@ -272,7 +272,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function previewFeaturedImage(event) {
         const file = event.target.files[0];
-        const preview = document.getElementById('featuredImagePreview');
+        const preview = document.getElementById('featured_image').addEventListener('change', previewFeaturedImage);
+
 
         if (file && preview) {
             const reader = new FileReader();
