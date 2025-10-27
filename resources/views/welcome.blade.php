@@ -21,7 +21,93 @@
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 
+           <!-- Hero Slideshow Section -->
+            <section class="mb-16 -mx-4 sm:-mx-6 lg:-mx-8 mt-2"> 
+                <div wire:ignore class="swiper hero-swiper h-80 md:h-[450px] lg:h-[550px] w-screen">
+                    <div class="swiper-wrapper">
+                       
+                        <div class="swiper-slide relative">
+                            <div class="absolute inset-0 bg-black bg-opacity-50 z-10"></div>
+                            <img src="https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
+                                alt="Live Events" 
+                                class="w-full h-full object-cover">
+                            <div class="absolute inset-0 z-20 flex items-center justify-center text-center px-4">
+                                <div class="text-white max-w-4xl">
+                                    <h2 class="text-3xl md:text-5xl lg:text-6xl font-bold mb-4">Discover Amazing Events</h2>
+                                    <p class="text-lg md:text-xl lg:text-2xl mb-6 md:mb-8 opacity-90">Find and book tickets for the hottest events in your city</p>
+                                    <a href="{{ route('events.index') }}"
+                                        class="bg-pink-500 hover:bg-pink-600 text-white px-6 py-2 md:px-8 md:py-3 rounded-full font-semibold text-base md:text-lg transition duration-300 transform hover:scale-105 inline-block text-center">
+                                        Explore Events
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
 
+                        <div class="swiper-slide relative">
+                            <div class="absolute inset-0 bg-black bg-opacity-50 z-10"></div>
+                            <img src="/img/javent.png" 
+                                alt="Create Events" 
+                                class="w-full h-full object-cover">
+                            <div class="absolute inset-0 z-20 flex items-center justify-center text-center px-4">
+                                <div class="text-white max-w-4xl">
+                                    <h2 class="text-3xl md:text-5xl lg:text-6xl font-bold mb-4">Host Your Event</h2>
+                                    <p class="text-lg md:text-xl lg:text-2xl mb-6 md:mb-8 opacity-90">Reach thousands of attendees with our powerful platform</p>
+                                    <button @click="signupOpen = true" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 md:px-8 md:py-3 rounded-full font-semibold text-base md:text-lg transition duration-300 transform hover:scale-105">
+                                        Get Started
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        
+                        <div class="swiper-slide relative">
+                            <div class="absolute inset-0 bg-black bg-opacity-50 z-10"></div>
+                            <img src="https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
+                                alt="Voting Contests" 
+                                class="w-full h-full object-cover">
+                            <div class="absolute inset-0 z-20 flex items-center justify-center text-center px-4">
+                                <div class="text-white max-w-4xl">
+                                    <h2 class="text-3xl md:text-5xl lg:text-6xl font-bold mb-4">Join Live Voting</h2>
+                                    <p class="text-lg md:text-xl lg:text-2xl mb-6 md:mb-8 opacity-90">Participate in exciting contests and shape the outcomes</p>
+                                    <a href="{{ route('voting.index') }}"
+                                        class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 md:px-8 md:py-3 rounded-full font-semibold text-base md:text-lg transition duration-300 transform hover:scale-105 inline-block text-center">
+                                        Vote Now
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        
+                        <div class="swiper-slide relative">
+                            
+                            <div class="absolute inset-0 bg-cover bg-center scale-110 blur-sm" 
+                                style="background-image: url('/img/dance.jpeg')"></div>
+                            <div class="absolute inset-0 bg-black bg-opacity-60 z-10"></div> 
+                            <img src="/img/dance.jpeg" 
+                                alt="Book Tickets" 
+                                class="w-full h-full object-contain opacity-50 z-20 relative">
+                            <div class="absolute inset-0 z-30 flex items-center justify-center text-center px-4">
+                                <div class="text-white max-w-4xl">
+                                    <h2 class="text-3xl md:text-5xl lg:text-6xl font-bold mb-4 text-white drop-shadow-2xl">Book Your Tickets</h2>
+                                    <p class="text-lg md:text-xl lg:text-2xl mb-6 md:mb-8 text-white font-medium drop-shadow-lg">Secure your spot at amazing events with easy, fast booking</p>
+                                    <a href="{{ route('events.index') }}" class="bg-purple-500 hover:bg-purple-700 text-white px-8 py-3 md:px-10 md:py-4 rounded-full font-bold text-lg md:text-xl transition duration-300 transform hover:scale-105 inline-block shadow-2xl">
+                                        Book Your Tickets
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                     
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="swiper-pagination !bottom-4"></div>
+
+                   <!-- Navigation Buttons - Properly Styled -->
+                    <div class="swiper-button-prev !w-4!h-4 md:!w-12 md:!h-12 !left-1 md:!left-2 bg-white bg-opacity-10 rounded-full shadow-lg hover:bg-purple hover:scale-90 transition-all duration-300"></div>
+                    <div class="swiper-button-next !w-4 !h-4 md:!w-12 md:!h-12 !right-1 md:!right-2 bg-white bg-opacity-10 rounded-full shadow-lg hover:bg-purple hover:scale-90 transition-all duration-300"></div>
+                </div>
+            </section>
 
         <!-- Intelligent Feed Section -->
         <section class="mb-16">
@@ -40,8 +126,8 @@
 
         <!-- Dual-Path How It Works Section -->
         <section class="mb-16">
-            <h2 class="text-3xl font-bold text-center text-gray-900 mb-12">How Javent Works</h2>
-            <div class="grid md:grid-cols-2 gap-8">
+            <h2 class="text-3xl font-bold text-center text-purple-500 mb-12">How Javent Works</h2>
+            <div class="grid md:grid-cols-2 gap-4">
                 <!-- For Attendees Column -->
                 <div class="bg-black rounded-2xl shadow-lg p-8 ticket-gradient text-white">
                     <div class="flex items-center mb-6">
@@ -78,7 +164,7 @@
                 </div>
 
                 <!-- For Organizers Column -->
-                <div class="bg-white rounded-2xl shadow-lg p-8 vote-gradient text-white">
+                <div class="bg-black rounded-2xl shadow-lg p-8 vote-gradient text-white">
                     <div class="flex items-center mb-6">
                         <div class="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center mr-4">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -116,7 +202,7 @@
 
         <!-- Testimonials Section -->
         <section class="mb-16">
-            <h2 class="text-3xl font-bold text-center text-gray-900 mb-12">What Our Community Says</h2>
+            <h2 class="text-3xl font-bold text-center text-purple-500 mb-12">What Our Community Says</h2>
             <div class="grid md:grid-cols-3 gap-8">
                 <div class="bg-white p-6 rounded-2xl shadow-lg">
                     <div class="flex items-center mb-4">
@@ -124,11 +210,11 @@
                             AJ
                         </div>
                         <div>
-                            <h4 class="font-semibold">Aisha J.</h4>
-                            <p class="text-gray-600 text-sm">Event Attendee</p>
+                            <h4 class="font-semibold text-black">Keffa.</h4>
+                            <p class="text-gray-600 text-sm">CEO, HeartBeat of Style</p>
                         </div>
                     </div>
-                    <p class="text-gray-700">"Booking tickets through Javent is so seamless. The QR check-in made entry a breeze!"</p>
+                    <p class="text-gray-700">“Javent made our event feel truly interactive through ticket bookings and more. The live voting kept our audience energized, and the sleek poster designs gave our brand a polished, professional edge.”</p>
                 </div>
                 <div class="bg-white p-6 rounded-2xl shadow-lg">
                     <div class="flex items-center mb-4">
@@ -136,7 +222,7 @@
                             MK
                         </div>
                         <div>
-                            <h4 class="font-semibold">Mark K.</h4>
+                            <h4 class="font-semibold text-black">Mark K.</h4>
                             <p class="text-gray-600 text-sm">Awards Organizer</p>
                         </div>
                     </div>
@@ -148,11 +234,66 @@
                             SM
                         </div>
                         <div>
-                            <h4 class="font-semibold">Sarah M.</h4>
+                            <h4 class="font-semibold text-black">Sarah M.</h4>
                             <p class="text-gray-600 text-sm">Music Festival Director</p>
                         </div>
                     </div>
                     <p class="text-gray-700">"From ticketing to vendor management, Javent handles everything. A game-changer!"</p>
+                </div>
+            </div>
+        </section>
+        <!-- Partners Section -->
+        <section class="mb-16">
+            <h2 class="text-3xl font-bold text-center text-purple-500 mb-8">Our Trusted Partners</h2>
+            
+            <!-- Partner Description -->
+            <div class="text-center mb-8">
+                <p class="text-gray-300 text-lg max-w-3xl mx-auto leading-relaxed">
+                    Collaborating with industry leaders to deliver exceptional event and voting experiences 
+                    through innovative technology and seamless partnerships.
+                </p>
+            </div>
+
+            <!-- Partners Logos Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 max-w-4xl mx-auto">
+                <!-- Partner 1 -->
+                <div class="bg-white rounded-lg shadow-sm p-4 flex flex-col items-center justify-center hover:shadow-md transition-all duration-300 hover:scale-105 border border-gray-200 h-35">
+                    <div class="w-full h-23 flex items-center justify-center mb-2">
+                        <img src="/img/LHTBT.png" 
+                            alt="HeartBeat of Style" 
+                            class="w-full h-full object-contain">
+                    </div>
+                    <h3 class="font-semibold text-gray-800 text-xs text-center leading-tight mt-1">HeartBeat of Style</h3>
+                </div>
+
+                <!-- Partner 2 -->
+                <div class="bg-white rounded-lg shadow-sm p-4 flex flex-col items-center justify-center hover:shadow-md transition-all duration-300 hover:scale-105 border border-gray-200 h-35">
+                    <div class="w-full h-23 bg-transparent flex items-center justify-center mb-2">
+                        <img src="/img/java.png" 
+                             alt="JavaPA" 
+                            class="w-full h-full object-contain">
+                    </div>
+                    <h3 class="font-semibold text-gray-800 text-xs text-center leading-tight mt-1">JavaPA Limited</h3>
+                </div>
+
+                <!-- Partner 3 -->
+                <div class="bg-white rounded-lg shadow-sm p-4 flex flex-col items-center justify-center hover:shadow-md transition-all duration-300 hover:scale-105 border border-gray-200 h-35">
+                    <div class="w-full h-23 bg-transparent flex items-center justify-center mb-2">
+                        <img src="/img/GEvents.jpeg" 
+                             alt="The Giftland Events" 
+                            class="w-full h-full object-contain">
+                    </div>
+                    <h3 class="font-semibold text-gray-800 text-xs text-center leading-tight mt-1">Giftland Events Limited</h3>
+                </div>
+
+                <!-- Partner 4 -->
+                <div class="bg-white rounded-lg shadow-sm p-4 flex flex-col items-center justify-center hover:shadow-md transition-all duration-300 hover:scale-105 border border-gray-200 h-35">
+                    <div class="w-full h-23 bg-transparent flex items-center justify-center mb-2">
+                        <img src="/img/g.png" 
+                             alt="The Giftland Studios and Restaurant" 
+                            class="w-full h-full object-contain">
+                    </div>
+                    <h3 class="font-semibold text-gray-800 text-xs text-center leading-tight mt-1">The Giftland Studios and Restaurant</h3>
                 </div>
             </div>
         </section>
@@ -188,6 +329,28 @@
                         }
                     });
                 });
+            });
+
+            new Swiper('.hero-swiper', {
+                loop: true,
+                autoplay: {
+                    delay: 5000,
+                    disableOnInteraction: false,
+                },
+                speed: 1000,
+                effect: 'fade',
+                fadeEffect: {
+                    crossFade: true
+                },
+                pagination: {
+                    el: '.hero-swiper .swiper-pagination',
+                    clickable: true,
+                    dynamicBullets: true,
+                },
+                navigation: {
+                    nextEl: '.hero-swiper .swiper-button-next',
+                    prevEl: '.hero-swiper .swiper-button-prev',
+                },
             });
         });
     </script>

@@ -3,24 +3,24 @@
 @section('title', $title)
 
 @section('content')
-<div class="min-h-screen bg-gray-50">
+<div class="min-h-screen modal-header">
     <!-- Header Section -->
-    <div class="bg-white shadow-sm border-b border-gray-200">
+    <div class="bg-black shadow-sm border-b border-gray-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <div class="md:flex md:items-center md:justify-between">
                 <div class="flex-1 min-w-0">
-                    <h1 class="text-3xl font-bold leading-tight text-gray-900">
+                    <h1 class="text-3xl font-bold leading-tight text-white">
                         Discover Events
                         @if(isset($category))
                         <span class="text-blue-600">in {{ $category->name }}</span>
                         @endif
                     </h1>
-                    <p class="mt-2 text-lg text-gray-600">
+                    <p class="mt-2 text-lg text-gray-400">
                         Find amazing events happening near you
                     </p>
                 </div>
                 <div class="mt-4 flex md:mt-0 md:ml-4">
-                    <a href="{{ route('organizer.events.create') }}" class="ml-3 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <a href="{{ route('organizer.events.create') }}" class="ml-3 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                         <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                         </svg>
@@ -32,15 +32,15 @@
     </div>
 
     <!-- Filters and Search Section -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+    <div class="modal-bg max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div class="modal-header rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <!-- Search -->
                 <div class="md:col-span-2">
-                    <label for="search" class="block text-sm font-medium text-gray-700 mb-2">Search Events</label>
+                    <label for="search" class="block text-sm font-medium text-white mb-2">Search Events</label>
                     <div class="relative rounded-md shadow-sm">
                         <input type="text" name="search" id="search" placeholder="Search by event name, location..."
-                            class="focus:ring-blue-500 focus:border-blue-500 block w-full pl-4 pr-12 py-3 text-sm border-gray-300 rounded-md">
+                            class="focus:ring-blue-500 focus:border-blue-500 block w-full pl-4 pr-12 py-3 text-sm border-gray-300 rounded-md" style="color: black;">
                         <div class="absolute inset-y-0 right-0 flex items-center pr-3">
                             <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
@@ -51,8 +51,8 @@
 
                 <!-- Category Filter -->
                 <div>
-                    <label for="category" class="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                    <select id="category" name="category" class="mt-1 block w-full pl-3 pr-10 py-3 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                    <label for="category" class="block text-sm font-medium text-white mb-2">Category</label>
+                    <select id="category" name="category" class="mt-1 block w-full pl-3 pr-10 py-3 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md" style="color: black;">
                         <option value="">All Categories</option>
                         @foreach($categories as $cat)
                         <option value="{{ $cat->id }}" {{ isset($category) && $category->id == $cat->id ? 'selected' : '' }}>
@@ -64,26 +64,26 @@
 
                 <!-- Location Filter -->
                 <div>
-                    <label for="location" class="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                    <label for="location" class="block text-sm font-medium text-white mb-2">Location</label>
                     <input type="text" name="location" id="location" placeholder="City, Country..."
-                        class="focus:ring-blue-500 focus:border-blue-500 block w-full px-4 py-3 text-sm border-gray-300 rounded-md">
+                        class="focus:ring-blue-500 focus:border-blue-500 block w-full px-4 py-3 text-sm border-gray-300 rounded-md" style="color: black;">
                 </div>
             </div>
 
             <!-- Date Range Filter -->
             <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                    <label for="date_from" class="block text-sm font-medium text-gray-700 mb-2">From Date</label>
+                    <label for="date_from" class="block text-sm font-medium tex-white mb-2">From Date</label>
                     <input type="date" name="date_from" id="date_from"
-                        class="focus:ring-blue-500 focus:border-blue-500 block w-full px-4 py-3 text-sm border-gray-300 rounded-md">
+                        class="focus:ring-blue-500 focus:border-blue-500 block w-full px-4 py-3 text-sm border-gray-300 rounded-md" style="color: black;">
                 </div>
                 <div>
-                    <label for="date_to" class="block text-sm font-medium text-gray-700 mb-2">To Date</label>
+                    <label for="date_to" class="block text-sm font-medium text-white mb-2">To Date</label>
                     <input type="date" name="date_to" id="date_to"
-                        class="focus:ring-blue-500 focus:border-blue-500 block w-full px-4 py-3 text-sm border-gray-300 rounded-md">
+                        class="focus:ring-blue-500 focus:border-blue-500 block w-full px-4 py-3 text-sm border-gray-300 rounded-md" style="color: black;">
                 </div>
                 <div class="flex items-end">
-                    <button type="button" id="applyFilters" class="w-full bg-blue-600 text-white px-4 py-3 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm font-medium">
+                    <button type="button" id="applyFilters" class="w-full bg-purple-600 text-white px-4 py-3 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm font-medium">
                         Apply Filters
                     </button>
                 </div>
@@ -93,17 +93,17 @@
         <!-- Events Grid -->
         <div class="mb-6">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-semibold text-gray-900">
+                <h2 class="text-2xl font-semibold text-white">
                     @if(isset($category))
                     {{ $category->name }} Events
                     @else
                     All Events
                     @endif
-                    <span class="text-lg text-gray-600">({{ $events->total() }} found)</span>
+                    <span class="text-lg text-purple-400">({{ $events->total() }} found)</span>
                 </h2>
                 <div class="flex items-center space-x-4">
-                    <span class="text-sm text-gray-600">Sort by:</span>
-                    <select id="sort" name="sort" class="text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                    <span class="text-sm text-gray-300">Sort by:</span>
+                    <select id="sort" name="sort" class="text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" style="color: black;">
                         <option value="date_asc">Date (Earliest)</option>
                         <option value="date_desc">Date (Latest)</option>
                         <option value="name_asc">Name (A-Z)</option>
@@ -204,7 +204,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                 </svg>
                 <h3 class="mt-4 text-lg font-medium text-gray-900">No events found</h3>
-                <p class="mt-2 text-sm text-gray-600">
+                <p class="mt-2 text-sm text-white">
                     @if(isset($category))
                     There are no {{ $category->name }} events matching your criteria.
                     @else
@@ -212,7 +212,7 @@
                     @endif
                 </p>
                 <div class="mt-6">
-                    <a href="{{ route('organizer.events') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <a href="{{ route('organizer.events') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                         Clear Filters
                     </a>
                 </div>

@@ -3,19 +3,19 @@
 @section('title', $title)
 
 @section('content')
-<div class="min-h-screen bg-gray-50">
+<div class="min-h-screen modal-header">
     <!-- Header Section -->
-    <div class="bg-white shadow-sm border-b border-gray-200">
+    <div class="bg-black shadow-sm border-b border-gray-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <div class="md:flex md:items-center md:justify-between">
                 <div class="flex-1 min-w-0">
-                    <h1 class="text-3xl font-bold leading-tight text-gray-900">
+                    <h1 class="text-3xl font-bold leading-tight text-white-900">
                         Active Voting Contests
                         @if(isset($category))
                             <span class="text-purple-600">in {{ $category->name }}</span>
                         @endif
                     </h1>
-                    <p class="mt-2 text-lg text-gray-600">
+                    <p class="mt-2 text-lg text-gray-400">
                         Participate in live voting and help shape the outcomes
                     </p>
                 </div>
@@ -36,15 +36,15 @@
     </div>
 
     <!-- Filters and Search Section -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 modal-bg">
+        <div class="modal-header rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <!-- Search -->
                 <div class="md:col-span-2">
-                    <label for="search" class="block text-sm font-medium text-gray-700 mb-2">Search Contests</label>
+                    <label for="search" class="block text-sm font-medium text-black mb-2">Search Contests</label>
                     <div class="relative rounded-md shadow-sm">
                         <input type="text" name="search" id="search" placeholder="Search by contest title, description..."
-                               class="focus:ring-purple-500 focus:border-purple-500 block w-full pl-4 pr-12 py-3 text-sm border-gray-300 rounded-md">
+                               class="focus:ring-purple-500 focus:border-purple-500 block w-full pl-4 pr-12 py-3 text-sm border-gray-300 rounded-md" style="color: black;">
                         <div class="absolute inset-y-0 right-0 flex items-center pr-3">
                             <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
@@ -55,8 +55,8 @@
 
                 <!-- Category Filter -->
                 <div>
-                    <label for="category" class="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                    <select id="category" name="category" class="mt-1 block w-full pl-3 pr-10 py-3 text-base border-gray-300 focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm rounded-md">
+                    <label for="category" class="block text-sm font-medium text-black mb-2">Category</label>
+                    <select id="category" name="category" class="mt-1 block w-full pl-3 pr-10 py-3 text-base border-gray-300 focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm rounded-md" style="color: black;">
                         <option value="">All Categories</option>
                         @foreach($categories as $cat)
                             <option value="{{ $cat->id }}" {{ isset($category) && $category->id == $cat->id ? 'selected' : '' }}>
@@ -68,8 +68,8 @@
 
                 <!-- Status Filter -->
                 <div>
-                    <label for="status" class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                    <select id="status" name="status" class="mt-1 block w-full pl-3 pr-10 py-3 text-base border-gray-300 focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm rounded-md">
+                    <label for="status" class="block text-sm font-medium text-black mb-2">Status</label>
+                    <select id="status" name="status" class="mt-1 block w-full pl-3 pr-10 py-3 text-base border-gray-300 focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm rounded-md" style="color: black;">
                         <option value="all">All Contests</option>
                         <option value="ongoing">Ongoing</option>
                         <option value="upcoming">Upcoming</option>
@@ -89,17 +89,17 @@
         <!-- Voting Contests Grid -->
         <div class="mb-6">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-semibold text-gray-900">
+                <h2 class="text-2xl font-semibold text-gray-100">
                     @if(isset($category))
                         {{ $category->name }} Voting
                     @else
                         All Voting Contests
                     @endif
-                    <span class="text-lg text-gray-600">({{ $contests->total() }} found)</span>
+                    <span class="text-lg text-purple-400">({{ $contests->total() }} found)</span>
                 </h2>
                 <div class="flex items-center space-x-4">
-                    <span class="text-sm text-gray-600">Sort by:</span>
-                    <select id="sort" name="sort" class="text-sm border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500">
+                    <span class="text-sm text-gray-400">Sort by:</span>
+                    <select id="sort" name="sort" class="text-sm border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500" style="color: black;">
                         <option value="newest">Newest First</option>
                         <option value="oldest">Oldest First</option>
                         <option value="ending_soon">Ending Soon</option>
