@@ -3,26 +3,26 @@
 @section('title', 'Javent')
 
 @section('content')
-<div class="min-h-screen bg-gray-50">
+<div class="min-h-screen modal-header">
     <!-- Header -->
-    <div class="bg-white shadow-sm border-b border-gray-200">
+    <div class="modal-bg shadow-sm border-b border-gray-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <div class="md:flex md:items-center md:justify-between">
                 <div class="flex-1 min-w-0">
-                    <h1 class="text-3xl font-bold leading-tight text-gray-900">
+                    <h1 class="text-3xl font-bold leading-tight text-white">
                         Organizer Dashboard
                     </h1>
-                    <p class="mt-2 text-lg text-gray-600">
+                    <p class="mt-2 text-lg text-gray-400">
                         Manage your events and voting contests.
                     </p>
                 </div>
                 <div class="mt-4 flex md:mt-0 md:ml-4 space-x-3">
                     <a href="{{ route('organizer.events.create') }}"
-                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white  hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" style="background-color: rgba(226, 0, 177, 1);">
                         Create Event
                     </a>
                     <a href="{{ route('organizer.voting.create') }}"
-                        class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" style="background-color: rgba(196, 2, 255, 1);">
                         Create Voting
                     </a>
                 </div>
@@ -150,7 +150,7 @@
                 <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
                     <h3 class="text-lg font-semibold text-gray-900">Recent Ticket Sales</h3>
                     <a href=""
-                        class="inline-flex items-center px-3 py-1 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        class="inline-flex items-center px-3 py-1 text-sm font-medium text-white bg-purple-500 hover:bg-purple-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                         View All
                     </a>
                 </div>
@@ -217,7 +217,7 @@
                 <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
                     <h3 class="text-lg font-semibold text-gray-900">Upcoming Events</h3>
                     <a href="{{ route('organizer.events.create') }}"
-                        class="inline-flex items-center px-3 py-1 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        class="inline-flex items-center px-3 py-1 text-sm font-medium text-white bg-purple-500 hover:bg-purple-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                         + Create Event
                     </a>
                 </div>
@@ -281,7 +281,7 @@
                         <p class="mt-1 text-sm text-gray-500">Start by creating your first event below.</p>
                         <div class="mt-6">
                             <a href="{{ route('organizer.events.create') }}"
-                                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-500 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                                 Create Event
                             </a>
                         </div>

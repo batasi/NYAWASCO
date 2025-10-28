@@ -1,73 +1,109 @@
-<div class="content-slideshow" 
-     x-data="{
-         currentEventSlide: 0, 
-         totalEventSlides: {{ $events->count() }}, 
-         eventAutoSlide: true,
-         eventInterval: null
-     }"
-     x-init="
-         eventInterval = setInterval(() => {
-             if (eventAutoSlide && totalEventSlides > 0) {
-                 currentEventSlide = (currentEventSlide + 1) % totalEventSlides;
-             }
-         }, 4000);
-     ">
-    
-    @forelse($events as $index => $event)
-    @php
-        $backgroundStyle = $event->image_url 
-            ? "linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('{$event->image_url}')"
-            : "linear-gradient(135deg, rgba(236,72,153,0.9), rgba(0,0,0,0.8))";
-    @endphp
 
-    <div class="content-slide events" 
-         :class="{ 'active': currentEventSlide === {{ $index }} }"
-         style="background: {{ $backgroundStyle }}; background-size: cover; background-position: center; background-repeat: no-repeat;">
-        <div class="slide-content-wrapper">
-            <div class="slide-icon">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                </svg>
-            </div>
-            <h4 class="slide-title">{{ $event->name }}</h4>
-            <p class="slide-meta">
-                @if($event->start_date)
-                    {{ $event->start_date->format('M d, Y') }}
-                @else
-                    Date TBA
-                @endif
-                @if($event->end_date && $event->end_date != $event->start_date)
-                    <br>to {{ $event->end_date->format('M d, Y') }}
-                @endif
-                <br>
-                @if($event->location)
-                    {{ $event->location }}
-                @endif
-            </p>
-            <a href="{{ route('events.show', $event->id) }}" class="slide-badge-small">Event</a>
+<div>
+@if($events->count() > 0)
+<div class="flex justify-between items-center mb-8">
+    <h2 class="text-3xl font-bold text-purple-500">Explore new Events</h2>
+
+</div>
+    <div wire:ignore class="swiper mySwiper-events px-4 py-6">
+        <div class="swiper-wrapper">
+            @forelse($events as $event)
+                <div class="swiper-slide">
+                    <div class="modal-header rounded-lg shadow p-4 hover:shadow-xl transition">
+                        <img src="{{ $event->featured_image }}" alt="{{ $event->name }}" class="rounded mb-4 w-full h-40 object-contain">
+                        <h3 class="font-semibold text-lg">{{ $event->name }}</h3>
+                        <p class="text-sm text-gray-600">
+                            {{ \Illuminate\Support\Str::limit($event->short_description ?? $event->description, 100) }}
+                        </p>
+                        <a href="{{ route('events.show', $event) }}" class="text-indigo-600 mt-2 inline-block hover:underline">
+                            View Details
+                        </a>
+                    </div>
+                </div>
+            @empty
+                <div class="swiper-slide text-center text-gray-500">No upcoming events at the moment.</div>
+            @endforelse
         </div>
-    </div>
-    @empty
-    <div class="slideshow-empty">
-        <div class="empty-content">
-            <div class="empty-icon">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                </svg>
-            </div>
-            <p class="text-sm">No upcoming events</p>
-        </div>
-    </div>
-    @endforelse
-    
-    <!-- Event Slide Indicators -->
-    @if($events->count() > 1)
-    <div class="content-slide-indicators">
-        @foreach($events as $index => $event)
-        <div :class="{ 'active': currentEventSlide === {{ $index }} }" 
-             class="content-slide-indicator"
-             @click="currentEventSlide = {{ $index }}; eventAutoSlide = false; setTimeout(() => eventAutoSlide = true, 8000)"></div>
-        @endforeach
+
+        <div class="swiper-pagination mt-4"></div>
+        <div class="swiper-button-prev"></div>
+        <div class="swiper-button-next"></div>
     </div>
     @endif
-</div>
+    </div>
+    <script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Initialize Swipers
+    new Swiper('.mySwiper-contests', {
+        slidesPerView: 1,
+        spaceBetween: 16,
+        loop: true,
+        autoplay: {
+            delay: 5000, // 3 seconds between slides
+            disableOnInteraction: false, // Continue autoplay after user interaction
+        },
+        pagination: {
+            el: '.mySwiper-contests .swiper-pagination',
+            clickable: true,
+        },
+        navigation: {
+            nextEl: '.mySwiper-contests .swiper-button-next',
+            prevEl: '.mySwiper-contests .swiper-button-prev',
+        },
+        breakpoints: {
+            768: { slidesPerView: 2 },
+            1024: { slidesPerView: 3 },
+        },
+    });
+
+    new Swiper('.mySwiper-events', {
+        slidesPerView: 1,
+        spaceBetween: 16,
+        loop: true,
+        pagination: {
+            el: '.mySwiper-events .swiper-pagination',
+            clickable: true,
+        },
+        navigation: {
+            nextEl: '.mySwiper-events .swiper-button-next',
+            prevEl: '.mySwiper-events .swiper-button-prev',
+        },
+        breakpoints: {
+            768: { slidesPerView: 2 },
+            1024: { slidesPerView: 3 },
+        },
+    });
+
+    // Countdown logic
+    function updateCountdowns() {
+        document.querySelectorAll('.countdown').forEach(el => {
+            const start = new Date(el.dataset.start);
+            const end = new Date(el.dataset.end);
+            const now = new Date();
+
+            let label = '';
+            let distance = 0;
+
+            if (now < start) {
+                label = 'Starts in ';
+                distance = start - now;
+            } else if (now >= start && now <= end) {
+                label = 'Ends in ';
+                distance = end - now;
+            } else {
+                el.textContent = 'Ended';
+                return;
+            }
+
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+
+            el.textContent = `${label}${days}d ${hours}h ${minutes}m`;
+        });
+    }
+
+    updateCountdowns();
+    setInterval(updateCountdowns, 60000); // update every minute
+});
+</script>

@@ -3,10 +3,10 @@
 @section('title', $title)
 
 @section('content')
-<div class="min-h-screen bg-gray-50">
+<div class="min-h-screen modal-header">
     <!-- Header Section -->
 <!-- Contest Header -->
-<div 
+<div
     class="relative bg-gray-900 text-white"
     @if($contest->featured_image)
         style="background-image: url('{{ \Illuminate\Support\Facades\Storage::url($contest->featured_image) }}'); background-size: cover; background-position: center;"
@@ -150,31 +150,34 @@
             setInterval(updateCountdown, 1000);
         });
     </script>
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 modal-header">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <!-- Main Content -->
             <div class="lg:col-span-4">
-                <div class="rounded-lg shadow-sm border border-gray-200 p-6">
-                <h2 class="text-2xl font-bold text-gray-900 mb-6">Contestants</h2>
+                <div class="rounded-lg shadow-sm border-gray-100 p-6">
+                <h2 class="text-2xl font-bold text-white mb-6">Contestants</h2>
 
                 @if($groupedNominees->count() > 0)
                     @foreach($groupedNominees as $categoryName => $nominees)
                         <!-- Category Title -->
-                        <h3 class="text-xl font-semibold text-purple-700 mb-4 border-b pb-1">
+                        <h3 class="text-xl font-semibold text-purple-500 mb-4 border-b pb-1">
                             {{ $categoryName }}
                         </h3>
 
                         <!-- Nominees Grid -->
-                        <div class="grid gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 mb-8">
+                        <div class="grid gap-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 mb-8">
                             @foreach($nominees as $nominee)
-                                <div class="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 p-5 flex flex-col justify-between">
+                                <div class="bg-black  border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 p-5 flex flex-col justify-between">
                                     <div>
                                         <!-- Photo -->
                                         <div class="flex justify-center mb-4">
                                             @if($nominee->photo)
-                                                <img src="{{ \Illuminate\Support\Facades\Storage::url($nominee->photo) }}"
-                                                    alt="{{ $nominee->name }}"
-                                                    class="w-24 h-24 rounded-full object-cover ring-4 ring-purple-100">
+                                                <img
+                                                    src="{{ $nominee->photo
+                                                        ? \Illuminate\Support\Facades\Storage::url($nominee->photo)
+                                                        : \Illuminate\Support\Facades\Storage::url('nominees/OIP.jpg') }}"
+                                                    class="w-24 h-24 rounded-full object-cover ring-4 ring-purple-100"
+                                                />
                                             @else
                                                 <div class="w-24 h-24 rounded-full bg-purple-500 flex items-center justify-center text-white text-3xl font-bold">
                                                     {{ strtoupper(substr($nominee->name, 0, 1)) }}
@@ -184,10 +187,10 @@
 
                                         <!-- Info -->
                                         <div class="text-center">
-                                            <h3 class="text-lg font-semibold text-gray-900">{{ $nominee->name }}</h3>
-                                            <p class="text-gray-600 text-center text-sm mt-1">Code: {{ $nominee->code ?? '' }}</p>
+                                            <h3 class="text-lg font-semibold text-white">{{ $nominee->name }}</h3>
+                                            <p class="text-white text-center text-sm mt-1">Code: {{ $nominee->code ?? '' }}</p>
                                             @if($nominee->bio)
-                                                <p class="text-gray-600 text-sm mt-1 line-clamp-2">{{ $nominee->bio }}</p>
+                                                <p class="text-white text-sm mt-1 line-clamp-2">{{ $nominee->bio }}</p>
                                             @endif
 
                                             @if($contest->isOrganizer())
@@ -211,24 +214,24 @@
                                     <!-- Buttons -->
                                     <div class="mt-5 text-center space-y-2">
                                         @if($contest->isOngoing())
-                                            <button 
+                                            <button
                                                 type="button"
                                                 onclick="openVoteModal('{{ $nominee->id }}', '{{ $nominee->name }}', '{{ $nominee->code }}', '{{ $nominee->photo ? \Illuminate\Support\Facades\Storage::url($nominee->photo) : '' }}')"
-                                                class="inline-flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+                                                class="inline-flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500" style="background-color: rgba(226, 0, 177, 1);">
                                                 Vote
                                             </button>
                                         @endif
 
                                         <!-- Share Button -->
-                                        <button 
+                                        <button
                                             type="button"
                                             onclick="copyShareLink('{{ $contest->id }}', '{{ $nominee->code }}', this)"
-                                            class="inline-flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-purple-600 bg-purple-50 rounded-md hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+                                            class="inline-flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-pink bg-purple-50 rounded-md hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
                                             Share Voting Link
                                         </button>
 
                                         <!-- Tooltip -->
-                                        <span class="text-xs text-green-600 hidden" id="copied-{{ $nominee->code }}">Link copied!</span>
+                                        <span class="text-xs text-blue-500 hidden" id="copied-{{ $nominee->code }}">Link copied!</span>
 
                                         @if($userVote && $userVote->nominee_id == $nominee->id)
                                             <span class="inline-flex items-center justify-center w-full mt-2 px-3 py-1 rounded-md text-sm font-medium bg-green-100 text-green-800">
@@ -259,7 +262,7 @@
                 </div>
             </div>
 
-        
+
         </div>
     </div>
 </div>
@@ -268,12 +271,12 @@
     <div class="flex items-center justify-center min-h-screen px-4">
         <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity" onclick="closeVoteModal()"></div>
 
-        <div class="bg-white rounded-xl shadow-lg overflow-hidden w-full max-w-md z-50 transform transition-all scale-100">
+        <div class="modal-header rounded-xl shadow-lg overflow-hidden w-full max-w-md z-50 transform transition-all scale-100">
             <div class="p-6">
                 <div class="text-center">
                     <img id="modalNomineePhoto" src="" alt="" class="w-24 h-24 rounded-full mx-auto object-cover ring-4 ring-purple-100">
-                    <h2 id="modalNomineeName" class="mt-4 text-2xl font-bold text-gray-900"></h2>
-                    <p id="modalNomineeCode" class="text-sm text-gray-500"></p>
+                    <h2 id="modalNomineeName" class="mt-4 text-2xl font-bold text-white-900"></h2>
+                    <p id="modalNomineeCode" class="text-sm text-white-500"></p>
                 </div>
 
                 <form id="voteForm" method="POST" action="{{ route('pesapal.stkpush') }}" class="mt-6 space-y-4">
@@ -282,27 +285,27 @@
                     <input type="hidden" name="contest_id" value="{{ $contest->id }}">
                     <!-- Price Info -->
                     <div class="flex justify-between items-center">
-                        <span class="text-gray-700 font-medium">Price per Vote:</span>
-                        <span class="text-purple-700 font-semibold">KES {{ number_format($contest->price_per_vote ?? 10, 2) }}</span>
+                        <span class="text-white-700 font-medium">Price per Vote:</span>
+                        <span class="text-white font-semibold">KES {{ number_format($contest->price_per_vote ?? 10, 2) }}</span>
                     </div>
 
                     <!-- Vote Quantity -->
                     <div>
-                        <label for="voteCount" class="block text-sm font-medium text-gray-700">Number of Votes</label>
+                        <label for="voteCount" class="block text-sm font-medium text-white-700">Number of Votes</label>
                         <input type="number" name="votes" id="voteCount" min="1" value="1" 
-                               class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:ring-purple-500 focus:border-purple-500">
+                               class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:ring-purple-500 focus:border-purple-500" style="color: black;">
                     </div>
 
                     <!-- Total -->
                     <div class="flex justify-between items-center bg-purple-50 px-4 py-3 rounded-md">
                         <span class="text-gray-700 font-medium">Total:</span>
-                        <span id="totalAmount" class="text-purple-700 font-bold text-lg">KES {{ number_format($contest->price_per_vote ?? 10, 2) }}</span>
+                        <span id="totalAmount" class="text-pink font-bold text-lg">KES {{ number_format($contest->price_per_vote ?? 10, 2) }}</span>
                     </div>
 
                     <!-- Phone Number -->
                     <!-- <div>
                         <label for="phone" class="block text-sm font-medium text-gray-700">Phone Number (for STK Push)</label>
-                        <input type="text" name="phone" id="modalPhone" placeholder="e.g. 07XXXXXXXX" 
+                        <input type="text" name="phone" id="modalPhone" placeholder="e.g. 07XXXXXXXX"
                                class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:ring-purple-500 focus:border-purple-500" required>
                     </div> -->
                     <!-- Feedback / progress -->
@@ -320,7 +323,7 @@
                             Cancel
                         </button>
                         <button type="submit"
-                                class="px-5 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+                                class="px-5 py-2 text-sm font-medium text-white rounded-md hover:bg-purple-700 focus:ring-2 focus:ring-offset-2 focus:ring-purple-500" style="background-color: rgba(0, 0, 0, 1);">
                             Confirm & Pay
                         </button>
                     </div>
@@ -366,8 +369,9 @@ document.addEventListener('DOMContentLoaded', function() {
             '{{ $autoNominee->id }}',
             '{{ addslashes($autoNominee->name) }}',
             '{{ $autoNominee->code }}',
-            '{{ $autoNominee->photo ? \Illuminate\Support\Facades\Storage::url($autoNominee->photo) : '' }}'
+            '{{ $autoNominee->photo ? \Illuminate\Support\Facades\Storage::url($autoNominee->photo) : \Illuminate\Support\Facades\Storage::url("nominees/OIP.jpg") }}'
         );
+
     @endif
 });
 function copyShareLink(contestId, code, btn) {
@@ -466,7 +470,7 @@ document.getElementById('voteForm').addEventListener('submit', function(e){
         showVoteError('Error initiating payment. Try again.', progress, message);
     });
 
-   
+
 });
 
 </script> -->

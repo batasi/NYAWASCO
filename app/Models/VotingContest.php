@@ -104,7 +104,7 @@ class VotingContest extends Model
     }
 
     // Helper Methods
- 
+
 
     public function isUpcoming()
     {

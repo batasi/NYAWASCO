@@ -14,9 +14,9 @@ use Illuminate\Support\Facades\Storage;
 
 class VotingController extends Controller
 {
-    // ---------------------------
-    // Public Views
-    // ---------------------------
+    # ---------------------------
+    # Public Views
+    # ---------------------------
 
     public function index()
     {
@@ -60,21 +60,22 @@ class VotingController extends Controller
     public function show(VotingContest $contest)
     {
         $contest->load(['nominees.nomineeCategory', 'category', 'organizer']);
-    
+
         $userVote = null;
         if (Auth::check()) {
             $userVote = Vote::where('user_id', Auth::id())
                 ->where('voting_contest_id', $contest->id)
                 ->first();
         }
+
         $autoNominee = null;
         if (request()->has('code')) {
             $autoNominee = $contest->nominees()->where('code', request('code'))->first();
         }
-        // Group nominees by category
+
         $groupedNominees = $contest->nominees
             ->groupBy(fn($nominee) => optional($nominee->nomineeCategory)->name ?? 'Uncategorized');
-    
+
         return view('voting.show', [
             'contest' => $contest,
             'groupedNominees' => $groupedNominees,
@@ -83,7 +84,6 @@ class VotingController extends Controller
             'title' => "{$contest->title} - Javent",
         ]);
     }
-    
 
     public function vote(Request $request, VotingContest $contest)
     {
@@ -166,14 +166,12 @@ class VotingController extends Controller
         return response()->json($contests);
     }
 
-    // ---------------------------
-    // Organizer/Admin Functions
-    // ---------------------------
+    # ---------------------------
+    # Organizer/Admin Functions
+    # ---------------------------
 
     public function create()
     {
-       
-
         $categories = VotingCategory::where('is_active', true)
             ->orderBy('sort_order', 'asc')
             ->get();
@@ -189,12 +187,6 @@ class VotingController extends Controller
 
     public function store(Request $request)
     {
-        $categories = VotingCategory::where('is_active', true)
-            ->orderBy('sort_order', 'asc')
-            ->get();
-
-        $nomineeCategories = NomineeCategory::all();
-
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'category_id' => 'required|exists:voting_categories,id',
@@ -202,6 +194,9 @@ class VotingController extends Controller
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'max_votes_per_user' => 'nullable|integer|min:1',
+            'max_votes_option' => 'nullable|in:limited,unlimited',
+            'amount' => 'nullable|numeric|min:0',
+            'featured_image' => 'nullable|image|max:2048',
             'requires_approval' => 'nullable|boolean',
             'is_active' => 'nullable|boolean',
             'is_featured' => 'nullable|boolean',
@@ -209,40 +204,52 @@ class VotingController extends Controller
             'nominees.*.photo' => 'nullable|image|max:2048',
             'nominees.*.description' => 'nullable|string|max:500',
             'nominees.*.category_id' => 'required|exists:nominee_categories,id',
-        ], [], [
-            'nominees.*.category_id' => 'Nominee Category'
         ]);
 
-        // Create Contest
+        # Handle contest photo
+        $photoPath = null;
+        if ($request->hasFile('featured_image')) {
+            $photoPath = $request->file('featured_image')->store('featured_images', 'public');
+        }
+
+        # Set max votes
+        $maxVotes = ($validated['votes_limit_type'] ?? 'limited') === 'limited'
+        ? $validated['max_votes_per_user'] ?? 1
+        : null;
+
+
+        # Create contest
         $contest = VotingContest::create([
             'title' => $validated['title'],
             'category_id' => $validated['category_id'],
-            'description' => $validated['description'] ?? null,
+            'description' => $validated['description'] ?? '',
             'start_date' => $validated['start_date'] ?? now(),
             'end_date' => $validated['end_date'] ?? null,
-            'max_votes_per_user' => $validated['max_votes_per_user'] ?? 1,
+            'max_votes_per_user' => $maxVotes,
+            'amount' => $validated['amount'] ?? 0,
+            'photo' => $photoPath,
             'requires_approval' => $request->boolean('requires_approval'),
             'is_active' => $request->boolean('is_active', true),
             'is_featured' => $request->boolean('is_featured', false),
             'total_votes' => 0,
-            'views' => 0,
+            'views_count' => 0,
             'organizer_id' => Auth::id(),
         ]);
 
-        // Create nominees
+        # Create nominees
         if ($request->has('nominees')) {
             foreach ($request->nominees as $nomineeData) {
                 if (!empty($nomineeData['name'])) {
-                    $photoPath = null;
+                    $nomineePhotoPath = null;
                     if (isset($nomineeData['photo']) && $nomineeData['photo'] instanceof \Illuminate\Http\UploadedFile) {
-                        $photoPath = $nomineeData['photo']->store('nominee_photos', 'public');
+                        $nomineePhotoPath = $nomineeData['photo']->store('nominee_photos', 'public');
                     }
 
                     Nominee::create([
                         'voting_contest_id' => $contest->id,
                         'name' => $nomineeData['name'],
-                        'photo' => $photoPath,
-                        'description' => $nomineeData['description'] ?? null,
+                        'photo' => $nomineePhotoPath,
+                        'description' => $nomineeData['description'] ?? '',
                         'category_id' => $nomineeData['category_id'],
                         'votes_count' => 0,
                     ]);
@@ -250,13 +257,12 @@ class VotingController extends Controller
             }
         }
 
-        return redirect()->route('voting.index')->with('success', "Voting contest '{$contest->title}' created successfully with nominees.");
+        return redirect()->route('voting.index')
+            ->with('success', "Voting contest '{$contest->title}' created successfully with nominees.");
     }
 
     public function edit($id)
     {
-       
-
         $contest = VotingContest::findOrFail($id);
         $categories = VotingCategory::where('is_active', true)->orderBy('sort_order')->get();
         $nomineeCategories = NomineeCategory::all();
@@ -266,7 +272,6 @@ class VotingController extends Controller
 
     public function update(Request $request, $id)
     {
-      
         $contest = VotingContest::findOrFail($id);
 
         $validated = $request->validate([
@@ -276,10 +281,23 @@ class VotingController extends Controller
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'max_votes_per_user' => 'nullable|integer|min:1',
+            'max_votes_option' => 'required|in:limited,unlimited',
+            'amount' => 'nullable|numeric|min:0',
+            'featured_image' => 'nullable|image|max:2048',
             'requires_approval' => 'nullable|boolean',
             'is_active' => 'nullable|boolean',
             'is_featured' => 'nullable|boolean',
         ]);
+
+        # Handle contest photo
+        if ($request->hasFile('featured_image')) {
+            $contest->photo = $request->file('featured_image')->store('featured_images', 'public');
+        }
+
+        # Set max votes
+        $contest->max_votes_per_user = $validated['max_votes_option'] === 'limited'
+            ? $validated['max_votes_per_user'] ?? 1
+            : null;
 
         $contest->update([
             'title' => $validated['title'],
@@ -287,7 +305,7 @@ class VotingController extends Controller
             'description' => $validated['description'] ?? $contest->description,
             'start_date' => $validated['start_date'] ?? $contest->start_date,
             'end_date' => $validated['end_date'] ?? $contest->end_date,
-            'max_votes_per_user' => $validated['max_votes_per_user'] ?? $contest->max_votes_per_user,
+            'amount' => $validated['amount'] ?? $contest->amount,
             'requires_approval' => $request->boolean('requires_approval'),
             'is_active' => $request->boolean('is_active', $contest->is_active),
             'is_featured' => $request->boolean('is_featured', $contest->is_featured),
@@ -298,7 +316,6 @@ class VotingController extends Controller
 
     public function destroy($id)
     {
-      
         $contest = VotingContest::findOrFail($id);
         $contest->delete();
 
