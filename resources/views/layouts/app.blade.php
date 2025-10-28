@@ -378,6 +378,7 @@ use Illuminate\Support\Facades\Route;
                                 class="origin-top-left absolute left-0 mt-2 w-48 rounded-md shadow-lg bg-gray-900 ring-1 ring-pink-500 ring-opacity-20 focus:outline-none z-50"
                                 x-cloak>
                                 <div class="py-1">
+                                    <a href="{{ route('pricing') }}" class="block px-4 py-2 text-sm text-white hover:bg-pink-900 transition-colors">Pricing</a>
                                     <a href="{{ route('about') }}" class="block px-4 py-2 text-sm text-white hover:bg-pink-900 transition-colors">About Us</a>
                                     <a href="{{ route('contact') }}" class="block px-4 py-2 text-sm text-white hover:bg-pink-900 transition-colors">Contact</a>
                                     <a href="{{ route('help') }}" class="block px-4 py-2 text-sm text-white hover:bg-pink-900 transition-colors">Help Center</a>
@@ -439,7 +440,7 @@ use Illuminate\Support\Facades\Route;
                 <a href="{{ route('admin.vendors.index') }}" class="block px-3 py-2 text-white font-medium hover:bg-pink-900 rounded-md transition-colors">Vendors</a>
                 @endif
                 @endauth
-
+                <a href="{{ route('pricing') }}" class="block px-3 py-2 text-white font-medium hover:bg-pink-900 rounded-md transition-colors">Pricing</a>
                 <a href="{{ route('about') }}" class="block px-3 py-2 text-white font-medium hover:bg-pink-900 rounded-md transition-colors">About Us</a>
                 <a href="{{ route('contact') }}" class="block px-3 py-2 text-white font-medium hover:bg-pink-900 rounded-md transition-colors">Contact</a>
                 <a href="{{ route('help') }}" class="block px-3 py-2 text-white font-medium hover:bg-pink-900 rounded-md transition-colors">Help Center</a>
@@ -479,6 +480,14 @@ use Illuminate\Support\Facades\Route;
             </div>
 
             <div class="p-4 sm:p-6 max-h-[calc(100vh-4rem)] overflow-y-auto">
+
+                    <div class="mb-4 justify-center flex">
+                        <a href="{{ route('home') }}" class="flex items-center">
+                            <img src="{{ asset('img/Logo.png') }}"
+                                alt="Javent"
+                                class="h-20 w-auto">
+                        </a>
+                    </div>
                 <x-validation-errors class="mb-4" />
 
                 <form method="POST" action="{{ route('register') }}" id="registrationForm">
@@ -641,6 +650,14 @@ use Illuminate\Support\Facades\Route;
             </div>
 
             <div class="p-6">
+
+                    <div class="mb-4 justify-center flex">
+                        <a href="{{ route('home') }}" class="flex items-center">
+                            <img src="{{ asset('img/Logo.png') }}"
+                                alt="Javent"
+                                class="h-20 w-auto">
+                        </a>
+                    </div>
                 <x-validation-errors class="mb-4" />
 
                 @if (session('status'))
@@ -720,21 +737,21 @@ use Illuminate\Support\Facades\Route;
     <footer class="footer-bg text-white py-12">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="footer-grid">
-              <div>
+                <div>
 
-    <div class="mb-4">
-        <a href="{{ route('home') }}" class="flex items-center">
-            <img src="{{ asset('img/Logo.png') }}"
-                 alt="Javent"
-                 class="h-28 w-auto">
-        </a>
-    </div>
+                    <div class="mb-4">
+                        <a href="{{ route('home') }}" class="flex items-center">
+                            <img src="{{ asset('img/Logo.png') }}"
+                                alt="Javent"
+                                class="h-20 w-auto">
+                        </a>
+                    </div>
 
 
-    <p class="text-gray-400 mt-4 text-lg leading-relaxed">
-        Your complete universe for events, ticketing, and community engagement.
-    </p>
-</div>
+                    <p class="text-gray-400 mt-4 text-lg leading-relaxed">
+                        Your complete universe for events, ticketing, and community engagement.
+                    </p>
+                </div>
                 <div>
                     <h4 class="font-semibold mb-4 text-pink-400">Quick Links</h4>
                     <ul class="space-y-2 text-gray-400">

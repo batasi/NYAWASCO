@@ -69,6 +69,7 @@ Route::get('/organizers/{organizer}', [OrganizerController::class, 'show'])->nam
 Route::get('/search', [SearchController::class, 'index'])->name('search.index');
 
 // Static Pages
+Route::view('/pricing', 'static.pricing', ['title' => 'pricing'])->name('pricing');
 Route::view('/about', 'static.about', ['title' => 'About Us - EventSphere'])->name('about');
 Route::view('/contact', 'static.contact', ['title' => 'Contact Us - EventSphere'])->name('contact');
 Route::view('/privacy', 'static.privacy', ['title' => 'Privacy Policy - EventSphere'])->name('privacy');
