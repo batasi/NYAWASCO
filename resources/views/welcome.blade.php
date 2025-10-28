@@ -45,8 +45,8 @@
 
                         <div class="swiper-slide relative">
                             <div class="absolute inset-0 bg-black bg-opacity-50 z-10"></div>
-                            <img src="/img/javent.png"
-                                alt="Create Events"
+                            <img src="/img/Javent.png" 
+                                alt="Create Events" 
                                 class="w-full h-full object-cover">
                             <div class="absolute inset-0 z-20 flex items-center justify-center text-center px-4">
                                 <div class="text-white max-w-4xl">
@@ -62,7 +62,7 @@
 
                         <div class="swiper-slide relative">
                             <div class="absolute inset-0 bg-black bg-opacity-50 z-10"></div>
-                            <img src="https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
+                            <img src="/img/ja.png"
                                 alt="Voting Contests"
                                 class="w-full h-full object-cover">
                             <div class="absolute inset-0 z-20 flex items-center justify-center text-center px-4">
@@ -207,10 +207,10 @@
                 <div class="bg-white p-6 rounded-2xl shadow-lg">
                     <div class="flex items-center mb-4">
                         <div class="w-12 h-12 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-lg mr-4">
-                            AJ
+                            KO
                         </div>
                         <div>
-                            <h4 class="font-semibold text-black">Keffa.</h4>
+                            <h4 class="font-semibold text-black">Kephas Ouma.</h4>
                             <p class="text-gray-600 text-sm">CEO, HeartBeat of Style</p>
                         </div>
                     </div>
@@ -219,26 +219,26 @@
                 <div class="bg-white p-6 rounded-2xl shadow-lg">
                     <div class="flex items-center mb-4">
                         <div class="w-12 h-12 bg-gradient-to-r from-pink-400 to-red-500 rounded-full flex items-center justify-center text-white font-bold text-lg mr-4">
-                            MK
+                            GS
                         </div>
                         <div>
-                            <h4 class="font-semibold text-black">Mark K.</h4>
-                            <p class="text-gray-600 text-sm">Awards Organizer</p>
+                            <h4 class="font-semibold text-black">Robin Sansiro.</h4>
+                            <p class="text-gray-600 text-sm">CEO, The Giftland</p>
                         </div>
                     </div>
-                    <p class="text-gray-700">"The voting system transformed our awards night. Real-time results kept everyone engaged!"</p>
+                    <p class="text-gray-700">“Javent’s ticketing system made our event planning seamless. From branded digital tickets to smooth check-ins, The Giftland delivered a premium experience our guests won’t forget.”</p>
                 </div>
                 <div class="bg-white p-6 rounded-2xl shadow-lg">
                     <div class="flex items-center mb-4">
                         <div class="w-12 h-12 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-lg mr-4">
-                            SM
+                            SB
                         </div>
                         <div>
-                            <h4 class="font-semibold text-black">Sarah M.</h4>
-                            <p class="text-gray-600 text-sm">Music Festival Director</p>
+                            <h4 class="font-semibold text-black">Solomon Batasi.</h4>
+                            <p class="text-gray-600 text-sm">JavaPA LIMITED</p>
                         </div>
                     </div>
-                    <p class="text-gray-700">"From ticketing to vendor management, Javent handles everything. A game-changer!"</p>
+                    <p class="text-gray-700">“With Javent, we never worry about security. Our customers trust the site, and the payment process is smooth, encrypted, and completely hassle-free.”</p>
                 </div>
             </div>
         </section>
@@ -295,6 +295,7 @@
                     </div>
                     <h3 class="font-semibold text-gray-800 text-xs text-center leading-tight mt-1">The Giftland Studios and Restaurant</h3>
                 </div>
+
             </div>
         </section>
     </main>
