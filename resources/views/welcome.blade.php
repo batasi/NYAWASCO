@@ -104,8 +104,8 @@
                     <div class="swiper-pagination !bottom-4"></div>
 
                    <!-- Navigation Buttons - Properly Styled -->
-                    <div class="swiper-button-prev !w-4!h-4 md:!w-12 md:!h-12 !left-1 md:!left-2 bg-white bg-opacity-10 rounded-full shadow-lg hover:bg-purple hover:scale-90 transition-all duration-300"></div>
-                    <div class="swiper-button-next !w-4 !h-4 md:!w-12 md:!h-12 !right-1 md:!right-2 bg-white bg-opacity-10 rounded-full shadow-lg hover:bg-purple hover:scale-90 transition-all duration-300"></div>
+                    <div class="swiper-button-prev !w-4!h-4 md:!w-12 md:!h-12 !left-1 md:!left-2 bg-opacity-50 rounded-full shadow-lg hover:bg-purple hover:scale-90 transition-all duration-300"></div>
+                    <div class="swiper-button-next !w-4 !h-4 md:!w-12 md:!h-12 !right-1 md:!right-2 bg-opacity-50 rounded-full shadow-lg hover:bg-purple hover:scale-90 transition-all duration-300"></div>
                 </div>
             </section>
 
@@ -257,7 +257,18 @@
             <!-- Partners Logos Grid -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 max-w-4xl mx-auto">
                 <!-- Partner 1 -->
-                <div class="bg-white rounded-lg shadow-sm p-4 flex flex-col items-center justify-center hover:shadow-md transition-all duration-300 hover:scale-105 border border-gray-200 h-35">
+                <div class="bg-white rounded-lg shadow-sm p-4 flex flex-col items-center justify-center hover:shadow-md transition-all duration-300 hover:scale-105 border border-gray-200 h-35 cursor-pointer"
+                    @click="openPartnerModal(
+                        'HeartBeat of Style', 
+                        '/img/LHTBT.png', 
+                        'Heartbeat of Style is a creative hub that empowers youth through fashion, modeling and community impact programs. We provide a platform for models, designers and creatives to showcase talent, grow professionally and build sustainable careers.',
+                        {
+                            facebook: 'https://facebook.com/heartbeatofstyle',
+                            instagram: 'https://instagram.com/heartbeatofstyle',
+                            twitter: 'https://twitter.com/heartbeatofstyle',
+                            linkedin: 'https://linkedin.com/company/heartbeatofstyle'
+                        }
+                    )">
                     <div class="w-full h-23 flex items-center justify-center mb-2">
                         <img src="/img/LHTBT.png"
                             alt="HeartBeat of Style"
@@ -267,37 +278,175 @@
                 </div>
 
                 <!-- Partner 2 -->
-                <div class="bg-white rounded-lg shadow-sm p-4 flex flex-col items-center justify-center hover:shadow-md transition-all duration-300 hover:scale-105 border border-gray-200 h-35">
+                <div class="bg-white rounded-lg shadow-sm p-4 flex flex-col items-center justify-center hover:shadow-md transition-all duration-300 hover:scale-105 border border-gray-200 h-35 cursor-pointer"
+                    @click="openPartnerModal(
+                        'JavaPA Limited', 
+                        '/img/java.png', 
+                        'JavaPA Limited is a technology solutions provider specializing in event management software and digital platforms. They bring cutting-edge technology to streamline event operations and enhance attendee experiences through innovative digital solutions.',
+                        {
+                            facebook: 'https://web.facebook.com/people/Javapa-Limited/61579385817243/',
+                            instagram: 'https://www.instagram.com/jav.apa/',
+                            twitter: 'https://twitter.com/search?q=%23JavaPa&vertical=default',
+                            linkedin: 'https://ke.linkedin.com/company/javapa'
+                        }
+                    )">
                     <div class="w-full h-23 bg-transparent flex items-center justify-center mb-2">
                         <img src="/img/java.png"
-                             alt="JavaPA"
+                            alt="JavaPA"
                             class="w-full h-full object-contain">
                     </div>
                     <h3 class="font-semibold text-gray-800 text-xs text-center leading-tight mt-1">JavaPA Limited</h3>
                 </div>
 
                 <!-- Partner 3 -->
-                <div class="bg-white rounded-lg shadow-sm p-4 flex flex-col items-center justify-center hover:shadow-md transition-all duration-300 hover:scale-105 border border-gray-200 h-35">
+                <div class="bg-white rounded-lg shadow-sm p-4 flex flex-col items-center justify-center hover:shadow-md transition-all duration-300 hover:scale-105 border border-gray-200 h-35 cursor-pointer"
+                    @click="openPartnerModal(
+                        'Giftland Events Limited', 
+                        '/img/GEvents.jpeg', 
+                        'Giftland Events Limited is a full-service event management company specializing in corporate events, weddings, and large-scale celebrations. With years of experience, they bring professionalism and creativity to every event they organize.',
+                        {
+                            facebook: 'https://facebook.com/giftlandevents',
+                            instagram: 'https://instagram.com/giftlandevents',
+                            twitter: 'https://twitter.com/giftlandevents',
+                            linkedin: 'https://linkedin.com/company/giftlandevents'
+                        }
+                    )">
                     <div class="w-full h-23 bg-transparent flex items-center justify-center mb-2">
                         <img src="/img/GEvents.jpeg"
-                             alt="The Giftland Events"
+                            alt="The Giftland Events"
                             class="w-full h-full object-contain">
                     </div>
                     <h3 class="font-semibold text-gray-800 text-xs text-center leading-tight mt-1">Giftland Events Limited</h3>
                 </div>
 
                 <!-- Partner 4 -->
-                <div class="bg-white rounded-lg shadow-sm p-4 flex flex-col items-center justify-center hover:shadow-md transition-all duration-300 hover:scale-105 border border-gray-200 h-35">
+                <div class="bg-white rounded-lg shadow-sm p-4 flex flex-col items-center justify-center hover:shadow-md transition-all duration-300 hover:scale-105 border border-gray-200 h-35 cursor-pointer"
+                    @click="openPartnerModal(
+                        'The Giftland Studios and Restaurant', 
+                        '/img/g.png', 
+                        'The Giftland Studios and Restaurant offers premium event venues and catering services. Their state-of-the-art studios and restaurant facilities provide the perfect backdrop for memorable events, from intimate gatherings to large celebrations.',
+                        {
+                            facebook: 'https://facebook.com/giftlandstudios',
+                            instagram: 'https://instagram.com/giftlandstudios',
+                            twitter: 'https://twitter.com/giftlandstudios',
+                            linkedin: 'https://linkedin.com/company/giftlandstudios'
+                        }
+                    )">
                     <div class="w-full h-23 bg-transparent flex items-center justify-center mb-2">
                         <img src="/img/g.png"
-                             alt="The Giftland Studios and Restaurant"
+                            alt="The Giftland Studios and Restaurant"
                             class="w-full h-full object-contain">
                     </div>
                     <h3 class="font-semibold text-gray-800 text-xs text-center leading-tight mt-1">The Giftland Studios and Restaurant</h3>
                 </div>
-
             </div>
         </section>
+
+        <!-- Partner Modal -->
+        <div x-show="partnerModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4 transition-opacity duration-300">
+            <div class="bg-black rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative transform transition-all duration-300 scale-100"
+                @click.away="partnerModalOpen = false">
+                <!-- Close Button -->
+                <button @click="partnerModalOpen = false" 
+                        class="absolute top-4 right-4 z-10 text-gray-500 hover:text-gray-700 transition-colors bg-white rounded-full p-2 shadow-lg">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+
+                <!-- Modal Content -->
+                <div class="p-6">
+                    <!-- Partner Image -->
+                    <div class="flex justify-center mb-6">
+                        <img x-bind:src="currentPartner.image" 
+                            x-bind:alt="currentPartner.name"
+                            class="h-32 w-auto object-contain rounded-lg">
+                    </div>
+
+                    <!-- Partner Name -->
+                    <h2 x-text="currentPartner.name" class="text-2xl md:text-3xl font-bold text-center text-purple-600 mb-4"></h2>
+
+                    <!-- Partner Description -->
+                    <div class="prose max-w-none">
+                        <p x-text="currentPartner.description" class="text-white text-lg leading-relaxed text-center"></p>
+                    </div>
+
+                    <!-- Social Links -->
+                    <div class="mt-6 text-center" x-show="currentPartner.socials">
+                        <h4 class="font-semibold mb-4 text-pink-400">Connect</h4>
+                        <div class="flex space-x-4 justify-center">
+                            <!-- Facebook -->
+                            <a x-bind:href="currentPartner.socials.facebook" 
+                            x-show="currentPartner.socials.facebook"
+                            target="_blank"
+                            class="text-gray-400 hover:text-pink-300 transition-colors">
+                                <span class="sr-only">Facebook</span>
+                                <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                                </svg>
+                            </a>
+
+                            <!-- Twitter/X -->
+                            <a x-bind:href="currentPartner.socials.twitter" 
+                            x-show="currentPartner.socials.twitter"
+                            target="_blank"
+                            class="text-gray-400 hover:text-pink-300 transition-colors">
+                                <span class="sr-only">X</span>
+                                <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M20.39 3.61h2.56l-7.42 8.48 8.72 10.3h-6.87l-5.39-6.36-6.16 6.36H2.4l7.9-8.15L1.6 3.61h7.05l4.8 5.67 6.94-5.67z"/>
+                                </svg>
+                            </a>
+
+                            <!-- LinkedIn -->
+                            <a x-bind:href="currentPartner.socials.linkedin" 
+                            x-show="currentPartner.socials.linkedin"
+                            target="_blank"
+                            class="text-gray-400 hover:text-pink-300 transition-colors">
+                                <span class="sr-only">LinkedIn</span>
+                                <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M4.98 3.5C4.98 4.88 3.87 6 2.5 6S0 4.88 0 3.5 1.12 1 2.5 1 4.98 2.12 4.98 3.5zM.5 8h4V24h-4V8zm7.5 0h3.8v2.2h.05c.53-1 1.83-2.2 3.75-2.2 4 0 4.75 2.63 4.75 6.05V24h-4v-7.5c0-1.8-.03-4.1-2.5-4.1-2.5 0-2.88 1.95-2.88 3.97V24h-4V8z"/>
+                                </svg>
+                            </a>
+
+                            <!-- Instagram -->
+                            <a x-bind:href="currentPartner.socials.instagram" 
+                            x-show="currentPartner.socials.instagram"
+                            target="_blank"
+                            class="text-gray-400 hover:text-pink-300 transition-colors">
+                                <span class="sr-only">Instagram</span>
+                                <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12.315 2c2.43 0 2.784.013 3.808.06 1.064.049 1.791.218 2.427.465a4.902 4.902 0 011.772 1.153 4.902 4.902 0 011.153 1.772c.247.636.416 1.363.465 2.427.048 1.067.06 1.407.06 4.123v.08c0 2.643-.012 2.987-.06 4.043-.049 1.064-.218 1.791-.465 2.427a4.902 4.902 0 01-1.153 1.772 4.902 4.902 0 01-1.772 1.153c-.636.247-1.363.416-2.427.465-1.067.048-1.407.06-4.123.06h-.08c-2.643 0-2.987-.012-4.043-.06-1.064-.049-1.791-.218-2.427-.465a4.902 4.902 0 01-1.772-1.153 4.902 4.902 0 01-1.153-1.772c-.247-.636-.416-1.363-.465-2.427-.047-1.024-.06-1.379-.06-3.808v-.63c0-2.43.013-2.784.06-3.808.049-1.064.218-1.791.465-2.427a4.902 4.902 0 011.153-1.772A4.902 4.902 0 015.45 2.525c.636-.247 1.363-.416 2.427-.465C8.901 2.013 9.256 2 11.685 2h.63zm-.081 1.802h-.468c-2.456 0-2.784.011-3.807.058-.975.045-1.504.207-1.857.344-.467.182-.8.398-1.15.748-.35.35-.566.683-.748 1.15-.137.353-.3.882-.344 1.857-.047 1.023-.058 1.351-.058 3.807v.468c0 2.456.011 2.784.058 3.807.045.975.207 1.504.344 1.857.182.466.399.8.748 1.15.35.35.683.566 1.15.748.353.137.882.3 1.857.344 1.054.048 1.37.058 4.041.058h.08c2.597 0 2.917-.01 3.96-.058.976-.045 1.505-.207 1.858-.344.466-.182.8-.398 1.15-.748.35-.35.566-.683.748-1.15.137-.353.3-.882.344-1.857.048-1.055.058-1.37.058-4.041v-.08c0-2.597-.01-2.917-.058-3.96-.045-.976-.207-1.505-.344-1.858a3.097 3.097 0 00-.748-1.15 3.098 3.098 0 00-1.15-.748c-.353-.137-.882-.3-1.857-.344-1.023-.047-1.351-.058-3.807-.058zM12 6.865a5.135 5.135 0 110 10.27 5.135 5.135 0 010-10.27zm0 1.802a3.333 3.333 0 100 6.666 3.333 3.333 0 000-6.666zm5.338-3.205a1.2 1.2 0 110 2.4 1.2 1.2 0 010-2.4z"/>
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('partners', () => ({
+                partnerModalOpen: false,
+                currentPartner: {
+                    name: '',
+                    image: '',
+                    description: '',
+                    socials: null
+                },
+                
+                openPartnerModal(name, image, description, socials = null) {
+                    this.currentPartner = {
+                        name: name,
+                        image: image,
+                        description: description,
+                        socials: socials
+                    };
+                    this.partnerModalOpen = true;
+                }
+            }));
+        });
+        </script>
     </main>
 
     <!-- Livewire Scripts -->
