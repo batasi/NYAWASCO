@@ -18,8 +18,8 @@
                 <div>
                     <label for="title" class="text-sm font-medium text-purple-500">Contest Title</label>
                     <input id="title" name="title" value="{{ old('title') }}" required
-                        class="w-full border-gray-300 rounded-md px-3 py-1.5 text-sm"
-                        placeholder="Best Male Artist 2025">
+                        class="w-full border-gray-300 rounded-md px-3 py-1.5 text-sm" style="color: black;"
+                        placeholder="Example: Best Male Artist 2025">
                 </div>
 
                 {{-- Voting Category --}}
@@ -27,7 +27,7 @@
                     <label for="category_id" class="text-sm font-medium text-purple-500">Voting Category</label>
                     <div class="flex gap-2">
                         <select id="category_id" name="category_id" required
-                            class="flex-1 border-gray-300 rounded-md px-3 py-1.5 text-sm">
+                            class="flex-1 border-gray-300 rounded-md px-3 py-1.5 text-sm" style="color: black;">
                             <option value="">-- Select Voting Category --</option>
                             @foreach($categories as $category)
                                 <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>
@@ -43,19 +43,19 @@
                 <div>
                     <label for="description" class="text-sm font-medium text-purple-500">Description (optional)</label>
                     <textarea id="description" name="description" rows="2"
-                        class="w-full border-gray-300 rounded-md px-3 py-1.5 text-sm">{{ old('description') }}</textarea>
+                        class="w-full border-gray-300 rounded-md px-3 py-1.5 text-sm" style="color: black;">{{ old('description') }}</textarea>
                 </div>
                 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label for="start_date" class="text-sm font-medium text-purple-500">Start Date</label>
                         <input id="start_date" name="start_date" type="date" value="{{ old('start_date') }}"
-                            class="w-full border-gray-300 rounded-md px-3 py-1.5 text-sm">
+                            class="w-full border-gray-300 rounded-md px-3 py-1.5 text-sm" style="color: black;">
                     </div>
                     <div>
                         <label for="end_date" class="text-sm font-medium text-purple-500">End Date</label>
                         <input id="end_date" name="end_date" type="date" value="{{ old('end_date') }}"
-                            class="w-full border-gray-300 rounded-md px-3 py-1.5 text-sm">
+                            class="w-full border-gray-300 rounded-md px-3 py-1.5 text-sm" style="color: black;">
                     </div>
                 </div>
 
@@ -75,7 +75,7 @@
                     <label for="amount" class="text-sm font-medium text-purple-500">Amount (optional)</label>
                     <input id="amount" name="amount" type="number" step="0.01" min="0"
                         value="{{ old('amount') }}"
-                        class="w-full border-gray-300 rounded-md px-3 py-1.5 text-sm"
+                        class="w-full border-gray-300 rounded-md px-3 py-1.5 text-sm" style="color: black;"
                         placeholder="Enter amount (e.g. 5.00)">
                     <p class="text-xs text-gray-200 mt-1">Leave empty if there's no fee for this contest.</p>
                 </div>
@@ -98,7 +98,7 @@
                         <label for="max_votes_per_user" class="text-sm font-medium text-purple-500">Max Votes Per User</label>
                         <input id="max_votes_per_user" name="max_votes_per_user" type="number" min="1"
                             value="{{ old('max_votes_per_user', 1) }}"
-                            class="w-full border-gray-300 rounded-md px-3 py-1.5 text-sm">
+                            class="w-full border-gray-300 rounded-md px-3 py-1.5 text-sm" style="color: black;">
                         <p class="text-xs text-gray-200 mt-1">If 'Unlimited' is selected above, this value will be ignored.</p>
                     </div>
                 </div>
@@ -139,7 +139,7 @@
                         <div class="flex flex-col w-1/5 min-w-[120px]">
                             <label class="text-purple-500 text-sm font-medium mb-1">Name</label>
                             <input type="text" name="nominees[0][name]" required
-                                class="border-gray-300 rounded-md px-2 py-1 text-sm" placeholder="Nominee Name">
+                                class="border-gray-300 rounded-md px-2 py-1 text-sm" style="color: black;" placeholder="Nominee Name">
                         </div>
                         <div class="flex flex-col w-1/5 min-w-[120px]">
                             <label class="text-purple-500 text-sm font-medium mb-1">Photo</label>
@@ -148,13 +148,13 @@
                         <div class="flex flex-col w-1/4 min-w-[150px]">
                             <label class="text-purple-500 text-sm font-medium mb-1">Description</label>
                             <input type="text" name="nominees[0][description]"
-                                class="border-gray-300 rounded-md px-2 py-1 text-sm" placeholder="Short description">
+                                class="border-gray-300 rounded-md px-2 py-1 text-sm" style="color: black;" placeholder="Short description">
                         </div>
                         <div class="flex flex-col w-1/5 min-w-[130px]">
                             <label class="text-purple-500 text-sm font-medium mb-1">Category</label>
                             <div class="flex gap-1">
                                 <select name="nominees[0][category_id]" required
-                                    class="border-gray-300 rounded-md px-2 py-1 text-sm flex-1">
+                                    class="border-gray-300 rounded-md px-2 py-1 text-sm flex-1" style="color: black;">
                                     <option value="">-- Select --</option>
                                     @foreach($nomineeCategories as $ncat)
                                         <option value="{{ $ncat->id }}">{{ $ncat->name }}</option>
@@ -196,7 +196,7 @@
             <div class="mb-3">
                 <label class="block text-purple-500 font-medium mb-1">Category Name</label>
                 <input type="text" id="votingCategoryName" name="name" placeholder="Enter category name"
-                    class="w-full border-gray-300 rounded-md px-3 py-1.5 text-sm" required>
+                    class="w-full border-gray-300 rounded-md px-3 py-1.5 text-sm" style="color: black;" required>
             </div>
             <div class="mb-3">
                 <label class="block text-purple-500 font-medium mb-1">Color (optional)</label>
@@ -222,7 +222,7 @@
             <div class="mb-3">
                 <label class="block text-purple-500 font-medium mb-1">Category Name</label>
                 <input type="text" id="categoryName" name="name" placeholder="Enter category name"
-                    class="w-full border-gray-300 rounded-md px-3 py-1.5 text-sm" required>
+                    class="w-full border-gray-300 rounded-md px-3 py-1.5 text-sm" style="color: black;" required>
             </div>
             <div class="mb-4">
                 <label class="block text-purple-500 font-medium mb-1">Color (optional)</label>
