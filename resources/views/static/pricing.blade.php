@@ -306,7 +306,7 @@
                     Join thousands of organizers who trust Javent for their events and voting programs
                 </p>
                 <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                    <a href="{{ route('register') ?? '/register' }}" class="bg-white text-purple-600 hover:bg-gray-100 font-bold py-4 px-8 rounded-lg transition duration-300 text-lg">
+                    <a @click="signupOpen = true" class="bg-white text-purple-600 hover:bg-gray-100 font-bold py-4 px-8 rounded-lg transition duration-300 text-lg">
                         Start Free Today
                     </a>
                     <a href="{{ route('contact') ?? '/contact' }}" class="border-2 border-white text-white hover:bg-white hover:text-purple-600 font-bold py-4 px-8 rounded-lg transition duration-300 text-lg">

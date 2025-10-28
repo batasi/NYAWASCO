@@ -302,7 +302,7 @@
                 <div class="bg-white rounded-lg shadow-sm p-4 flex flex-col items-center justify-center hover:shadow-md transition-all duration-300 hover:scale-105 border border-gray-200 h-35 cursor-pointer"
                     @click="openPartnerModal(
                         'Giftland Events Limited', 
-                        '/img/GEvents.jpeg', 
+                        '/img/gifte.png', 
                         'Giftland Events Limited is a full-service event management company specializing in corporate events, weddings, and large-scale celebrations. With years of experience, they bring professionalism and creativity to every event they organize.',
                         {
                             facebook: 'https://facebook.com/giftlandevents',
@@ -312,7 +312,7 @@
                         }
                     )">
                     <div class="w-full h-23 bg-transparent flex items-center justify-center mb-2">
-                        <img src="/img/GEvents.jpeg"
+                        <img src="/img/gifte.png"
                             alt="The Giftland Events"
                             class="w-full h-full object-contain">
                     </div>
@@ -323,7 +323,7 @@
                 <div class="bg-white rounded-lg shadow-sm p-4 flex flex-col items-center justify-center hover:shadow-md transition-all duration-300 hover:scale-105 border border-gray-200 h-35 cursor-pointer"
                     @click="openPartnerModal(
                         'The Giftland Studios and Restaurant', 
-                        '/img/g.png', 
+                        '/img/land.png', 
                         'The Giftland Studios and Restaurant offers premium event venues and catering services. Their state-of-the-art studios and restaurant facilities provide the perfect backdrop for memorable events, from intimate gatherings to large celebrations.',
                         {
                             facebook: 'https://facebook.com/giftlandstudios',
@@ -333,7 +333,7 @@
                         }
                     )">
                     <div class="w-full h-23 bg-transparent flex items-center justify-center mb-2">
-                        <img src="/img/g.png"
+                        <img src="/img/land.png"
                             alt="The Giftland Studios and Restaurant"
                             class="w-full h-full object-contain">
                     </div>
