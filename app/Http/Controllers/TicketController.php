@@ -8,6 +8,7 @@ use App\Models\Ticket;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Str;
 
 class TicketController extends Controller
 {
@@ -22,16 +23,17 @@ class TicketController extends Controller
         return view('tickets.index', compact('ticketPurchases'));
     }
 
-    // public function show(TicketPurchase $ticketPurchase)
-    // {
-    //     if ($ticketPurchase->user_id !== Auth::id()) {
-    //         abort(403);
-    //     }
+    // Show individual ticket purchase (renamed to avoid conflict)
+    public function showTicket(TicketPurchase $ticketPurchase)
+    {
+        if ($ticketPurchase->user_id !== Auth::id()) {
+            abort(403);
+        }
 
-    //     $ticketPurchase->load(['event', 'ticket', 'event.organizer']);
+        $ticketPurchase->load(['event', 'ticket', 'event.organizer']);
 
-    //     return view('tickets.show', compact('ticketPurchase'));
-    // }
+        return view('tickets.show', compact('ticketPurchase'));
+    }
 
     public function show(Event $event)
     {
@@ -42,7 +44,15 @@ class TicketController extends Controller
 
         $tickets = $event->tickets()->where('is_active', true)->get();
 
-        return view('tickets.purchase', compact('event', 'tickets'));
+        // Get pre-selected ticket from query parameter
+        $selectedTicketId = request()->query('ticket_id');
+        $selectedTicket = null;
+
+        if ($selectedTicketId) {
+            $selectedTicket = $tickets->firstWhere('id', $selectedTicketId);
+        }
+
+        return view('tickets.purchase', compact('event', 'tickets', 'selectedTicket'));
     }
 
     public function purchase(Request $request, Event $event)
@@ -142,5 +152,4 @@ class TicketController extends Controller
 
         return view('tickets.view', compact('ticketPurchase'));
     }
-
 }

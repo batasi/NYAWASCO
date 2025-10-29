@@ -77,6 +77,9 @@ Route::view('/privacy', 'static.privacy', ['title' => 'Privacy Policy - EventSph
 Route::view('/terms', 'static.terms', ['title' => 'Terms of Service - EventSphere'])->name('terms');
 Route::view('/help', 'static.help', ['title' => 'Help Center - EventSphere'])->name('help');
 
+Route::get('/events/{event}/tickets', [TicketController::class, 'show'])->name('tickets.purchase.show');
+    Route::post('/events/{event}/tickets/purchase', [TicketController::class, 'purchase'])->name('tickets.purchase');
+
 /*
 |--------------------------------------------------------------------------
 | PUBLIC API ROUTES
@@ -113,11 +116,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // Tickets & Bookings
+    Route::get('/my-tickets', [TicketController::class, 'myTickets'])->name('tickets.my-tickets');
     Route::get('/tickets', [TicketController::class, 'index'])->name('tickets.index');
-    Route::get('/tickets/{ticketPurchase}', [TicketController::class, 'show'])->name('tickets.show');
+    Route::get('/tickets/{ticketPurchase}', [TicketController::class, 'showTicket'])->name('tickets.show');
     Route::get('/tickets/{ticketPurchase}/download', [TicketController::class, 'download'])->name('tickets.download');
-    Route::post('/events/{event}/tickets/purchase', [TicketController::class, 'purchase'])->name('tickets.purchase');
     Route::get('/tickets/{ticketPurchase}/view', [TicketController::class, 'view'])->name('tickets.view');
+
+
 
     // Bookings
     Route::get('/bookings', [BookingController::class, 'index'])->name('bookings.index');
@@ -264,7 +269,7 @@ Route::middleware(['auth', 'verified', 'role:vendor'])->prefix('vendor')->name('
 
 Route::get('auth/google', [GoogleController::class, 'redirectToGoogle'])->name('google.login');
 Route::get('auth/google/callback', [GoogleController::class, 'handleGoogleCallback']);
-Route::get('/payment/{type}/{id}', [PaymentController::class, 'process'])->name('payment.process');
+Route::get('/payment/{type}/{id}', [PaymentController::class, 'process'])->name('payments.process');
 Route::post('/payment/{type}/{id}/complete', [PaymentController::class, 'complete'])->name('payment.complete');
 Route::patch('/organizer/events/{event}/status', [OrganizerController::class, 'updateEventStatus'])->name('organizer.events.update-status')->middleware(['auth', 'verified']);
 Route::post('/admin/events/{event}/approve', [OrganizerController::class, 'approveEvent'])->name('admin.events.approve')->middleware(['auth', 'verified', 'can:admin']);

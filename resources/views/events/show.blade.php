@@ -150,13 +150,14 @@
         <!-- Action Buttons -->
         <div class="flex flex-col sm:flex-row gap-4 mb-12">
             @if($event->status === 'approved' && $event->is_active && $event->start_date > now())
-            <a href="{{ route('events.tickets', $event) }}"
-               class="group bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 hover:shadow-2xl inline-flex items-center justify-center">
-                <svg class="w-6 h-6 mr-3 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
-                </svg>
-                Get Tickets
-            </a>
+                {{-- Main "Get Tickets" button - goes to general purchase page --}}
+                <a href="{{ route('tickets.purchase.show', $event) }}"
+                class="group bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 hover:shadow-2xl inline-flex items-center justify-center">
+                    <svg class="w-6 h-6 mr-3 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                    </svg>
+                    Get Tickets
+                </a>
             @endif
 
             @if($event->voting_contest_id)
@@ -301,10 +302,11 @@
                                     @endphp
 
                                     @if($isAvailable)
-                                        <a href="{{ route('events.tickets', $event) }}?ticket_id={{ $ticket->id }}"
-                                        class="">
+                                        {{-- For individual ticket selection - goes to purchase page with ticket pre-selected --}}
+                                        <a href="{{ route('tickets.purchase.show', $event) }}?ticket_id={{ $ticket->id }}"
+                                        class="group bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg inline-flex items-center justify-center">
                                             Select Ticket
-                                            <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg class="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
                                             </svg>
                                         </a>

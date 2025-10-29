@@ -3,6 +3,11 @@
 @section('title', 'Purchase Tickets - ' . $event->title)
 
 @section('content')
+@php
+    use Illuminate\Support\Str;
+    use Illuminate\Support\Facades\Storage;
+    use Illuminate\Support\Facades\Auth;
+@endphp
 <div class="min-h-screen bg-gray-900">
     <!-- Header Section -->
     <div class="bg-black shadow-sm border-b border-gray-200">
