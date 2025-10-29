@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Booking;
 use App\Models\Ticket;
+use Illuminate\Support\Facades\DB;
 
 
 class OrganizerController extends BaseController
@@ -414,104 +415,232 @@ class OrganizerController extends BaseController
         return back()->with('success', 'Booking status updated successfully.');
     }
 
-public function events(Request $request)
-{
-    $query = Event::with(['organizer', 'category']);
+    public function events(Request $request)
+    {
+        $query = Event::with(['organizer', 'category']);
 
-    // ✅ ORGANIZER: Only see their own events (all statuses and dates)
-    if (Auth::check() && Auth::user()->role === 'organizer') {
-        $query->where('organizer_id', Auth::id());
+        // ✅ ORGANIZER: Only see their own events (all statuses and dates)
+        if (Auth::check() && Auth::user()->role === 'organizer') {
+            $query->where('organizer_id', Auth::id());
+        }
+
+        // ✅ Optional filters
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('category')) {
+            $query->where('category_id', $request->category);
+        }
+
+        if ($request->filled('location')) {
+            $query->where('location', 'like', '%' . $request->location . '%');
+        }
+
+        // ✅ PUBLIC or REGULAR USER: only approved, active, and future events
+        if (
+            !Auth::check() ||
+            (Auth::check() && !in_array(Auth::user()->role, ['admin', 'organizer']))
+        ) {
+            $query->where('status', 'approved')
+                ->where('is_active', true)
+                ->where('start_date', '>', now());
+        }
+
+        // ✅ ADMINS: see all events, including past ones
+        // (no extra filtering needed – they see everything by default)
+
+        $events = $query->orderBy('start_date', 'desc')->paginate(12);
+
+        $categories = EventCategory::where('is_active', true)->get();
+
+        return view('events.index', [
+            'events' => $events,
+            'categories' => $categories,
+            'title' => Auth::check() && Auth::user()->role === 'organizer'
+                ? 'My Events - EventSphere'
+                : 'Events - EventSphere',
+        ]);
     }
-
-    // ✅ Optional filters
-    if ($request->has('status')) {
-        $query->where('status', $request->status);
-    }
-
-    if ($request->filled('category')) {
-        $query->where('category_id', $request->category);
-    }
-
-    if ($request->filled('location')) {
-        $query->where('location', 'like', '%' . $request->location . '%');
-    }
-
-    // ✅ PUBLIC or REGULAR USER: only approved, active, and future events
-    if (
-        !Auth::check() ||
-        (Auth::check() && !in_array(Auth::user()->role, ['admin', 'organizer']))
-    ) {
-        $query->where('status', 'approved')
-              ->where('is_active', true)
-              ->where('start_date', '>', now());
-    }
-
-    // ✅ ADMINS: see all events, including past ones
-    // (no extra filtering needed – they see everything by default)
-
-    $events = $query->orderBy('start_date', 'desc')->paginate(12);
-
-    $categories = EventCategory::where('is_active', true)->get();
-
-    return view('events.index', [
-        'events' => $events,
-        'categories' => $categories,
-        'title' => Auth::check() && Auth::user()->role === 'organizer'
-            ? 'My Events - EventSphere'
-            : 'Events - EventSphere',
-    ]);
-}
 
 
     public function createEvent()
     {
         $categories = EventCategory::where('is_active', true)
-        ->orderBy('sort_order')
-        ->orderBy('name')
-        ->get();
-        $nomineeCategories = NomineeCategory::all();
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
+
+        // Use VotingCategory instead of NomineeCategory
+        $votingCategories = \App\Models\NomineeCategory::where('is_active', true)->get();
+
         $organizers = User::where('role', 'organizer')->paginate(12);
 
         return view('organizers.events.create', [
             'categories' => $categories,
             'organizers' => $organizers,
-            'nomineeCategories' => $nomineeCategories,
+            'nomineeCategories' => $votingCategories, // This will now pass voting categories
             'title' => 'Create New Event - EventSphere'
         ]);
     }
 
+
     public function storeEvent(Request $request)
     {
-        $validated = $request->validate([
-            'title' => 'required|string|max:191',
-            'category_id' => 'required|exists:event_categories,id',
-            'description' => 'nullable|string',
-            'location' => 'required|string|max:191',
-            'start_date' => 'required|date|after:now',
-            'end_date' => 'required|date|after:start_date',
-            'ticket_price' => 'nullable|numeric|min:0',
-            'capacity' => 'nullable|integer|min:1',
-            'banner_image' => 'required|image|max:2048',
-            'is_active' => 'boolean',
-            'is_featured' => 'boolean',
-        ]);
+        DB::beginTransaction();
 
-        // Handle file upload
-        if ($request->hasFile('banner_image')) {
-            $path = $request->file('banner_image')->store('events', 'public');
-            $validated['banner_image'] = $path;
+        try {
+            // First, validate voting contest data if enabled
+            $votingRules = [];
+            if ($request->has('enable_voting') && $request->enable_voting) {
+                $votingRules = [
+                    'voting_title' => 'required|string|max:191',
+                    'voting_description' => 'nullable|string',
+                    'nominee_category_id' => 'nullable|exists:voting_categories,id',
+                    'price_per_vote' => 'required|numeric|min:0',
+                    'max_votes_per_user' => 'nullable|integer|min:1',
+                    'requires_approval' => 'boolean',
+                    'nominees' => 'nullable|array',
+                    'nominees.*.name' => 'required|string|max:255',
+                    'nominees.*.code' => 'nullable|string|max:100',
+                    'nominees.*.bio' => 'nullable|string',
+                    'nominees.*.affiliation' => 'nullable|string|max:255',
+                    'nominees.*.position' => 'nullable|integer',
+                    'nominees.*.photo' => 'nullable|image|max:2048',
+                ];
+            }
+
+            // Validate main event data including conditional voting rules
+            $validated = $request->validate(array_merge([
+                'title' => 'required|string|max:191',
+                'category_id' => 'required|exists:event_categories,id',
+                'description' => 'nullable|string',
+                'location' => 'required|string|max:191',
+                'start_date' => 'required|date|after:now',
+                'end_date' => 'required|date|after:start_date',
+                'ticket_price' => 'nullable|numeric|min:0',
+                'capacity' => 'nullable|integer|min:1',
+                'banner_image' => 'required|image|max:2048',
+                'is_active' => 'boolean',
+                'is_featured' => 'boolean',
+                'tickets' => 'required|array|min:1',
+                'tickets.*.name' => 'required|string|max:255',
+                'tickets.*.price' => 'required|numeric|min:0',
+                'tickets.*.quantity_available' => 'required|integer|min:1',
+                'tickets.*.max_per_order' => 'nullable|integer|min:1',
+                'tickets.*.sale_start_date' => 'nullable|date',
+                'tickets.*.sale_end_date' => 'nullable|date|after:tickets.*.sale_start_date',
+            ], $votingRules));
+
+            // Handle event banner image upload
+            if ($request->hasFile('banner_image')) {
+                $path = $request->file('banner_image')->store('events', 'public');
+                $validated['banner_image'] = $path;
+            }
+
+            // Set default values
+            $validated['organizer_id'] = Auth::id();
+            $validated['status'] = 'draft';
+            $validated['is_active'] = $request->has('is_active');
+            $validated['is_featured'] = $request->has('is_featured');
+            $validated['voting_contest_id'] = null;
+
+            // Create event
+            $event = Event::create($validated);
+
+            // Create tickets
+            foreach ($request->tickets as $ticketData) {
+                Ticket::create([
+                    'event_id' => $event->id,
+                    'name' => $ticketData['name'],
+                    'price' => $ticketData['price'],
+                    'quantity_available' => $ticketData['quantity_available'],
+                    'max_per_order' => $ticketData['max_per_order'] ?? 10,
+                    'sale_start_date' => !empty($ticketData['sale_start_date']) ? $ticketData['sale_start_date'] : null,
+                    'sale_end_date' => !empty($ticketData['sale_end_date']) ? $ticketData['sale_end_date'] : null,
+                    'is_active' => true,
+                ]);
+            }
+
+            $votingContest = null;
+
+            // Create voting contest if enabled and link to event
+            if ($request->has('enable_voting') && $request->enable_voting) {
+                // Use the existing voting category (ID 1) or the selected one
+                $votingCategoryId = $request->nominee_category_id ?? 1;
+
+                // Verify the category exists
+                if (!\App\Models\VotingCategory::where('id', $votingCategoryId)->exists()) {
+                    // If the selected category doesn't exist, use the first available one
+                    $firstCategory = \App\Models\VotingCategory::first();
+                    $votingCategoryId = $firstCategory ? $firstCategory->id : null;
+                }
+
+                $votingContest = \App\Models\VotingContest::create([
+                    'organizer_id' => Auth::id(),
+                    'category_id' => $votingCategoryId,
+                    'title' => $request->voting_title,
+                    'slug' => Str::slug($request->voting_title) . '-' . uniqid(),
+                    'description' => $request->voting_description ?? '',
+                    'rules' => null,
+                    'start_date' => $event->start_date,
+                    'end_date' => $event->end_date,
+                    'price_per_vote' => $request->price_per_vote,
+                    'max_votes_per_user' => $request->max_votes_per_user ?? 1,
+                    'requires_approval' => $request->has('requires_approval'),
+                    'is_active' => true,
+                    'is_featured' => false,
+                    'total_votes' => 0,
+                    'views_count' => 0,
+                ]);
+
+                // Update the event with the voting contest ID
+                $event->update(['voting_contest_id' => $votingContest->id]);
+
+                // Handle nominees creation
+                if ($request->has('nominees') && is_array($request->nominees)) {
+                    foreach ($request->nominees as $index => $nomineeData) {
+                        $nominee = new \App\Models\Nominee([
+                            'name' => $nomineeData['name'],
+                            'code' => $nomineeData['code'] ?? null,
+                            'bio' => $nomineeData['bio'] ?? null,
+                            'affiliation' => $nomineeData['affiliation'] ?? null,
+                            'position' => $nomineeData['position'] ?? 0,
+                            'is_active' => true,
+                        ]);
+
+                        // Handle nominee photo upload
+                        if (isset($nomineeData['photo']) && $request->hasFile("nominees.{$index}.photo")) {
+                            $photoPath = $request->file("nominees.{$index}.photo")->store('nominees', 'public');
+                            $nominee->photo = $photoPath;
+                        }
+
+                        $votingContest->nominees()->save($nominee);
+                    }
+                }
+            }
+
+            DB::commit();
+
+            // Build success message
+            $successMessage = 'Event created successfully with ' . count($request->tickets) . ' ticket type(s)';
+            if ($request->has('enable_voting') && $request->enable_voting) {
+                $successMessage .= ' and voting contest';
+                if ($request->has('nominees') && is_array($request->nominees)) {
+                    $successMessage .= ' with ' . count($request->nominees) . ' nominee(s)';
+                }
+            }
+            $successMessage .= '!';
+
+            return redirect()->route('organizer.events.edit', $event)
+                ->with('success', $successMessage);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Event creation failed: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+            return back()->with('error', 'Failed to create event: ' . $e->getMessage())->withInput();
         }
-
-        // Set default values
-        $validated['organizer_id'] = Auth::id();
-        $validated['status'] = 'draft';
-        $validated['is_active'] = $request->has('is_active');
-        $validated['is_featured'] = $request->has('is_featured');
-
-        $event = Event::create($validated);
-
-        return redirect()->route('organizer.events.edit', $event)
-            ->with('success', 'Event created successfully! You can now add tickets and other details.');
     }
 
     public function storeEventCategory(Request $request)

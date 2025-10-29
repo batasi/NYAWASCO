@@ -333,62 +333,82 @@ use Illuminate\Support\Facades\Route;
                     </a>
                 </div>
 
-                    <!-- Desktop Navigation Links -->
-                    <div class="hidden space-x-8 sm:-my-px sm:ml-10 sm:flex">
-                        <x-nav-link href="{{ route('voting.index') }}" :active="request()->routeIs('voting.*')" class="text-white hover:text-pink-300 transition-colors">
-                            Voting Platform
-                        </x-nav-link>
-                        <x-nav-link href="{{ route('events.index') }}" :active="request()->routeIs('events.*')" class="text-white hover:text-pink-300 transition-colors">
-                            Discover Events
-                        </x-nav-link>
+                <!-- Desktop Navigation Links -->
+                <div class="hidden space-x-8 sm:-my-px sm:ml-10 sm:flex items-center">
 
-                        <!-- Admin-only Links -->
-                        @auth
+                    <!-- Core Links -->
+                    <x-nav-link href="{{ route('voting.index') }}"
+                                :active="request()->routeIs('voting.*')"
+                                class="text-white hover:text-pink-300 transition-colors">
+                        Voting Platform
+                    </x-nav-link>
+
+                    <x-nav-link href="{{ route('events.index') }}"
+                                :active="request()->routeIs('events.*')"
+                                class="text-white hover:text-pink-300 transition-colors">
+                        Discover Events
+                    </x-nav-link>
+
+                    <x-nav-link href="{{ route('tickets.my-tickets') }}"
+                                :active="request()->routeIs('tickets.my-tickets')"
+                                class="text-white hover:text-pink-300 transition-colors">
+                        My Tickets
+                    </x-nav-link>
+
+                    <!-- Admin-only Links -->
+                    @auth
                         @if(auth()->user()->hasRole('admin'))
-                        <x-nav-link href="{{ route('organizers.index') }}" :active="request()->routeIs('organizers.*')" class="text-white hover:text-pink-300 transition-colors">
-                            Organizers
-                        </x-nav-link>
-                        <x-nav-link href="{{ route('admin.attendees.index') }}" :active="request()->routeIs('admin.attendees.*')" class="text-white hover:text-pink-300 transition-colors">
-                            Attendees
-                        </x-nav-link>
-                        <x-nav-link href="{{ route('admin.vendors.index') }}" :active="request()->routeIs('admin.vendors.*')" class="text-white hover:text-pink-300 transition-colors">
-                            Vendors
-                        </x-nav-link>
+                            <x-nav-link href="{{ route('organizers.index') }}"
+                                        :active="request()->routeIs('organizers.*')"
+                                        class="text-white hover:text-pink-300 transition-colors">
+                                Organizers
+                            </x-nav-link>
+
+                            <x-nav-link href="{{ route('admin.attendees.index') }}"
+                                        :active="request()->routeIs('admin.attendees.*')"
+                                        class="text-white hover:text-pink-300 transition-colors">
+                                Attendees
+                            </x-nav-link>
+
+                            <x-nav-link href="{{ route('admin.vendors.index') }}"
+                                        :active="request()->routeIs('admin.vendors.*')"
+                                        class="text-white hover:text-pink-300 transition-colors">
+                                Vendors
+                            </x-nav-link>
                         @endif
-                        @endauth
+                    @endauth
 
-                        <!-- More Dropdown -->
-                        <div class="relative" x-data="{ open: false }" x-cloak>
-                            <button
-                                @click="open = !open"
-                                class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-white hover:text-pink-300 hover:border-pink-300 focus:outline-none transition duration-150 ease-in-out"
+                    <!-- More Dropdown -->
+                    <div class="relative" x-data="{ open: false }" x-cloak>
+                        <button @click="open = !open"
+                                class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-white hover:text-pink-300 hover:border-pink-300 focus:outline-none transition duration-150 ease-in-out"
                                 :class="{ 'border-pink-300 text-white': open }">
-                                More
-                                <svg class="ml-1 -mr-0.5 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd"
-                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                        clip-rule="evenodd" />
-                                </svg>
-                            </button>
+                            More
+                            <svg class="ml-1 -mr-0.5 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd"
+                                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                        </button>
 
-                            <div
-                                x-show="open"
-                                x-transition
-                                @click.away="open = false"
-                                class="origin-top-left absolute left-0 mt-2 w-48 rounded-md shadow-lg bg-gray-900 ring-1 ring-pink-500 ring-opacity-20 focus:outline-none z-50"
-                                x-cloak>
-                                <div class="py-1">
-                                    <a href="{{ route('pricing') }}" class="block px-4 py-2 text-sm text-white hover:bg-pink-900 transition-colors">Pricing</a>
-                                    <a href="{{ route('about') }}" class="block px-4 py-2 text-sm text-white hover:bg-pink-900 transition-colors">About Us</a>
-                                    <a href="{{ route('contact') }}" class="block px-4 py-2 text-sm text-white hover:bg-pink-900 transition-colors">Contact</a>
-                                    <a href="{{ route('help') }}" class="block px-4 py-2 text-sm text-white hover:bg-pink-900 transition-colors">Help Center</a>
-                                    <div class="border-t border-pink-500 border-opacity-20 my-1"></div>
-                                    <a href="{{ route('privacy') }}" class="block px-4 py-2 text-sm text-white hover:bg-pink-900 transition-colors">Privacy Policy</a>
-                                    <a href="{{ route('terms') }}" class="block px-4 py-2 text-sm text-white hover:bg-pink-900 transition-colors">Terms of Service</a>
-                                </div>
+                        <div x-show="open"
+                            x-transition
+                            @click.away="open = false"
+                            class="origin-top-left absolute left-0 mt-2 w-48 rounded-md shadow-lg bg-gray-900 ring-1 ring-pink-500 ring-opacity-20 focus:outline-none z-50"
+                            x-cloak>
+                            <div class="py-1 flex flex-col">
+                                <a href="{{ route('about') }}" class="block px-4 py-2 text-sm text-white hover:bg-pink-900 transition-colors">About Us</a>
+                                <a href="{{ route('contact') }}" class="block px-4 py-2 text-sm text-white hover:bg-pink-900 transition-colors">Contact</a>
+                                <a href="{{ route('help') }}" class="block px-4 py-2 text-sm text-white hover:bg-pink-900 transition-colors">Help Center</a>
+                                <div class="border-t border-pink-500 border-opacity-20 my-1"></div>
+                                <a href="{{ route('privacy') }}" class="block px-4 py-2 text-sm text-white hover:bg-pink-900 transition-colors">Privacy Policy</a>
+                                <a href="{{ route('terms') }}" class="block px-4 py-2 text-sm text-white hover:bg-pink-900 transition-colors">Terms of Service</a>
                             </div>
                         </div>
                     </div>
+
+                </div>
+
                 </div>
 
                 <!-- Right Side (Search + Auth) -->
@@ -440,7 +460,15 @@ use Illuminate\Support\Facades\Route;
                 <a href="{{ route('admin.vendors.index') }}" class="block px-3 py-2 text-white font-medium hover:bg-pink-900 rounded-md transition-colors">Vendors</a>
                 @endif
                 @endauth
-                <a href="{{ route('pricing') }}" class="block px-3 py-2 text-white font-medium hover:bg-pink-900 rounded-md transition-colors">Pricing</a>
+
+                <li>
+                    <a href="{{ route('tickets.my-tickets') }}" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">
+                        My Tickets
+                    </a>
+                </li>
+
+
+
                 <a href="{{ route('about') }}" class="block px-3 py-2 text-white font-medium hover:bg-pink-900 rounded-md transition-colors">About Us</a>
                 <a href="{{ route('contact') }}" class="block px-3 py-2 text-white font-medium hover:bg-pink-900 rounded-md transition-colors">Contact</a>
                 <a href="{{ route('help') }}" class="block px-3 py-2 text-white font-medium hover:bg-pink-900 rounded-md transition-colors">Help Center</a>

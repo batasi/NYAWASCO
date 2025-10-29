@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class VotingContest extends Model
 {
@@ -157,9 +158,13 @@ class VotingContest extends Model
 
     public function isOrganizer($userId = null)
     {
-        $userId = $userId ?? auth()->id();
+        $userId = $userId ?? Auth::id();
         return $this->organizer_id === $userId;
     }
 
+    public function event()
+    {
+        return $this->hasOne(Event::class, 'voting_contest_id');
+    }
 
 }
