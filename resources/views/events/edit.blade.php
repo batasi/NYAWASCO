@@ -3,6 +3,11 @@
 @section('title', $title)
 
 @section('content')
+@php
+    use Illuminate\Support\Str;
+    use Illuminate\Support\Facades\Storage;
+    use Illuminate\Support\Facades\Auth;
+@endphp
 <div class="min-h-screen bg-gray-900">
     <!-- Header Section -->
     <div class="bg-black shadow-sm border-b border-gray-800">
@@ -10,14 +15,23 @@
             <div class="md:flex md:items-center md:justify-between">
                 <div class="flex-1 min-w-0">
                     <h1 class="text-3xl font-bold leading-tight text-white">
-                        Create New Event
+                        Edit Event: {{ $event->title }}
                     </h1>
                     <p class="mt-2 text-lg text-gray-400">
-                        Organize and host amazing events for your audience
+                        Update your event details and settings
                     </p>
                 </div>
-                <div class="mt-4 flex md:mt-0 md:ml-4">
-                    <a href="{{ route('events.index') }}" class="inline-flex items-center px-4 py-2 border border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-300 bg-gray-800 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+                <div class="mt-4 flex md:mt-0 md:ml-4 space-x-3">
+                    <a href="{{ route('events.show', $event) }}"
+                       class="inline-flex items-center px-4 py-2 border border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-300 bg-gray-800 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+                        <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                        </svg>
+                        View Event
+                    </a>
+                    <a href="{{ route('organizer.events') }}"
+                       class="inline-flex items-center px-4 py-2 border border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-300 bg-gray-800 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
                         <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                         </svg>
@@ -30,8 +44,25 @@
 
     <!-- Main Content -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <form action="{{ route('events.store') }}" method="POST" enctype="multipart/form-data" id="eventForm">
+        @if(session('success'))
+            <div class="mb-6 bg-green-600 text-white p-4 rounded-lg">
+                {{ session('success') }}
+            </div>
+        @endif
+
+        @if($errors->any())
+            <div class="mb-6 bg-red-600 text-white p-4 rounded-lg">
+                <ul class="list-disc list-inside">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        <form action="{{ route('organizer.events.update', $event) }}" method="POST" enctype="multipart/form-data" id="eventForm">
             @csrf
+            @method('PUT')
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <!-- Left Column - Main Event Details -->
@@ -46,9 +77,9 @@
                                 <label for="title" class="block text-sm font-medium text-gray-200 mb-2">
                                     Event Title <span class="text-red-400">*</span>
                                 </label>
-                                <input type="text" id="title" name="title" value="{{ old('title') }}"
-                                    class="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors duration-200"
-                                    placeholder="Enter your event title" required maxlength="191">
+                                <input type="text" id="title" name="title" value="{{ old('title', $event->title) }}"
+                                       class="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors duration-200"
+                                       placeholder="Enter your event title" required maxlength="191">
                                 @error('title')
                                     <p class="mt-1 text-sm text-red-400">{{ $message }}</p>
                                 @enderror
@@ -60,8 +91,8 @@
                                     Description
                                 </label>
                                 <textarea id="description" name="description" rows="5"
-                                        class="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors duration-200"
-                                        placeholder="Describe your event in detail">{{ old('description') }}</textarea>
+                                          class="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors duration-200"
+                                          placeholder="Describe your event in detail">{{ old('description', $event->description) }}</textarea>
                                 @error('description')
                                     <p class="mt-1 text-sm text-red-400">{{ $message }}</p>
                                 @enderror
@@ -77,7 +108,7 @@
                                             class="w-full px-4 py-3 pr-12 bg-gray-900 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors duration-200 appearance-none" required>
                                         <option value="" class="text-gray-500">Select Category</option>
                                         @foreach($categories as $category)
-                                            <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }} class="text-white">
+                                            <option value="{{ $category->id }}" {{ old('category_id', $event->category_id) == $category->id ? 'selected' : '' }} class="text-white">
                                                 {{ $category->name }}
                                             </option>
                                         @endforeach
@@ -108,8 +139,9 @@
                                 <label for="start_date" class="block text-sm font-medium text-gray-200 mb-2">
                                     Start Date & Time <span class="text-red-400">*</span>
                                 </label>
-                                <input type="datetime-local" id="start_date" name="start_date" value="{{ old('start_date') }}"
-                                    class="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors duration-200" required>
+                                <input type="datetime-local" id="start_date" name="start_date"
+                                       value="{{ old('start_date', $event->start_date ? $event->start_date->format('Y-m-d\TH:i') : '') }}"
+                                       class="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors duration-200" required>
                                 @error('start_date')
                                     <p class="mt-1 text-sm text-red-400">{{ $message }}</p>
                                 @enderror
@@ -119,8 +151,9 @@
                                 <label for="end_date" class="block text-sm font-medium text-gray-200 mb-2">
                                     End Date & Time <span class="text-red-400">*</span>
                                 </label>
-                                <input type="datetime-local" id="end_date" name="end_date" value="{{ old('end_date') }}"
-                                    class="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors duration-200" required>
+                                <input type="datetime-local" id="end_date" name="end_date"
+                                       value="{{ old('end_date', $event->end_date ? $event->end_date->format('Y-m-d\TH:i') : '') }}"
+                                       class="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors duration-200" required>
                                 @error('end_date')
                                     <p class="mt-1 text-sm text-red-400">{{ $message }}</p>
                                 @enderror
@@ -137,9 +170,9 @@
                                 <label for="location" class="block text-sm font-medium text-gray-200 mb-2">
                                     Location <span class="text-red-400">*</span>
                                 </label>
-                                <input type="text" id="location" name="location" value="{{ old('location') }}"
-                                    class="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors duration-200"
-                                    placeholder="Event venue or address" required maxlength="191">
+                                <input type="text" id="location" name="location" value="{{ old('location', $event->location) }}"
+                                       class="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors duration-200"
+                                       placeholder="Event venue or address" required maxlength="191">
                                 @error('location')
                                     <p class="mt-1 text-sm text-red-400">{{ $message }}</p>
                                 @enderror
@@ -150,9 +183,9 @@
                                     <label for="ticket_price" class="block text-sm font-medium text-gray-200 mb-2">
                                         Ticket Price (KES)
                                     </label>
-                                    <input type="number" id="ticket_price" name="ticket_price" value="{{ old('ticket_price', 0) }}"
-                                        class="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors duration-200"
-                                        step="0.01" min="0" placeholder="0.00">
+                                    <input type="number" id="ticket_price" name="ticket_price" value="{{ old('ticket_price', $event->ticket_price) }}"
+                                           class="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors duration-200"
+                                           step="0.01" min="0" placeholder="0.00">
                                     @error('ticket_price')
                                         <p class="mt-1 text-sm text-red-400">{{ $message }}</p>
                                     @enderror
@@ -162,9 +195,9 @@
                                     <label for="capacity" class="block text-sm font-medium text-gray-200 mb-2">
                                         Capacity
                                     </label>
-                                    <input type="number" id="capacity" name="capacity" value="{{ old('capacity') }}"
-                                        class="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors duration-200"
-                                        placeholder="Maximum number of attendees" min="1">
+                                    <input type="number" id="capacity" name="capacity" value="{{ old('capacity', $event->capacity) }}"
+                                           class="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors duration-200"
+                                           placeholder="Maximum number of attendees" min="1">
                                     @error('capacity')
                                         <p class="mt-1 text-sm text-red-400">{{ $message }}</p>
                                     @enderror
@@ -177,23 +210,71 @@
                     <div class="bg-gray-800 rounded-lg shadow-sm border border-gray-700 p-6">
                         <h3 class="text-lg font-semibold text-white mb-4">Event Image</h3>
 
-                        <div>
-                            <label for="banner_image" class="block text-sm font-medium text-gray-200 mb-2">
-                                Banner Image <span class="text-red-400">*</span>
-                            </label>
-                            <input type="file" id="banner_image" name="banner_image"
-                                class="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-600 file:text-white hover:file:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors duration-200"
-                                accept="image/*" required>
-                            <p class="mt-2 text-sm text-gray-400">Recommended size: 1200x400 pixels. Max file size: 2MB</p>
-                            @error('banner_image')
-                                <p class="mt-1 text-sm text-red-400">{{ $message }}</p>
-                            @enderror
+                        <div class="space-y-4">
+                            @if($event->banner_image)
+                            <div>
+                                <label class="block text-sm font-medium text-gray-200 mb-2">Current Image</label>
+                                <div class="flex items-center space-x-4">
+                                    <img src="{{ Storage::disk('public')->url($event->banner_image) }}"
+                                         alt="Event banner"
+                                         class="w-32 h-20 object-cover rounded-lg border border-gray-600">
+                                    <div class="text-sm text-gray-400">
+                                        <p>Current banner image</p>
+                                        <button type="button"
+                                                onclick="document.getElementById('remove_banner').value = '1'; document.getElementById('current_banner').classList.add('hidden');"
+                                                class="text-red-400 hover:text-red-300 mt-1">
+                                            Remove image
+                                        </button>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="remove_banner" name="remove_banner" value="0">
+                                <div id="current_banner">
+                                    <input type="hidden" name="current_banner" value="{{ $event->banner_image }}">
+                                </div>
+                            </div>
+                            @endif
+
+                            <div>
+                                <label for="banner_image" class="block text-sm font-medium text-gray-200 mb-2">
+                                    {{ $event->banner_image ? 'Update Banner Image' : 'Banner Image' }}
+                                </label>
+                                <input type="file" id="banner_image" name="banner_image"
+                                       class="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-600 file:text-white hover:file:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors duration-200"
+                                       accept="image/*">
+                                <p class="mt-2 text-sm text-gray-400">Recommended size: 1200x400 pixels. Max file size: 2MB</p>
+                                @error('banner_image')
+                                    <p class="mt-1 text-sm text-red-400">{{ $message }}</p>
+                                @enderror
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Right Column - Sidebar -->
                 <div class="space-y-6">
+                    <!-- Event Status Card -->
+                    <div class="bg-gray-800 rounded-lg shadow-sm border border-gray-700 p-6">
+                        <h3 class="text-lg font-semibold text-white mb-4">Event Status</h3>
+
+                        <div class="space-y-4">
+                            <div>
+                                <label for="status" class="block text-sm font-medium text-gray-200 mb-2">
+                                    Status
+                                </label>
+                                <select id="status" name="status"
+                                        class="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors duration-200">
+                                    <option value="draft" {{ old('status', $event->status) == 'draft' ? 'selected' : '' }} class="text-white">Draft</option>
+                                    <option value="pending_approval" {{ old('status', $event->status) == 'pending_approval' ? 'selected' : '' }} class="text-white">Pending Approval</option>
+                                    <option value="approved" {{ old('status', $event->status) == 'approved' ? 'selected' : '' }} class="text-white">Approved</option>
+                                    <option value="cancelled" {{ old('status', $event->status) == 'cancelled' ? 'selected' : '' }} class="text-white">Cancelled</option>
+                                </select>
+                                @error('status')
+                                    <p class="mt-1 text-sm text-red-400">{{ $message }}</p>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Event Settings Card -->
                     <div class="bg-gray-800 rounded-lg shadow-sm border border-gray-700 p-6">
                         <h3 class="text-lg font-semibold text-white mb-4">Event Settings</h3>
@@ -202,13 +283,37 @@
                             <div class="flex items-center justify-between">
                                 <label for="is_featured" class="text-sm font-medium text-gray-200">Feature this event</label>
                                 <input type="checkbox" id="is_featured" name="is_featured" value="1"
-                                    class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-600 rounded bg-gray-700">
+                                       {{ old('is_featured', $event->is_featured) ? 'checked' : '' }}
+                                       class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-600 rounded bg-gray-700">
                             </div>
 
                             <div class="flex items-center justify-between">
                                 <label for="is_active" class="text-sm font-medium text-gray-200">Activate event</label>
-                                <input type="checkbox" id="is_active" name="is_active" value="1" checked
-                                    class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-600 rounded bg-gray-700">
+                                <input type="checkbox" id="is_active" name="is_active" value="1"
+                                       {{ old('is_active', $event->is_active) ? 'checked' : '' }}
+                                       class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-600 rounded bg-gray-700">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Event Statistics Card -->
+                    <div class="bg-gray-800 rounded-lg shadow-sm border border-gray-700 p-6">
+                        <h3 class="text-lg font-semibold text-white mb-4">Event Statistics</h3>
+
+                        <div class="space-y-3 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-400">Created</span>
+                                <span class="text-white">{{ $event->created_at->format('M j, Y') }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-400">Last Updated</span>
+                                <span class="text-white">{{ $event->updated_at->format('M j, Y') }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-400">Status</span>
+                                <span class="capitalize {{ $event->status == 'approved' ? 'text-green-400' : ($event->status == 'cancelled' ? 'text-red-400' : 'text-yellow-400') }}">
+                                    {{ str_replace('_', ' ', $event->status) }}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -221,11 +326,11 @@
                                 <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                 </svg>
-                                Create Event
+                                Update Event
                             </button>
 
-                            <a href="{{ route('events.index') }}"
-                            class="w-full inline-flex justify-center items-center px-4 py-3 border border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-300 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors duration-200">
+                            <a href="{{ route('organizer.events') }}"
+                               class="w-full inline-flex justify-center items-center px-4 py-3 border border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-300 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors duration-200">
                                 Cancel
                             </a>
                         </div>
@@ -233,13 +338,102 @@
                 </div>
             </div>
         </form>
+
+        <!-- Danger Zone Section -->
+        <div class="bg-red-50 rounded-lg shadow-sm border border-red-200 p-6 mt-8">
+            <h3 class="text-lg font-semibold text-red-800 mb-4">Danger Zone</h3>
+
+            <div class="flex items-center justify-between">
+                <div>
+                    <h4 class="text-sm font-medium text-red-800">Delete Event</h4>
+                    <p class="text-sm text-red-600 mt-1">
+                        Once you delete an event, there is no going back. Please be certain.
+                    </p>
+
+                    @if($event->bookings()->exists() || $event->ticketPurchases()->exists())
+                        <p class="text-sm text-red-700 font-medium mt-2">
+                            ⚠️ This event has existing bookings or ticket purchases and cannot be deleted.
+                        </p>
+                    @endif
+                </div>
+
+                <div>
+                    @if(!$event->bookings()->exists() && !$event->ticketPurchases()->exists())
+                        <button type="button"
+                                onclick="openDeleteModal('{{ $event->id }}', '{{ $event->title }}')"
+                                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4
+                                    a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                            Delete Event
+                        </button>
+
+                        <!-- Delete Form (Hidden, submitted via JS) -->
+                        <form id="delete-form-{{ $event->id }}"
+                            action="{{ route('organizer.events.destroy', $event) }}"
+                            method="POST" class="hidden">
+                            @csrf
+                            @method('DELETE')
+                        </form>
+                    @else
+                        <button disabled
+                                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-400 cursor-not-allowed">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0
+                                    2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732
+                                    0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                            </svg>
+                            Cannot Delete
+                        </button>
+                    @endif
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div id="deleteModal"
+            class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4 sm:px-6 lg:px-8">
+
+            <div
+                class="bg-white rounded-2xl shadow-2xl w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl p-6 md:p-8 transform transition-all duration-300 scale-100">
+
+                <!-- Header -->
+                <h2 class="text-lg md:text-xl lg:text-2xl font-semibold text-gray-900 mb-4 text-center">
+                    Confirm Deletion
+                </h2>
+
+                <!-- Message -->
+                <p class="text-gray-700 mb-6 text-sm md:text-base text-center leading-relaxed" id="deleteModalMessage">
+                    Are you sure you want to delete this item? This action cannot be undone.
+                </p>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-col sm:flex-row justify-center sm:justify-end gap-3 mt-6">
+                    <button type="button"
+                        onclick="closeDeleteModal()"
+                        class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300 transition">
+                        Cancel
+                    </button>
+
+                    <button type="button"
+                        id="confirmDeleteButton"
+                        class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 transition">
+                        Yes, Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
-<!-- Add Category Modal -->
+<!-- Add Category Modal (same as create form) -->
 <div id="categoryModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
-    <div class="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm md:max-w-md lg:max-w-lg border border-gray-700 mx-auto">
-        <div class="flex justify-between items-center p-6 border-b border-gray-700">
+    <div class="bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm md:max-w-md lg:max-w-lg border border-gray-700 mx-auto">
+        <div class="flex justify-between items-center mb-6">
             <h3 class="text-xl font-bold text-white">Add New Category</h3>
             <button type="button"
                     onclick="closeCategoryModal()"
@@ -351,132 +545,32 @@
     </div>
 </div>
 
-<!-- Success Toast -->
-<div id="successToast" class="fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300 z-50 hidden">
-    <div class="flex items-center space-x-2">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-        </svg>
-        <span id="toastMessage">Category added successfully!</span>
-    </div>
-</div>
-
 @push('scripts')
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Toggle voting section
-        const enableVoting = document.getElementById('enable_voting');
-        const votingSection = document.getElementById('voting-section');
+    // Form validation
+    document.getElementById('eventForm').addEventListener('submit', function(e) {
+        const startDate = new Date(document.getElementById('start_date').value);
+        const endDate = new Date(document.getElementById('end_date').value);
 
-        enableVoting.addEventListener('change', function() {
-            votingSection.classList.toggle('hidden', !this.checked);
-        });
-
-        // Add ticket type
-        let ticketCount = 1;
-        document.getElementById('add-ticket-type').addEventListener('click', function() {
-            const ticketTypes = document.getElementById('ticket-types');
-            const newTicket = document.createElement('div');
-            newTicket.className = 'ticket-type p-4 bg-gray-900 rounded-lg border border-gray-600 relative';
-            newTicket.innerHTML = `
-                <button type="button" class="absolute top-2 right-2 text-gray-400 hover:text-red-400 remove-ticket transition-colors duration-200">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-                <label class="block text-sm font-medium text-gray-200 mb-2">Ticket Name</label>
-                <input type="text" name="tickets[${ticketCount}][name]"
-                    class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-transparent transition-colors duration-200"
-                    placeholder="e.g., VIP Access">
-                <label class="block text-sm font-medium text-gray-200 mt-3 mb-2">Price (KES)</label>
-                <input type="number" name="tickets[${ticketCount}][price]"
-                    class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-transparent transition-colors duration-200"
-                    step="0.01" min="0" value="0">
-                <label class="block text-sm font-medium text-gray-200 mt-3 mb-2">Quantity Available</label>
-                <input type="number" name="tickets[${ticketCount}][quantity_available]"
-                    class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-transparent transition-colors duration-200"
-                    min="1" value="100">
-            `;
-            ticketTypes.appendChild(newTicket);
-            ticketCount++;
-        });
-
-        // Remove ticket type
-        document.addEventListener('click', function(e) {
-            if (e.target.classList.contains('remove-ticket') || e.target.closest('.remove-ticket')) {
-                const removeBtn = e.target.classList.contains('remove-ticket') ? e.target : e.target.closest('.remove-ticket');
-                removeBtn.closest('.ticket-type').remove();
-            }
-        });
-
-        // Form validation
-        document.getElementById('eventForm').addEventListener('submit', function(e) {
-            const startDate = new Date(document.getElementById('start_date').value);
-            const endDate = new Date(document.getElementById('end_date').value);
-
-            if (endDate <= startDate) {
-                e.preventDefault();
-                alert('End date must be after start date.');
-                return false;
-            }
-        });
+        if (endDate <= startDate) {
+            e.preventDefault();
+            alert('End date must be after start date.');
+            return false;
+        }
     });
 
-    // Modal Functions
+    // Category Modal Functions
     function openCategoryModal() {
         document.getElementById('categoryModal').classList.remove('hidden');
-        document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        document.body.style.overflow = 'hidden';
         document.getElementById('category_name').focus();
     }
 
     function closeCategoryModal() {
         document.getElementById('categoryModal').classList.add('hidden');
-        document.body.style.overflow = ''; // Restore scrolling
+        document.body.style.overflow = '';
         document.getElementById('categoryForm').reset();
-        document.getElementById('category_color').value = '#3B82F6';
-        document.getElementById('category_color_text').value = '#3B82F6';
-        hideError('category_name_error');
-    }
-
-    // Color Picker Sync
-    document.getElementById('category_color').addEventListener('input', function(e) {
-        document.getElementById('category_color_text').value = e.target.value;
-    });
-
-    document.getElementById('category_color_text').addEventListener('input', function(e) {
-        const color = e.target.value;
-        if (/^#[0-9A-F]{6}$/i.test(color)) {
-            document.getElementById('category_color').value = color;
-        }
-    });
-
-    // Error Handling
-    function showError(fieldId, message) {
-        const errorElement = document.getElementById(fieldId);
-        errorElement.textContent = message;
-        errorElement.classList.remove('hidden');
-    }
-
-    function hideError(fieldId) {
-        const errorElement = document.getElementById(fieldId);
-        errorElement.classList.add('hidden');
-    }
-
-    // Toast Notification
-    function showToast(message) {
-        const toast = document.getElementById('successToast');
-        const toastMessage = document.getElementById('toastMessage');
-
-        toastMessage.textContent = message;
-        toast.classList.remove('hidden');
-        setTimeout(() => {
-            toast.classList.remove('translate-x-full');
-        }, 100);
-
-        setTimeout(() => {
-            toast.classList.add('translate-x-full');
-            setTimeout(() => toast.classList.add('hidden'), 300);
-        }, 3000);
+        document.getElementById('category_name_error').classList.add('hidden');
     }
 
     // Category Form Submission
@@ -511,33 +605,17 @@
             const data = await response.json();
 
             if (response.ok) {
-                // Success
                 closeCategoryModal();
-
-                // Add new category to select
                 const categorySelect = document.getElementById('category_id');
                 const newOption = new Option(data.category.name, data.category.id, false, true);
                 categorySelect.add(newOption);
-
-                showToast('Category added successfully!');
             } else {
-                // Show validation errors
-                if (data.errors) {
-                    if (data.errors.name) {
-                        showError('category_name_error', data.errors.name[0]);
-                    }
-                    if (data.errors.slug) {
-                        showError('category_name_error', data.errors.slug[0]);
-                    }
-                } else if (data.message) {
-                    showError('category_name_error', data.message);
-                }
+                // Handle errors
+                console.error('Error:', data);
             }
         } catch (error) {
             console.error('Error:', error);
-            showError('category_name_error', 'An error occurred while saving the category.');
         } finally {
-            // Reset button state
             saveBtn.innerHTML = originalText;
             saveBtn.disabled = false;
         }
@@ -557,47 +635,29 @@
         }
     });
 </script>
+
+<script>
+    let currentEventId = null;
+
+    function openDeleteModal(eventId, eventTitle) {
+        currentEventId = eventId;
+        const message = `You are about to permanently delete "${eventTitle}". This action cannot be undone.`;
+        document.getElementById('deleteModalMessage').textContent = message;
+        document.getElementById('deleteModal').classList.remove('hidden');
+    }
+
+    function closeDeleteModal() {
+        currentEventId = null;
+        document.getElementById('deleteModal').classList.add('hidden');
+    }
+
+    document.getElementById('confirmDeleteButton').addEventListener('click', function () {
+        if (currentEventId) {
+            const form = document.getElementById(`delete-form-${currentEventId}`);
+            if (form) form.submit();
+        }
+    });
+</script>
+
 @endpush
-
-<style>
-    .line-clamp-1 {
-        overflow: hidden;
-        display: -webkit-box;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: 1;
-    }
-
-    .line-clamp-2 {
-        overflow: hidden;
-        display: -webkit-box;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: 2;
-    }
-
-    /* Custom file input styling */
-    input[type="file"]::-webkit-file-upload-button {
-        color: white;
-        background: #7c3aed;
-        border: 0;
-        padding: 0.5rem 1rem;
-        border-radius: 9999px;
-        cursor: pointer;
-        transition: background-color 0.2s;
-    }
-
-    input[type="file"]::-webkit-file-upload-button:hover {
-        background: #6d28d9;
-    }
-
-    /* Ensure datetime inputs have proper contrast */
-    input[type="datetime-local"] {
-        color-scheme: dark;
-    }
-
-    /* Improve select dropdown contrast */
-    select option {
-        background: #1f2937;
-        color: white;
-    }
-</style>
 @endsection

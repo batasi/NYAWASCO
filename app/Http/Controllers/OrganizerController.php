@@ -18,6 +18,11 @@ use App\Models\User;
 use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Foundation\Bus\DispatchesJobs;
 use Illuminate\Foundation\Validation\ValidatesRequests;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use App\Models\Booking;
+use App\Models\Ticket;
+
 
 class OrganizerController extends BaseController
 {
@@ -71,126 +76,437 @@ class OrganizerController extends BaseController
         ]);
     }
 
+    public function approveEvent(Event $event)
+    {
+        if (!Auth::user()->hasRole('admin')) {
+            return back()->with('error', 'Only administrators can approve events.');
+        }
+
+        $event->update([
+            'status' => 'approved',
+            'approved_at' => now(),
+            'approved_by' => Auth::id()
+        ]);
+
+        // You can also send notification to the organizer here
+        // Notification::send($event->organizer, new EventApproved($event));
+
+        return back()->with('success', 'Event approved successfully!');
+    }
 
     public function dashboard()
     {
         $user = Auth::user();
 
-        $stats = [
-            'total_events' => Event::where('organizer_id', $user->id)->count(),
-            'active_events' => Event::where('organizer_id', $user->id)
-                ->where('is_active', true)
-                ->where('start_date', '>=', now())
-                ->count(),
-            'total_voting_contests' => VotingContest::where('organizer_id', $user->id)->count(),
-            'active_voting_contests' => VotingContest::where('organizer_id', $user->id)
-                ->where('is_active', true)
-                ->where(function ($query) {
-                    $query->where('end_date', '>=', now())
-                        ->orWhereNull('end_date');
-                })
-                ->count(),
-            'total_ticket_sales' => TicketPurchase::whereIn(
-                'event_id',
-                Event::where('organizer_id', $user->id)->pluck('id')
-            )
-                ->where('status', 'paid')
-                ->sum('quantity'),
-            'total_revenue' => TicketPurchase::whereIn(
-                'event_id',
-                Event::where('organizer_id', $user->id)->pluck('id')
-            )
-                ->where('status', 'paid')
-                ->sum('final_amount'),
-        ];
+        // Organizer's events
+        $events = Event::where('organizer_id', $user->id)->get();
 
-        $recentTicketSales = TicketPurchase::with(['event', 'user'])
-            ->whereIn('event_id', Event::where('organizer_id', $user->id)->pluck('id'))
-            ->where('status', 'paid')
-            ->latest()
-            ->take(10)
-            ->get();
+        // Core statistics
+        $totalEvents = $events->count();
+        $activeEvents = $events->where('is_active', true)->count();
 
+        // Voting contests
+        $totalVotingContests = VotingContest::where('organizer_id', $user->id)->count();
+        $activeContests = VotingContest::where('organizer_id', $user->id)
+            ->where('is_active', true)
+            ->where('end_date', '>', now())
+            ->count();
+
+        // Ticket sales and revenue
+        $totalTicketSales = TicketPurchase::whereHas('event', function ($query) use ($user) {
+            $query->where('organizer_id', $user->id);
+        })->where('status', 'paid')->sum('quantity');
+
+        $todaySales = TicketPurchase::whereHas('event', function ($query) use ($user) {
+            $query->where('organizer_id', $user->id);
+        })->where('status', 'paid')
+          ->whereDate('created_at', today())
+          ->sum('quantity');
+
+        $totalRevenue = TicketPurchase::whereHas('event', function ($query) use ($user) {
+            $query->where('organizer_id', $user->id);
+        })->where('status', 'paid')->sum('final_amount');
+
+        $monthRevenue = TicketPurchase::whereHas('event', function ($query) use ($user) {
+            $query->where('organizer_id', $user->id);
+        })->where('status', 'paid')
+          ->whereMonth('created_at', now()->month)
+          ->whereYear('created_at', now()->year)
+          ->sum('final_amount');
+
+        // Total bookings (polymorphic)
+        $totalBookings = Booking::whereHasMorph(
+            'bookable',
+            [Event::class],
+            function ($query) use ($user) {
+                $query->where('organizer_id', $user->id);
+            }
+        )->count();
+
+        // Upcoming events
         $upcomingEvents = Event::where('organizer_id', $user->id)
             ->where('is_active', true)
-            ->where('start_date', '>=', now())
-            ->with('category')
-            ->orderBy('start_date')
+            ->where('start_date', '>', now())
+            ->orderBy('start_date', 'asc')
             ->take(5)
             ->get();
 
-        return view('dashboard.organizer', [
-            'stats' => $stats,
-            'recentTicketSales' => $recentTicketSales,
-            'upcomingEvents' => $upcomingEvents,
-            'title' => 'Organizer Dashboard - EventSphere'
-        ]);
+        // Recent bookings
+        $recentBookings = Booking::whereHasMorph(
+            'bookable',
+            [Event::class],
+            function ($query) use ($user) {
+                $query->where('organizer_id', $user->id);
+            }
+        )->with(['bookable', 'user'])
+         ->latest()
+         ->take(5)
+         ->get();
+
+        // Recent ticket sales
+        $recentTicketSales = TicketPurchase::whereHas('event', function ($query) use ($user) {
+            $query->where('organizer_id', $user->id);
+        })->with(['event', 'ticket', 'user'])
+          ->where('status', 'paid')
+          ->latest()
+          ->take(5)
+          ->get();
+
+        // Performance metrics (placeholder calculations)
+        $attendanceRate = $totalEvents > 0 ? min(100, round(($totalBookings / max(1, $totalEvents * 100)) * 100)) : 0;
+        $conversionRate = $totalEvents > 0 ? min(100, round(($totalTicketSales / max(1, $totalEvents * 50)) * 100)) : 0;
+        $satisfactionRate = 95; // Placeholder
+
+        // Compile stats array for the view
+        $stats = [
+            'total_events' => $totalEvents,
+            'active_events' => $activeEvents,
+            'total_voting_contests' => $totalVotingContests,
+            'active_contests' => $activeContests,
+            'total_ticket_sales' => $totalTicketSales,
+            'today_sales' => $todaySales,
+            'total_revenue' => $totalRevenue,
+            'month_revenue' => $monthRevenue,
+            'total_bookings' => $totalBookings,
+            'attendance_rate' => $attendanceRate,
+            'conversion_rate' => $conversionRate,
+            'satisfaction_rate' => $satisfactionRate,
+        ];
+
+        // Recent activity (combine recent bookings and ticket sales)
+        $recentActivity = collect();
+
+        // Add recent ticket sales to activity
+        foreach ($recentTicketSales as $sale) {
+            $recentActivity->push((object)[
+                'type' => 'ticket_sale',
+                'type_color' => 'green',
+                'icon' => 'M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z',
+                'message' => "New ticket sale for {$sale->event->title}",
+                'created_at' => $sale->created_at,
+            ]);
+        }
+
+        // Add recent bookings to activity
+        foreach ($recentBookings as $booking) {
+            $recentActivity->push((object)[
+                'type' => 'booking',
+                'type_color' => 'blue',
+                'icon' => 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
+                'message' => "New booking for {$booking->bookable->title}",
+                'created_at' => $booking->created_at,
+            ]);
+        }
+
+        // Sort by creation date and take latest 5
+        $recentActivity = $recentActivity->sortByDesc('created_at')->take(5);
+
+        return view('dashboard.organizer', compact(
+            'stats',
+            'upcomingEvents',
+            'recentBookings',
+            'recentTicketSales',
+            'recentActivity'
+        ));
     }
 
-    // Event Management Methods
-    public function events()
+    public function ticketSales(Request $request)
     {
-        $events = Event::where('organizer_id', Auth::id())
-            ->with(['category', 'tickets'])
-            ->latest()
-            ->paginate(10);
+        $user = Auth::user();
 
-        return view('organizer.events.index', [
-            'events' => $events,
-            'title' => 'My Events - EventSphere'
-        ]);
+        // Get organizer's tickets with sales data
+        $ticketsQuery = Ticket::whereHas('event', function($query) use ($user) {
+            $query->where('organizer_id', $user->id);
+        })->with(['event', 'purchases']);
+
+        // Apply filters
+        if ($request->has('event') && $request->event) {
+            $ticketsQuery->where('event_id', $request->event);
+        }
+
+        if ($request->has('status') && $request->status) {
+            if ($request->status === 'active') {
+                $ticketsQuery->where('is_active', true);
+            } elseif ($request->status === 'inactive') {
+                $ticketsQuery->where('is_active', false);
+            }
+        }
+
+        if ($request->has('start_date') && $request->start_date) {
+            $ticketsQuery->whereDate('created_at', '>=', $request->start_date);
+        }
+
+        if ($request->has('end_date') && $request->end_date) {
+            $ticketsQuery->whereDate('created_at', '<=', $request->end_date);
+        }
+
+        $ticketSales = $ticketsQuery->paginate(10);
+
+        // Calculate statistics
+        $totalSales = TicketPurchase::whereHas('event', function($query) use ($user) {
+            $query->where('organizer_id', $user->id);
+        })->where('status', 'paid')->sum('final_amount');
+
+        $ticketsSold = TicketPurchase::whereHas('event', function($query) use ($user) {
+            $query->where('organizer_id', $user->id);
+        })->where('status', 'paid')->sum('quantity');
+
+        $activeEvents = Event::where('organizer_id', $user->id)
+            ->where('is_active', true)
+            ->count();
+
+        $pendingPayments = TicketPurchase::whereHas('event', function($query) use ($user) {
+            $query->where('organizer_id', $user->id);
+        })->where('status', 'pending')->count();
+
+        // Get events for filter dropdown
+        $events = Event::where('organizer_id', $user->id)->get();
+
+        return view('organizer.ticket-sales', compact(
+            'ticketSales',
+            'totalSales',
+            'ticketsSold',
+            'activeEvents',
+            'pendingPayments',
+            'events'
+        ));
     }
+
+    public function bookings(Request $request)
+    {
+        $user = Auth::user();
+
+        // Get organizer's bookings for events (using polymorphic relationship)
+        $bookingsQuery = Booking::whereHasMorph(
+            'bookable',
+            [Event::class],
+            function($query) use ($user) {
+                $query->where('organizer_id', $user->id);
+            }
+        )->with(['bookable', 'user']);
+
+        // Apply filters
+        if ($request->has('event') && $request->event) {
+            $bookingsQuery->whereHasMorph('bookable', [Event::class], function($query) use ($request) {
+                $query->where('id', $request->event);
+            });
+        }
+
+        if ($request->has('status') && $request->status) {
+            $bookingsQuery->where('status', $request->status);
+        }
+
+        if ($request->has('payment_status') && $request->payment_status) {
+            $bookingsQuery->where('payment_status', $request->payment_status);
+        }
+
+        if ($request->has('start_date') && $request->start_date) {
+            $bookingsQuery->whereDate('created_at', '>=', $request->start_date);
+        }
+
+        if ($request->has('end_date') && $request->end_date) {
+            $bookingsQuery->whereDate('created_at', '<=', $request->end_date);
+        }
+
+        $bookings = $bookingsQuery->latest()->paginate(10);
+
+        // Calculate statistics
+        $totalBookings = Booking::whereHasMorph(
+            'bookable',
+            [Event::class],
+            function($query) use ($user) {
+                $query->where('organizer_id', $user->id);
+            }
+        )->count();
+
+        $confirmedBookings = Booking::whereHasMorph(
+            'bookable',
+            [Event::class],
+            function($query) use ($user) {
+                $query->where('organizer_id', $user->id);
+            }
+        )->where('status', 'confirmed')->count();
+
+        $pendingBookings = Booking::whereHasMorph(
+            'bookable',
+            [Event::class],
+            function($query) use ($user) {
+                $query->where('organizer_id', $user->id);
+            }
+        )->where('status', 'pending')->count();
+
+        $cancelledBookings = Booking::whereHasMorph(
+            'bookable',
+            [Event::class],
+            function($query) use ($user) {
+                $query->where('organizer_id', $user->id);
+            }
+        )->where('status', 'cancelled')->count();
+
+        // Get events for filter dropdown
+        $events = Event::where('organizer_id', $user->id)->get();
+
+        return view('organizer.bookings', compact(
+            'bookings',
+            'totalBookings',
+            'confirmedBookings',
+            'pendingBookings',
+            'cancelledBookings',
+            'events'
+        ));
+    }
+
+    public function bookingDetails($bookingId)
+    {
+        $user = Auth::user();
+
+        $booking = Booking::where('id', $bookingId)
+            ->whereHasMorph(
+                'bookable',
+                [Event::class],
+                function($query) use ($user) {
+                    $query->where('organizer_id', $user->id);
+                }
+            )
+            ->with(['bookable', 'user'])
+            ->firstOrFail();
+
+        return view('organizer.booking-details', compact('booking'));
+    }
+
+    public function updateBooking(Request $request, Booking $booking)
+    {
+        $user = Auth::user();
+
+        // Verify the booking belongs to organizer's event (using polymorphic relationship)
+        if ($booking->bookable_type !== Event::class || $booking->bookable->organizer_id !== $user->id) {
+            abort(403);
+        }
+
+        $request->validate([
+            'status' => 'required|in:pending,confirmed,cancelled'
+        ]);
+
+        $booking->update([
+            'status' => $request->status
+        ]);
+
+        return back()->with('success', 'Booking status updated successfully.');
+    }
+
+public function events(Request $request)
+{
+    $query = Event::with(['organizer', 'category']);
+
+    // ✅ ORGANIZER: Only see their own events (all statuses and dates)
+    if (Auth::check() && Auth::user()->role === 'organizer') {
+        $query->where('organizer_id', Auth::id());
+    }
+
+    // ✅ Optional filters
+    if ($request->has('status')) {
+        $query->where('status', $request->status);
+    }
+
+    if ($request->filled('category')) {
+        $query->where('category_id', $request->category);
+    }
+
+    if ($request->filled('location')) {
+        $query->where('location', 'like', '%' . $request->location . '%');
+    }
+
+    // ✅ PUBLIC or REGULAR USER: only approved, active, and future events
+    if (
+        !Auth::check() ||
+        (Auth::check() && !in_array(Auth::user()->role, ['admin', 'organizer']))
+    ) {
+        $query->where('status', 'approved')
+              ->where('is_active', true)
+              ->where('start_date', '>', now());
+    }
+
+    // ✅ ADMINS: see all events, including past ones
+    // (no extra filtering needed – they see everything by default)
+
+    $events = $query->orderBy('start_date', 'desc')->paginate(12);
+
+    $categories = EventCategory::where('is_active', true)->get();
+
+    return view('events.index', [
+        'events' => $events,
+        'categories' => $categories,
+        'title' => Auth::check() && Auth::user()->role === 'organizer'
+            ? 'My Events - EventSphere'
+            : 'Events - EventSphere',
+    ]);
+}
+
 
     public function createEvent()
     {
-        $categories = EventCategory::where('is_active', true)->get();
+        $categories = EventCategory::where('is_active', true)
+        ->orderBy('sort_order')
+        ->orderBy('name')
+        ->get();
+        $nomineeCategories = NomineeCategory::all();
+        $organizers = User::where('role', 'organizer')->paginate(12);
 
-        return view('organizers.create', [
+        return view('organizers.events.create', [
             'categories' => $categories,
+            'organizers' => $organizers,
+            'nomineeCategories' => $nomineeCategories,
             'title' => 'Create New Event - EventSphere'
         ]);
     }
 
     public function storeEvent(Request $request)
     {
-
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'title' => 'required|string|max:191',
             'category_id' => 'required|exists:event_categories,id',
-            'description' => 'required|string',
-            'short_description' => 'nullable|string|max:500',
-            'featured_image' => 'required|image|max:2048',
-            'venue_name' => 'required|string|max:255',
-            'address' => 'required|string|max:500',
-            'city' => 'required|string|max:255',
-            'state' => 'required|string|max:255',
-            'country' => 'required|string|max:255',
-            'postal_code' => 'required|string|max:20',
+            'description' => 'nullable|string',
+            'location' => 'required|string|max:191',
             'start_date' => 'required|date|after:now',
             'end_date' => 'required|date|after:start_date',
-            'registration_start' => 'nullable|date',
-            'registration_end' => 'nullable|date|after:registration_start',
-            'max_attendees' => 'nullable|integer|min:1',
-            'price' => 'nullable|numeric|min:0',
-            'is_free' => 'boolean',
-            'tags' => 'nullable|string',
+            'ticket_price' => 'nullable|numeric|min:0',
+            'capacity' => 'nullable|integer|min:1',
+            'banner_image' => 'required|image|max:2048',
+            'is_active' => 'boolean',
+            'is_featured' => 'boolean',
         ]);
 
         // Handle file upload
-        if ($request->hasFile('featured_image')) {
-            $path = $request->file('featured_image')->store('events', 'public');
-            $validated['featured_image'] = $path;
+        if ($request->hasFile('banner_image')) {
+            $path = $request->file('banner_image')->store('events', 'public');
+            $validated['banner_image'] = $path;
         }
 
-        // Generate slug
-        $validated['slug'] = Str::slug($validated['name']) . '-' . Str::random(6);
+        // Set default values
         $validated['organizer_id'] = Auth::id();
-        $validated['currency'] = 'USD';
         $validated['status'] = 'draft';
-
-        if ($request->has('tags')) {
-            $validated['tags'] = json_encode(explode(',', $request->tags));
-        }
+        $validated['is_active'] = $request->has('is_active');
+        $validated['is_featured'] = $request->has('is_featured');
 
         $event = Event::create($validated);
 
@@ -198,67 +514,194 @@ class OrganizerController extends BaseController
             ->with('success', 'Event created successfully! You can now add tickets and other details.');
     }
 
+    public function storeEventCategory(Request $request)
+    {
+        // Validate the request
+        $validated = $request->validate([
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('event_categories', 'name')
+            ],
+            'description' => 'nullable|string',
+            'icon' => 'nullable|string|max:255',
+            'color' => 'required|string|max:7|regex:/^#[0-9A-F]{6}$/i',
+            'is_active' => 'boolean',
+        ]);
+
+        try {
+            // Create the category
+            $category = EventCategory::create([
+                'name' => $validated['name'],
+                'slug' => Str::slug($validated['name']),
+                'description' => $validated['description'] ?? null,
+                'icon' => $validated['icon'] ?? null,
+                'color' => $validated['color'],
+                'is_active' => $validated['is_active'] ?? true,
+                'sort_order' => EventCategory::max('sort_order') + 1,
+            ]);
+
+            // Return success response
+            return response()->json([
+                'success' => true,
+                'message' => 'Category created successfully',
+                'category' => [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                    'slug' => $category->slug
+                ]
+            ], 201);
+
+        } catch (\Exception $e) {
+            Log::error('Category creation failed: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create category',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function editEvent(Event $event)
     {
-
         $categories = EventCategory::where('is_active', true)->get();
 
-        return view('organizer.events.edit', [
+        return view('events.edit', [
             'event' => $event,
             'categories' => $categories,
-            'title' => "Edit {$event->name} - EventSphere"
+            'title' => "Edit {$event->title} - EventSphere"
         ]);
     }
 
     public function updateEvent(Request $request, Event $event)
     {
-
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'title' => 'required|string|max:191',
             'category_id' => 'required|exists:event_categories,id',
-            'description' => 'required|string',
-            'short_description' => 'nullable|string|max:500',
-            'featured_image' => 'nullable|image|max:2048',
-            'venue_name' => 'required|string|max:255',
-            'address' => 'required|string|max:500',
-            'city' => 'required|string|max:255',
-            'state' => 'required|string|max:255',
-            'country' => 'required|string|max:255',
-            'postal_code' => 'required|string|max:20',
+            'description' => 'nullable|string',
+            'location' => 'required|string|max:191',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
-            'registration_start' => 'nullable|date',
-            'registration_end' => 'nullable|date|after:registration_start',
-            'max_attendees' => 'nullable|integer|min:1',
-            'price' => 'nullable|numeric|min:0',
-            'is_free' => 'boolean',
+            'ticket_price' => 'nullable|numeric|min:0',
+            'capacity' => 'nullable|integer|min:1',
+            'banner_image' => 'nullable|image|max:2048',
             'is_active' => 'boolean',
-            'status' => Rule::in(['draft', 'published', 'cancelled']),
-            'tags' => 'nullable|string',
+            'is_featured' => 'boolean',
+            'status' => 'required|in:draft,pending_approval,approved,cancelled',
         ]);
 
         // Handle file upload
-        if ($request->hasFile('featured_image')) {
-            $path = $request->file('featured_image')->store('events', 'public');
-            $validated['featured_image'] = $path;
+        if ($request->hasFile('banner_image')) {
+            // Delete old banner image if exists
+            if ($event->banner_image) {
+                Storage::disk('public')->delete($event->banner_image);
+            }
+
+            $path = $request->file('banner_image')->store('events', 'public');
+            $validated['banner_image'] = $path;
+        } elseif ($request->has('remove_banner') && $request->remove_banner == '1') {
+            // Remove banner image if requested
+            if ($event->banner_image) {
+                Storage::disk('public')->delete($event->banner_image);
+            }
+            $validated['banner_image'] = null;
         }
 
-        if ($request->has('tags')) {
-            $validated['tags'] = json_encode(explode(',', $request->tags));
-        }
+        // Set boolean values
+        $validated['is_active'] = $request->has('is_active');
+        $validated['is_featured'] = $request->has('is_featured');
 
         $event->update($validated);
 
         return back()->with('success', 'Event updated successfully!');
     }
 
+    public function updateEventStatus(Request $request, Event $event)
+    {
+        $request->validate([
+            'status' => 'required|in:draft,pending_approval,approved,cancelled'
+        ]);
+
+        // Check if user has permission to update this event
+        if ($event->organizer_id !== Auth::id() && !Auth::user()->hasRole('admin')) {
+            return back()->with('error', 'You are not authorized to update this event.');
+        }
+
+        $oldStatus = $event->status;
+        $newStatus = $request->status;
+
+        $event->update([
+            'status' => $newStatus,
+            'updated_at' => now()
+        ]);
+
+        // Log the status change
+        Log::info("Event status changed", [
+            'event_id' => $event->id,
+            'event_title' => $event->title,
+            'old_status' => $oldStatus,
+            'new_status' => $newStatus,
+            'user_id' => Auth::id()
+        ]);
+
+        $statusMessages = [
+            'draft' => 'Event moved to draft',
+            'pending_approval' => 'Event submitted for approval',
+            'approved' => 'Event approved and published',
+            'cancelled' => 'Event cancelled'
+        ];
+
+        return back()->with('success', $statusMessages[$newStatus] . ' successfully!');
+    }
+
     public function destroyEvent(Event $event)
     {
+        if ($event->organizer_id !== Auth::id() && !Auth::user()->hasRole('admin')) {
+            return redirect()->route('organizer.events')
+                ->with('error', 'You are not authorized to delete this event.');
+        }
+
+        $hasBookings = Booking::whereHasMorph(
+            'bookable',
+            [Event::class],
+            function($query) use ($event) {
+                $query->where('id', $event->id);
+            }
+        )->exists();
+
+        if ($hasBookings) {
+            return redirect()->route('organizer.events')
+                ->with('error', 'Cannot delete event with existing bookings. Please cancel the event instead.');
+        }
+
+        $hasTicketPurchases = TicketPurchase::where('event_id', $event->id)->exists();
+
+        if ($hasTicketPurchases) {
+            return redirect()->route('organizer.events')
+                ->with('error', 'Cannot delete event with existing ticket purchases. Please cancel the event instead.');
+        }
+
+        $eventTitle = $event->title;
+
+        if ($event->banner_image) {
+            Storage::disk('public')->delete($event->banner_image);
+        }
+
+        $event->tickets()->delete();
 
         $event->delete();
 
+        Log::info("Event deleted", [
+            'event_id' => $event->id,
+            'event_title' => $eventTitle,
+            'user_id' => Auth::id(),
+            'deleted_at' => now()
+        ]);
+
         return redirect()->route('organizer.events')
-            ->with('success', 'Event deleted successfully!');
+            ->with('success', "Event '{$eventTitle}' deleted successfully!");
     }
 
     // Voting Management Methods

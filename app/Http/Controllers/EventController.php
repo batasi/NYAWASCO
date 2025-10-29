@@ -36,24 +36,27 @@ class EventController extends Controller
             ->orderBy('start_date')
             ->paginate(12);
 
+        $categories = EventCategory::where('is_active', true)->get();
+
         return view('events.index', [
             'events' => $events,
             'category' => $category,
+            'categories' => $categories,
             'title' => "{$category->name} Events - EventSphere"
         ]);
     }
+
     public function show(Event $event)
     {
         if (!$event->is_active && !Gate::allows('view_inactive_events')) {
             abort(404);
         }
 
-        $event->load(['organizer', 'tickets', 'category', 'vendorServices']);
-        $event->load(['organizer', 'tickets', 'category', 'vendorServices']);
+        $event->load(['organizer', 'tickets', 'category']);
 
         return view('events.show', [
             'event' => $event,
-            'title' => "{$event->name} - EventSphere"
+            'title' => "{$event->title} - EventSphere"
         ]);
     }
 

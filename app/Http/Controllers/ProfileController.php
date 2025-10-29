@@ -13,7 +13,7 @@ class ProfileController extends Controller
 {
     public function edit()
     {
-        $user = User::with('profile')->find(Auth::id());
+        $user = User::find(Auth::id());
 
         if (! $user) {
             $user = Auth::user();

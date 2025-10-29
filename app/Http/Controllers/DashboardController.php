@@ -112,45 +112,139 @@ class DashboardController extends Controller
         ];
     }
 
-    private function getOrganizerData(User $user)
-    {
-        $upcomingEvents = Event::where('organizer_id', $user->id)
-            ->where('is_active', true)
-            ->where('start_date', '>=', now())
-            ->latest('start_date')
-            ->take(5)
-            ->get();
+private function getOrganizerData(User $user)
+{
+    // Organizer's events
+    $events = Event::where('organizer_id', $user->id)->get();
 
-        $myEvents = Event::where('organizer_id', $user->id)
-            ->withCount(['ticketPurchases as total_tickets_sold' => function ($query) {
-                $query->where('status', 'paid');
-            }])
-            ->withSum(['ticketPurchases as total_revenue' => function ($query) {
-                $query->where('status', 'paid');
-            }], 'final_amount')
-            ->latest()
-            ->paginate(10);
+    // Core statistics
+    $totalEvents = $events->count();
+    $activeEvents = $events->where('is_active', true)->count();
 
-        $myVotingContests = VotingContest::where('organizer_id', $user->id)
-            ->withCount('votes')
-            ->withCount('nominees')
-            ->latest()
-            ->paginate(10);
+    // Voting contests
+    $totalVotingContests = VotingContest::where('organizer_id', $user->id)->count();
+    $activeContests = VotingContest::where('organizer_id', $user->id)
+        ->where('is_active', true)
+        ->where('end_date', '>', now())
+        ->count();
 
-        return [
-            'recentTicketSales' => $myEvents,   // matches your ticket sales table
-            'upcomingEvents' => $upcomingEvents, // now defined for the view
-            'my_voting_contests' => $myVotingContests,
-            'total_my_events' => Event::where('organizer_id', $user->id)->count(),
-            'total_my_voting_contests' => VotingContest::where('organizer_id', $user->id)->count(),
-            'total_my_ticket_sales' => TicketPurchase::whereHas('event', function ($query) use ($user) {
-                $query->where('organizer_id', $user->id);
-            })->where('status', 'paid')->count(),
-            'total_my_revenue' => TicketPurchase::whereHas('event', function ($query) use ($user) {
-                $query->where('organizer_id', $user->id);
-            })->where('status', 'paid')->sum('final_amount'),
-        ];
+    // Ticket sales and revenue
+    $totalTicketSales = TicketPurchase::whereHas('event', function ($query) use ($user) {
+        $query->where('organizer_id', $user->id);
+    })->where('status', 'paid')->sum('quantity');
+
+    $todaySales = TicketPurchase::whereHas('event', function ($query) use ($user) {
+        $query->where('organizer_id', $user->id);
+    })->where('status', 'paid')
+      ->whereDate('created_at', today())
+      ->sum('quantity');
+
+    $totalRevenue = TicketPurchase::whereHas('event', function ($query) use ($user) {
+        $query->where('organizer_id', $user->id);
+    })->where('status', 'paid')->sum('final_amount');
+
+    $monthRevenue = TicketPurchase::whereHas('event', function ($query) use ($user) {
+        $query->where('organizer_id', $user->id);
+    })->where('status', 'paid')
+      ->whereMonth('created_at', now()->month)
+      ->whereYear('created_at', now()->year)
+      ->sum('final_amount');
+
+    // Total bookings (polymorphic)
+    $totalBookings = Booking::whereHasMorph(
+        'bookable',
+        [Event::class],
+        function ($query) use ($user) {
+            $query->where('organizer_id', $user->id);
+        }
+    )->count();
+
+    // Upcoming events
+    $upcomingEvents = Event::where('organizer_id', $user->id)
+        ->where('is_active', true)
+        ->where('start_date', '>', now())
+        ->orderBy('start_date', 'asc')
+        ->take(5)
+        ->get();
+
+    // Recent bookings
+    $recentBookings = Booking::whereHasMorph(
+        'bookable',
+        [Event::class],
+        function ($query) use ($user) {
+            $query->where('organizer_id', $user->id);
+        }
+    )->with(['bookable', 'user'])
+     ->latest()
+     ->take(5)
+     ->get();
+
+    // Recent ticket sales
+    $recentTicketSales = TicketPurchase::whereHas('event', function ($query) use ($user) {
+        $query->where('organizer_id', $user->id);
+    })->with(['event', 'ticket', 'user'])
+      ->where('status', 'paid')
+      ->latest()
+      ->take(5)
+      ->get();
+
+    // Performance metrics
+    $attendanceRate = $totalEvents > 0 ? min(100, round(($totalBookings / max(1, $totalEvents * 100)) * 100)) : 0;
+    $conversionRate = $totalEvents > 0 ? min(100, round(($totalTicketSales / max(1, $totalEvents * 50)) * 100)) : 0;
+    $satisfactionRate = 95; // Placeholder until feedback system added
+
+    // Combine into unified stats array
+    $stats = [
+        'total_events' => $totalEvents,
+        'active_events' => $activeEvents,
+        'total_voting_contests' => $totalVotingContests,
+        'active_contests' => $activeContests,
+        'total_ticket_sales' => $totalTicketSales,
+        'today_sales' => $todaySales,
+        'total_revenue' => $totalRevenue,
+        'month_revenue' => $monthRevenue,
+        'total_bookings' => $totalBookings,
+        'attendance_rate' => $attendanceRate,
+        'conversion_rate' => $conversionRate,
+        'satisfaction_rate' => $satisfactionRate,
+    ];
+
+    // Build recent activity feed dynamically
+    $recentActivity = collect();
+
+    foreach ($recentTicketSales as $sale) {
+        $recentActivity->push((object)[
+            'type' => 'ticket_sale',
+            'type_color' => 'green',
+            'icon' => 'M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z',
+            'message' => "New ticket sale for {$sale->event->title}",
+            'created_at' => $sale->created_at,
+        ]);
     }
+
+    foreach ($recentBookings as $booking) {
+        $recentActivity->push((object)[
+            'type' => 'booking',
+            'type_color' => 'blue',
+            'icon' => 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
+            'message' => "New booking for {$booking->bookable->title}",
+            'created_at' => $booking->created_at,
+        ]);
+    }
+
+    // Sort and trim feed
+    $recentActivity = $recentActivity->sortByDesc('created_at')->take(5);
+
+    // Return the entire dataset
+    return [
+        'stats' => $stats,
+        'upcomingEvents' => $upcomingEvents,
+        'recentBookings' => $recentBookings,
+        'recentTicketSales' => $recentTicketSales,
+        'recentActivity' => $recentActivity,
+    ];
+}
+
 
     private function getVendorData(User $user)
     {

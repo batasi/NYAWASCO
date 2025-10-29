@@ -20,6 +20,7 @@ class Event extends Model
         'ticket_price',
         'capacity',
         'is_active',
+        'is_featured',
         'status',
         'banner_image',
     ];
@@ -60,8 +61,9 @@ class Event extends Model
 
     public function category()
     {
-        return $this->belongsTo(EventCategory::class);
+        return $this->belongsTo(EventCategory::class, 'category_id');
     }
+
 
     // Scopes
     public function scopeActive($query)

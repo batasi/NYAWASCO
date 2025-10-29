@@ -72,6 +72,11 @@ class Booking extends Model
         return $query->where('payment_status', 'unpaid');
     }
 
+    public function scopeForEvents($query)
+    {
+        return $query->where('bookable_type', Event::class);
+    }
+
     // Helper Methods
     public function confirm()
     {
@@ -109,5 +114,23 @@ class Booking extends Model
             $this->ticket_number = 'BK-' . strtoupper(uniqid());
         }
         return $this->ticket_number;
+    }
+
+    // Accessor for event (for backward compatibility)
+    public function getEventAttribute()
+    {
+        if ($this->bookable_type === Event::class) {
+            return $this->bookable;
+        }
+        return null;
+    }
+
+    public function ticketPurchases()
+    {
+        if ($this->bookable_type === Event::class) {
+            return $this->hasMany(TicketPurchase::class, 'event_id', 'bookable_id')
+                ->where('user_id', $this->user_id);
+        }
+        return null;
     }
 }

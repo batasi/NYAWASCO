@@ -24,6 +24,8 @@ use App\Http\Controllers\VotingCategoryController;
 use App\Http\Controllers\MpesaController;
 use App\Http\Controllers\PesapalController;
 use App\Http\Controllers\NomineeCategoryController;
+use App\Http\Controllers\BookingController;
+use App\Http\Controllers\PaymentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -110,15 +112,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Tickets
+    // Tickets & Bookings
     Route::get('/tickets', [TicketController::class, 'index'])->name('tickets.index');
-    Route::get('/tickets/{ticket}', [TicketController::class, 'show'])->name('tickets.show');
-    Route::get('/tickets/{ticket}/download', [TicketController::class, 'download'])->name('tickets.download');
+    Route::get('/tickets/{ticketPurchase}', [TicketController::class, 'show'])->name('tickets.show');
+    Route::get('/tickets/{ticketPurchase}/download', [TicketController::class, 'download'])->name('tickets.download');
     Route::post('/events/{event}/tickets/purchase', [TicketController::class, 'purchase'])->name('tickets.purchase');
+
+    // Bookings
+    Route::get('/bookings', [BookingController::class, 'index'])->name('bookings.index');
+    Route::get('/bookings/{booking}', [BookingController::class, 'show'])->name('bookings.show');
+    Route::post('/events/{event}/book', [BookingController::class, 'store'])->name('bookings.store');
+    Route::delete('/bookings/{booking}', [BookingController::class, 'cancel'])->name('bookings.cancel');
 
     // Voting
     Route::post('/voting/{contest}/vote', [VotingController::class, 'vote'])->name('voting.vote');
     Route::get('/my-votes', [VotingController::class, 'myVotes'])->name('voting.myVotes');
+
+    // Organizer Routes
+    Route::prefix('organizer')->group(function () {
+        Route::get('/dashboard', [OrganizerController::class, 'dashboard'])->name('organizer.dashboard');
+        Route::get('/ticket-sales', [OrganizerController::class, 'ticketSales'])->name('organizer.ticket-sales');
+        Route::get('/bookings', [OrganizerController::class, 'bookings'])->name('organizer.bookings');
+    });
 });
 
 /*
@@ -133,9 +148,11 @@ Route::middleware(['auth', 'verified', 'role:organizer'])->prefix('organizer')->
     // Event Management
     Route::get('/events', [OrganizerController::class, 'events'])->name('organizer.events');
     Route::get('/events/create', [OrganizerController::class, 'createEvent'])->name('organizer.events.create');
-    Route::post('/events', [OrganizerController::class, 'storeEvent'])->name('organizer.events.store');
-    Route::get('/events/{event}/edit', [OrganizerController::class, 'editEvent'])->name('organizer.events.edit');
-    Route::put('/events/{event}', [OrganizerController::class, 'updateEvent'])->name('organizer.events.update');
+    Route::post('/events', [OrganizerController::class, 'storeEvent'])->name('events.store');
+    Route::post('/event-categories', [OrganizerController::class, 'storeEventCategory'])->name('event-categories.store');
+    Route::get('/organizer/events/{event}/edit', [OrganizerController::class, 'editEvent'])->name('organizer.events.edit');
+    Route::put('/organizer/events/{event}', [OrganizerController::class, 'updateEvent'])->name('organizer.events.update');
+    Route::get('/organizer/events/{event}', [OrganizerController::class, 'showEvent'])->name('organizer.events.show');
     Route::delete('/events/{event}', [OrganizerController::class, 'destroyEvent'])->name('organizer.events.destroy');
 
     // Voting Management
@@ -219,10 +236,10 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
 
     // Other admin management views
     Route::prefix('management')->name('management.')->group(function () {
-        Route::view('/events', 'admin.events', ['title' => 'Event Management - EventSphere'])->name('events');
-        Route::view('/voting', 'admin.voting', ['title' => 'Voting Management - EventSphere'])->name('voting');
-        Route::view('/tickets', 'admin.tickets', ['title' => 'Ticket Management - EventSphere'])->name('tickets');
-        Route::view('/analytics', 'admin.analytics', ['title' => 'Analytics - EventSphere'])->name('analytics');
+        Route::view('/events', 'admin.events')->name('events');
+        Route::view('/voting', 'admin.voting')->name('voting');
+        Route::view('/tickets', 'admin.tickets')->name('tickets');
+        Route::view('/analytics', 'admin.analytics')->name('analytics');
     });
 });
 
@@ -246,3 +263,8 @@ Route::middleware(['auth', 'verified', 'role:vendor'])->prefix('vendor')->name('
 
 Route::get('auth/google', [GoogleController::class, 'redirectToGoogle'])->name('google.login');
 Route::get('auth/google/callback', [GoogleController::class, 'handleGoogleCallback']);
+Route::get('/payment/{type}/{id}', [PaymentController::class, 'process'])->name('payment.process');
+Route::post('/payment/{type}/{id}/complete', [PaymentController::class, 'complete'])->name('payment.complete');
+Route::patch('/organizer/events/{event}/status', [OrganizerController::class, 'updateEventStatus'])->name('organizer.events.update-status')->middleware(['auth', 'verified']);
+Route::post('/admin/events/{event}/approve', [OrganizerController::class, 'approveEvent'])->name('admin.events.approve')->middleware(['auth', 'verified', 'can:admin']);
+Route::delete('/organizer/events/{event}', [OrganizerController::class, 'destroyEvent'])->name('organizer.events.destroy')->middleware(['auth', 'verified']);

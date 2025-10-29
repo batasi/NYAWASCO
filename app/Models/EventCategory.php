@@ -31,11 +31,11 @@ class EventCategory extends Model
         'sort_order' => 0,
     ];
 
-    // Relationships
     public function events()
     {
-        return $this->hasMany(Event::class);
+        return $this->hasMany(Event::class, 'category_id');
     }
+
 
     // Scopes
     public function scopeActive($query)
