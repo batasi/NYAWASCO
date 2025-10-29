@@ -12,6 +12,7 @@ class Event extends Model
 
     protected $fillable = [
         'organizer_id',
+        'voting_contest_id',
         'title',
         'description',
         'location',
@@ -38,17 +39,6 @@ class Event extends Model
         'is_active' => true,
     ];
 
-    // Relationships
-    public function organizer()
-    {
-        return $this->belongsTo(User::class, 'organizer_id');
-    }
-
-    public function tickets()
-    {
-        return $this->hasMany(Ticket::class);
-    }
-
     public function ticketPurchases()
     {
         return $this->hasMany(TicketPurchase::class);
@@ -59,10 +49,6 @@ class Event extends Model
         return $this->morphMany(Booking::class, 'bookable');
     }
 
-    public function category()
-    {
-        return $this->belongsTo(EventCategory::class, 'category_id');
-    }
 
 
     // Scopes
@@ -124,5 +110,27 @@ class Event extends Model
             $this->status === 'approved' &&
             !$this->isSoldOut() &&
             $this->start_date > now();
+    }
+
+    public function votingContest()
+    {
+        return $this->belongsTo(VotingContest::class, 'voting_contest_id');
+    }
+
+    public function tickets()
+    {
+        return $this->hasMany(Ticket::class);
+    }
+
+    // Relationship with category
+    public function category()
+    {
+        return $this->belongsTo(EventCategory::class, 'category_id');
+    }
+
+    // Relationship with organizer
+    public function organizer()
+    {
+        return $this->belongsTo(User::class, 'organizer_id');
     }
 }

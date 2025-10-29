@@ -66,7 +66,7 @@ class EventController extends Controller
             abort(404);
         }
 
-        $event->load(['tickets', 'seatingPlan']);
+        $event->load(['tickets']);
 
         return view('events.tickets', [
             'event' => $event,

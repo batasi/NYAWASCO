@@ -3,7 +3,11 @@
 @section('title', $title)
 
 @section('content')
-
+@php
+    use Illuminate\Support\Str;
+    use Illuminate\Support\Facades\Storage;
+    use Illuminate\Support\Facades\Auth;
+@endphp
 
     <!-- Page Content Wrapper -->
     <div class="pt-20">

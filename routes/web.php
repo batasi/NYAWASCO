@@ -117,6 +117,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/tickets/{ticketPurchase}', [TicketController::class, 'show'])->name('tickets.show');
     Route::get('/tickets/{ticketPurchase}/download', [TicketController::class, 'download'])->name('tickets.download');
     Route::post('/events/{event}/tickets/purchase', [TicketController::class, 'purchase'])->name('tickets.purchase');
+    Route::get('/tickets/{ticketPurchase}/view', [TicketController::class, 'view'])->name('tickets.view');
 
     // Bookings
     Route::get('/bookings', [BookingController::class, 'index'])->name('bookings.index');
@@ -268,3 +269,4 @@ Route::post('/payment/{type}/{id}/complete', [PaymentController::class, 'complet
 Route::patch('/organizer/events/{event}/status', [OrganizerController::class, 'updateEventStatus'])->name('organizer.events.update-status')->middleware(['auth', 'verified']);
 Route::post('/admin/events/{event}/approve', [OrganizerController::class, 'approveEvent'])->name('admin.events.approve')->middleware(['auth', 'verified', 'can:admin']);
 Route::delete('/organizer/events/{event}', [OrganizerController::class, 'destroyEvent'])->name('organizer.events.destroy')->middleware(['auth', 'verified']);
+Route::get('/tickets/my-tickets', [TicketController::class, 'myTickets'])->name('tickets.my-tickets');

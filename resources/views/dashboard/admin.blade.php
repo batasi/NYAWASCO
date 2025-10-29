@@ -3,6 +3,12 @@
 @section('title', 'Javent')
 
 @section('content')
+@php
+    use Illuminate\Support\Str;
+    use Illuminate\Support\Facades\Storage;
+    use Illuminate\Support\Facades\Auth;
+@endphp
+
 <div class="min-h-screen bg-gray-50">
     <!-- Enhanced Header -->
     <div class="bg-white shadow-sm border-b border-gray-200">
