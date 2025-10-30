@@ -187,6 +187,7 @@ class VotingController extends Controller
 
     public function store(Request $request)
     {
+        dd($request->all());
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'category_id' => 'required|exists:voting_categories,id',

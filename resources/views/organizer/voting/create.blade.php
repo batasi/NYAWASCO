@@ -8,7 +8,7 @@
         <h1 class="text-2xl font-bold mb-2" style="color: rgba(198, 0, 238, 1);">Create Voting Contest</h1>
         <p class="text-gray-200 mb-5 text-sm">Create a contest under a category and set voting rules (start/end dates, limits).</p>
 
-    
+
 
         <form method="POST" action="{{ route('voting.store') }}" enctype="multipart/form-data">
             @csrf
@@ -19,7 +19,7 @@
                     <label for="title" class="text-sm font-medium text-purple-500">Contest Title</label>
                     <input id="title" name="title" value="{{ old('title') }}" required
                         class="w-full border-gray-300 rounded-md px-3 py-1.5 text-sm" style="color: black;"
-                        placeholder="Example: Best Male Artist 2025">
+                        placeholder="Example: Htz Awards 2019">
                 </div>
 
                 {{-- Voting Category --}}
@@ -45,7 +45,7 @@
                     <textarea id="description" name="description" rows="2"
                         class="w-full border-gray-300 rounded-md px-3 py-1.5 text-sm" style="color: black;">{{ old('description') }}</textarea>
                 </div>
-                
+
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label for="start_date" class="text-sm font-medium text-purple-500">Start Date</label>
@@ -103,7 +103,7 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-3 mt-3">
+                <div class="grid grid-cols-2 gap-3 mt-3" style="display:none">
                     <div class="flex items-center gap-2 mt-6">
                         <input id="is_featured" name="is_featured" type="checkbox" value="1"
                             {{ old('is_featured') ? 'checked' : '' }}
@@ -121,7 +121,7 @@
                     </div>
                 </div>
 
-                <div class="flex flex-wrap items-center gap-4 mt-2">
+                <div class="flex flex-wrap items-center gap-4 mt-2" style="display:none">
                     <label class="flex items-center text-sm">
                         <input type="checkbox" id="requires_approval" name="requires_approval" value="1"
                             {{ old('requires_approval') ? 'checked' : '' }}
