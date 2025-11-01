@@ -304,22 +304,26 @@
                     <!-- Vote Quantity -->
                     <div>
                         <label for="voteCount" class="block text-sm font-medium text-white-700">Number of Votes</label>
-                        <input type="number" name="votes" id="voteCount" min="1" value="1"
-                               class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:ring-purple-500 focus:border-purple-500" style="color: black;">
+                        <input type="number" name="votes" id="voteCount" min="1" value="1" max="100"
+                               class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:ring-purple-500 focus:border-purple-500"
+                               style="color: black;"
+                               required>
                     </div>
 
                     <!-- Total -->
                     <div class="flex justify-between items-center bg-purple-50 px-4 py-3 rounded-md">
-                        <span class="text-gray-700 font-medium">Total:</span>
+                        <span class="text-gray-700 font-medium">Total Amount:</span>
                         <span id="totalAmount" class="text-pink font-bold text-lg">KES {{ number_format($contest->price_per_vote ?? 10, 2) }}</span>
                     </div>
 
                     <!-- Phone Number -->
                     <div>
                         <label for="phone" class="block text-sm font-medium text-gray-700">M-PESA Phone Number</label>
-                        <input type="text" name="phone" id="modalPhone" placeholder="e.g. 07XXXXXXXX"
+                        <input type="text" name="phone" id="modalPhone" placeholder="e.g. 07XXXXXXXX or 2547XXXXXXXX"
                                class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:ring-purple-500 focus:border-purple-500"
                                style="color: black;"
+                               pattern="[0-9]{10,12}"
+                               title="Enter 10-digit (07...) or 12-digit (2547...) phone number"
                                required>
                         <p class="text-xs text-gray-500 mt-1">Enter your M-PESA registered phone number</p>
                     </div>
@@ -327,7 +331,7 @@
                     <!-- Payment Status -->
                     <div id="paymentStatus" class="hidden mt-4 p-4 rounded-md bg-blue-50 border border-blue-200">
                         <div class="flex items-center">
-                            <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-3"></div>
+                            <div id="statusSpinner" class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-3"></div>
                             <p id="statusMessage" class="text-blue-800 font-medium">Initiating payment...</p>
                         </div>
                         <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
@@ -338,11 +342,11 @@
                     <!-- Buttons -->
                     <div class="flex justify-end space-x-3 pt-4">
                         <button type="button" onclick="closeVoteModal()" id="cancelButton"
-                                class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200">
+                                class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors">
                             Cancel
                         </button>
                         <button type="submit" id="submitButton"
-                                class="px-5 py-2 text-sm font-medium text-white rounded-md hover:bg-purple-700 focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+                                class="px-5 py-2 text-sm font-medium text-white rounded-md hover:bg-purple-700 focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors"
                                 style="background-color: rgba(0, 0, 0, 1);">
                             Confirm & Pay via M-PESA
                         </button>
@@ -370,15 +374,7 @@
         document.getElementById('modalPhone').value = '';
 
         // Reset payment status
-        document.getElementById('paymentStatus').classList.add('hidden');
-        document.getElementById('submitButton').disabled = false;
-        document.getElementById('cancelButton').disabled = false;
-
-        // Clear any existing intervals
-        if (statusCheckInterval) {
-            clearInterval(statusCheckInterval);
-            statusCheckInterval = null;
-        }
+        resetPaymentStatus();
 
         // Show modal
         document.getElementById('voteModal').classList.remove('hidden');
@@ -386,12 +382,35 @@
 
     function closeVoteModal() {
         document.getElementById('voteModal').classList.add('hidden');
+        resetPaymentStatus();
+    }
+
+    function resetPaymentStatus() {
+        const paymentStatus = document.getElementById('paymentStatus');
+        const statusMessage = document.getElementById('statusMessage');
+        const paymentProgress = document.getElementById('paymentProgress');
+        const statusSpinner = document.getElementById('statusSpinner');
+        const submitButton = document.getElementById('submitButton');
+        const cancelButton = document.getElementById('cancelButton');
+
+        paymentStatus.classList.add('hidden');
+        paymentStatus.classList.remove('bg-red-50', 'border-red-200', 'bg-green-50', 'border-green-200');
+        statusMessage.classList.remove('text-red-800', 'text-green-800');
+        paymentProgress.style.width = '0%';
+        paymentProgress.classList.remove('bg-green-600', 'bg-red-600');
+        paymentProgress.classList.add('bg-blue-600');
+        statusSpinner.classList.remove('hidden');
+
+        submitButton.disabled = false;
+        cancelButton.disabled = false;
 
         // Clear any existing intervals
         if (statusCheckInterval) {
             clearInterval(statusCheckInterval);
             statusCheckInterval = null;
         }
+
+        currentPaymentId = null;
     }
 
     // Live total update when votes change
@@ -400,6 +419,18 @@
         const price = {{ $contest->price_per_vote ?? 10 }};
         const total = count * price;
         document.getElementById('totalAmount').textContent = 'KES ' + total.toLocaleString();
+    });
+
+    // Phone number formatting
+    document.getElementById('modalPhone').addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+
+        // Auto-format to 254 if starts with 0
+        if (value.startsWith('0') && value.length === 10) {
+            value = '254' + value.substring(1);
+        }
+
+        e.target.value = value;
     });
 
     // Form submission
@@ -412,6 +443,13 @@
         const paymentStatus = document.getElementById('paymentStatus');
         const statusMessage = document.getElementById('statusMessage');
         const paymentProgress = document.getElementById('paymentProgress');
+
+        // Validate phone number
+        const phone = formData.get('phone');
+        if (!phone.match(/^(254|0)?[17]\d{8}$/)) {
+            alert('Please enter a valid M-PESA phone number (e.g., 07XXXXXXXX or 2547XXXXXXXX)');
+            return;
+        }
 
         // Disable buttons and show status
         submitButton.disabled = true;
@@ -458,7 +496,7 @@
 
     function startPaymentStatusCheck(paymentId) {
         let attempts = 0;
-        const maxAttempts = 30; // 2.5 minutes (5-second intervals)
+        const maxAttempts = 36; // 3 minutes (5-second intervals)
 
         statusCheckInterval = setInterval(async () => {
             attempts++;
@@ -478,12 +516,16 @@
 
                 const statusMessage = document.getElementById('statusMessage');
                 const paymentProgress = document.getElementById('paymentProgress');
+                const statusSpinner = document.getElementById('statusSpinner');
 
                 if (data.status === 'success') {
-                    statusMessage.textContent = data.message;
+                    statusMessage.textContent = data.message || 'Payment successful! Votes cast.';
                     paymentProgress.style.width = '100%';
                     paymentProgress.classList.remove('bg-blue-600');
                     paymentProgress.classList.add('bg-green-600');
+                    statusSpinner.classList.add('hidden');
+                    paymentStatus.classList.add('bg-green-50', 'border-green-200');
+                    statusMessage.classList.add('text-green-800');
 
                     clearInterval(statusCheckInterval);
 
@@ -493,10 +535,13 @@
                     }, 2000);
 
                 } else if (data.status === 'failed') {
-                    statusMessage.textContent = data.message;
+                    statusMessage.textContent = data.message || 'Payment failed.';
                     paymentProgress.style.width = '0%';
                     paymentProgress.classList.remove('bg-blue-600');
                     paymentProgress.classList.add('bg-red-600');
+                    statusSpinner.classList.add('hidden');
+                    paymentStatus.classList.add('bg-red-50', 'border-red-200');
+                    statusMessage.classList.add('text-red-800');
 
                     clearInterval(statusCheckInterval);
 
@@ -508,12 +553,13 @@
                     // Still pending
                     const progress = 50 + (attempts / maxAttempts) * 40;
                     paymentProgress.style.width = Math.min(progress, 90) + '%';
-                    statusMessage.textContent = 'Waiting for payment confirmation... (' + attempts + '/' + maxAttempts + ')';
+                    statusMessage.textContent = 'Waiting for payment confirmation...';
                 }
 
                 if (attempts >= maxAttempts) {
                     clearInterval(statusCheckInterval);
                     statusMessage.textContent = 'Payment timeout. Please check your M-PESA messages.';
+                    statusSpinner.classList.add('hidden');
                     document.getElementById('submitButton').disabled = false;
                     document.getElementById('cancelButton').disabled = false;
                 }
@@ -523,12 +569,6 @@
             }
         }, 5000); // Check every 5 seconds
     }
-
-    // Phone number formatting
-    document.getElementById('modalPhone').addEventListener('input', function(e) {
-        let value = e.target.value.replace(/\D/g, '');
-        e.target.value = value;
-    });
 
     // Auto-open modal for specific nominee
     document.addEventListener('DOMContentLoaded', function() {
@@ -553,7 +593,6 @@
         });
     }
 </script>
-
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {

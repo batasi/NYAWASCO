@@ -50,17 +50,14 @@ Route::post('/email/verification-notification', function (Request $request) {
 
 
 
-// routes/api.php
-Route::post('/mpesa/stkpush', [MpesaPaymentController::class, 'initiatePayment']);
-Route::post('/payments/callback', [MpesaPaymentController::class, 'handleCallback']);
-Route::post('/mpesa/check-status', [MpesaPaymentController::class, 'checkPaymentStatus']);
-
-// routes/web.php
+// M-PESA Payment Routes
 Route::middleware('auth')->group(function () {
     Route::post('/pay/mpesa/initiate', [MpesaPaymentController::class, 'initiatePayment'])->name('mpesa.initiate');
     Route::post('/pay/mpesa/check-status', [MpesaPaymentController::class, 'checkPaymentStatus'])->name('mpesa.checkStatus');
 });
 
+// M-PESA callback (no auth required)
+Route::post('/payments/callback', [MpesaPaymentController::class, 'handleCallback'])->name('mpesa.callback');
 /*
 |--------------------------------------------------------------------------
 | PUBLIC ROUTES

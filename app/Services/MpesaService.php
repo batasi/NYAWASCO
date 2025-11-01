@@ -1,151 +1,235 @@
 <?php
+
 namespace App\Services;
 
-use Illuminate\Support\Facades\Http;
+use Kemboielvis\MpesaSdkPhp\Mpesa;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 class MpesaService
 {
-    protected $base;
-    protected $consumerKey;
-    protected $consumerSecret;
-    protected $shortcode;
+    protected $mpesa;
+    protected $environment;
+    protected $businessCode;
     protected $passkey;
-    protected $stkCallback;
+    protected $callbackUrl;
 
     public function __construct()
     {
-        $env = config('mpesa.environment', 'sandbox');
+        $this->environment = config('mpesa.environment', 'production');
+        $this->businessCode = config('mpesa.business_till') ?: config('mpesa.business_shortcode');
+        $this->passkey = config('mpesa.lnm_passkey');
+        $this->callbackUrl = config('mpesa.stk_callback_url');
 
-        $this->base = $env === 'production'
-            ? 'https://api.safaricom.co.ke'
-            : 'https://sandbox.safaricom.co.ke';
+        // Initialize M-Pesa SDK
+        $this->mpesa = new Mpesa(
+            config('mpesa.consumer_key'),
+            config('mpesa.consumer_secret'),
+            $this->environment === 'production' ? 'live' : 'sandbox'
+        );
 
-        $this->consumerKey   = config('mpesa.consumer_key');
-        $this->consumerSecret= config('mpesa.consumer_secret');
-        $this->shortcode     = config('mpesa.business_shortcode');
-        $this->passkey       = config('mpesa.lnm_passkey');
-        $this->stkCallback   = config('mpesa.stk_callback_url');
+        // Set cache file in storage directory
+       if (!file_exists(storage_path('logs'))) {
+            mkdir(storage_path('logs'), 0777, true);
+        }
+        $this->mpesa->setStoreFile('storage/logs/mpesa_token_cache.json');
+
+
+
+        // Enable debug logging
+        $this->mpesa->setDebug(true);
+
+        // Set business code and passkey
+        $this->mpesa->setBusinessCode($this->businessCode);
+        $this->mpesa->setPassKey($this->passkey);
+
+        Log::info('MpesaService Initialized', [
+            'environment' => $this->environment,
+            'business_code' => $this->businessCode,
+            'callback_url' => $this->callbackUrl
+        ]);
     }
 
     /**
-     * Get OAuth token from Daraja with retry logic
+     * Initiate STK Push for voting
      */
-    public function getAccessToken(): ?string
+    public function initiateSTKPush(string $phone, float $amount, string $reference, string $description = 'Vote Payment'): array
     {
-        $url = "{$this->base}/oauth/v1/generate?grant_type=client_credentials";
-
         try {
-            $res = Http::timeout(10)
-                      ->retry(3, 100)
-                      ->withBasicAuth($this->consumerKey, $this->consumerSecret)
-                      ->get($url);
-
-            if ($res->ok()) {
-                return $res->json('access_token');
+            // Validate amount
+            if ($amount < 1) {
+                throw new \Exception('Amount must be at least KES 1');
             }
 
-            Log::error('MPESA token error', [
-                'status' => $res->status(),
-                'response' => $res->body()
+            $phone = $this->normalizePhone($phone);
+
+            // Determine transaction type based on business code
+            $transactionType = $this->getTransactionType();
+
+            Log::info('Initiating STK Push', [
+                'phone' => $phone,
+                'amount' => $amount,
+                'reference' => $reference,
+                'transaction_type' => $transactionType,
+                'business_code' => $this->businessCode
             ]);
-            return null;
 
-        } catch (\Exception $e) {
-            Log::error('MPESA token exception', ['error' => $e->getMessage()]);
-            return null;
-        }
-    }
+            // Initiate STK Push using the SDK
+            $response = $this->mpesa->stk()
+                ->setTransactionType($transactionType)
+                ->setAmount($amount)
+                ->setPhoneNumber($phone)
+                ->setCallbackUrl($this->callbackUrl)
+                ->setAccountReference($reference)
+                ->setTransactionDesc($description)
+                ->push()
+                ->getResponse();
 
-    /**
-     * Initialize STK Push with enhanced validation
-     */
-    public function stkPush(string $phone, $amount, string $accountReference = 'Vote Payment', string $transactionDesc = 'Voting')
-    {
-        $token = $this->getAccessToken();
-        if (!$token) {
-            throw new \Exception('Failed to get MPESA access token');
-        }
+            Log::info('STK Push Response', $response);
 
-        $timestamp = now()->format('YmdHis');
-        $password = base64_encode($this->shortcode . $this->passkey . $timestamp);
+            if (isset($response['ResponseCode']) && $response['ResponseCode'] == '0') {
+                return [
+                    'success' => true,
+                    'merchant_request_id' => $response['MerchantRequestID'],
+                    'checkout_request_id' => $response['CheckoutRequestID'],
+                    'response_code' => $response['ResponseCode'],
+                    'response_description' => $response['ResponseDescription'],
+                    'customer_message' => $response['CustomerMessage'],
+                    'raw_response' => $response,
+                ];
+            } else {
+                $errorMessage = $response['errorMessage'] ?? $response['ResponseDescription'] ?? 'STK Push failed';
 
-        $transactionType = $this->shortcode == '174379'
-            ? 'CustomerPayBillOnline'   // Paybill
-            : 'CustomerBuyGoodsOnline';  // Till
+                Log::error('STK Push Failed', [
+                    'error' => $errorMessage,
+                    'response' => $response
+                ]);
 
-        $payload = [
-            'BusinessShortCode' => $this->shortcode,
-            'Password'          => $password,
-            'Timestamp'         => $timestamp,
-            'TransactionType'   => $transactionType,
-            'Amount'            => (int)ceil($amount),
-            'PartyA'            => $phone,
-            'PartyB'            => $this->shortcode,
-            'PhoneNumber'       => $phone,
-            'CallBackURL'       => $this->stkCallback,
-            'AccountReference'  => Str::limit($accountReference, 12, ''),
-            'TransactionDesc'   => Str::limit($transactionDesc, 13, ''),
-        ];
+                return [
+                    'success' => false,
+                    'error' => $errorMessage,
+                    'raw_response' => $response,
+                ];
+            }
 
-        $url = "{$this->base}/mpesa/stkpush/v1/processrequest";
-
-        $res = Http::withToken($token)
-            ->withHeaders(['Content-Type' => 'application/json'])
-            ->post($url, $payload);
-
-        $response = $res->json();
-
-        if ($res->failed()) {
-            Log::error('MPESA STK Push failed', [
-                'status' => $res->status(),
-                'response' => $response,
+        } catch (\Throwable $e) {
+            Log::error('STK Push Exception', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
+
             return [
-                'status' => 'error',
-                'message' => $response['errorMessage'] ?? 'Unknown error',
-                'data' => $response,
+                'success' => false,
+                'error' => $e->getMessage(),
             ];
         }
-
-        Log::info('MPESA STK Push Success', ['response' => $response]);
-
-        return $response;
     }
 
     /**
      * Query STK Push status
      */
-    public function queryStkStatus($checkoutRequestId)
+    public function querySTKStatus(string $checkoutRequestId): ?array
     {
-        $token = $this->getAccessToken();
-        if (!$token) {
-            return null;
-        }
-
-        $timestamp = Carbon::now()->format('YmdHis');
-        $password = base64_encode($this->shortcode . $this->passkey . $timestamp);
-
-        $payload = [
-            'BusinessShortCode' => $this->shortcode,
-            'Password' => $password,
-            'Timestamp' => $timestamp,
-            'CheckoutRequestID' => $checkoutRequestId,
-        ];
-
-        $url = "{$this->base}/mpesa/stkpushquery/v1/query";
-
         try {
-            $res = Http::withToken($token)
-                      ->post($url, $payload);
+            Log::info('Querying STK Status', ['checkout_request_id' => $checkoutRequestId]);
 
-            return $res->ok() ? $res->json() : null;
+            $response = $this->mpesa->stk()
+                ->query($checkoutRequestId)
+                ->getResponse();
 
-        } catch (\Exception $e) {
-            Log::error('MPESA STK Query failed', ['error' => $e->getMessage()]);
+            Log::info('STK Query Response', $response);
+
+            return $response;
+
+        } catch (\Throwable $e) {
+            Log::error('STK Query Exception', [
+                'error' => $e->getMessage(),
+                'checkout_request_id' => $checkoutRequestId
+            ]);
+
             return null;
         }
+    }
+
+    /**
+     * Determine transaction type based on business code
+     */
+    private function getTransactionType(): string
+    {
+        // If it's a till number (Buy Goods), use CustomerBuyGoodsOnline
+        // If it's a shortcode (PayBill), use CustomerPayBillOnline
+        $tillNumber = config('mpesa.business_till');
+
+        return $tillNumber ? 'CustomerBuyGoodsOnline' : 'CustomerPayBillOnline';
+    }
+
+    /**
+     * Normalize phone number to 254 format
+     */
+    private function normalizePhone(string $phone): string
+    {
+        $phone = preg_replace('/[^0-9]/', '', $phone);
+
+        if (strlen($phone) === 10 && str_starts_with($phone, '0')) {
+            return '254' . substr($phone, 1);
+        }
+
+        if (strlen($phone) === 9 && str_starts_with($phone, '7')) {
+            return '254' . $phone;
+        }
+
+        return $phone;
+    }
+
+    /**
+     * Validate configuration
+     */
+    public function validateConfiguration(): array
+    {
+        $errors = [];
+
+        if (empty($this->businessCode)) {
+            $errors[] = "Business code is not configured";
+        }
+
+        if (empty($this->passkey)) {
+            $errors[] = "LNM passkey is not configured";
+        }
+
+        if (empty($this->callbackUrl)) {
+            $errors[] = "Callback URL is not configured";
+        }
+
+        if (!filter_var($this->callbackUrl, FILTER_VALIDATE_URL)) {
+            $errors[] = "Callback URL is not a valid URL";
+        }
+
+        return [
+            'valid' => empty($errors),
+            'errors' => $errors,
+            'configuration' => [
+                'environment' => $this->environment,
+                'business_code' => $this->businessCode,
+                'transaction_type' => $this->getTransactionType(),
+                'callback_url' => $this->callbackUrl,
+            ]
+        ];
+    }
+
+    /**
+     * Clear token cache (useful for debugging)
+     */
+    public function clearTokenCache(): void
+    {
+        $this->mpesa->clearTokenCache();
+        Log::info('MPESA token cache cleared');
+    }
+
+    /**
+     * Get cache file path
+     */
+    public function getCacheFilePath(): string
+    {
+        return $this->mpesa->getResolvedStoreFilePath();
     }
 }

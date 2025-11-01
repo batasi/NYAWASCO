@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "74e231f1886cf1725bc3dd26f0ded50a",
+    "content-hash": "04575d151e1e8fac434894cb775ea135",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -1300,6 +1300,42 @@
             "time": "2025-08-22T14:27:06+00:00"
         },
         {
+            "name": "kemboielvis/mpesa-sdk-php",
+            "version": "v2.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/kemboi22/mpesa-php-sdk.git",
+                "reference": "506695d17468b7a65ee4ec2fe39c6082106484f4"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/kemboi22/mpesa-php-sdk/zipball/506695d17468b7a65ee4ec2fe39c6082106484f4",
+                "reference": "506695d17468b7a65ee4ec2fe39c6082106484f4",
+                "shasum": ""
+            },
+            "require": {
+                "ext-curl": "*",
+                "ext-openssl": "*"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Kemboielvis\\MpesaSdkPhp\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "authors": [
+                {
+                    "name": "kemboielvis"
+                }
+            ],
+            "support": {
+                "issues": "https://github.com/kemboi22/mpesa-php-sdk/issues",
+                "source": "https://github.com/kemboi22/mpesa-php-sdk/tree/v2.1.0"
+            },
+            "time": "2025-10-21T19:19:18+00:00"
+        },
+        {
             "name": "laravel/fortify",
             "version": "v1.31.2",
             "source": {
@@ -1362,7 +1398,6 @@
                 "issues": "https://github.com/laravel/fortify/issues",
                 "source": "https://github.com/laravel/fortify"
             },
-            "time": "2025-10-21T14:47:38+00:00"
             "time": "2025-10-21T14:47:38+00:00"
         },
         {
