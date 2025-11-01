@@ -26,6 +26,7 @@ use App\Http\Controllers\PesapalController;
 use App\Http\Controllers\NomineeCategoryController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\MpesaPaymentController;
 
 /*
 |--------------------------------------------------------------------------
