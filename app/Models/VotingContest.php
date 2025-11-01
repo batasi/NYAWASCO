@@ -134,6 +134,7 @@ class VotingContest extends Model
     {
         return $this->nominees()->orderByDesc('votes_count')->first();
     }
+    
     public function isOngoing(): bool
     {
         $now = Carbon::now();
@@ -161,6 +162,8 @@ class VotingContest extends Model
         $userId = $userId ?? Auth::id();
         return $this->organizer_id === $userId;
     }
+    
+   
 
     public function event()
     {

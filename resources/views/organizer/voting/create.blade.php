@@ -3,65 +3,50 @@
 @section('title', $title ?? 'Create Voting Contest')
 
 @section('content')
-<div class="min-h-screen modal-header">
-    <!-- Header Section -->
-    <div class="bg-black shadow-sm border-b border-gray-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div class="md:flex md:items-center md:justify-between">
-                <div class="flex-1 min-w-0">
-                    <h1 class="text-3xl font-bold leading-tight text-white">
-                        Create Voting Contest
-                    </h1>
-                    <p class="mt-2 text-lg text-gray-400">
-                        Create a contest under a category and set voting rules
-                    </p>
+<div class="min-h-screen modal-header flex items-center justify-center py-10">
+    <div class="modal-bg shadow-lg rounded-lg w-full max-w-3xl p-6">
+        <h1 class="text-2xl font-bold mb-2" style="color: rgba(198, 0, 238, 1);">Create Voting Contest</h1>
+        <p class="text-gray-200 mb-5 text-sm">Create a contest under a category and set voting rules (start/end dates, limits).</p>
+
+
+
+        <form method="POST" action="{{ route('voting.store') }}" enctype="multipart/form-data">
+            @csrf
+
+            {{-- Contest Info --}}
+            <div class="space-y-3">
+                <div>
+                    <label for="title" class="text-sm font-medium text-purple-500">Contest Title</label>
+                    <input id="title" name="title" value="{{ old('title') }}" required
+                        class="w-full border-gray-300 rounded-md px-3 py-1.5 text-sm" style="color: black;"
+                        placeholder="Example: Htz Awards 2019">
                 </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Main Content -->
-    <div class="modal-bg max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="modal-header rounded-lg shadow-xl border border-gray-700 p-8">
-            <form method="POST" action="{{ route('voting.store') }}" enctype="multipart/form-data" class="space-y-8">
-                @csrf
-
-                <!-- Contest Information -->
-                <div class="space-y-6">
-                    <h2 class="text-xl font-bold text-white border-b border-gray-600 pb-3">Contest Information</h2>
-
-                    <!-- Contest Title -->
-                    <div>
-                        <label for="title" class="block text-sm font-medium text-purple-400 mb-2">Contest Title</label>
-                        <input id="title" name="title" value="{{ old('title') }}" required
-                            class="w-full bg-gray-200 border border-gray-600 rounded-lg px-4 py-3 text-black placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors duration-200"
-                            placeholder="Best Male Artist 2025">
+                {{-- Voting Category --}}
+                <div>
+                    <label for="category_id" class="text-sm font-medium text-purple-500">Voting Category</label>
+                    <div class="flex gap-2">
+                        <select id="category_id" name="category_id" required
+                            class="flex-1 border-gray-300 rounded-md px-3 py-1.5 text-sm" style="color: black;">
+                            <option value="">-- Select Voting Category --</option>
+                            @foreach($categories as $category)
+                                <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>
+                                    {{ $category->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <button type="button" id="addVotingCategoryBtn"
+                            class="px-3 py-1.5 bg-purple-500 text-white rounded-md text-sm hover:bg-indigo-700">+</button>
                     </div>
+                </div>
 
-                    <!-- Voting Category -->
-                    <div>
-                        <label for="category_id" class="block text-sm font-medium text-purple-400 mb-2">Voting Category</label>
-                        <div class="flex gap-3">
-                            <select id="category_id" name="category_id" required
-                                class="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors duration-200">
-                                <option value="" class="text-gray-400">-- Select Voting Category --</option>
-                                @foreach($categories as $category)
-                                    <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }} class="text-white">
-                                        {{ $category->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            <button type="button" id="addVotingCategoryBtn"
-                                class="px-6 py-3 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors duration-200 flex items-center gap-2">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-                                </svg>
-                                Add Category
-                            </button>
-                        </div>
-                    </div>
+                <div>
+                    <label for="description" class="text-sm font-medium text-purple-500">Description (optional)</label>
+                    <textarea id="description" name="description" rows="2"
+                        class="w-full border-gray-300 rounded-md px-3 py-1.5 text-sm" style="color: black;">{{ old('description') }}</textarea>
+                </div>
 
-                    <!-- Description -->
+                <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label for="description" class="block text-sm font-medium text-purple-400 mb-2">Description (optional)</label>
                         <textarea id="description" name="description" rows="3"
@@ -133,14 +118,13 @@
                         </div>
                     </div>
 
-                    <!-- Contest Settings -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="flex items-center gap-3">
-                            <input id="is_featured" name="is_featured" type="checkbox" value="1"
-                                {{ old('is_featured') ? 'checked' : '' }}
-                                class="h-4 w-4 text-purple-600 border-gray-500 bg-gray-700 rounded focus:ring-purple-500 focus:ring-offset-gray-800">
-                            <label for="is_featured" class="text-sm font-medium text-white">Feature this contest</label>
-                        </div>
+                <div class="grid grid-cols-2 gap-3 mt-3" style="display:none">
+                    <div class="flex items-center gap-2 mt-6">
+                        <input id="is_featured" name="is_featured" type="checkbox" value="1"
+                            {{ old('is_featured') ? 'checked' : '' }}
+                            class="h-4 w-4 text-indigo-600 border-gray-300 rounded">
+                        <label for="is_featured" class="text-purple-500 text-sm">Feature this contest</label>
+                    </div>
 
                         <div class="flex items-center gap-3">
                             <input type="checkbox" id="is_active" name="is_active" value="1"
@@ -150,7 +134,8 @@
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-3">
+                <div class="flex flex-wrap items-center gap-4 mt-2" style="display:none">
+                    <label class="flex items-center text-sm">
                         <input type="checkbox" id="requires_approval" name="requires_approval" value="1"
                             {{ old('requires_approval') ? 'checked' : '' }}
                             class="h-4 w-4 text-purple-600 border-gray-500 bg-gray-700 rounded focus:ring-purple-500 focus:ring-offset-gray-800">

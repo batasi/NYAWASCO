@@ -44,10 +44,10 @@ class MpesaController extends Controller
             $phone = preg_replace('/[^0-9]/', '', $phone);
     
             // Credentials
-            $consumerKey = env('MPESA_CONSUMER_KEY');
-            $consumerSecret = env('MPESA_CONSUMER_SECRET');
-            $shortcode = env('MPESA_SHORTCODE', '174379'); // sandbox default
-            $passkey = env('MPESA_PASSKEY', 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919');
+            $consumerKey = env('MPESA_CONSUMER_KEY', '9vAia5fVEsA2ZHIT33K4HEqekUxWUwlViAZUARJP9GG7Mgwu');
+            $consumerSecret = env('MPESA_CONSUMER_SECRET', 'WAy65zyqjogIUuuCrsMQRDlRgxI9FajzyR6gotaVYwLBudRe0u49rcgb8Ae6ykwn');
+            $shortcode = env('MPESA_SHORTCODE', '5676670'); 
+            $passkey = env('MPESA_PASSKEY', '4a591f5c5719bbb8b40fe2b67030a9d7fc99253efa13770da1492a75aa519117');
     
             // 1️⃣ Get Access Token
             $tokenResponse = Http::withBasicAuth($consumerKey, $consumerSecret)

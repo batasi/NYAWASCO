@@ -86,4 +86,6 @@ class Nominee extends Model
     {
         return $this->belongsTo(VotingContest::class, 'voting_contest_id');
     }
+    
+   
 }

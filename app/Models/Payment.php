@@ -29,4 +29,6 @@ class Payment extends Model
     public function contest() {
         return $this->belongsTo(VotingContest::class, 'voting_contest_id');
     }
+    
+
 }

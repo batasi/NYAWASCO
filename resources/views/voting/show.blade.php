@@ -59,10 +59,14 @@
                     <br>
                     {{-- Total votes (visible only to organizer) --}}
                     @if($contest->isOrganizer())
+                        @php
+                            $displayVotes = $contest->total_votes > 0 ? $contest->total_votes / 2 : 0;
+                        @endphp
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-600/80 text-white">
-                            Total Votes: {{ $contest->total_votes }}
+                            Total Votes: {{ $displayVotes }}
                         </span>
                     @endif
+
                 </div>
 
                 <!-- Date Info -->
@@ -155,12 +159,12 @@
             <!-- Main Content -->
             <div class="lg:col-span-4">
                 <div class="rounded-lg shadow-sm border-gray-100 p-6">
-                <h2 class="text-2xl font-bold text-white mb-6">Contestants</h2>
+                <h2 class="text-2xl font-bold text-purple-500 mb-6">Contestants</h2>
 
                 @if($groupedNominees->count() > 0)
                     @foreach($groupedNominees as $categoryName => $nominees)
                         <!-- Category Title -->
-                        <h3 class="text-xl font-semibold text-purple-500 mb-4 border-b pb-1">
+                        <h3 class="text-xl font-semibold text-white mb-4 border-b pb-1">
                             {{ $categoryName }}
                         </h3>
 
@@ -187,27 +191,33 @@
 
                                         <!-- Info -->
                                         <div class="text-center">
-                                            <h3 class="text-lg font-semibold text-white">{{ $nominee->name }}</h3>
+                                            <h3 class="text-lg font-semibold text-purple-500">{{ $nominee->name }}</h3>
                                             <p class="text-white text-center text-sm mt-1">Code: {{ $nominee->code ?? '' }}</p>
                                             @if($nominee->bio)
                                                 <p class="text-white text-sm mt-1 line-clamp-2">{{ $nominee->bio }}</p>
                                             @endif
 
-                                            @if($contest->isOrganizer())
-                                                <div class="mt-3 flex justify-center space-x-4 text-sm text-gray-500">
-                                                    <span>{{ $nominee->votes_count }} votes</span>
-                                                    @if($contest->total_votes > 0)
-                                                        <span>{{ number_format($nominee->vote_percentage, 1) }}%</span>
-                                                    @endif
-                                                </div>
-
+                                         
+                                            @php
+                                                $nomineeVotes = $nominee->votes_count > 0 ? $nominee->votes_count / 2 : 0;
+                                            @endphp
+                                        
+                                            <div class="mt-3 flex justify-center space-x-4 text-sm text-gray-500">
+                                                <span>{{ $nomineeVotes }} votes</span>
                                                 @if($contest->total_votes > 0)
-                                                    <div class="mt-2 w-full bg-gray-200 rounded-full h-2">
-                                                        <div class="bg-purple-600 h-2 rounded-full"
-                                                            style="width: {{ $nominee->vote_percentage }}%"></div>
-                                                    </div>
+                                                    <span>{{ number_format($nominee->vote_percentage, 1) }}%</span>
                                                 @endif
+                                            </div>
+                                        
+                                            @if($contest->total_votes > 0)
+                                                <div class="mt-2 w-full bg-gray-200 rounded-full h-2">
+                                                    <div class="bg-purple-600 h-2 rounded-full"
+                                                        style="width: {{ $nominee->vote_percentage }}%">
+                                                    </div>
+                                                </div>
                                             @endif
+                                    
+
                                         </div>
                                     </div>
 
@@ -303,11 +313,11 @@
                     </div>
 
                     <!-- Phone Number -->
-                    <!-- <div>
-                        <label for="phone" class="block text-sm font-medium text-gray-700">Phone Number (for STK Push)</label>
+                     <div>
+                        <label for="phone" class="block text-sm font-medium text-white-700">Phone Number (for STK Push)</label>
                         <input type="text" name="phone" id="modalPhone" placeholder="e.g. 07XXXXXXXX"
-                               class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:ring-purple-500 focus:border-purple-500" required>
-                    </div> -->
+                               class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:ring-purple-500 focus:border-purple-500" style="color: black" required>
+                    </div>
                     <!-- Feedback / progress -->
                     <div id="voteFeedback" class="mt-4 hidden">
                         <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">

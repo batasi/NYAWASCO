@@ -14,7 +14,7 @@
                     <div class="modal-header shadow-lg rounded-xl overflow-hidden hover:shadow-2xl transition duration-300 flex flex-col h-[360px] group">
                         {{-- Fixed Image Section --}}
                         @if($contest->featured_image)
-                            <div class="h-40 w-full bg-gray-100 flex items-center justify-center group-hover:opacity-90 transition-opacity">
+                            <div class="h-40 w-full bg-black flex items-center justify-center group-hover:opacity-90 transition-opacity">
                                 <img src="{{ \Illuminate\Support\Facades\Storage::url($contest->featured_image) }}"
                                      alt="{{ $contest->title }}"
                                      class="max-h-full max-w-full object-contain">
