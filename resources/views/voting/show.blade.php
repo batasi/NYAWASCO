@@ -197,18 +197,18 @@
                                                 <p class="text-white text-sm mt-1 line-clamp-2">{{ $nominee->bio }}</p>
                                             @endif
 
-                                         
+
                                             @php
                                                 $nomineeVotes = $nominee->votes_count > 0 ? $nominee->votes_count / 2 : 0;
                                             @endphp
-                                        
+
                                             <div class="mt-3 flex justify-center space-x-4 text-sm text-gray-500">
                                                 <span>{{ $nomineeVotes }} votes</span>
                                                 @if($contest->total_votes > 0)
                                                     <span>{{ number_format($nominee->vote_percentage, 1) }}%</span>
                                                 @endif
                                             </div>
-                                        
+
                                             @if($contest->total_votes > 0)
                                                 <div class="mt-2 w-full bg-gray-200 rounded-full h-2">
                                                     <div class="bg-purple-600 h-2 rounded-full"
@@ -216,7 +216,7 @@
                                                     </div>
                                                 </div>
                                             @endif
-                                    
+
 
                                         </div>
                                     </div>
@@ -276,6 +276,7 @@
         </div>
     </div>
 </div>
+
 <!-- Vote Modal -->
 <div id="voteModal" class="hidden fixed inset-0 z-50 overflow-y-auto transition-opacity duration-300">
     <div class="flex items-center justify-center min-h-screen px-4">
@@ -289,10 +290,11 @@
                     <p id="modalNomineeCode" class="text-sm text-white-500"></p>
                 </div>
 
-                <form id="voteForm" method="POST" action="{{ route('pesapal.stkpush') }}" class="mt-6 space-y-4">
-                     @csrf
+                <form id="voteForm" class="mt-6 space-y-4">
+                    @csrf
                     <input type="hidden" name="nominee_id" id="modalNomineeId">
                     <input type="hidden" name="contest_id" value="{{ $contest->id }}">
+
                     <!-- Price Info -->
                     <div class="flex justify-between items-center">
                         <span class="text-white-700 font-medium">Price per Vote:</span>
@@ -302,7 +304,7 @@
                     <!-- Vote Quantity -->
                     <div>
                         <label for="voteCount" class="block text-sm font-medium text-white-700">Number of Votes</label>
-                        <input type="number" name="votes" id="voteCount" min="1" value="1" 
+                        <input type="number" name="votes" id="voteCount" min="1" value="1"
                                class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:ring-purple-500 focus:border-purple-500" style="color: black;">
                     </div>
 
@@ -313,28 +315,36 @@
                     </div>
 
                     <!-- Phone Number -->
-                     <div>
-                        <label for="phone" class="block text-sm font-medium text-white-700">Phone Number (for STK Push)</label>
+                    <div>
+                        <label for="phone" class="block text-sm font-medium text-gray-700">M-PESA Phone Number</label>
                         <input type="text" name="phone" id="modalPhone" placeholder="e.g. 07XXXXXXXX"
-                               class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:ring-purple-500 focus:border-purple-500" style="color: black" required>
+                               class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:ring-purple-500 focus:border-purple-500"
+                               style="color: black;"
+                               required>
+                        <p class="text-xs text-gray-500 mt-1">Enter your M-PESA registered phone number</p>
                     </div>
-                    <!-- Feedback / progress -->
-                    <div id="voteFeedback" class="mt-4 hidden">
-                        <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                            <div id="voteProgress" class="bg-purple-600 h-2 w-0 transition-all"></div>
+
+                    <!-- Payment Status -->
+                    <div id="paymentStatus" class="hidden mt-4 p-4 rounded-md bg-blue-50 border border-blue-200">
+                        <div class="flex items-center">
+                            <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-3"></div>
+                            <p id="statusMessage" class="text-blue-800 font-medium">Initiating payment...</p>
                         </div>
-                        <p id="voteMessage" class="mt-2 text-center text-gray-700"></p>
+                        <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                            <div id="paymentProgress" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
                     </div>
 
                     <!-- Buttons -->
                     <div class="flex justify-end space-x-3 pt-4">
-                        <button type="button" onclick="closeVoteModal()"
+                        <button type="button" onclick="closeVoteModal()" id="cancelButton"
                                 class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200">
                             Cancel
                         </button>
-                        <button type="submit"
-                                class="px-5 py-2 text-sm font-medium text-white rounded-md hover:bg-purple-700 focus:ring-2 focus:ring-offset-2 focus:ring-purple-500" style="background-color: rgba(0, 0, 0, 1);">
-                            Confirm & Pay
+                        <button type="submit" id="submitButton"
+                                class="px-5 py-2 text-sm font-medium text-white rounded-md hover:bg-purple-700 focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+                                style="background-color: rgba(0, 0, 0, 1);">
+                            Confirm & Pay via M-PESA
                         </button>
                     </div>
                 </form>
@@ -342,59 +352,233 @@
         </div>
     </div>
 </div>
+
 <script>
-function openVoteModal(id, name, code, photoUrl) {
-    // Set nominee data
-    document.getElementById('modalNomineeId').value = id;
-    document.getElementById('modalNomineeName').textContent = name;
-    document.getElementById('modalNomineeCode').textContent = 'Code: ' + code;
-    document.getElementById('modalNomineePhoto').src = photoUrl || '/default-avatar.png';
+    let currentPaymentId = null;
+    let statusCheckInterval = null;
 
-    // Reset form inputs
-    document.getElementById('voteCount').value = 1;
-    document.getElementById('totalAmount').textContent = 'KES {{ number_format($contest->price_per_vote ?? 10, 2) }}';
-    document.getElementById('phone').value = '';
+    function openVoteModal(id, name, code, photoUrl) {
+        // Set nominee data
+        document.getElementById('modalNomineeId').value = id;
+        document.getElementById('modalNomineeName').textContent = name;
+        document.getElementById('modalNomineeCode').textContent = 'Code: ' + code;
+        document.getElementById('modalNomineePhoto').src = photoUrl || '/default-avatar.png';
 
-    // Show modal
-    document.getElementById('voteModal').classList.remove('hidden');
-}
+        // Reset form inputs
+        document.getElementById('voteCount').value = 1;
+        document.getElementById('totalAmount').textContent = 'KES {{ number_format($contest->price_per_vote ?? 10, 2) }}';
+        document.getElementById('modalPhone').value = '';
 
-function closeVoteModal() {
-    document.getElementById('voteModal').classList.add('hidden');
-}
+        // Reset payment status
+        document.getElementById('paymentStatus').classList.add('hidden');
+        document.getElementById('submitButton').disabled = false;
+        document.getElementById('cancelButton').disabled = false;
 
-// Live total update when votes change
-document.getElementById('voteCount').addEventListener('input', function() {
-    const count = parseInt(this.value) || 1;
-    const price = {{ $contest->price_per_vote ?? 10 }};
-    const total = count * price;
-    document.getElementById('totalAmount').textContent = 'KES ' + total.toLocaleString();
-});
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    @if($autoNominee)
-        // Automatically open modal for this nominee
-        openVoteModal(
-            '{{ $autoNominee->id }}',
-            '{{ addslashes($autoNominee->name) }}',
-            '{{ $autoNominee->code }}',
-            '{{ $autoNominee->photo ? \Illuminate\Support\Facades\Storage::url($autoNominee->photo) : \Illuminate\Support\Facades\Storage::url("nominees/OIP.jpg") }}'
-        );
+        // Clear any existing intervals
+        if (statusCheckInterval) {
+            clearInterval(statusCheckInterval);
+            statusCheckInterval = null;
+        }
 
-    @endif
-});
-function copyShareLink(contestId, code, btn) {
-    const baseUrl = window.location.origin + '/voting/' + contestId + '?code=' + code;
-    navigator.clipboard.writeText(baseUrl).then(() => {
-        // Show tooltip
-        const copiedMsg = document.getElementById('copied-' + code);
-        if (copiedMsg) {
-            copiedMsg.classList.remove('hidden');
-            setTimeout(() => copiedMsg.classList.add('hidden'), 2000);
+        // Show modal
+        document.getElementById('voteModal').classList.remove('hidden');
+    }
+
+    function closeVoteModal() {
+        document.getElementById('voteModal').classList.add('hidden');
+
+        // Clear any existing intervals
+        if (statusCheckInterval) {
+            clearInterval(statusCheckInterval);
+            statusCheckInterval = null;
+        }
+    }
+
+    // Live total update when votes change
+    document.getElementById('voteCount').addEventListener('input', function() {
+        const count = parseInt(this.value) || 1;
+        const price = {{ $contest->price_per_vote ?? 10 }};
+        const total = count * price;
+        document.getElementById('totalAmount').textContent = 'KES ' + total.toLocaleString();
+    });
+
+    // Form submission
+    document.getElementById('voteForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const submitButton = document.getElementById('submitButton');
+        const cancelButton = document.getElementById('cancelButton');
+        const paymentStatus = document.getElementById('paymentStatus');
+        const statusMessage = document.getElementById('statusMessage');
+        const paymentProgress = document.getElementById('paymentProgress');
+
+        // Disable buttons and show status
+        submitButton.disabled = true;
+        cancelButton.disabled = true;
+        paymentStatus.classList.remove('hidden');
+        statusMessage.textContent = 'Initiating M-PESA payment...';
+        paymentProgress.style.width = '20%';
+
+        try {
+            const response = await fetch('{{ route("mpesa.initiate") }}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json',
+                },
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                currentPaymentId = data.payment_id;
+                statusMessage.textContent = data.message || 'Check your phone for STK Push prompt...';
+                paymentProgress.style.width = '50%';
+
+                // Start checking payment status
+                startPaymentStatusCheck(currentPaymentId);
+
+            } else {
+                throw new Error(data.error || 'Payment initiation failed');
+            }
+
+        } catch (error) {
+            statusMessage.textContent = 'Error: ' + error.message;
+            paymentProgress.style.width = '0%';
+            paymentStatus.classList.add('bg-red-50', 'border-red-200');
+            statusMessage.classList.add('text-red-800');
+
+            // Re-enable buttons
+            submitButton.disabled = false;
+            cancelButton.disabled = false;
         }
     });
-}
+
+    function startPaymentStatusCheck(paymentId) {
+        let attempts = 0;
+        const maxAttempts = 30; // 2.5 minutes (5-second intervals)
+
+        statusCheckInterval = setInterval(async () => {
+            attempts++;
+
+            try {
+                const response = await fetch('{{ route("mpesa.checkStatus") }}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ payment_id: paymentId })
+                });
+
+                const data = await response.json();
+
+                const statusMessage = document.getElementById('statusMessage');
+                const paymentProgress = document.getElementById('paymentProgress');
+
+                if (data.status === 'success') {
+                    statusMessage.textContent = data.message;
+                    paymentProgress.style.width = '100%';
+                    paymentProgress.classList.remove('bg-blue-600');
+                    paymentProgress.classList.add('bg-green-600');
+
+                    clearInterval(statusCheckInterval);
+
+                    // Redirect after success
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+
+                } else if (data.status === 'failed') {
+                    statusMessage.textContent = data.message;
+                    paymentProgress.style.width = '0%';
+                    paymentProgress.classList.remove('bg-blue-600');
+                    paymentProgress.classList.add('bg-red-600');
+
+                    clearInterval(statusCheckInterval);
+
+                    // Re-enable buttons
+                    document.getElementById('submitButton').disabled = false;
+                    document.getElementById('cancelButton').disabled = false;
+
+                } else {
+                    // Still pending
+                    const progress = 50 + (attempts / maxAttempts) * 40;
+                    paymentProgress.style.width = Math.min(progress, 90) + '%';
+                    statusMessage.textContent = 'Waiting for payment confirmation... (' + attempts + '/' + maxAttempts + ')';
+                }
+
+                if (attempts >= maxAttempts) {
+                    clearInterval(statusCheckInterval);
+                    statusMessage.textContent = 'Payment timeout. Please check your M-PESA messages.';
+                    document.getElementById('submitButton').disabled = false;
+                    document.getElementById('cancelButton').disabled = false;
+                }
+
+            } catch (error) {
+                console.error('Status check error:', error);
+            }
+        }, 5000); // Check every 5 seconds
+    }
+
+    // Phone number formatting
+    document.getElementById('modalPhone').addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        e.target.value = value;
+    });
+
+    // Auto-open modal for specific nominee
+    document.addEventListener('DOMContentLoaded', function() {
+        @if($autoNominee)
+            openVoteModal(
+                '{{ $autoNominee->id }}',
+                '{{ addslashes($autoNominee->name) }}',
+                '{{ $autoNominee->code }}',
+                '{{ $autoNominee->photo ? \Illuminate\Support\Facades\Storage::url($autoNominee->photo) : \Illuminate\Support\Facades\Storage::url("nominees/OIP.jpg") }}'
+            );
+        @endif
+    });
+
+    function copyShareLink(contestId, code, btn) {
+        const baseUrl = window.location.origin + '/voting/' + contestId + '?code=' + code;
+        navigator.clipboard.writeText(baseUrl).then(() => {
+            const copiedMsg = document.getElementById('copied-' + code);
+            if (copiedMsg) {
+                copiedMsg.classList.remove('hidden');
+                setTimeout(() => copiedMsg.classList.add('hidden'), 2000);
+            }
+        });
+    }
+</script>
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        @if($autoNominee)
+            // Automatically open modal for this nominee
+            openVoteModal(
+                '{{ $autoNominee->id }}',
+                '{{ addslashes($autoNominee->name) }}',
+                '{{ $autoNominee->code }}',
+                '{{ $autoNominee->photo ? \Illuminate\Support\Facades\Storage::url($autoNominee->photo) : \Illuminate\Support\Facades\Storage::url("nominees/OIP.jpg") }}'
+            );
+
+        @endif
+    });
+    function copyShareLink(contestId, code, btn) {
+        const baseUrl = window.location.origin + '/voting/' + contestId + '?code=' + code;
+        navigator.clipboard.writeText(baseUrl).then(() => {
+            // Show tooltip
+            const copiedMsg = document.getElementById('copied-' + code);
+            if (copiedMsg) {
+                copiedMsg.classList.remove('hidden');
+                setTimeout(() => copiedMsg.classList.add('hidden'), 2000);
+            }
+        });
+    }
 
 </script>
 
