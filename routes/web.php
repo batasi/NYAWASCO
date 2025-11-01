@@ -49,6 +49,17 @@ Route::post('/email/verification-notification', function (Request $request) {
 
 
 
+// routes/api.php
+Route::post('/mpesa/stkpush', [MpesaPaymentController::class, 'initiatePayment']);
+Route::post('/payments/callback', [MpesaPaymentController::class, 'handleCallback']);
+Route::post('/mpesa/check-status', [MpesaPaymentController::class, 'checkPaymentStatus']);
+
+// routes/web.php
+Route::middleware('auth')->group(function () {
+    Route::post('/pay/mpesa/initiate', [MpesaPaymentController::class, 'initiatePayment'])->name('mpesa.initiate');
+    Route::post('/pay/mpesa/check-status', [MpesaPaymentController::class, 'checkPaymentStatus'])->name('mpesa.checkStatus');
+});
+
 /*
 |--------------------------------------------------------------------------
 | PUBLIC ROUTES
@@ -88,8 +99,8 @@ Route::get('/events/{event}/tickets', [TicketController::class, 'show'])->name('
 | PUBLIC API ROUTES
 |--------------------------------------------------------------------------
 */
-Route::post('/mpesa/stkpush', [MpesaController::class, 'stkPush'])->name('mpesa.stkpush');
-Route::post('/mpesa/callback', [MpesaController::class, 'callback'])->name('mpesa.callback');
+// Route::post('/mpesa/stkpush', [MpesaController::class, 'stkPush'])->name('mpesa.stkpush');
+// Route::post('/mpesa/callback', [MpesaController::class, 'callback'])->name('mpesa.callback');
 
 Route::post('/pesapal/stkpush', [PesapalController::class, 'stkPush'])->name('pesapal.stkpush');
 Route::post('/pesapal/callback', [PesapalController::class, 'callback'])->name('pesapal.callback');
