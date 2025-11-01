@@ -5,7 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-
+ use Illuminate\Support\Facades\DB;
+ 
 class PesapalController extends Controller
 {
     /**
@@ -225,16 +226,21 @@ class PesapalController extends Controller
     /**
      * Handle completed Pesapal payments and register votes
      */
-    private function processSuccessfulPayment(string $trackingId, Request $request)
-    {
-        $payment = \App\Models\Payment::where('order_tracking_id', $trackingId)->first();
+
+
+private function processSuccessfulPayment(string $trackingId, Request $request)
+{
+    DB::transaction(function () use ($trackingId, $request) {
+        $payment = \App\Models\Payment::where('order_tracking_id', $trackingId)
+            ->lockForUpdate()
+            ->first();
 
         if (!$payment) {
             Log::warning('Payment not found during success processing', ['trackingId' => $trackingId]);
             return;
         }
 
-        // Prevent duplicate processing
+        // ✅ Prevent duplicate processing even under concurrency
         if ($payment->status === 'COMPLETED') {
             Log::info('Payment already processed', ['trackingId' => $trackingId]);
             return;
@@ -290,6 +296,7 @@ class PesapalController extends Controller
             'votes_added' => $votesToAdd,
             'amount' => $payment->amount,
         ]);
-    }
+    });
+}
 
 }
