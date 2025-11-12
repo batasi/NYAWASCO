@@ -11,18 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('payments', function (Blueprint $table) {
-            $table->integer('votes_count')->nullable();
+        Schema::create('water_meters', function (Blueprint $table) {
+            $table->id();
+            $table->timestamps();
         });
     }
-   
+
     /**
      * Reverse the migrations.
      */
     public function down(): void
     {
-        Schema::table('payments', function (Blueprint $table) {
-            $table->dropColumn('votes_count');
-        });
+        Schema::dropIfExists('water_meters');
     }
 };

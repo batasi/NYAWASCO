@@ -98,8 +98,8 @@
                             </div>
                         </div>
                         <div class="ml-4 flex-1">
-                            <dt class="text-sm font-medium text-gray-500 truncate">Organizers</dt>
-                            <dd class="text-2xl font-semibold text-gray-900">{{ $total_organizers ?? 0 }}</dd>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Pending Enrollees</dt>
+                            <dd class="text-2xl font-semibold text-gray-900">{{ $pending_enrollees ?? 0 }}</dd>
                         </div>
                     </div>
                 </div>
@@ -130,8 +130,8 @@
                             </div>
                         </div>
                         <div class="ml-4 flex-1">
-                            <dt class="text-sm font-medium text-gray-500 truncate">Attendees</dt>
-                            <dd class="text-2xl font-semibold text-gray-900">{{ $total_attendees ?? 0 }}</dd>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Verified Enrollees</dt>
+                            <dd class="text-2xl font-semibold text-gray-900">{{ $verified_enrollees ?? 0 }}</dd>
                         </div>
                     </div>
                 </div>
@@ -162,8 +162,39 @@
                             </div>
                         </div>
                         <div class="ml-4 flex-1">
-                            <dt class="text-sm font-medium text-gray-500 truncate">Vendors</dt>
-                            <dd class="text-2xl font-semibold text-gray-900">{{ $total_vendors ?? 0 }}</dd>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Active Learners</dt>
+                            <dd class="text-2xl font-semibold text-gray-900">{{ $active_learners ?? 0 }}</dd>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-5 py-3">
+                    <div class="text-sm">
+                        <a href="{{ route('admin.vendors.index') }}"
+                            class="font-medium text-yellow-600 hover:text-yellow-700 transition-colors duration-200 flex items-center">
+                            View all vendors
+                            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+               <!-- Vendors -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-md">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="h-12 w-12 rounded-lg bg-yellow-50 flex items-center justify-center">
+                                <svg class="h-6 w-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M3 7h18M5 7V5a2 2 0 012-2h10a2 2 0 012 2v2m-2 4v9a2 2 0 01-2 2H9a2 2 0 01-2-2v-9m10 0H7" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="ml-4 flex-1">
+                            <dt class="text-sm font-medium text-gray-500 truncate">All Learners</dt>
+                            <dd class="text-2xl font-semibold text-gray-900">{{ $all_learners ?? 0 }}</dd>
                         </div>
                     </div>
                 </div>
@@ -181,7 +212,6 @@
                 </div>
             </div>
         </div>
-
 
         <!-- Users Table Section -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8">

@@ -10,6 +10,7 @@ use App\Models\Vote;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Notifications\DatabaseNotification;
 use App\Models\User;
+use App\Models\Student_ef_list;
 use App\Models\Booking;
 use App\Models\VotePurchase;
 
@@ -70,6 +71,10 @@ class DashboardController extends Controller
         return [
             // Users
             'total_users' => User::count(),
+            'all_learners' => Student_ef_list::count(),
+            'active_learners' => Student_ef_list::where('type', 3)->where('status', 'verified')->count(),
+            'verified_enrollees' => Student_ef_list::where('type', 3)->where('status', 'verified')->count(),
+            'pending_enrollees' => Student_ef_list::where('type', 3)->where('status', 'pending')->count(),
             'total_attendees' => User::role('attendee')->count(),
             'total_vendors' => User::role('vendor')->count(),
             'total_organizers' => User::role('organizer')->count(),
