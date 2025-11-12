@@ -27,6 +27,10 @@ use App\Http\Controllers\NomineeCategoryController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\MpesaPaymentController;
+use App\Http\Controllers\Admin\CustomerController;
+use App\Http\Controllers\Admin\MeterController;
+use App\Http\Controllers\Admin\BillController;
+use App\Http\Controllers\Admin\MeterReadingController;
 
 /*
 |--------------------------------------------------------------------------
@@ -48,9 +52,177 @@ Route::post('/email/verification-notification', function (Request $request) {
     return back()->with('status', 'verification-link-sent');
 })->middleware(['auth', 'throttle:6,1'])->name('verification.send');
 
+/*
+|--------------------------------------------------------------------------
+| NYAWASCO ROUTES
+|--------------------------------------------------------------------------
+*/
+
+// Water Connection Routes
+Route::get('/services/water-connection', function () {
+    return view('services.water-connection');
+})->name('water-connection');
+
+Route::get('/services/sewer-connection', function () {
+    return view('services.sewer-connection');
+})->name('sewer-connection');
+
+Route::get('/services/bill-payment', function () {
+    return view('services.bill-payment');
+})->name('bill-payment');
+
+Route::get('/complaints/create', function () {
+    return view('complaints.create');
+})->name('complaints.create');
+
+Route::get('/report-corruption', function () {
+    return view('report-corruption');
+})->name('corruption-report');
+
+Route::get('/tenders', function () {
+    return view('tenders.index');
+})->name('tenders');
+
+Route::get('/careers', function () {
+    return view('careers.index');
+})->name('careers');
+
+Route::get('/reports', function () {
+    return view('reports.index');
+})->name('reports');
+
+Route::get('/downloads', function () {
+    return view('downloads.index');
+})->name('downloads');
+
+Route::get('/news', function () {
+    return view('news.index');
+})->name('news');
+
+Route::get('/news/{slug}', function ($slug) {
+    return view('news.show', compact('slug'));
+})->name('news.show');
+
+Route::get('/documentary', function () {
+    return view('documentary');
+})->name('documentary');
+
+// Service Routes
+Route::get('/services', function () {
+    return view('services.index');
+})->name('services');
+
+Route::get('/services/water-supply', function () {
+    return view('services.water-supply');
+})->name('water-supply');
+
+Route::get('/services/sewerage', function () {
+    return view('services.sewerage');
+})->name('sewerage');
+
+Route::get('/services/new-connections', function () {
+    return view('services.new-connections');
+})->name('new-connections');
+
+Route::get('/services/payments', function () {
+    return view('services.payments');
+})->name('payments');
+
+Route::get('/support', function () {
+    return view('support.index');
+})->name('support');
+
+// About Routes
+Route::get('/about', function () {
+    return view('about.index');
+})->name('about');
+
+Route::get('/about/management', function () {
+    return view('about.management');
+})->name('management');
+
+// Projects Routes
+Route::get('/projects', function () {
+    return view('projects.index');
+})->name('projects');
+
+// Contact Form Submission
+Route::post('/contact/submit', function (Request $request) {
+    // For now, just redirect back with success message
+    // You can implement email sending or database storage later
+    return back()->with('success', 'Your message has been sent successfully!');
+})->name('contact.submit');
 
 
-// M-PESA Payment Routes
+
+
+
+
+
+
+
+// ... your existing routes ...
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN ROUTES (ROLE-BASED)
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    // Dashboard
+    Route::get('dashboard', [UserController::class, 'index'])->name('dashboard');
+
+    // Customer Management Routes
+    Route::prefix('customers')->name('customers.')->group(function () {
+        Route::get('/', [CustomerController::class, 'index'])->name('index');
+        Route::get('/create', [CustomerController::class, 'create'])->name('create');
+        Route::post('/', [CustomerController::class, 'store'])->name('store');
+        Route::get('/{customer}', [CustomerController::class, 'show'])->name('show');
+        Route::get('/{customer}/edit', [CustomerController::class, 'edit'])->name('edit');
+        Route::put('/{customer}', [CustomerController::class, 'update'])->name('update');
+        Route::delete('/{customer}', [CustomerController::class, 'destroy'])->name('destroy');
+        
+        // Meter Readings
+        Route::get('/{customer}/readings', [CustomerController::class, 'meterReadings'])->name('meter-readings');
+        Route::get('/{customer}/readings/create', [CustomerController::class, 'createReading'])->name('readings.create');
+        Route::post('/{customer}/readings', [CustomerController::class, 'storeReading'])->name('readings.store');
+        
+        // Billing
+        Route::post('/{customer}/readings/{reading}/generate-bill', [CustomerController::class, 'generateBill'])->name('generate-bill');
+        Route::get('/{customer}/bills', [CustomerController::class, 'bills'])->name('bills');
+    });
+
+    // Meter Readings Management
+    Route::prefix('meter-readings')->name('meter-readings.')->group(function () {
+        Route::get('/', [MeterReadingController::class, 'index'])->name('index');
+        Route::get('/create', [MeterReadingController::class, 'create'])->name('create');
+        Route::post('/', [MeterReadingController::class, 'store'])->name('store');
+    });
+
+    // Meters Management (Simple overview)
+    Route::prefix('meters')->name('meters.')->group(function () {
+        Route::get('/', [MeterController::class, 'index'])->name('index');
+        Route::get('/{customer}', [MeterController::class, 'show'])->name('show');
+    });
+
+    // Billing Management
+    Route::prefix('bills')->name('bills.')->group(function () {
+        Route::get('/', [BillController::class, 'index'])->name('index');
+        Route::get('/generate', [BillController::class, 'generate'])->name('generate');
+        Route::post('/generate-bulk', [BillController::class, 'generateBulk'])->name('generate-bulk');
+        Route::get('/{bill}', [BillController::class, 'show'])->name('show');
+    });
+
+
+});
+
+/*
+|--------------------------------------------------------------------------
+| M-PESA Payment Routes
+|--------------------------------------------------------------------------
+*/
+
 Route::middleware('auth')->group(function () {
     Route::post('/pay/mpesa/initiate', [MpesaPaymentController::class, 'initiatePayment'])->name('mpesa.initiate');
     Route::post('/pay/mpesa/check-status', [MpesaPaymentController::class, 'checkPaymentStatus'])->name('mpesa.checkStatus');
@@ -58,6 +230,7 @@ Route::middleware('auth')->group(function () {
 
 // M-PESA callback (no auth required)
 Route::post('/payments/callback', [MpesaPaymentController::class, 'handleCallback'])->name('mpesa.callback');
+
 /*
 |--------------------------------------------------------------------------
 | PUBLIC ROUTES
@@ -81,24 +254,21 @@ Route::get('/organizers/{organizer}', [OrganizerController::class, 'show'])->nam
 
 Route::get('/search', [SearchController::class, 'index'])->name('search.index');
 
-// Static Pages
-Route::view('/pricing', 'static.pricing', ['title' => 'pricing'])->name('pricing');
-Route::view('/about', 'static.about', ['title' => 'About Us - EventSphere'])->name('about');
-Route::view('/contact', 'static.contact', ['title' => 'Contact Us - EventSphere'])->name('contact');
-Route::view('/privacy', 'static.privacy', ['title' => 'Privacy Policy - EventSphere'])->name('privacy');
-Route::view('/terms', 'static.terms', ['title' => 'Terms of Service - EventSphere'])->name('terms');
-Route::view('/help', 'static.help', ['title' => 'Help Center - EventSphere'])->name('help');
+// Static Pages (Updated for NYAWASCO)
+Route::view('/pricing', 'static.pricing', ['title' => 'Pricing - NYAWASCO'])->name('pricing');
+Route::view('/contact', 'static.contact', ['title' => 'Contact Us - NYAWASCO'])->name('contact');
+Route::view('/privacy', 'static.privacy', ['title' => 'Privacy Policy - NYAWASCO'])->name('privacy');
+Route::view('/terms', 'static.terms', ['title' => 'Terms of Service - NYAWASCO'])->name('terms');
+Route::view('/help', 'static.help', ['title' => 'Help Center - NYAWASCO'])->name('help');
 
 Route::get('/events/{event}/tickets', [TicketController::class, 'show'])->name('tickets.purchase.show');
-    Route::post('/events/{event}/tickets/purchase', [TicketController::class, 'purchase'])->name('tickets.purchase');
+Route::post('/events/{event}/tickets/purchase', [TicketController::class, 'purchase'])->name('tickets.purchase');
 
 /*
 |--------------------------------------------------------------------------
 | PUBLIC API ROUTES
 |--------------------------------------------------------------------------
 */
-// Route::post('/mpesa/stkpush', [MpesaController::class, 'stkPush'])->name('mpesa.stkpush');
-// Route::post('/mpesa/callback', [MpesaController::class, 'callback'])->name('mpesa.callback');
 
 Route::post('/pesapal/stkpush', [PesapalController::class, 'stkPush'])->name('pesapal.stkpush');
 Route::post('/pesapal/callback', [PesapalController::class, 'callback'])->name('pesapal.callback');
@@ -133,8 +303,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/tickets/{ticketPurchase}', [TicketController::class, 'showTicket'])->name('tickets.show');
     Route::get('/tickets/{ticketPurchase}/download', [TicketController::class, 'download'])->name('tickets.download');
     Route::get('/tickets/{ticketPurchase}/view', [TicketController::class, 'view'])->name('tickets.view');
-
-
 
     // Bookings
     Route::get('/bookings', [BookingController::class, 'index'])->name('bookings.index');
@@ -250,7 +418,6 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
         // Optional: dashboard route for vendor admin overview
         Route::get('/dashboard', [VendorController::class, 'dashboard'])->name('dashboard');
     });
-
 
     // Other admin management views
     Route::prefix('management')->name('management.')->group(function () {
