@@ -32,6 +32,7 @@ use App\Http\Controllers\Admin\MeterController;
 use App\Http\Controllers\BillController;
 use App\Http\Controllers\Admin\MeterReadingController;
 
+
 Route::prefix('payments')->group(function () {
     Route::get('/', [PaymentController::class, 'index'])->name('payments.index');
     Route::get('/create', [PaymentController::class, 'create'])->name('payments.create');
