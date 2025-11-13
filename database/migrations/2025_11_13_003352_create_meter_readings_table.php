@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('meter_readings', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('customer_id')->constrained()->onDelete('cascade');
+            $table->foreignId('customer_id')->nullable()->constrained()->onDelete('cascade');
             $table->decimal('current_reading', 10, 2);
             $table->decimal('previous_reading', 10, 2)->default(0);
             $table->decimal('consumption', 10, 2)->default(0); // current_reading - previous_reading

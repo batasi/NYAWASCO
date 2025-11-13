@@ -13,21 +13,25 @@ return new class extends Migration
             $table->string('customer_number')->unique();
             $table->string('first_name');
             $table->string('last_name');
-            $table->string('email')->unique();
+            $table->string('email');
             $table->string('phone');
-            $table->string('id_number')->unique();
+            $table->string('id_number');
             $table->text('physical_address');
-            $table->string('postal_address')->nullable();
-            $table->string('meter_number')->unique();
-            $table->enum('meter_type', ['domestic', 'commercial', 'industrial'])->default('domestic');
-            $table->enum('connection_type', ['new', 'existing'])->default('new');
-            $table->date('connection_date');
-            $table->enum('status', ['active', 'inactive', 'suspended'])->default('active');
+            $table->string('plot_number');
+            $table->string('house_number');
+            $table->string('estate')->nullable();
+            $table->string('meter_number')->unique()->nullable();
+            $table->string('meter_type')->default('domestic');
+            $table->string('connection_type')->default('residential');
             $table->decimal('initial_meter_reading', 10, 2)->default(0);
-            $table->date('initial_reading_date');
+            $table->date('connection_date')->nullable();
+            $table->enum('status', ['active', 'inactive', 'pending', 'suspended'])->default('pending');
+            $table->string('kra_pin')->nullable();
+            $table->string('property_owner');
+            $table->integer('expected_users')->nullable();
             $table->text('notes')->nullable();
-            $table->timestamps();
             $table->softDeletes();
+            $table->timestamps();
         });
     }
 

@@ -18,21 +18,25 @@ class Customer extends Model
         'phone',
         'id_number',
         'physical_address',
-        'postal_address',
+        'plot_number',
+        'house_number',
+        'estate',
         'meter_number',
         'meter_type',
         'connection_type',
+        'initial_meter_reading',
         'connection_date',
         'status',
-        'initial_meter_reading',
-        'initial_reading_date',
+        'kra_pin',
+        'property_owner',
+        'expected_users',
         'notes',
     ];
 
     protected $casts = [
         'connection_date' => 'date',
-        'initial_reading_date' => 'date',
         'initial_meter_reading' => 'decimal:2',
+        'expected_users' => 'integer',
     ];
 
     protected static function boot()
@@ -41,69 +45,30 @@ class Customer extends Model
 
         static::creating(function ($customer) {
             if (empty($customer->customer_number)) {
-                $customer->customer_number = 'CUST' . date('Ymd') . str_pad(static::withTrashed()->count() + 1, 4, '0', STR_PAD_LEFT);
-            }
-            
-            // Auto-generate meter number if not provided
-            if (empty($customer->meter_number)) {
-                $customer->meter_number = 'MTR' . date('Ymd') . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT);
+                $customer->customer_number = 'CUST' . date('Ymd') . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT);
             }
         });
-
-        static::created(function ($customer) {
-            // Create initial meter reading record
-            if ($customer->initial_meter_reading && $customer->initial_reading_date) {
-                MeterReading::create([
-                    'customer_id' => $customer->id,
-                    'current_reading' => $customer->initial_meter_reading,
-                    'previous_reading' => 0,
-                    'consumption' => $customer->initial_meter_reading,
-                    'reading_date' => $customer->initial_reading_date,
-                    'reading_type' => 'initial',
-                    'reading_period' => 'Initial Reading',
-                    'billed' => false,
-                    'read_by' => auth()->id() ?? 1,
-                    'notes' => 'Initial meter reading upon registration',
-                ]);
-            }
-        });
-    }
-
-    public function getFullNameAttribute()
-    {
-        return $this->first_name . ' ' . $this->last_name;
-    }
-
-    public function getFullAddressAttribute()
-    {
-        return $this->physical_address . ($this->postal_address ? "\n" . $this->postal_address : '');
     }
 
     // Relationships
+    public function waterApplication()
+    {
+        return $this->hasOne(WaterConnectionApplication::class);
+    }
+
+    public function meter()
+    {
+        return $this->hasOne(Meter::class);
+    }
+
     public function meterReadings()
     {
-        return $this->hasMany(MeterReading::class)->orderBy('reading_date', 'desc');
+        return $this->hasMany(MeterReading::class);
     }
 
     public function bills()
     {
-        return $this->hasMany(Bill::class)->orderBy('billing_date', 'desc');
-    }
-
-    public function payments()
-    {
-        return $this->hasMany(Payment::class);
-    }
-
-    public function latestMeterReading()
-    {
-        return $this->hasOne(MeterReading::class)->latestOfMany();
-    }
-
-    public function currentBillingPeriodReading()
-    {
-        $currentPeriod = now()->format('F Y');
-        return $this->hasOne(MeterReading::class)->where('reading_period', $currentPeriod);
+        return $this->hasMany(Bill::class);
     }
 
     // Scopes
@@ -112,48 +77,44 @@ class Customer extends Model
         return $query->where('status', 'active');
     }
 
-    public function scopeWithUnbilledReadings($query)
+    public function scopePending($query)
     {
-        return $query->whereHas('meterReadings', function ($q) {
-            $q->where('billed', false)
-              ->where('reading_type', 'monthly');
-        });
+        return $query->where('status', 'pending');
     }
 
-    public function getCurrentConsumptionAttribute()
+    public function scopeInactive($query)
     {
-        $latestReading = $this->latestMeterReading;
-        return $latestReading ? $latestReading->consumption : 0;
+        return $query->where('status', 'inactive');
     }
 
-    public function getLastBillingDateAttribute()
+    // Accessors
+    public function getFullNameAttribute()
     {
-        $lastBill = $this->bills()->latest()->first();
-        return $lastBill ? $lastBill->billing_date : null;
+        return $this->first_name . ' ' . $this->last_name;
     }
 
-    // New methods for meter management
-    public function scopeWithMeterNumber($query, $meterNumber)
+    public function getFullAddressAttribute()
     {
-        return $query->where('meter_number', $meterNumber);
+        $address = $this->plot_number . ', ' . $this->house_number;
+        if ($this->estate) {
+            $address .= ', ' . $this->estate;
+        }
+        return $address;
     }
 
-    public static function getAvailableMeterTypes()
+    public function getCurrentMeterReadingAttribute()
     {
-        return [
-            'domestic' => 'Domestic',
-            'commercial' => 'Commercial', 
-            'industrial' => 'Industrial',
-            'institutional' => 'Institutional',
-        ];
+        $latestReading = $this->meterReadings()->latest()->first();
+        return $latestReading ? $latestReading->current_reading : $this->initial_meter_reading;
     }
 
-
-    public function getInstallationAddressAttribute()
+    public function getLastReadingDateAttribute()
     {
-        return $this->physical_address;
+        $latestReading = $this->meterReadings()->latest()->first();
+        return $latestReading ? $latestReading->reading_date : null;
     }
 
+    // Static methods for dropdowns
     public static function getConnectionTypes()
     {
         return [
@@ -164,8 +125,13 @@ class Customer extends Model
         ];
     }
 
-    public function canHaveMeterAssigned()
+    public static function getAvailableMeterTypes()
     {
-        return empty($this->meter_number) || $this->meter_number === 'PENDING';
+        return [
+            'domestic' => 'Domestic - Single Phase',
+            'commercial' => 'Commercial - Three Phase',
+            'industrial' => 'Industrial - High Capacity',
+            'institutional' => 'Institutional - Bulk Meter',
+        ];
     }
 }

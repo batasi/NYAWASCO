@@ -31,6 +31,8 @@ use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\MeterController;
 use App\Http\Controllers\BillController;
 use App\Http\Controllers\Admin\MeterReadingController;
+use App\Http\Controllers\Admin\WaterConnectionController;
+
 use App\Models\Customer;
 
 
@@ -85,6 +87,14 @@ Route::post('/email/verification-notification', function (Request $request) {
 Route::get('/services/water-connection', function () {
     return view('services.water-connection');
 })->name('water-connection');
+
+// Show the form
+Route::get('/water-connection/apply', [WaterConnectionController::class, 'create'])
+    ->name('water-connection.apply');
+
+// Handle form submission
+Route::post('/water-connection/apply', [WaterConnectionController::class, 'store'])
+    ->name('water-connection.submit');
 
 Route::get('/services/sewer-connection', function () {
     return view('services.sewer-connection');
@@ -186,6 +196,24 @@ Route::post('/contact/submit', function (Request $request) {
 |--------------------------------------------------------------------------
 */
 
+
+// Public water connection application routes
+Route::get('/water-connection/apply', [WaterConnectionController::class, 'create'])->name('water-connection.apply');
+Route::post('/water-connection/submit', [WaterConnectionController::class, 'store'])->name('water-connection.submit');
+
+// Admin routes group
+Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
+    
+    // Water applications routes
+    Route::get('/water-applications', [WaterConnectionController::class, 'index'])->name('water-applications.index');
+    Route::get('/water-applications/{application}', [WaterConnectionController::class, 'show'])->name('water-applications.show');
+    Route::post('/water-applications/{application}/approve', [WaterConnectionController::class, 'approve'])->name('water-applications.approve');
+    Route::post('/water-applications/{application}/decline', [WaterConnectionController::class, 'decline'])->name('water-applications.decline');
+    
+    // Customers routes
+    Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
+});
+
 Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     // Dashboard
     Route::get('dashboard', [UserController::class, 'index'])->name('dashboard');
@@ -215,6 +243,8 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
             ]);
         })->name('customers.address');
     });
+
+
 
     // Meter Readings Management
     Route::prefix('meter-readings')->name('meter-readings.')->group(function () {

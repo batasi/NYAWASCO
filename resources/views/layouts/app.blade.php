@@ -998,7 +998,7 @@ use Illuminate\Support\Facades\Route;
                         <div class="dropdown-content">
                             <a href="{{ route('water-supply') }}">Water Supply</a>
                             <a href="{{ route('sewerage') }}">Sewerage Services</a>
-                            <a href="{{ route('new-connections') }}">New Connections</a>
+                            <a href="{{ route('water-connection') }}">New Water Connection</a>
                             <a href="{{ route('payments') }}">Bill Payments</a>
                         </div>
                     </div>
@@ -1013,7 +1013,7 @@ use Illuminate\Support\Facades\Route;
                                 </button>
                                 <div class="dropdown-content">
                                     <a href="{{ route('admin.customers.index') }}">All Customers</a>
-                                    <a href="{{ route('admin.customers.create') }}">Register Customer</a>
+                                    <a href="{{ route('water-connection') }}">Register Customer</a>
 
                                 </div>
                             </div>
@@ -1086,7 +1086,7 @@ use Illuminate\Support\Facades\Route;
                 <div class="mobile-dropdown-content" :class="{ 'open': mobileDropdowns.services }">
                     <a href="{{ route('water-supply') }}" @click="mobileMenuOpen = false">Water Supply</a>
                     <a href="{{ route('sewerage') }}" @click="mobileMenuOpen = false">Sewerage Services</a>
-                    <a href="{{ route('new-connections') }}" @click="mobileMenuOpen = false">New Connections</a>
+                    <a href="{{ route('water-connection') }}" @click="mobileMenuOpen = false">New Water Connections</a>
                     <a href="{{ route('payments') }}" @click="mobileMenuOpen = false">Bill Payments</a>
                 </div>
             </div>

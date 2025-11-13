@@ -1,89 +1,86 @@
 @extends('layouts.app')
 
-@section('title', 'Water Connection Application - NYAWASCO')
-
 @section('content')
-<div class="container mx-auto px-4 py-8">
-    <div class="max-w-4xl mx-auto">
-        <div class="bg-white rounded-lg shadow-lg p-6">
-            <div class="text-center mb-8">
-                <h1 class="text-3xl font-bold text-blue-700 mb-4">Water Connection Application</h1>
-                <p class="text-gray-600">Apply for a new water connection with NYAWASCO</p>
+
+<!-- Hero Section -->
+<section class="relative flex items-center justify-center text-center text-white overflow-hidden min-h-[70vh] pt-24">
+    <!-- Background Image: Natural river water -->
+    <img src="https://tse2.mm.bing.net/th/id/OIP.AeIKKhbEb1OdsgULPfYI0gHaFj?cb=ucfimgc2&rs=1&pid=ImgDetMain&o=7&rm=3"
+         alt="Natural river water background"
+         class="absolute inset-0 w-full h-full object-cover opacity-80 z-0">
+    
+    <!-- Blue Overlay -->
+    <div class="absolute inset-0 bg-gradient-to-b from-sky-900/70 to-sky-600/60 z-0"></div>
+
+    <!-- Hero Text -->
+    <div class="relative z-10 px-6">
+        <h1 class="text-4xl md:text-5xl font-bold mb-3 drop-shadow-lg">
+            New Water Connection
+        </h1>
+        <p class="text-lg text-sky-100 max-w-2xl mx-auto drop-shadow-md">
+            Seamlessly connect to clean, safe, and reliable water supply today.
+        </p>
+    </div>
+</section>
+
+
+<!-- Page Content -->
+<section class="relative bg-gradient-to-b from-sky-50 to-white py-20">
+    <!-- Light Water Texture -->
+    <div class="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/wavecut.png')] pointer-events-none"></div>
+
+    <div class="container mx-auto px-6 relative z-10">
+        <!-- Info Cards -->
+        <div class="grid md:grid-cols-2 gap-10 mb-12">
+            
+            <!-- Individual Requirements -->
+            <div class="bg-white rounded-2xl shadow-lg p-8 border-t-4 border-sky-600 hover:shadow-2xl transition transform hover:-translate-y-1">
+                <h2 class="text-2xl font-semibold text-sky-700 mb-6">Requirements for Individuals</h2>
+                <ul class="space-y-3 text-gray-700">
+                    <li class="flex items-start"><i class="fas fa-id-card text-sky-600 mt-1 mr-3"></i> Copy of National Identification Card (ID)</li>
+                    <li class="flex items-start"><i class="fas fa-file-alt text-sky-600 mt-1 mr-3"></i> Copy of KRA PIN Certificate</li>
+                    <li class="flex items-start"><i class="fas fa-file-signature text-sky-600 mt-1 mr-3"></i> Copy of Title Deed or introduction letter from agent/landlord</li>
+                    <li class="flex items-start"><i class="fas fa-clipboard-check text-sky-600 mt-1 mr-3"></i> Duly filled application form</li>
+                </ul>
             </div>
 
-            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-                <div class="flex items-center">
-                    <svg class="w-5 h-5 text-yellow-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                    </svg>
-                    <p class="text-yellow-700">This service is currently under development. Please visit our offices for water connection applications.</p>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div>
-                    <h2 class="text-xl font-semibold text-blue-700 mb-4">Requirements for Water Connection</h2>
-                    <ul class="space-y-2 text-gray-600">
-                        <li class="flex items-start">
-                            <svg class="w-5 h-5 text-green-500 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                            </svg>
-                            Completed application form
-                        </li>
-                        <li class="flex items-start">
-                            <svg class="w-5 h-5 text-green-500 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                            </svg>
-                            Copy of ID/Passport
-                        </li>
-                        <li class="flex items-start">
-                            <svg class="w-5 h-5 text-green-500 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                            </svg>
-                            Proof of ownership/tenancy
-                        </li>
-                        <li class="flex items-start">
-                            <svg class="w-5 h-5 text-green-500 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                            </svg>
-                            Site location sketch
-                        </li>
-                    </ul>
-                </div>
-
-                <div>
-                    <h2 class="text-xl font-semibold text-blue-700 mb-4">Contact Information</h2>
-                    <div class="space-y-3 text-gray-600">
-                        <div class="flex items-center">
-                            <svg class="w-5 h-5 text-blue-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
-                            </svg>
-                            NYAWASCO Headquarters, Nyamira
-                        </div>
-                        <div class="flex items-center">
-                            <svg class="w-5 h-5 text-blue-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/>
-                            </svg>
-                            +254 728 725 559
-                        </div>
-                        <div class="flex items-center">
-                            <svg class="w-5 h-5 text-blue-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
-                                <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
-                            </svg>
-                            info@nyawasco.co.ke
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="mt-8 text-center">
-                <a href="{{ route('home') }}" 
-                   class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold transition duration-200 inline-block">
-                    Return to Homepage
-                </a>
+            <!-- Company Requirements -->
+            <div class="bg-white rounded-2xl shadow-lg p-8 border-t-4 border-blue-600 hover:shadow-2xl transition transform hover:-translate-y-1">
+                <h2 class="text-2xl font-semibold text-blue-700 mb-6">Requirements for Companies & Institutions</h2>
+                <ul class="space-y-3 text-gray-700">
+                    <li class="flex items-start"><i class="fas fa-building text-blue-600 mt-1 mr-3"></i> Copy of Certificate of Incorporation</li>
+                    <li class="flex items-start"><i class="fas fa-file-alt text-blue-600 mt-1 mr-3"></i> Copy of KRA PIN Certificate</li>
+                    <li class="flex items-start"><i class="fas fa-file-contract text-blue-600 mt-1 mr-3"></i> Copy of Title Deed</li>
+                    <li class="flex items-start"><i class="fas fa-clipboard-list text-blue-600 mt-1 mr-3"></i> Duly filled application form</li>
+                    <li class="flex items-start"><i class="fas fa-id-badge text-blue-600 mt-1 mr-3"></i> Copy of CR12</li>
+                </ul>
             </div>
         </div>
+
+        <!-- Change of Tenancy -->
+        <div class="bg-white rounded-2xl shadow-lg p-8 border-t-4 border-teal-600 max-w-3xl mx-auto hover:shadow-2xl transition transform hover:-translate-y-1">
+            <h2 class="text-2xl font-semibold text-teal-700 mb-6">Change of Tenancy Requirements</h2>
+            <ul class="space-y-3 text-gray-700">
+                <li class="flex items-start"><i class="fas fa-id-card text-teal-600 mt-1 mr-3"></i> Copy of National Identification Card (ID)</li>
+                <li class="flex items-start"><i class="fas fa-file-alt text-teal-600 mt-1 mr-3"></i> Copy of KRA PIN Certificate</li>
+                <li class="flex items-start"><i class="fas fa-file-signature text-teal-600 mt-1 mr-3"></i> Introduction letter from agent/landlord</li>
+                <li class="flex items-start"><i class="fas fa-clipboard-check text-teal-600 mt-1 mr-3"></i> Duly filled application form</li>
+            </ul>
+        </div>
+
+       <!-- Action Buttons -->
+        <div class="relative z-10 flex flex-col md:flex-row justify-center top-10 items-center mt-16 gap-4">
+            <a href="{{ route('water-connection.apply') }}"
+            class="inline-flex items-center justify-center px-8 py-4 bg-gradient-to-r from-sky-700 to-blue-600 text-blue rounded-full hover:opacity-90 transition text-lg font-semibold shadow-lg">
+                <i class="fas fa-globe mr-2 text-black"></i> Apply Water Connection Online
+            </a>
+            <a href="#"
+            class="inline-flex items-center justify-center px-8 py-4 bg-white text-sky-700 border border-sky-600 rounded-full hover:bg-sky-50 transition text-lg font-semibold shadow">
+                <i class="fas fa-download mr-2"></i> Download Application Form
+            </a>
+        </div>
+
     </div>
-</div>
+</section>
+
 @endsection
