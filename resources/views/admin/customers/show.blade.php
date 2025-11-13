@@ -1,5 +1,5 @@
 @extends('layouts.app')
-
+@php use Illuminate\Support\Facades\Storage; @endphp
 @section('title', 'Customer Details - NYAWASCO')
 
 @section('content')
