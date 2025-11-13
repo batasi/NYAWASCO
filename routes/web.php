@@ -51,6 +51,7 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/bills/{bill}', [BillController::class, 'update'])->name('bills.edit');
     Route::delete('/bills/{bill}', [BillController::class, 'destroy'])->name('bills.destroy');
 });
+use App\Models\Customer;
 
 /*
 |--------------------------------------------------------------------------
@@ -177,12 +178,6 @@ Route::post('/contact/submit', function (Request $request) {
 
 
 
-
-
-
-
-// ... your existing routes ...
-
 /*
 |--------------------------------------------------------------------------
 | ADMIN ROUTES (ROLE-BASED)
@@ -211,6 +206,12 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
         // Billing
         Route::post('/{customer}/readings/{reading}/generate-bill', [CustomerController::class, 'generateBill'])->name('generate-bill');
         Route::get('/{customer}/bills', [CustomerController::class, 'bills'])->name('bills');
+
+         Route::get('/customers/{customer}/address', function (Customer $customer) {
+            return response()->json([
+                'address' => $customer->physical_address
+            ]);
+        })->name('customers.address');
     });
 
     // Meter Readings Management
@@ -226,16 +227,27 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
         Route::get('/{customer}', [MeterController::class, 'show'])->name('show');
     });
 
-    // Billing Management
-    Route::prefix('bills')->name('bills.')->group(function () {
-        Route::get('/', [BillController::class, 'index'])->name('index');
-        Route::get('/generate', [BillController::class, 'generate'])->name('generate');
-        Route::post('/generate-bulk', [BillController::class, 'generateBulk'])->name('generate-bulk');
-        Route::get('/{bill}', [BillController::class, 'show'])->name('show');
+    // Meter Management Routes
+    Route::prefix('meters')->name('meters.')->group(function () {
+        Route::get('/', [MeterController::class, 'index'])->name('index');
+        Route::get('/available', [MeterController::class, 'available'])->name('available');
+        Route::get('/assigned', [MeterController::class, 'assigned'])->name('assigned');
+        Route::get('/by-location', [MeterController::class, 'byLocation'])->name('by-location');
+      
+        Route::post('/', [MeterController::class, 'store'])->name('store');
+        Route::get('/{meter}', [MeterController::class, 'show'])->name('show');
+        Route::get('/{meter}/edit', [MeterController::class, 'edit'])->name('edit');
+        Route::put('/{meter}', [MeterController::class, 'update'])->name('update');
+        Route::post('/{meter}/assign', [MeterController::class, 'assignToCustomer'])->name('assign');
+        Route::post('/{meter}/unassign', [MeterController::class, 'unassign'])->name('unassign');
     });
 
 
+   
+
 });
+
+
 
 /*
 |--------------------------------------------------------------------------

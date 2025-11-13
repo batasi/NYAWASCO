@@ -4,18 +4,29 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Meter extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'meter_number',
         'meter_type',
+        'meter_model',
         'status',
         'customer_id',
+        'installation_address',
         'installation_date',
-        'notes'
+        'last_maintenance_date',
+        'initial_reading',
+        'notes',
+    ];
+
+    protected $casts = [
+        'installation_date' => 'date',
+        'last_maintenance_date' => 'date',
+        'initial_reading' => 'decimal:2',
     ];
 
     protected static function boot()
@@ -29,25 +40,77 @@ class Meter extends Model
         });
     }
 
+    // Relationships
     public function customer()
     {
         return $this->belongsTo(Customer::class);
     }
 
-    public function readings()
+    public function meterReadings()
     {
         return $this->hasMany(MeterReading::class);
     }
 
-    // Scope to get available meters
+    public function latestReading()
+    {
+        return $this->hasOne(MeterReading::class)->latestOfMany();
+    }
+
+    // Scopes
     public function scopeAvailable($query)
     {
         return $query->where('status', 'available');
     }
 
-    // Scope to get assigned meters
     public function scopeAssigned($query)
     {
         return $query->where('status', 'assigned');
+    }
+
+    public function scopeFaulty($query)
+    {
+        return $query->where('status', 'faulty');
+    }
+
+    public function scopeByLocation($query, $location)
+    {
+        return $query->where('installation_address', 'like', "%{$location}%");
+    }
+
+    // Accessors
+    public function getCurrentReadingAttribute()
+    {
+        return $this->latestReading ? $this->latestReading->current_reading : $this->initial_reading;
+    }
+
+    public function getLastReadingDateAttribute()
+    {
+        return $this->latestReading ? $this->latestReading->reading_date : null;
+    }
+
+    public function getTotalConsumptionAttribute()
+    {
+        return $this->meterReadings()->sum('consumption');
+    }
+
+    public function getIsAssignedAttribute()
+    {
+        return $this->status === 'assigned' && $this->customer_id !== null;
+    }
+
+    // Get initial reading with date
+    public function getInitialReadingWithDateAttribute()
+    {
+        $initialReading = $this->meterReadings()
+            ->where('reading_type', 'initial')
+            ->first();
+
+        return $initialReading ? [
+            'reading' => $initialReading->current_reading,
+            'date' => $initialReading->reading_date
+        ] : [
+            'reading' => $this->initial_reading,
+            'date' => $this->installation_date
+        ];
     }
 }

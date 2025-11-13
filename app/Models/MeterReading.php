@@ -55,6 +55,13 @@ class MeterReading extends Model
         });
     }
 
+      // Add this to allow null customer_id
+    public function __construct(array $attributes = [])
+    {
+        parent::__construct($attributes);
+        $this->attributes['customer_id'] = $this->attributes['customer_id'] ?? null;
+    }
+
     // Relationships
     public function customer()
     {

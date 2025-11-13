@@ -148,6 +148,12 @@ class Customer extends Model
         ];
     }
 
+
+    public function getInstallationAddressAttribute()
+    {
+        return $this->physical_address;
+    }
+
     public static function getConnectionTypes()
     {
         return [
