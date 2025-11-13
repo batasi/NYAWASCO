@@ -13,11 +13,16 @@ return new class extends Migration
     {
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('ef_id')->constrained('student_ef_lists')->onDelete('cascade');
-            $table->decimal('amount', 12, 2);
-            $table->text('remarks')->nullable();
+            $table->foreignId('bill_id')->constrained('bills')->onDelete('cascade');
+            $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->string('payment_no')->unique();
+            $table->date('payment_date')->nullable();
+            $table->decimal('amount', 10, 2)->default(0);
+            $table->string('payment_method')->nullable(); // e.g., MPESA, Cash, Bank
+            $table->string('transaction_reference')->nullable();
+            $table->string('payment_status')->default('pending'); // pending, completed, failed
+            $table->text('notes')->nullable();
             $table->timestamps();
-
         });
     }
 

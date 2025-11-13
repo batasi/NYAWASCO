@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('water_meters', function (Blueprint $table) {
             $table->id();
+            $table->unsignedBigInteger('user_id');
+            $table->unsignedBigInteger('meter');
             $table->timestamps();
         });
     }

@@ -25,10 +25,10 @@ use Illuminate\Support\Facades\Route;
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
-    
+
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <!-- Swiper CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
 
@@ -125,25 +125,25 @@ use Illuminate\Support\Facades\Route;
         .nav-top-bar {
             padding: 0.4rem 0;
         }
-        
+
         .top-nav-compact {
             justify-content: center;
             gap: 0.75rem;
         }
-        
+
         .mobile-contact {
             gap: 0.75rem;
             justify-content: center;
         }
-        
+
         .mobile-contact a span {
             display: none;
         }
-        
+
         .mobile-contact a {
             gap: 0;
         }
-        
+
         .mobile-social {
             gap: 0.5rem;
         }
@@ -154,11 +154,11 @@ use Illuminate\Support\Facades\Route;
             flex-direction: column;
             gap: 0.5rem;
         }
-        
+
         .mobile-contact {
             gap: 1rem;
         }
-        
+
         .mobile-social {
             gap: 0.75rem;
         }
@@ -168,11 +168,11 @@ use Illuminate\Support\Facades\Route;
         .mobile-contact {
             gap: 0.75rem;
         }
-        
+
         .mobile-social {
             gap: 0.5rem;
         }
-        
+
         .mobile-social a {
             font-size: 0.9rem;
         }
@@ -184,7 +184,7 @@ use Illuminate\Support\Facades\Route;
         color: #FFFFFF;
         position: sticky;
         top: 0;
-        z-index: 1000;
+        z-index: 50;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     }
 
@@ -650,7 +650,7 @@ use Illuminate\Support\Facades\Route;
     .mobile-only {
         display: block;
     }
-    
+
     .desktop-only {
         display: none;
     }
@@ -659,7 +659,7 @@ use Illuminate\Support\Facades\Route;
         .mobile-only {
             display: none;
         }
-        
+
         .desktop-only {
             display: block;
         }
@@ -763,7 +763,7 @@ use Illuminate\Support\Facades\Route;
         .quick-links-grid {
             grid-template-columns: repeat(3, 1fr);
         }
-        
+
         .quick-link-icon {
             width: 70px;
             height: 70px;
@@ -776,17 +776,17 @@ use Illuminate\Support\Facades\Route;
             grid-template-columns: repeat(4, 1fr);
             gap: 1.5rem;
         }
-        
+
         .quick-link-card {
             padding: 2rem 1rem;
         }
-        
+
         .quick-link-icon {
             width: 80px;
             height: 80px;
             font-size: 2.5rem;
         }
-        
+
         .quick-link-text {
             font-size: 0.9rem;
         }
@@ -807,15 +807,15 @@ use Illuminate\Support\Facades\Route;
         margin: 1rem;
         max-height: 85vh;
     }
-    
+
     .modal-body {
         padding: 1rem;
     }
-    
+
     .modal-header {
         padding: 1rem;
     }
-    
+
     .modal-header h2 {
         font-size: 1.5rem;
     }
@@ -826,11 +826,11 @@ use Illuminate\Support\Facades\Route;
         margin: 0.5rem;
         border-radius: 0.5rem;
     }
-    
+
     .grid.grid-cols-1.md\:grid-cols-2 {
         grid-template-columns: 1fr;
     }
-    
+
     .modal-body {
         padding: 0.75rem;
     }
@@ -846,7 +846,7 @@ use Illuminate\Support\Facades\Route;
     .modal-body {
         padding: 0.5rem;
     }
-    
+
     .btn {
         padding: 0.625rem 1.25rem;
         font-size: 0.8rem;
@@ -919,9 +919,9 @@ use Illuminate\Support\Facades\Route;
 
 </head>
 
-<body x-data="{ 
-    signupOpen: false, 
-    loginOpen: false, 
+<body x-data="{
+    signupOpen: false,
+    loginOpen: false,
     mobileMenuOpen: false,
     mobileDropdowns: {}
 }" class="font-sans antialiased body-bg">
@@ -970,13 +970,13 @@ use Illuminate\Support\Facades\Route;
                         <img src="{{ asset('img/Logo.png') }}" alt="NYAWASCO Logo">
                         </a>
                     </div>
-                   
+
                 </div>
 
                 <!-- Desktop Navigation -->
                 <div class="nav-links">
                     <a href="{{ route('home') }}" class="nav-link">Home</a>
-                    
+
                     <div class="dropdown">
                         <button class="dropdown-btn">
                             About Us
@@ -1014,20 +1014,21 @@ use Illuminate\Support\Facades\Route;
                                 <div class="dropdown-content">
                                     <a href="{{ route('admin.customers.index') }}">All Customers</a>
                                     <a href="{{ route('admin.customers.create') }}">Register Customer</a>
-                                
+
                                 </div>
                             </div>
 
-                            
-                            
+
+
                             <a href="{{ route('admin.meters.index') }}" class="nav-link">Meters</a>
-                            
+                            <a href="{{ route('bills.index') }}" class="nav-link">Billings</a>
+                            <a href="{{ route('payments.index') }}" class="nav-link">Payments</a>
+
                         @endif
                     @endauth
 
                     <a href="{{ route('projects') }}" class="nav-link">Projects</a>
                     <a href="{{ route('careers') }}" class="nav-link">Careers</a>
-                    <a href="#contact" class="nav-link">Contact Us</a>
                 </div>
 
                 <!-- Desktop Auth -->
@@ -1063,7 +1064,7 @@ use Illuminate\Support\Facades\Route;
 
         <div class="mobile-nav-links">
             <a href="{{ route('home') }}" class="mobile-nav-link" @click="mobileMenuOpen = false">Home</a>
-            
+
             <div class="mobile-nav-item">
                 <button class="mobile-dropdown-btn" @click="mobileDropdowns.about = !mobileDropdowns.about">
                     About Us
@@ -1091,8 +1092,6 @@ use Illuminate\Support\Facades\Route;
             </div>
 
             <a href="{{ route('projects') }}" class="mobile-nav-link" @click="mobileMenuOpen = false">Projects</a>
-            <a href="{{ route('careers') }}" class="mobile-nav-link" @click="mobileMenuOpen = false">Careers</a>
-            <a href="#contact" class="mobile-nav-link" @click="mobileMenuOpen = false">Contact Us</a>
         </div>
 
         @guest
@@ -1119,7 +1118,7 @@ use Illuminate\Support\Facades\Route;
                     <img src="{{ asset('img/Logo.png') }}" class="h-16 w-auto">
                 </a>
             </div>
-            
+
             <x-validation-errors class="mb-4" />
 
             <form method="POST" action="{{ route('register') }}" id="registrationForm">
@@ -1206,14 +1205,14 @@ use Illuminate\Support\Facades\Route;
                         <img src="{{ asset('img/Logo.png') }}" class="h-16 w-auto">
                     </a>
                 </div>
-                
+
                 <form method="POST" action="{{ route('login') }}">
                     @csrf
                     <div class="mb-4">
                         <x-label for="login_email" value="Email Address" />
                         <x-input id="login_email" class="form-input block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus autocomplete="email" placeholder="Enter your email address" />
                     </div>
-                    
+
                     <div class="mb-4">
                         <x-label for="login_password" value="Password" />
                         <x-input id="login_password" class="form-input block mt-1 w-full" type="password" name="password" required autocomplete="current-password" placeholder="Enter your password" />
@@ -1224,14 +1223,14 @@ use Illuminate\Support\Facades\Route;
                             <input type="checkbox" name="remember" class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
                             <span class="ml-2 text-sm text-gray-600">Remember me</span>
                         </label>
-                        
+
                         @if (Route::has('password.request'))
                         <a href="{{ route('password.request') }}" class="text-sm text-blue-600 hover:text-blue-800 transition-colors">
                             Forgot password?
                         </a>
                         @endif
                     </div>
-                    
+
                     <div class="mb-6">
                         <button type="submit" class="w-full btn-primary font-medium py-3 px-4 rounded-lg transition duration-200">
                             Log In
@@ -1308,7 +1307,6 @@ use Illuminate\Support\Facades\Route;
                         <li><a href="{{ route('about') }}">About Us</a></li>
                         <li><a href="{{ route('services') }}">Services</a></li>
                         <li><a href="{{ route('projects') }}">Projects</a></li>
-                        <li><a href="{{ route('careers') }}">Careers</a></li>
                     </ul>
                 </div>
 
@@ -1359,7 +1357,7 @@ use Illuminate\Support\Facades\Route;
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-    
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize Swiper
@@ -1388,9 +1386,9 @@ use Illuminate\Support\Facades\Route;
             document.addEventListener('click', function(event) {
                 const mobileMenu = document.querySelector('.mobile-menu');
                 const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
-                
-                if (mobileMenu.classList.contains('open') && 
-                    !mobileMenu.contains(event.target) && 
+
+                if (mobileMenu.classList.contains('open') &&
+                    !mobileMenu.contains(event.target) &&
                     !mobileMenuBtn.contains(event.target)) {
                     mobileMenu.classList.remove('open');
                 }
@@ -1400,13 +1398,13 @@ use Illuminate\Support\Facades\Route;
             document.addEventListener('click', function(event) {
                 const signupModal = document.querySelector('[x-show="signupOpen"]');
                 const loginModal = document.querySelector('[x-show="loginOpen"]');
-                
-                if (signupModal && signupModal.style.display !== 'none' && 
+
+                if (signupModal && signupModal.style.display !== 'none' &&
                     !signupModal.querySelector('.modal-container').contains(event.target)) {
                     signupOpen = false;
                 }
-                
-                if (loginModal && loginModal.style.display !== 'none' && 
+
+                if (loginModal && loginModal.style.display !== 'none' &&
                     !loginModal.querySelector('.modal-container').contains(event.target)) {
                     loginOpen = false;
                 }

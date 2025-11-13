@@ -29,8 +29,28 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\MpesaPaymentController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\MeterController;
-use App\Http\Controllers\Admin\BillController;
+use App\Http\Controllers\BillController;
 use App\Http\Controllers\Admin\MeterReadingController;
+
+Route::prefix('payments')->group(function () {
+    Route::get('/', [PaymentController::class, 'index'])->name('payments.index');
+    Route::get('/create', [PaymentController::class, 'create'])->name('payments.create');
+    Route::post('/', [PaymentController::class, 'store'])->name('payments.store');
+    Route::get('/{payment}', [PaymentController::class, 'show'])->name('payments.show');
+    Route::get('/{payment}/edit', [PaymentController::class, 'edit'])->name('payments.edit');
+    Route::put('/{payment}', [PaymentController::class, 'update'])->name('payments.update');
+    Route::delete('/{payment}', [PaymentController::class, 'destroy'])->name('payments.destroy');
+});
+// web.php
+Route::get('/bills/{bill}/info', [BillController::class, 'info']);
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/bills', [BillController::class, 'index'])->name('bills.index');
+    Route::post('/bills', [BillController::class, 'store'])->name('bills.store');
+    Route::get('/bills/{bill}', [BillController::class, 'show'])->name('bills.show');
+    Route::put('/bills/{bill}', [BillController::class, 'update'])->name('bills.edit');
+    Route::delete('/bills/{bill}', [BillController::class, 'destroy'])->name('bills.destroy');
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -182,12 +202,12 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
         Route::get('/{customer}/edit', [CustomerController::class, 'edit'])->name('edit');
         Route::put('/{customer}', [CustomerController::class, 'update'])->name('update');
         Route::delete('/{customer}', [CustomerController::class, 'destroy'])->name('destroy');
-        
+
         // Meter Readings
         Route::get('/{customer}/readings', [CustomerController::class, 'meterReadings'])->name('meter-readings');
         Route::get('/{customer}/readings/create', [CustomerController::class, 'createReading'])->name('readings.create');
         Route::post('/{customer}/readings', [CustomerController::class, 'storeReading'])->name('readings.store');
-        
+
         // Billing
         Route::post('/{customer}/readings/{reading}/generate-bill', [CustomerController::class, 'generateBill'])->name('generate-bill');
         Route::get('/{customer}/bills', [CustomerController::class, 'bills'])->name('bills');

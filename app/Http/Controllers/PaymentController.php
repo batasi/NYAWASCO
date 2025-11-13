@@ -2,52 +2,147 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\TicketPurchase;
-use App\Models\Booking;
+use App\Models\Payment;
+use App\Models\Bill;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
-use App\Models\Event;
 
 class PaymentController extends Controller
 {
-    public function process($type, $id)
+    /**
+     * Display a listing of payments.
+     */
+    public function index(Request $request)
     {
-        if ($type === 'ticket') {
-            $purchase = TicketPurchase::with(['event', 'ticket'])->findOrFail($id);
-            return view('payments.process', compact('type', 'id', 'purchase'));
-        } elseif ($type === 'booking') {
-            $booking = Booking::with(['bookable'])->findOrFail($id);
-            return view('payments.process', compact('type', 'id', 'booking'));
+        $query = Payment::with(['user', 'bill']);
+
+        // Search filter
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where('payment_no', 'like', "%{$search}%")
+                  ->orWhereHas('user', function($q) use ($search) {
+                      $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                  });
         }
 
-        abort(404);
+        // Status filter
+        if ($request->filled('status') && $request->status != 'all') {
+            $query->where('payment_status', $request->status);
+        }
+
+        // Sorting
+        $query->orderBy('payment_date', 'desc');
+
+        $payments = $query->paginate(10)->withQueryString();
+
+        // For modal dropdowns
+        $bills = Bill::with('user')->get();
+        $users = User::all();
+
+        return view('payments.index', compact('payments', 'bills', 'users'));
     }
 
-    public function complete(Request $request, $type, $id)
+    /**
+     * Show the form for creating a new payment (optional, using modal here).
+     */
+    public function create()
     {
-        // Handle payment completion logic here
-        // This would integrate with your payment gateway (Pesapal)
+        $bills = Bill::with('user')->get();
+        $users = User::all();
+        return view('payments.create', compact('bills', 'users'));
+    }
 
-        if ($type === 'ticket') {
-            $purchase = TicketPurchase::findOrFail($id);
-            $purchase->update([
-                'status' => 'paid',
-                'paid_at' => now(),
-            ]);
+    /**
+     * Store a newly created payment in storage.
+     */
+    public function store(Request $request)
+    {
+        $request->validate([
+            'bill_id' => 'required|exists:bills,id',
+            'user_id' => 'required|exists:users,id',
+            'payment_no' => 'required|unique:payments,payment_no',
+            'payment_date' => 'required|date',
+            'amount' => 'required|numeric|min:0',
+            'payment_method' => 'required|string',
+            'transaction_reference' => 'nullable|string|max:255',
+            'payment_status' => 'required|in:pending,completed,failed',
+            'notes' => 'nullable|string',
+        ]);
 
-            // Also update the associated booking
-            Booking::where('bookable_type', Event::class)
-                ->where('bookable_id', $purchase->event_id)
-                ->where('user_id', $purchase->user_id)
-                ->update([
-                    'status' => 'confirmed',
-                    'payment_status' => 'paid',
-                    'amount_paid' => $purchase->final_amount,
-                    'payment_reference' => 'PAY-' . strtoupper(Str::random(10)),
-                ]);
-        }
+        $payment = Payment::create([
+            'bill_id' => $request->bill_id,
+            'user_id' => $request->user_id,
+            'payment_no' => $request->payment_no ?? 'PAY-' . Str::upper(Str::random(6)),
+            'payment_date' => $request->payment_date,
+            'amount' => $request->amount,
+            'payment_method' => $request->payment_method,
+            'transaction_reference' => $request->transaction_reference,
+            'payment_status' => $request->payment_status,
+            'notes' => $request->notes,
+        ]);
 
-        return redirect()->route('bookings.index')
-            ->with('success', 'Payment completed successfully!');
+        return redirect()->route('payments.index')->with('success', 'Payment created successfully.');
+    }
+
+    /**
+     * Display the specified payment.
+     */
+    public function show(Payment $payment)
+    {
+        $payment->load(['user', 'bill']);
+        return view('payments.show', compact('payment'));
+    }
+
+    /**
+     * Show the form for editing the specified payment.
+     */
+    public function edit(Payment $payment)
+    {
+        $bills = Bill::with('user')->get();
+        $users = User::all();
+        return view('payments.edit', compact('payment', 'bills', 'users'));
+    }
+
+    /**
+     * Update the specified payment in storage.
+     */
+    public function update(Request $request, Payment $payment)
+    {
+        $request->validate([
+            'bill_id' => 'required|exists:bills,id',
+            'user_id' => 'required|exists:users,id',
+            'payment_no' => 'required|unique:payments,payment_no,' . $payment->id,
+            'payment_date' => 'required|date',
+            'amount' => 'required|numeric|min:0',
+            'payment_method' => 'required|string',
+            'transaction_reference' => 'nullable|string|max:255',
+            'payment_status' => 'required|in:pending,completed,failed',
+            'notes' => 'nullable|string',
+        ]);
+
+        $payment->update([
+            'bill_id' => $request->bill_id,
+            'user_id' => $request->user_id,
+            'payment_no' => $request->payment_no,
+            'payment_date' => $request->payment_date,
+            'amount' => $request->amount,
+            'payment_method' => $request->payment_method,
+            'transaction_reference' => $request->transaction_reference,
+            'payment_status' => $request->payment_status,
+            'notes' => $request->notes,
+        ]);
+
+        return redirect()->route('payments.index')->with('success', 'Payment updated successfully.');
+    }
+
+    /**
+     * Remove the specified payment from storage.
+     */
+    public function destroy(Payment $payment)
+    {
+        $payment->delete();
+        return redirect()->route('payments.index')->with('success', 'Payment deleted successfully.');
     }
 }
