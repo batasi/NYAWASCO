@@ -31,6 +31,8 @@ use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\MeterController;
 use App\Http\Controllers\BillController;
 use App\Http\Controllers\Admin\MeterReadingController;
+use App\Models\Customer;
+
 
 
 Route::prefix('payments')->group(function () {
@@ -52,7 +54,6 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/bills/{bill}', [BillController::class, 'update'])->name('bills.edit');
     Route::delete('/bills/{bill}', [BillController::class, 'destroy'])->name('bills.destroy');
 });
-use App\Models\Customer;
 
 /*
 |--------------------------------------------------------------------------
