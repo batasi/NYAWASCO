@@ -11,43 +11,10 @@
 
 <div class="min-h-screen bg-gray-50">
     <!-- Enhanced Header -->
-    <div class="bg-white shadow-sm border-b border-gray-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-4">
-                    <div class="flex-shrink-0">
-                        <div class="h-10 w-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                            <span class="text-white font-bold text-lg">J</span>
-                        </div>
-                    </div>
-                    <div>
-                        <h1 class="text-2xl font-bold text-gray-900">
-                            Admin Dashboard
-                        </h1>
-                        <p class="text-sm text-gray-500">
-                            Manage the Javent platform
-                        </p>
-                    </div>
-                </div>
-                <div class="flex items-center space-x-3">
-                    <a href=""
-                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
-                        </svg>
-                        Manage Users
-                    </a>
-                    <a href=""
-                        class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                        </svg>
-                        Manage Events
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
+
+    @include('components.dashboard-header')
+
+
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <!-- Enhanced Stats Cards -->
@@ -214,6 +181,7 @@
         </div>
 
         <!-- Users Table Section -->
+        @can('view users')
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8">
             <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
                 <div class="flex items-center justify-between">
@@ -242,8 +210,7 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Events</th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-100">
@@ -289,12 +256,11 @@
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {{ $user->created_at->format('M d, Y') }}
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {{ rand(0, 15) }}
-                            </td>
+
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <div class="flex justify-end space-x-2">
+                                <div class="flex justify-start space-x-2">
                                     <!-- Edit Button -->
+                                     @can('edit users')
                                     <button type="button"
                                         class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200 edit-user-btn"
                                         data-user-id="{{ $user->id }}"
@@ -306,8 +272,9 @@
                                         </svg>
                                         Edit
                                     </button>
-
+                                    @endcan
                                     <!-- Permissions Button -->
+                                     @can('edit permissions')
                                     <button type="button"
                                         class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors duration-200 roles-permissions-btn"
                                         data-user-id="{{ $user->id }}"
@@ -318,7 +285,8 @@
                                         </svg>
                                         Permissions
                                     </button>
-
+                                    @endcan
+                                    @can('delete users')
                                     <!-- Delete Button -->
                                     <button type="button"
                                         class="inline-flex items-center px-3 py-1.5 border border-transparent rounded-lg text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200 delete-user-btn"
@@ -329,6 +297,7 @@
                                         </svg>
                                         Delete
                                     </button>
+                                    @endcan
                                 </div>
                             </td>
                         </tr>
@@ -406,6 +375,7 @@
                 </div>
             </div>
         </div>
+        @endcan
 
         <!-- Pending Approvals Table Section -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">

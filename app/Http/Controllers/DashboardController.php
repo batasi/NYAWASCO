@@ -75,9 +75,9 @@ class DashboardController extends Controller
             'active_learners' => Student_ef_list::where('type', 3)->where('status', 'verified')->count(),
             'verified_enrollees' => Student_ef_list::where('type', 3)->where('status', 'verified')->count(),
             'pending_enrollees' => Student_ef_list::where('type', 3)->where('status', 'pending')->count(),
-            'total_attendees' => User::role('attendee')->count(),
-            'total_vendors' => User::role('vendor')->count(),
-            'total_organizers' => User::role('organizer')->count(),
+            'total_attendees' => User::role('ict')->count(),
+            'total_vendors' => User::role('manager')->count(),
+            'total_organizers' => User::role('admin')->count(),
 
             // Events & voting
             'total_events' => Event::count(),

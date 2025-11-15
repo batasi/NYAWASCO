@@ -16,37 +16,58 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // ✅ Define permissions
         $permissions = [
-            // Event permissions
-            'view events',
-            'create events',
-            'edit events',
-            'delete events',
-            'publish events',
-            'manage event categories',
-
-            // Voting permissions
-            'view voting',
-            'create voting',
-            'edit voting',
-            'delete voting',
-            'manage voting categories',
-
             // User management
+            'add users',
             'view users',
             'edit users',
             'delete users',
             'manage roles',
 
-            // Organizer specific
-            'manage own events',
-            'manage own voting',
-            'view event analytics',
-            'view voting analytics',
+            // Customer management
+            'add customers',
+            'view customers',
+            'edit customers',
+            'delete customers',
 
-            // Vendor specific
-            'manage services',
-            'view bookings',
-            'manage bookings',
+            // Permissions management
+            'view permissions',
+            'edit permissions',
+
+            // Payments management
+            'add payments',
+            'view payments',
+            'edit payments',
+            'delete payments',
+
+            // Bills management
+            'add bills',
+            'view bills',
+            'edit bills',
+            'delete bills',
+
+            // Meters management
+            'add meters',
+            'view meters',
+            'edit meters',
+            'delete meters',
+
+            // Meters readings management
+            'add readings',
+            'view readings',
+            'edit readings',
+            'delete readings',
+
+            // applications management
+            'add applications',
+            'view applications',
+            'edit applications',
+            'delete applications',
+
+            // reports management
+            'add reports',
+            'view reports',
+            'edit reports',
+            'delete reports',
 
             // System
             'access admin panel',
@@ -60,45 +81,272 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // ✅ Create roles safely
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
-        $organizerRole = Role::firstOrCreate(['name' => 'organizer']);
-        $vendorRole = Role::firstOrCreate(['name' => 'vendor']);
-        $attendeeRole = Role::firstOrCreate(['name' => 'attendee']);
+        $ictRole = Role::firstOrCreate(['name' => 'ict']);
+        $developerRole = Role::firstOrCreate(['name' => 'developer']);
+        $managerRole = Role::firstOrCreate(['name' => 'manager']);
+        $ceoRole = Role::firstOrCreate(['name' => 'ceo']);
+        $chiefRole = Role::firstOrCreate(['name' => 'chief']);
+        $billerRole = Role::firstOrCreate(['name' => 'biller']);
+        $registrarRole = Role::firstOrCreate(['name' => 'registrar']);
+        $reportRole = Role::firstOrCreate(['name' => 'report']);
 
         // ✅ Assign permissions per role
-        $adminRole->syncPermissions(Permission::all());
+        $developerRole->syncPermissions(Permission::all());
 
-        $organizerRole->syncPermissions([
-            'view events',
-            'create events',
-            'edit events',
-            'delete events',
-            'publish events',
-            'view voting',
-            'create voting',
-            'edit voting',
-            'delete voting',
-            'manage own events',
-            'manage own voting',
-            'view event analytics',
-            'view voting analytics',
+        $adminRole->syncPermissions([
+            // User management
+            'add users',
+            'view users',
+            'edit users',
+            'delete users',
+            'manage roles',
+
+            // Customer management
+            'add customers',
+            'view customers',
+            'edit customers',
+            'delete customers',
+
+            // Permissions management
+            'view permissions',
+            'edit permissions',
+
+            // Payments management
+            'add payments',
+            'view payments',
+            'edit payments',
+            'delete payments',
+
+            // Bills management
+            'add bills',
+            'view bills',
+            'edit bills',
+            'delete bills',
+
+            // Meters management
+            'add meters',
+            'view meters',
+            'edit meters',
+            'delete meters',
+
+            // Meters readings management
+            'add readings',
+            'view readings',
+            'edit readings',
+            'delete readings',
+
+            // applications management
+            'add applications',
+            'view applications',
+            'edit applications',
+            'delete applications',
+
+            // reports management
+            'add reports',
+            'view reports',
+            'edit reports',
+            'delete reports',
         ]);
 
-        $vendorRole->syncPermissions([
-            'view events',
-            'manage services',
-            'view bookings',
-            'manage bookings',
+        $ictRole->syncPermissions([
+            // User management
+
+            'view users',
+
+
+            // Customer management
+
+            'view customers',
+
+
+            // Permissions management
+            'view permissions',
+
+            // Payments management
+            'view payments',
+
+            // Bills management
+
+            'view bills',
+
+
+            // Meters management
+
+            'view meters',
+
+
+            // Meters readings management
+            'view readings',
+
+
+            // applications management
+
+            'view applications',
+
+
+            // reports management
+
+            'view reports',
+
         ]);
 
-        $attendeeRole->syncPermissions([
-            'view events',
-            'view voting',
+        $managerRole->syncPermissions([
+            // User management
+            'add users',
+            'view users',
+
+            // Customer management
+            'add customers',
+            'view customers',
+
+
+            // Payments management
+            'add payments',
+            'view payments',
+
+            // Bills management
+            'add bills',
+            'view bills',
+
+            // Meters management
+            'add meters',
+            'view meters',
+
+            // Meters readings management
+            'add readings',
+            'view readings',
+
+            // applications management
+            'add applications',
+            'view applications',
+
+            // reports management
+            'add reports',
+            'view reports',
+
+        ]);
+
+        $ceoRole->syncPermissions([
+            // User management
+            'add users',
+            'view users',
+
+            // Customer management
+            'add customers',
+            'view customers',
+
+
+            // Payments management
+            'add payments',
+            'view payments',
+
+            // Bills management
+            'add bills',
+            'view bills',
+
+            // Meters management
+            'add meters',
+            'view meters',
+
+            // Meters readings management
+            'add readings',
+            'view readings',
+
+            // applications management
+            'add applications',
+            'view applications',
+
+            // reports management
+            'add reports',
+            'view reports',
+
+        ]);
+
+        $chiefRole->syncPermissions([
+            // User management
+            'add users',
+            'view users',
+
+            // Customer management
+            'add customers',
+            'view customers',
+
+
+            // Payments management
+            'add payments',
+            'view payments',
+
+            // Bills management
+            'add bills',
+            'view bills',
+
+            // Meters management
+            'add meters',
+            'view meters',
+
+            // Meters readings management
+            'add readings',
+            'view readings',
+
+            // applications management
+            'add applications',
+            'view applications',
+
+            // reports management
+            'add reports',
+            'view reports',
+
+        ]);
+
+        $billerRole->syncPermissions([
+
+            // Bills management
+            'add bills',
+            'view bills',
+            'edit bills',
+            'delete bills',
+
+        ]);
+
+        $registrarRole->syncPermissions([
+
+            // Customer management
+            'add customers',
+            'view customers',
+
+            // Meters management
+            'add meters',
+            'view meters',
+
+            // Meters readings management
+            'add readings',
+            'view readings',
+
+            // applications management
+            'add applications',
+            'view applications',
+
+        ]);
+
+        $reportRole->syncPermissions([
+
+            // reports management
+            'add reports',
+            'view reports',
+            'edit reports',
+            'delete reports',
+
         ]);
 
         // ✅ Optional: Automatically assign admin role to the first admin user
-        $adminUser = User::where('email', 'admin@eventsphere.com')->first();
+        $adminUser = User::where('email', 'admin@mail.com')->first();
         if ($adminUser && !$adminUser->hasRole('admin')) {
             $adminUser->assignRole('admin');
+        }
+
+        $developerUser = User::where('email', 'developer@mail.com')->first();
+        if ($developerUser && !$developerUser->hasRole('developer')) {
+            $developerUser->assignRole('developer');
         }
 
         // ✅ Refresh Spatie cache
