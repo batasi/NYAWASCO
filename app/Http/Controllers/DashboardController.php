@@ -61,8 +61,8 @@ class DashboardController extends Controller
                 return view('dashboard.vendor', $data);
 
             default: // attendee or fallback
-                $data = array_merge($data, $this->getAttendeeData($user));
-                return view('dashboard.attendee', $data);
+                $data = array_merge($data, $this->getAdminData($user));
+                return view('dashboard.admin', $data);
         }
     }
 

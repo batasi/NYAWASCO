@@ -1012,8 +1012,7 @@ use Illuminate\Support\Facades\Route;
                     @auth
                         <livewire:navigation.user-dropdown />
                     @else
-                        <button @click="loginOpen = true" class="btn-secondary">Log in</button>
-                        <button @click="signupOpen = true" class="btn-primary">Sign up</button>
+                        <button @click="loginOpen = true" class="btn-primary">Log in</button>
                     @endauth
                 </div>
 
@@ -1072,8 +1071,7 @@ use Illuminate\Support\Facades\Route;
 
         @guest
         <div class="mobile-auth">
-            <button @click="loginOpen = true; mobileMenuOpen = false" class="btn-secondary w-full">Log in</button>
-            <button @click="signupOpen = true; mobileMenuOpen = false" class="btn-primary w-full">Sign up</button>
+            <button @click="loginOpen = true; mobileMenuOpen = false" class="btn-primary w-full">Log in</button>
         </div>
         @endguest
     </div>
