@@ -1,6 +1,5 @@
 @extends('layouts.app')
-
-@section('title', 'Javent')
+@props(['title' => 'Dashboard', 'subtitle' => 'Manage all activities in the system from a central position'])
 
 @section('content')
 @php

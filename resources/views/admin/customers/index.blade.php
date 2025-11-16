@@ -1,8 +1,32 @@
 @extends('layouts.app')
+@php
+use Illuminate\Support\Facades\Auth;
 
+// Prepare action buttons based on permissions
+$actionButtons = [];
+
+if (auth()->user()->can('view applications')) {
+    $actionButtons[] = [
+        'text' => 'Applications',
+        'href' => route('admin.water-applications.index'),
+        'icon' => 'fas fa-folder-open',
+        'color' => 'bg-green-600 hover:bg-green-700'
+    ];
+}
+
+if (auth()->user()->can('add customers')) {
+    $actionButtons[] = [
+        'text' => 'Add',
+        'href' => route('water-connection.apply'),
+        'icon' => 'fas fa-plus',
+        'color' => 'bg-green-600 hover:bg-green-700'
+    ];
+}
+@endphp
 @section('title', 'Customers - NYAWASCO')
 
 @section('content')
+@can('view customers')
 <!-- Background Image -->
 <div class="fixed inset-0 -z-10">
     <div class="absolute inset-0 bg-gradient-to-br from-blue-50/80 to-white/90"></div>
@@ -11,28 +35,11 @@
 <div class="container mx-auto px-4 py-8 relative z-10">
 
     <!-- Header Section -->
-    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8">
-        <div class="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
-            <h1 class="text-3xl font-bold text-blue-700 mb-2">Customer Management</h1>
-            <p class="text-gray-600">Manage water connection applications and customer accounts</p>
-        </div>
-        <div class="flex flex-wrap gap-3 mt-4 lg:mt-0">
-            <a href="{{ route('admin.water-applications.index') }}" 
-               class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition duration-200 flex items-center shadow-lg hover:shadow-xl transform hover:-translate-y-1">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                </svg>
-                View All Applications
-            </a>
-            <a href="{{ route('water-connection.apply') }}" 
-               class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition duration-200 flex items-center shadow-lg hover:shadow-xl transform hover:-translate-y-1">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                </svg>
-                New Application
-            </a>
-        </div>
-    </div>
+    @include('components.dashboard-header', [
+        'title' => 'Customer Management',
+        'subtitle' => 'Manage applications and customer accounts',
+        'actionButtons' => $actionButtons
+    ])
 
     <!-- Dashboard Stats -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -190,11 +197,11 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div class="flex space-x-2">
-                                <a href="{{ route('admin.customers.show', $customer) }}" 
+                                <a href="{{ route('admin.customers.show', $customer) }}"
                                    class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition duration-200 flex items-center">
                                     View
                                 </a>
-                                <a href="{{ route('admin.meter-readings.create', ['customer' => $customer->id]) }}" 
+                                <a href="{{ route('admin.meter-readings.create', ['customer' => $customer->id]) }}"
                                     class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm transition duration-200 flex items-center">
                                         <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
@@ -247,7 +254,7 @@
                 @endif
             </h2>
             <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
-                {{ $pendingApplications->count() }} 
+                {{ $pendingApplications->count() }}
                 @if($search ?? '')
                     found
                 @else
@@ -300,7 +307,7 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div class="flex space-x-2">
-                                <a href="/admin/water-applications/{{ $application->id }}" 
+                                <a href="/admin/water-applications/{{ $application->id }}"
                                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm transition duration-200 flex items-center shadow hover:shadow-md">
                                     <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -354,7 +361,7 @@
             @php
                 $recentApplications = \App\Models\WaterConnectionApplication::latest()->take(5)->get();
             @endphp
-            
+
             @foreach($recentApplications as $recentApp)
             <div class="flex items-center space-x-4 p-3 border border-gray-100 rounded-lg hover:bg-gray-50/50 transition duration-150">
                 <div class="flex-shrink-0">
@@ -387,8 +394,8 @@
                     </p>
                 </div>
                 <div class="flex-shrink-0">
-                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                        {{ $recentApp->status == 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                        {{ $recentApp->status == 'pending' ? 'bg-yellow-100 text-yellow-800' :
                            ($recentApp->status == 'approved' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800') }}">
                         {{ ucfirst($recentApp->status) }}
                     </span>
@@ -403,19 +410,19 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.querySelector('input[name="search"]');
-    
+
     if (searchInput) {
         // Focus on search input when page loads if there's a search term
         if (searchInput.value) {
             searchInput.focus();
         }
-        
+
         // Add real-time search suggestions (optional enhancement)
         searchInput.addEventListener('input', function() {
             // You can add AJAX real-time search here if needed
         });
     }
-    
+
     // Add keyboard shortcut for search (Ctrl+K or Cmd+K)
     document.addEventListener('keydown', function(e) {
         if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -427,4 +434,5 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+@endcan
 @endsection

@@ -3,15 +3,27 @@
 @section('title', 'Meters Management - NYAWASCO')
 
 @section('content')
+@can('view meters')
 <div class="container mx-auto px-4 py-8">
     <!-- Header -->
-    <div class="flex justify-between items-center mb-6">
-        <h1 class="text-3xl font-bold text-blue-700">Meters Management</h1>
-        <button onclick="openMeterModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition duration-200">
-            Register New Meter
-        </button>
-    </div>
+    @php
+    $actionButtons = [];
 
+    if (auth()->user()->can('add meters')) {
+        $actionButtons[] = [
+            'text' => 'Add Meter',
+            'onclick' => 'openMeterModal()',
+            'icon' => 'fas fa-plus',
+            'color' => 'bg-green-600 hover:bg-green-700'
+        ];
+    }
+    @endphp
+
+    @include('components.dashboard-header',[
+        'title' => 'Meters Management',
+        'subtitle' => 'Meters Management Platform',
+        'actionButtons' => $actionButtons
+    ])
     <!-- Statistics -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div class="bg-white rounded-lg shadow p-6 text-center">
@@ -132,7 +144,7 @@
                 </tbody>
             </table>
         </div>
-        
+
         <div class="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
             {{ $meters->links() }}
         </div>
@@ -156,7 +168,7 @@
                 <!-- Modal Body -->
                 <form id="meterRegistrationForm" action="{{ route('admin.meters.store') }}" method="POST" class="p-4 md:p-5">
                     @csrf
-                    
+
                     <div class="space-y-4 max-h-96 overflow-y-auto pr-2">
                         <div>
                             <label for="modal_meter_number" class="block text-sm font-medium text-gray-700 mb-1">Meter Number *</label>
@@ -164,7 +176,7 @@
                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm"
                                    placeholder="MTR20241215001">
                         </div>
-                        
+
                         <div>
                             <label for="modal_meter_type" class="block text-sm font-medium text-gray-700 mb-1">Meter Type *</label>
                             <select name="meter_type" id="modal_meter_type" required
@@ -188,7 +200,7 @@
                                     placeholder="0.00"
                                     value="0">
                             </div>
-                            
+
                             <div>
                                 <label for="modal_installation_date" class="block text-sm font-medium text-gray-700 mb-1">Installation Date</label>
                                 <input type="date" name="installation_date" id="modal_installation_date"
@@ -218,7 +230,7 @@
                                     placeholder="Customer's installation address">
                             </div>
                         </div>
-                        
+
                         <div>
                             <label for="modal_meter_model" class="block text-sm font-medium text-gray-700 mb-1">Model</label>
                             <input type="text" name="meter_model" id="modal_meter_model"
@@ -285,13 +297,13 @@
     // Handle form submission
     document.getElementById('meterRegistrationForm').addEventListener('submit', function(e) {
         e.preventDefault();
-        
+
         // Show loading state
         const submitBtn = this.querySelector('button[type="submit"]');
         const originalText = submitBtn.textContent;
         submitBtn.textContent = 'Registering...';
         submitBtn.disabled = true;
-        
+
         // Submit the form
         fetch(this.action, {
             method: 'POST',
@@ -323,7 +335,7 @@
     document.getElementById('modal_customer_id').addEventListener('change', function() {
         const customerFields = document.getElementById('customer_installation_fields');
         const installationAddress = document.getElementById('modal_installation_address');
-        
+
         if (this.value) {
             customerFields.classList.remove('hidden');
             // Auto-fill installation address if customer is selected
@@ -344,4 +356,5 @@
     document.getElementById('modal_installation_date').value = new Date().toISOString().split('T')[0];
     </script>
 </div>
+@endcan
 @endsection

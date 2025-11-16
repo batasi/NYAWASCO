@@ -1003,30 +1003,6 @@ use Illuminate\Support\Facades\Route;
                         </div>
                     </div>
 
-                    @auth
-                        @if(auth()->user()->hasRole('admin'))
-                            <!-- Customers Dropdown -->
-                            <div class="dropdown">
-                                <button class="dropdown-btn">
-                                    Customers
-                                    <i class="fas fa-chevron-down ml-1" style="font-size: 0.75rem;"></i>
-                                </button>
-                                <div class="dropdown-content">
-                                    <a href="{{ route('admin.customers.index') }}">All Customers</a>
-                                    <a href="{{ route('water-connection') }}">Register Customer</a>
-
-                                </div>
-                            </div>
-
-
-
-                            <a href="{{ route('admin.meters.index') }}" class="nav-link">Meters</a>
-                            <a href="{{ route('bills.index') }}" class="nav-link">Billings</a>
-                            <a href="{{ route('payments.index') }}" class="nav-link">Payments</a>
-
-                        @endif
-                    @endauth
-
                     <a href="{{ route('projects') }}" class="nav-link">Projects</a>
                     <a href="{{ route('careers') }}" class="nav-link">Careers</a>
                 </div>
