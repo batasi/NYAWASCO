@@ -942,18 +942,7 @@ use Illuminate\Support\Facades\Route;
             </div>
 
             <!-- Social Links -->
-            <div class="mobile-social desktop-only">
-                <a href="#" aria-label="Facebook">
-                    <i class="fab fa-facebook-f"></i>
-                </a>
-                <a href="#" aria-label="X">
-                    <span style="font-weight: bold; font-size: 1.2em;">X</span>
-                </a>
 
-                <a href="#" aria-label="Search">
-                    <i class="fas fa-search"></i>
-                </a>
-            </div>
         </div>
     </div>
 
