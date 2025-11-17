@@ -82,6 +82,156 @@
         </div>
     </div>
 
+    
+<!-- ADD THIS NEW DOCUMENTS SECTION -->
+@if($customer->waterApplication)
+<div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 mb-8 border border-white/20">
+    <h2 class="text-xl font-semibold text-blue-700 mb-4">Application Documents</h2>
+    
+    <div class="grid md:grid-cols-3 gap-4">
+        <!-- National ID -->
+        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition duration-200">
+            <div class="flex items-center justify-between mb-2">
+                <h4 class="font-medium text-gray-700">National ID</h4>
+                @if($customer->waterApplication->national_id_file)
+                    <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Uploaded</span>
+                @else
+                    <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">Missing</span>
+                @endif
+            </div>
+            @if($customer->waterApplication->national_id_file)
+                <div class="flex flex-col space-y-2">
+                    <a href="{{ Storage::url($customer->waterApplication->national_id_file) }}" 
+                       target="_blank"
+                       class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm flex items-center justify-center transition duration-200">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                        </svg>
+                        View Document
+                    </a>
+                    <a href="{{ Storage::url($customer->waterApplication->national_id_file) }}" 
+                       download
+                       class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm flex items-center justify-center transition duration-200">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                        </svg>
+                        Download
+                    </a>
+                </div>
+            @else
+                <p class="text-sm text-gray-500 italic text-center">No document uploaded</p>
+            @endif
+        </div>
+
+        <!-- KRA Pin -->
+        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition duration-200">
+            <div class="flex items-center justify-between mb-2">
+                <h4 class="font-medium text-gray-700">KRA Pin Certificate</h4>
+                @if($customer->waterApplication->kra_pin_file)
+                    <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Uploaded</span>
+                @else
+                    <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">Missing</span>
+                @endif
+            </div>
+            @if($customer->waterApplication->kra_pin_file)
+                <div class="flex flex-col space-y-2">
+                    <a href="{{ Storage::url($customer->waterApplication->kra_pin_file) }}" 
+                       target="_blank"
+                       class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm flex items-center justify-center transition duration-200">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                        </svg>
+                        View Document
+                    </a>
+                    <a href="{{ Storage::url($customer->waterApplication->kra_pin_file) }}" 
+                       download
+                       class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm flex items-center justify-center transition duration-200">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                        </svg>
+                        Download
+                    </a>
+                </div>
+            @else
+                <p class="text-sm text-gray-500 italic text-center">No document uploaded</p>
+            @endif
+        </div>
+
+        <!-- Title Document -->
+        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition duration-200">
+            <div class="flex items-center justify-between mb-2">
+                <h4 class="font-medium text-gray-700">Title Document</h4>
+                @if($customer->waterApplication->title_document)
+                    <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Uploaded</span>
+                @else
+                    <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">Missing</span>
+                @endif
+            </div>
+            @if($customer->waterApplication->title_document)
+                <div class="flex flex-col space-y-2">
+                    <a href="{{ Storage::url($customer->waterApplication->title_document) }}" 
+                       target="_blank"
+                       class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm flex items-center justify-center transition duration-200">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                        </svg>
+                        View Document
+                    </a>
+                    <a href="{{ Storage::url($customer->waterApplication->title_document) }}" 
+                       download
+                       class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm flex items-center justify-center transition duration-200">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                        </svg>
+                        Download
+                    </a>
+                </div>
+            @else
+                <p class="text-sm text-gray-500 italic text-center">No document uploaded</p>
+            @endif
+        </div>
+    </div>
+
+    <!-- Application Details -->
+    <div class="mt-6 pt-6 border-t border-gray-200">
+        <h3 class="text-lg font-medium text-gray-900 mb-3">Application Information</h3>
+        <div class="grid md:grid-cols-2 gap-4 text-sm">
+            <div>
+                <strong>Application ID:</strong> {{ $customer->waterApplication->id }}
+            </div>
+            <div>
+                <strong>Application Date:</strong> {{ $customer->waterApplication->created_at->format('M d, Y') }}
+            </div>
+            <div>
+                <strong>Application Status:</strong> 
+                <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                    {{ ucfirst($customer->waterApplication->status) }}
+                </span>
+            </div>
+            <div>
+                <strong>Processed By:</strong> {{ $customer->waterApplication->processedBy->name ?? 'System' }}
+            </div>
+        </div>
+    </div>
+</div>
+@else
+<!-- Show message if no application found -->
+<div class="bg-yellow-50/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 mb-8 border border-yellow-200">
+    <div class="flex items-center">
+        <svg class="w-8 h-8 text-yellow-600 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+        </svg>
+        <div>
+            <h3 class="text-lg font-semibold text-yellow-800">No Application Found</h3>
+            <p class="text-yellow-600">This customer was not created through a water connection application or the application data is not available.</p>
+        </div>
+    </div>
+</div>
+@endif
+
     <!-- Meter Information -->
     @if($customer->meter)
     <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 mb-8 border border-white/20">
