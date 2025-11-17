@@ -157,65 +157,69 @@
     @endif
 
     <!-- Reading Statistics -->
-    @if($customer->meter && $readingStats['total_readings'] > 0)
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div class="bg-blue-50/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-blue-200">
-            <div class="flex items-center">
-                <div class="p-3 bg-blue-100 rounded-lg">
-                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                    </svg>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-blue-600">Total Readings</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ $readingStats['total_readings'] }}</p>
-                </div>
+  @if($customer->meter && $readingStats['total_readings'] > 0)
+<div class="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-8">
+    <!-- Total Readings Card -->
+    <div class="bg-blue-50/80 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-lg p-3 md:p-6 border border-blue-200">
+        <div class="flex items-center justify-between md:justify-start">
+            <div class="p-2 bg-blue-100 rounded-lg">
+                <svg class="w-4 h-4 md:w-6 md:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
             </div>
-        </div>
-
-        <div class="bg-green-50/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-green-200">
-            <div class="flex items-center">
-                <div class="p-3 bg-green-100 rounded-lg">
-                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
-                    </svg>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-green-600">Last Reading</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ number_format($readingStats['last_reading']->current_reading, 2) }} m³</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-purple-50/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-purple-200">
-            <div class="flex items-center">
-                <div class="p-3 bg-purple-100 rounded-lg">
-                    <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                    </svg>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-purple-600">Avg Consumption</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ number_format($readingStats['average_consumption'], 2) }} m³</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-orange-50/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-orange-200">
-            <div class="flex items-center">
-                <div class="p-3 bg-orange-100 rounded-lg">
-                    <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-                    </svg>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-orange-600">Total Consumption</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ number_format($readingStats['total_consumption'], 2) }} m³</p>
-                </div>
+            <div class="text-right md:text-left md:ml-4 flex-1">
+                <p class="text-xs font-medium text-blue-600">Total Readings</p>
+                <p class="text-lg md:text-2xl font-bold text-gray-900">{{ $readingStats['total_readings'] }}</p>
             </div>
         </div>
     </div>
-    @endif
+
+    <!-- Last Reading Card -->
+    <div class="bg-green-50/80 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-lg p-3 md:p-6 border border-green-200">
+        <div class="flex items-center justify-between md:justify-start">
+            <div class="p-2 bg-green-100 rounded-lg">
+                <svg class="w-4 h-4 md:w-6 md:h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                </svg>
+            </div>
+            <div class="text-right md:text-left md:ml-4 flex-1">
+                <p class="text-xs font-medium text-green-600">Last Reading</p>
+                <p class="text-lg md:text-2xl font-bold text-gray-900">{{ number_format($readingStats['last_reading']->current_reading, 2) }} m³</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Average Consumption Card -->
+    <div class="bg-purple-50/80 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-lg p-3 md:p-6 border border-purple-200">
+        <div class="flex items-center justify-between md:justify-start">
+            <div class="p-2 bg-purple-100 rounded-lg">
+                <svg class="w-4 h-4 md:w-6 md:h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+            </div>
+            <div class="text-right md:text-left md:ml-4 flex-1">
+                <p class="text-xs font-medium text-purple-600">Avg Usage</p>
+                <p class="text-lg md:text-2xl font-bold text-gray-900">{{ number_format($readingStats['average_consumption'], 2) }} m³</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Consumption Card -->
+    <div class="bg-orange-50/80 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-lg p-3 md:p-6 border border-orange-200">
+        <div class="flex items-center justify-between md:justify-start">
+            <div class="p-2 bg-orange-100 rounded-lg">
+                <svg class="w-4 h-4 md:w-6 md:h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                </svg>
+            </div>
+            <div class="text-right md:text-left md:ml-4 flex-1">
+                <p class="text-xs font-medium text-orange-600">Total Usage</p>
+                <p class="text-lg md:text-2xl font-bold text-gray-900">{{ number_format($readingStats['total_consumption'], 2) }} m³</p>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
 
     <!-- Reading History -->
     @if($customer->meter)

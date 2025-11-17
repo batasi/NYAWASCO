@@ -244,6 +244,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
         })->name('customers.address');
     });
 
+    
 
 
     // Meter Readings Management
