@@ -121,6 +121,29 @@ private function getAdminData()
                                 ->get();
 
     $pending_approvals = $pending_approval_items->count();
+    // Monthly billed
+    $monthly_billed = Bill::selectRaw('MONTH(billing_period_start) as month, SUM(total_amount) as total')
+        ->groupBy('month')
+        ->pluck('total', 'month')
+        ->toArray();
+
+    $monthly_billed = array_replace(array_fill(1, 12, 0), $monthly_billed);
+
+    // Monthly collected
+    $monthly_collected = Payment::selectRaw('MONTH(payment_date) as month, SUM(amount) as total')
+        ->groupBy('month')
+        ->pluck('total', 'month')
+        ->toArray();
+
+    $monthly_collected = array_replace(array_fill(1, 12, 0), $monthly_collected);
+
+    // Bill status counts
+    $bill_status_counts = [
+        'paid' => Bill::where('bill_status', 'paid')->count(),
+        'unpaid' => Bill::where('bill_status', 'unpaid')->count(),
+        'overdue' => Bill::where('bill_status', 'unpaid')
+                        ->where('due_date', '<', now())->count(),
+    ];
 
     return [
         'total_customers'      => $total_customers,
@@ -153,6 +176,10 @@ private function getAdminData()
         // NEW
         'pending_approvals'        => $pending_approvals,
         'pending_approval_items'   => $pending_approval_items,
+
+        'monthly_billed' => array_values($monthly_billed),
+        'monthly_collected' => array_values($monthly_collected),
+        'bill_status_counts' => $bill_status_counts,
     ];
 }
 

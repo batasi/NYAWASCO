@@ -1377,6 +1377,78 @@ use Illuminate\Support\Facades\Route;
         });
     </script>
 
+    @php
+        $bill_status_counts = $bill_status_counts ?? [
+            'paid' => 0,
+            'unpaid' => 0,
+            'overdue' => 0,
+        ];
+
+        $monthly_billed = $monthly_billed ?? array_fill(0, 12, 0);
+        $monthly_collected = $monthly_collected ?? array_fill(0, 12, 0);
+    @endphp
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+
+            // Monthly Billing vs Collections
+            const monthlyLabels = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+            const billingData = @json($monthly_billed);
+            const collectedData = @json($monthly_collected);
+
+            new Chart(document.getElementById("billingCollectionsChart"), {
+                type: "line",
+                data: {
+                    labels: monthlyLabels,
+                    datasets: [
+                        {
+                            label: "Billed",
+                            data: billingData,
+                            borderColor: "rgb(37, 99, 235)",
+                            backgroundColor: "rgba(37, 99, 235, 0.3)",
+                            borderWidth: 2,
+                            tension: 0.4
+                        },
+                        {
+                            label: "Collected",
+                            data: collectedData,
+                            borderColor: "rgb(16, 185, 129)",
+                            backgroundColor: "rgba(16, 185, 129, 0.3)",
+                            borderWidth: 2,
+                            tension: 0.4
+                        }
+                    ]
+                }
+            });
+
+            // Bill Status Distribution
+            const billStatusCounts = @json($bill_status_counts);
+
+            new Chart(document.getElementById("billStatusChart"), {
+                type: "pie",
+                data: {
+                    labels: ["Paid", "Unpaid", "Overdue"],
+                    datasets: [{
+                        data: [
+                            billStatusCounts.paid,
+                            billStatusCounts.unpaid,
+                            billStatusCounts.overdue
+                        ],
+                        backgroundColor: [
+                            "rgb(34, 197, 94)",
+                            "rgb(234, 179, 8)",
+                            "rgb(239, 68, 68)"
+                        ]
+                    }]
+                }
+            });
+
+        });
+    </script>
+
+
     <!-- Livewire Scripts -->
     @livewireScripts
     <!-- Alpine.js -->

@@ -16,6 +16,7 @@
 
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
         <!-- Enhanced Stats Cards -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
 
@@ -227,6 +228,27 @@
                         </div>
                     </div>
                 </div>
+            </div>
+
+        </div>
+
+        <!-- Charts Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-10">
+
+            <!-- Monthly Billing vs Collections -->
+            <div class="bg-white rounded-xl shadow p-6">
+                <h3 class="text-lg font-semibold mb-4 text-gray-700">
+                    Monthly Billing vs Collections
+                </h3>
+                <canvas id="billingCollectionsChart" height="120"></canvas>
+            </div>
+
+            <!-- Bill Status Distribution -->
+            <div class="bg-white rounded-xl shadow p-6">
+                <h3 class="text-lg font-semibold mb-4 text-gray-700">
+                    Bill Status Distribution
+                </h3>
+                <canvas id="billStatusChart" height="120"></canvas>
             </div>
 
         </div>
