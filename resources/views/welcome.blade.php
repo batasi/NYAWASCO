@@ -458,7 +458,7 @@
                         <p class="text-gray-600 text-sm mb-4">
                             NYAWASCO launches a new water conservation awareness campaign to promote sustainable water usage...
                         </p>
-                        <a href="{{ route('news.show', 'water-conservation-campaign') }}" class="text-blue-600 hover:text-blue-800 font-semibold text-sm">
+                        <a href="#" class="text-blue-600 hover:text-blue-800 font-semibold text-sm">
                             Read More →
                         </a>
                     </div>
@@ -473,7 +473,7 @@
                         <p class="text-gray-600 text-sm mb-4">
                             Construction begins on new state-of-the-art water treatment plant to increase capacity...
                         </p>
-                        <a href="{{ route('news.show', 'new-water-treatment-plant') }}" class="text-blue-600 hover:text-blue-800 font-semibold text-sm">
+                        <a href="#" class="text-blue-600 hover:text-blue-800 font-semibold text-sm">
                             Read More →
                         </a>
                     </div>
@@ -488,7 +488,7 @@
                         <p class="text-gray-600 text-sm mb-4">
                             NYAWASCO engages with local communities to address water access challenges...
                         </p>
-                        <a href="{{ route('news.show', 'community-outreach-program') }}" class="text-blue-600 hover:text-blue-800 font-semibold text-sm">
+                        <a href="#" class="text-blue-600 hover:text-blue-800 font-semibold text-sm">
                             Read More →
                         </a>
                     </div>
@@ -496,7 +496,7 @@
             </div>
 
             <div class="text-center mt-12">
-                <a href="{{ route('news') }}" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold transition duration-300 inline-block">
+                <a href="#" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold transition duration-300 inline-block">
                     View All News
                 </a>
             </div>
@@ -570,7 +570,7 @@
                 <!-- Contact Form -->
                 <div>
                     <h3 class="text-2xl font-semibold text-blue-700 mb-6">Send us a Message</h3>
-                    <form action="{{ route('contact.submit') }}" method="POST" class="space-y-4">
+                    <form action="#" method="POST" class="space-y-4">
                         @csrf
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>

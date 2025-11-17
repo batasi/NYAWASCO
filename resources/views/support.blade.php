@@ -169,7 +169,7 @@
                 <!-- Contact Form -->
                 <div>
                     <h3 class="text-2xl font-semibold text-blue-700 mb-6">Send Us a Message</h3>
-                    <form action="{{ route('contact.submit') }}" method="POST" class="space-y-4">
+                    <form action="#" method="POST" class="space-y-4">
                         @csrf
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
