@@ -16,7 +16,7 @@
                 <!-- Slide 1 -->
                 <div class="swiper-slide relative">
                     <div class="absolute inset-0 bg-blue-900 bg-opacity-50 z-10"></div>
-                    <img src="/img/water-hero-1.jpg" alt="NYAWASCO Water Services" class="w-full h-full object-cover">
+                    <img src="/img/water-hero-1.jpeg" alt="NYAWASCO Water Services" class="w-full h-full object-cover">
                     <div class="absolute inset-0 z-20 flex items-center justify-center text-center px-4">
                         <div class="text-white max-w-4xl">
                             <h2 class="text-3xl md:text-5xl lg:text-6xl font-bold mb-4">Welcome to NYAWASCO</h2>
@@ -40,7 +40,7 @@
                 <!-- Slide 2 -->
                 <div class="swiper-slide relative">
                     <div class="absolute inset-0 bg-black bg-opacity-50 z-10"></div>
-                    <img src="/img/water-hero-2.jpg" alt="Water Conservation" class="w-full h-full object-cover">
+                    <img src="/img/water-hero-2.jpeg" alt="Water Conservation" class="w-full h-full object-cover">
                     <div class="absolute inset-0 z-20 flex items-center justify-center text-center px-4">
                         <div class="text-white max-w-4xl">
                             <h2 class="text-3xl md:text-5xl lg:text-6xl font-bold mb-4">Clean Water for All</h2>
@@ -58,7 +58,7 @@
                 <!-- Slide 3 -->
                 <div class="swiper-slide relative">
                     <div class="absolute inset-0 bg-black bg-opacity-50 z-10"></div>
-                    <img src="/img/water-hero-3.jpg" alt="Community Service" class="w-full h-full object-cover">
+                    <img src="/img/water-hero-3.jpeg" alt="Community Service" class="w-full h-full object-cover">
                     <div class="absolute inset-0 z-20 flex items-center justify-center text-center px-4">
                         <div class="text-white max-w-4xl">
                             <h2 class="text-3xl md:text-5xl lg:text-6xl font-bold mb-4">24/7 Customer Support</h2>
@@ -98,7 +98,7 @@
                 </div>
                 <div class="quick-link-text">New Water Connection</div>
             </a>
-            
+
             <!-- Sewer Connection -->
             <a href="{{ route('sewer-connection') }}" class="quick-link-card group">
                 <div class="quick-link-icon icon-sewer">
@@ -106,7 +106,7 @@
                 </div>
                 <div class="quick-link-text">New Sewer Connection</div>
             </a>
-            
+
             <!-- Bill Payment -->
             <a href="{{ route('bill-payment') }}" class="quick-link-card group">
                 <div class="quick-link-icon icon-payment">
@@ -114,7 +114,7 @@
                 </div>
                 <div class="quick-link-text">Pay For Services</div>
             </a>
-            
+
             <!-- Complaints -->
             <a href="{{ route('complaints.create') }}" class="quick-link-card group">
                 <div class="quick-link-icon icon-complaint">
@@ -122,7 +122,7 @@
                 </div>
                 <div class="quick-link-text">Lodge A Complaint</div>
             </a>
-            
+
             <!-- Corruption Report -->
             <a href="{{ route('corruption-report') }}" class="quick-link-card group">
                 <div class="quick-link-icon icon-corruption">
@@ -130,7 +130,7 @@
                 </div>
                 <div class="quick-link-text">Report Corruption</div>
             </a>
-            
+
             <!-- Tenders -->
             <a href="{{ route('tenders') }}" class="quick-link-card group">
                 <div class="quick-link-icon icon-tenders">
@@ -138,7 +138,7 @@
                 </div>
                 <div class="quick-link-text">Tenders</div>
             </a>
-            
+
             <!-- Careers -->
             <a href="{{ route('careers') }}" class="quick-link-card group">
                 <div class="quick-link-icon icon-careers">
@@ -146,7 +146,7 @@
                 </div>
                 <div class="quick-link-text">Careers</div>
             </a>
-            
+
             <!-- Reports -->
             <a href="{{ route('reports') }}" class="quick-link-card group">
                 <div class="quick-link-icon icon-reports">
@@ -154,7 +154,7 @@
                 </div>
                 <div class="quick-link-text">Reports</div>
             </a>
-            
+
             <!-- Downloads -->
             <a href="{{ route('downloads') }}" class="quick-link-card group">
                 <div class="quick-link-icon icon-downloads">
@@ -162,7 +162,7 @@
                 </div>
                 <div class="quick-link-text">Publications & Downloads</div>
             </a>
-            
+
             <!-- News -->
             <a href="{{ route('news') }}" class="quick-link-card group">
                 <div class="quick-link-icon icon-news">
@@ -170,7 +170,7 @@
                 </div>
                 <div class="quick-link-text">News & Events</div>
             </a>
-            
+
             <!-- Contacts -->
             <a href="#contact" class="quick-link-card group">
                 <div class="quick-link-icon icon-contacts">
@@ -178,7 +178,7 @@
                 </div>
                 <div class="quick-link-text">Contacts</div>
             </a>
-            
+
             <!-- Documentary -->
             <a href="{{ route('documentary') }}" class="quick-link-card group">
                 <div class="quick-link-icon icon-documentary">
@@ -344,14 +344,14 @@
                 <div>
                     <h2 class="text-3xl md:text-4xl font-bold text-blue-700 mb-6">About NYAWASCO</h2>
                     <p class="text-lg text-gray-700 mb-6 leading-relaxed">
-                        Nyamira Water and Sanitation Company (NYAWASCO) is committed to providing reliable, 
+                        Nyamira Water and Sanitation Company (NYAWASCO) is committed to providing reliable,
                         affordable, and sustainable water and sanitation services to the residents of Nyamira County.
                     </p>
                     <p class="text-lg text-gray-700 mb-8 leading-relaxed">
-                        With over 15 years of experience in water service provision, we continuously strive 
+                        With over 15 years of experience in water service provision, we continuously strive
                         to improve our infrastructure and services to meet the growing demands of our community.
                     </p>
-                    
+
                     <div class="grid grid-cols-2 gap-6 mb-8">
                         <div class="stat-card p-4 rounded-lg">
                             <div class="text-2xl font-bold text-blue-700 mb-1">Vision</div>
@@ -367,9 +367,9 @@
                         Read More About Us
                     </a>
                 </div>
-                
+
                 <div class="relative">
-                    <img src="/img/about-water.jpg" alt="About NYAWASCO" class="rounded-lg shadow-lg w-full">
+                    <img src="/img/about-water.jpeg" alt="About NYAWASCO" class="rounded-lg shadow-lg w-full">
                     <div class="absolute -bottom-6 -left-6 bg-white p-6 rounded-lg shadow-lg">
                         <div class="text-3xl font-bold text-blue-700 mb-2">15+ Years</div>
                         <div class="text-gray-600">Of Service Excellence</div>
@@ -392,7 +392,7 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <!-- Project 1 -->
                 <div class="news-card rounded-lg overflow-hidden">
-                    <img src="/img/project-1.jpg" alt="Water Network Expansion" class="w-full h-48 object-cover">
+                    <img src="/img/project-1.jpeg" alt="Water Network Expansion" class="w-full h-48 object-cover">
                     <div class="p-6">
                         <h3 class="text-xl font-semibold text-blue-700 mb-2">Water Network Expansion</h3>
                         <p class="text-gray-600 text-sm mb-4">
@@ -407,7 +407,7 @@
 
                 <!-- Project 2 -->
                 <div class="news-card rounded-lg overflow-hidden">
-                    <img src="/img/project-2.jpg" alt="Sewerage System Upgrade" class="w-full h-48 object-cover">
+                    <img src="/img/project-2.jpeg" alt="Sewerage System Upgrade" class="w-full h-48 object-cover">
                     <div class="p-6">
                         <h3 class="text-xl font-semibold text-blue-700 mb-2">Sewerage System Upgrade</h3>
                         <p class="text-gray-600 text-sm mb-4">
@@ -422,7 +422,7 @@
 
                 <!-- Project 3 -->
                 <div class="news-card rounded-lg overflow-hidden">
-                    <img src="/img/project-3.jpg" alt="Digital Metering" class="w-full h-48 object-cover">
+                    <img src="/img/project-3.jpeg" alt="Digital Metering" class="w-full h-48 object-cover">
                     <div class="p-6">
                         <h3 class="text-xl font-semibold text-blue-700 mb-2">Smart Metering Project</h3>
                         <p class="text-gray-600 text-sm mb-4">
@@ -451,7 +451,7 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <!-- News 1 -->
                 <div class="news-card rounded-lg overflow-hidden">
-                    <img src="/img/news-1.jpg" alt="Water Conservation" class="w-full h-48 object-cover">
+                    <img src="/img/news-1.jpeg" alt="Water Conservation" class="w-full h-48 object-cover">
                     <div class="p-6">
                         <div class="text-sm text-blue-600 font-semibold mb-2">November 15, 2024</div>
                         <h3 class="text-xl font-semibold text-gray-900 mb-3">Water Conservation Campaign Launch</h3>
@@ -466,7 +466,7 @@
 
                 <!-- News 2 -->
                 <div class="news-card rounded-lg overflow-hidden">
-                    <img src="/img/news-2.jpg" alt="Infrastructure" class="w-full h-48 object-cover">
+                    <img src="/img/news-2.jpeg" alt="Infrastructure" class="w-full h-48 object-cover">
                     <div class="p-6">
                         <div class="text-sm text-blue-600 font-semibold mb-2">October 28, 2024</div>
                         <h3 class="text-xl font-semibold text-gray-900 mb-3">New Water Treatment Plant</h3>
@@ -481,7 +481,7 @@
 
                 <!-- News 3 -->
                 <div class="news-card rounded-lg overflow-hidden">
-                    <img src="/img/news-3.jpg" alt="Community" class="w-full h-48 object-cover">
+                    <img src="/img/news-3.jpeg" alt="Community" class="w-full h-48 object-cover">
                     <div class="p-6">
                         <div class="text-sm text-blue-600 font-semibold mb-2">October 12, 2024</div>
                         <h3 class="text-xl font-semibold text-gray-900 mb-3">Community Outreach Program</h3>
@@ -517,7 +517,7 @@
                 <!-- Contact Information -->
                 <div>
                     <h3 class="text-2xl font-semibold text-blue-700 mb-6">Get In Touch</h3>
-                    
+
                     <div class="space-y-6">
                         <div class="flex items-start">
                             <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
@@ -575,26 +575,26 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-                                <input type="text" id="name" name="name" required 
+                                <input type="text" id="name" name="name" required
                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
                             </div>
                             <div>
                                 <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
-                                <input type="email" id="email" name="email" required 
+                                <input type="email" id="email" name="email" required
                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
                             </div>
                         </div>
                         <div>
                             <label for="subject" class="block text-sm font-medium text-gray-700 mb-1">Subject *</label>
-                            <input type="text" id="subject" name="subject" required 
+                            <input type="text" id="subject" name="subject" required
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
                         </div>
                         <div>
                             <label for="message" class="block text-sm font-medium text-gray-700 mb-1">Message *</label>
-                            <textarea id="message" name="message" rows="5" required 
+                            <textarea id="message" name="message" rows="5" required
                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"></textarea>
                         </div>
-                        <button type="submit" 
+                        <button type="submit"
                                 class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-semibold transition duration-300">
                             Send Message
                         </button>

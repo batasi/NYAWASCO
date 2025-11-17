@@ -19,7 +19,7 @@
         <!-- Enhanced Stats Cards -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
 
-            <!-- Total Users -->
+            <!-- Total Customers -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-md">
                 <div class="p-5">
                     <div class="flex items-center">
@@ -27,21 +27,21 @@
                             <div class="h-12 w-12 rounded-lg bg-blue-50 flex items-center justify-center">
                                 <svg class="h-6 w-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm6 0h-6v-1a6 6 0 019-5.197" />
+                                        d="M17 20h5V8H2v12h5m10 0a2 2 0 01-2 2H9a2 2 0 01-2-2m10 0v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4" />
                                 </svg>
                             </div>
                         </div>
                         <div class="ml-4 flex-1">
-                            <dt class="text-sm font-medium text-gray-500 truncate">Total Users</dt>
-                            <dd class="text-2xl font-semibold text-gray-900">{{ $total_users }}</dd>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Total Customers</dt>
+                            <dd class="text-2xl font-semibold text-gray-900">{{ $total_customers ?? ''}}</dd>
                         </div>
                     </div>
                 </div>
                 <div class="bg-gray-50 px-5 py-3">
                     <div class="text-sm">
-                        <a href="{{ route('admin.attendees.index') }}"
+                        <a href="#"
                             class="font-medium text-blue-600 hover:text-blue-700 transition-colors duration-200 flex items-center">
-                            View all users
+                            View all customers
                             <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M9 5l7 7-7 7"></path>
@@ -51,39 +51,7 @@
                 </div>
             </div>
 
-            <!-- Organizers -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-md">
-                <div class="p-5">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0">
-                            <div class="h-12 w-12 rounded-lg bg-indigo-50 flex items-center justify-center">
-                                <svg class="h-6 w-6 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                </svg>
-                            </div>
-                        </div>
-                        <div class="ml-4 flex-1">
-                            <dt class="text-sm font-medium text-gray-500 truncate">Pending Enrollees</dt>
-                            <dd class="text-2xl font-semibold text-gray-900">{{ $pending_enrollees ?? 0 }}</dd>
-                        </div>
-                    </div>
-                </div>
-                <div class="bg-gray-50 px-5 py-3">
-                    <div class="text-sm">
-                        <a href="{{ route('organizers.index') }}"
-                            class="font-medium text-indigo-600 hover:text-indigo-700 transition-colors duration-200 flex items-center">
-                            Manage organizers
-                            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M9 5l7 7-7 7"></path>
-                            </svg>
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Attendees -->
+            <!-- Active Customers -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-md">
                 <div class="p-5">
                     <div class="flex items-center">
@@ -91,21 +59,21 @@
                             <div class="h-12 w-12 rounded-lg bg-green-50 flex items-center justify-center">
                                 <svg class="h-6 w-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M17 20h5V8H2v12h5m10 0a2 2 0 01-2 2H9a2 2 0 01-2-2m10 0v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4" />
+                                        d="M5 13l4 4L19 7" />
                                 </svg>
                             </div>
                         </div>
                         <div class="ml-4 flex-1">
-                            <dt class="text-sm font-medium text-gray-500 truncate">Verified Enrollees</dt>
-                            <dd class="text-2xl font-semibold text-gray-900">{{ $verified_enrollees ?? 0 }}</dd>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Active Customers</dt>
+                            <dd class="text-2xl font-semibold text-gray-900">{{ $active_customers ?? '' }}</dd>
                         </div>
                     </div>
                 </div>
                 <div class="bg-gray-50 px-5 py-3">
                     <div class="text-sm">
-                        <a href="{{ route('admin.attendees.index') }}"
+                        <a href="#"
                             class="font-medium text-green-600 hover:text-green-700 transition-colors duration-200 flex items-center">
-                            View all attendees
+                            Manage customers
                             <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M9 5l7 7-7 7"></path>
@@ -115,7 +83,39 @@
                 </div>
             </div>
 
-            <!-- Vendors -->
+            <!-- Suspended Customers -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-md">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="h-12 w-12 rounded-lg bg-red-50 flex items-center justify-center">
+                                <svg class="h-6 w-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="ml-4 flex-1">
+                            <dt class="text-sm font-medium text-gray-500 truncate">Suspended Customers</dt>
+                            <dd class="text-2xl font-semibold text-gray-900">{{ $suspended_customers ?? '' }}</dd>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-5 py-3">
+                    <div class="text-sm">
+                        <a href="#"
+                            class="font-medium text-red-600 hover:text-red-700 transition-colors duration-200 flex items-center">
+                            Review suspended accounts
+                            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Bills -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-md">
                 <div class="p-5">
                     <div class="flex items-center">
@@ -128,16 +128,16 @@
                             </div>
                         </div>
                         <div class="ml-4 flex-1">
-                            <dt class="text-sm font-medium text-gray-500 truncate">Active Learners</dt>
-                            <dd class="text-2xl font-semibold text-gray-900">{{ $active_learners ?? 0 }}</dd>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Total Bills</dt>
+                            <dd class="text-2xl font-semibold text-gray-900">{{ $total_bills ?? ''}}</dd>
                         </div>
                     </div>
                 </div>
                 <div class="bg-gray-50 px-5 py-3">
                     <div class="text-sm">
-                        <a href="{{ route('admin.vendors.index') }}"
+                        <a href="{{ route('bills.index') }}"
                             class="font-medium text-yellow-600 hover:text-yellow-700 transition-colors duration-200 flex items-center">
-                            View all vendors
+                            View all bills
                             <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M9 5l7 7-7 7"></path>
@@ -146,29 +146,30 @@
                     </div>
                 </div>
             </div>
-               <!-- Vendors -->
+
+            <!-- Unpaid Bills -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-md">
                 <div class="p-5">
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
-                            <div class="h-12 w-12 rounded-lg bg-yellow-50 flex items-center justify-center">
-                                <svg class="h-6 w-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="h-12 w-12 rounded-lg bg-orange-50 flex items-center justify-center">
+                                <svg class="h-6 w-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M3 7h18M5 7V5a2 2 0 012-2h10a2 2 0 012 2v2m-2 4v9a2 2 0 01-2 2H9a2 2 0 01-2-2v-9m10 0H7" />
+                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                             </div>
                         </div>
                         <div class="ml-4 flex-1">
-                            <dt class="text-sm font-medium text-gray-500 truncate">All Learners</dt>
-                            <dd class="text-2xl font-semibold text-gray-900">{{ $all_learners ?? 0 }}</dd>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Unpaid Bills</dt>
+                            <dd class="text-2xl font-semibold text-gray-900">{{ $unpaid_bills ?? ''}}</dd>
                         </div>
                     </div>
                 </div>
                 <div class="bg-gray-50 px-5 py-3">
                     <div class="text-sm">
-                        <a href="{{ route('admin.vendors.index') }}"
-                            class="font-medium text-yellow-600 hover:text-yellow-700 transition-colors duration-200 flex items-center">
-                            View all vendors
+                        <a href="{{ route('bills.index') }}"
+                            class="font-medium text-orange-600 hover:text-orange-700 transition-colors duration-200 flex items-center">
+                            Review unpaid bills
                             <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M9 5l7 7-7 7"></path>
@@ -177,7 +178,59 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Total Payments -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-md">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="h-12 w-12 rounded-lg bg-purple-50 flex items-center justify-center">
+                                <svg class="h-6 w-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 8c-1.657 0-3 1.567-3 3.5S10.343 15 12 15s3-1.567 3-3.5S13.657 8 12 8z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="ml-4 flex-1">
+                            <dt class="text-sm font-medium text-gray-500 truncate">Total Payments</dt>
+                            <dd class="text-2xl font-semibold text-gray-900">{{ $total_payments ?? '' }}</dd>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-5 py-3">
+                    <div class="text-sm">
+                        <a href="{{ route('payments.index') }}"
+                            class="font-medium text-purple-600 hover:text-purple-700 transition-colors duration-200 flex items-center">
+                            View payment history
+                            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Revenue Collected -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-md col-span-1 md:col-span-2 lg:col-span-4">
+                <div class="p-6 flex items-center justify-between">
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Total Revenue Collected</dt>
+                        <dd class="text-3xl font-bold text-gray-900 mt-1">KES 0</dd>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <div class="h-16 w-16 rounded-xl bg-teal-50 flex items-center justify-center">
+                            <svg class="h-10 w-10 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 8v8m4-4H8m12 4V8a4 4 0 00-4-4H8a4 4 0 00-4 4v8a4 4 0 004 4h8a4 4 0 004-4z" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
+
 
         <!-- Users Table Section -->
         @can('view users')
@@ -376,6 +429,7 @@
         </div>
         @endcan
 
+        @can('view applications')
         <!-- Pending Approvals Table Section -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
@@ -400,36 +454,40 @@
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-100">
                         <!-- Sample approval items - you would replace with actual data -->
-                        <tr class="hover:bg-gray-50 transition-colors duration-150">
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm font-medium text-gray-900">Summer Music Festival 2024</div>
-                                <div class="text-sm text-gray-500">Large outdoor music event</div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                    Event
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="flex items-center">
-                                    <div class="h-8 w-8 rounded-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center border border-gray-200">
-                                        <span class="text-xs font-semibold text-green-700">M</span>
+                        @foreach ($pending_approval_items as $item)
+                            <tr>
+                                <td class="px-6 py-4">
+                                    <div class="text-sm font-medium text-gray-900">
+                                        {{ $item->first_name }} {{ $item->last_name }}
                                     </div>
-                                    <div class="ml-3">
-                                        <div class="text-sm font-medium text-gray-900">Music Events Co.</div>
+                                    <div class="text-sm text-gray-500">
+                                        Plot: {{ $item->plot_number }}, House: {{ $item->house_number }}
                                     </div>
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                May 15, 2024
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                                    Pending Review
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <div class="flex justify-end space-x-2">
+                                </td>
+
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                        Water Application
+                                    </span>
+                                </td>
+
+                                <td class="px-6 py-4">
+                                    {{ $item->email }}<br>
+                                    <span class="text-gray-500 text-sm">{{ $item->phone }}</span>
+                                </td>
+
+                                <td class="px-6 py-4 text-sm text-gray-500">
+                                    {{ $item->created_at->format('M d, Y') }}
+                                </td>
+
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                                        Pending Review
+                                    </span>
+                                </td>
+
+                                <td class="px-6 py-4 text-right">
+                                    <div class="flex justify-end space-x-2">
                                     <button class="inline-flex items-center px-3 py-1.5 border border-transparent rounded-lg text-xs font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200">
                                         <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
@@ -450,60 +508,9 @@
                                         Reject
                                     </button>
                                 </div>
-                            </td>
-                        </tr>
-                        <tr class="hover:bg-gray-50 transition-colors duration-150">
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm font-medium text-gray-900">Best Photography Contest</div>
-                                <div class="text-sm text-gray-500">Monthly photography competition</div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                                    Voting Contest
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="flex items-center">
-                                    <div class="h-8 w-8 rounded-full bg-gradient-to-br from-purple-100 to-purple-200 flex items-center justify-center border border-gray-200">
-                                        <span class="text-xs font-semibold text-purple-700">P</span>
-                                    </div>
-                                    <div class="ml-3">
-                                        <div class="text-sm font-medium text-gray-900">Photo Masters</div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                May 18, 2024
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                                    Pending Review
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <div class="flex justify-end space-x-2">
-                                    <button class="inline-flex items-center px-3 py-1.5 border border-transparent rounded-lg text-xs font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200">
-                                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                        </svg>
-                                        Approve
-                                    </button>
-                                    <button class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
-                                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                                        </svg>
-                                        Review
-                                    </button>
-                                    <button class="inline-flex items-center px-3 py-1.5 border border-transparent rounded-lg text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200">
-                                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                        </svg>
-                                        Reject
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
+                                </td>
+                            </tr>
+                        @endforeach
                     </tbody>
                 </table>
             </div>
@@ -518,6 +525,8 @@
                 </div>
             </div>
         </div>
+        @endcan
+
     </div>
 </div>
 
