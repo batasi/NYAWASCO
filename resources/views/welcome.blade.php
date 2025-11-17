@@ -24,10 +24,7 @@
                                 Providing reliable water and sanitation services to Nyamira County
                             </p>
                             <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                                <a href="{{ route('login') }}"
-                                   class="bg-white text-blue-700 hover:bg-blue-50 px-6 py-3 md:px-8 md:py-4 rounded-lg font-semibold text-base md:text-lg transition duration-300 transform hover:scale-105 inline-block text-center">
-                                    Customer Portal
-                                </a>
+
                                 <a href="#services"
                                    class="border-2 border-white text-white hover:bg-white hover:text-blue-700 px-6 py-3 md:px-8 md:py-4 rounded-lg font-semibold text-base md:text-lg transition duration-300 transform hover:scale-105 inline-block text-center">
                                     Our Services
