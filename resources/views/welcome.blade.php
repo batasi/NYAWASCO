@@ -100,7 +100,7 @@
             </a>
 
             <!-- Sewer Connection -->
-            <a href="{{ route('sewer-connection') }}" class="quick-link-card group">
+            <a href="{{ route('sewerage') }}" class="quick-link-card group">
                 <div class="quick-link-icon icon-sewer">
                     <i class="fas fa-recycle"></i>
                 </div>
@@ -108,7 +108,7 @@
             </a>
 
             <!-- Bill Payment -->
-            <a href="{{ route('bill-payment') }}" class="quick-link-card group">
+            <a href="#" class="quick-link-card group">
                 <div class="quick-link-icon icon-payment">
                     <i class="fas fa-credit-card"></i>
                 </div>
@@ -116,7 +116,7 @@
             </a>
 
             <!-- Complaints -->
-            <a href="{{ route('complaints.create') }}" class="quick-link-card group">
+            <a href="#" class="quick-link-card group">
                 <div class="quick-link-icon icon-complaint">
                     <i class="fas fa-exclamation-triangle"></i>
                 </div>
@@ -124,7 +124,7 @@
             </a>
 
             <!-- Corruption Report -->
-            <a href="{{ route('corruption-report') }}" class="quick-link-card group">
+            <a href="#" class="quick-link-card group">
                 <div class="quick-link-icon icon-corruption">
                     <i class="fas fa-shield-alt"></i>
                 </div>
@@ -132,7 +132,7 @@
             </a>
 
             <!-- Tenders -->
-            <a href="{{ route('tenders') }}" class="quick-link-card group">
+            <a href="#" class="quick-link-card group">
                 <div class="quick-link-icon icon-tenders">
                     <i class="fas fa-file-contract"></i>
                 </div>
@@ -140,7 +140,7 @@
             </a>
 
             <!-- Careers -->
-            <a href="{{ route('careers') }}" class="quick-link-card group">
+            <a href="#" class="quick-link-card group">
                 <div class="quick-link-icon icon-careers">
                     <i class="fas fa-briefcase"></i>
                 </div>
@@ -148,7 +148,7 @@
             </a>
 
             <!-- Reports -->
-            <a href="{{ route('reports') }}" class="quick-link-card group">
+            <a href="#" class="quick-link-card group">
                 <div class="quick-link-icon icon-reports">
                     <i class="fas fa-chart-bar"></i>
                 </div>
@@ -156,7 +156,7 @@
             </a>
 
             <!-- Downloads -->
-            <a href="{{ route('downloads') }}" class="quick-link-card group">
+            <a href="#" class="quick-link-card group">
                 <div class="quick-link-icon icon-downloads">
                     <i class="fas fa-download"></i>
                 </div>
@@ -164,7 +164,7 @@
             </a>
 
             <!-- News -->
-            <a href="{{ route('news') }}" class="quick-link-card group">
+            <a href="#" class="quick-link-card group">
                 <div class="quick-link-icon icon-news">
                     <i class="fas fa-newspaper"></i>
                 </div>
@@ -180,7 +180,7 @@
             </a>
 
             <!-- Documentary -->
-            <a href="{{ route('documentary') }}" class="quick-link-card group">
+            <a href="#" class="quick-link-card group">
                 <div class="quick-link-icon icon-documentary">
                     <i class="fas fa-video"></i>
                 </div>
@@ -262,7 +262,7 @@
                     <p class="text-gray-600 text-sm">
                         Easy and efficient process for new water and sewerage connections
                     </p>
-                    <a href="{{ route('new-connections') }}" class="inline-block mt-4 text-blue-600 hover:text-blue-800 font-medium text-sm">
+                    <a href="#" class="inline-block mt-4 text-blue-600 hover:text-blue-800 font-medium text-sm">
                         Apply Now →
                     </a>
                 </div>
@@ -276,7 +276,7 @@
                     <p class="text-gray-600 text-sm">
                         Convenient payment options including mobile money, bank, and online payments
                     </p>
-                    <a href="{{ route('payments') }}" class="inline-block mt-4 text-blue-600 hover:text-blue-800 font-medium text-sm">
+                    <a href="#" class="inline-block mt-4 text-blue-600 hover:text-blue-800 font-medium text-sm">
                         Pay Now →
                     </a>
                 </div>
@@ -316,7 +316,7 @@
                     <p class="opacity-90 text-sm mb-4">
                         Pay your water bill securely online
                     </p>
-                    <a href="{{ route('bill-payment') }}" class="inline-block bg-white text-blue-600 px-6 py-2 rounded-lg font-semibold hover:bg-blue-50 transition duration-300">
+                    <a href="#" class="inline-block bg-white text-blue-600 px-6 py-2 rounded-lg font-semibold hover:bg-blue-50 transition duration-300">
                         Pay Now
                     </a>
                 </div>
@@ -329,7 +329,7 @@
                     <p class="opacity-90 text-sm mb-4">
                         Get help and report issues
                     </p>
-                    <a href="{{ route('support') }}" class="inline-block bg-white text-blue-600 px-6 py-2 rounded-lg font-semibold hover:bg-blue-50 transition duration-300">
+                    <a href="{{route('support')}}" class="inline-block bg-white text-blue-600 px-6 py-2 rounded-lg font-semibold hover:bg-blue-50 transition duration-300">
                         Get Help
                     </a>
                 </div>
@@ -605,7 +605,7 @@
     </section>
 
     <!-- Emergency Banner -->
-    <div class="emergency-banner">
+    <div class="emergency-banner mt-2" style="background-color:green;">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <div class="flex flex-col md:flex-row items-center justify-center space-y-2 md:space-y-0 md:space-x-4">
                 <div class="flex items-center">

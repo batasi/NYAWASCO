@@ -162,7 +162,7 @@ Route::get('/services/payments', function () {
 })->name('payments');
 
 Route::get('/support', function () {
-    return view('support.index');
+    return view('support');
 })->name('support');
 
 // About Routes
@@ -203,13 +203,13 @@ Route::post('/water-connection/submit', [WaterConnectionController::class, 'stor
 
 // Admin routes group
 Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
-    
+
     // Water applications routes
     Route::get('/water-applications', [WaterConnectionController::class, 'index'])->name('water-applications.index');
     Route::get('/water-applications/{application}', [WaterConnectionController::class, 'show'])->name('water-applications.show');
     Route::post('/water-applications/{application}/approve', [WaterConnectionController::class, 'approve'])->name('water-applications.approve');
     Route::post('/water-applications/{application}/decline', [WaterConnectionController::class, 'decline'])->name('water-applications.decline');
-    
+
     // Customers routes
     Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
 });
@@ -265,7 +265,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
         Route::get('/available', [MeterController::class, 'available'])->name('available');
         Route::get('/assigned', [MeterController::class, 'assigned'])->name('assigned');
         Route::get('/by-location', [MeterController::class, 'byLocation'])->name('by-location');
-      
+
         Route::post('/', [MeterController::class, 'store'])->name('store');
         Route::get('/{meter}', [MeterController::class, 'show'])->name('show');
         Route::get('/{meter}/edit', [MeterController::class, 'edit'])->name('edit');
@@ -275,7 +275,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
     });
 
 
-   
+
 
 });
 

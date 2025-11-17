@@ -927,7 +927,7 @@ use Illuminate\Support\Facades\Route;
 }" class="font-sans antialiased body-bg">
 
     <!-- Top Navigation Bar -->
-    <div class="nav-top-bar">
+    <div class="nav-top-bar" style="background-color:green;">
         <div class="top-nav-compact">
             <!-- Contact Information -->
             <div class="mobile-contact">
@@ -983,9 +983,9 @@ use Illuminate\Support\Facades\Route;
                             <i class="fas fa-chevron-down ml-1" style="font-size: 0.75rem;"></i>
                         </button>
                         <div class="dropdown-content">
-                            <a href="{{ route('about') }}">Company Profile</a>
+                            <a href="#">Company Profile</a>
                             <a href="#">Board of Directors</a>
-                            <a href="{{ route('management') }}">Management Team</a>
+                            <a href="#">Management Team</a>
                             <a href="#">Mission & Vision</a>
                         </div>
                     </div>
@@ -999,12 +999,12 @@ use Illuminate\Support\Facades\Route;
                             <a href="{{ route('water-supply') }}">Water Supply</a>
                             <a href="{{ route('sewerage') }}">Sewerage Services</a>
                             <a href="{{ route('water-connection') }}">New Water Connection</a>
-                            <a href="{{ route('payments') }}">Bill Payments</a>
+                            <a href="#">Bill Payments</a>
                         </div>
                     </div>
 
-                    <a href="{{ route('projects') }}" class="nav-link">Projects</a>
-                    <a href="{{ route('careers') }}" class="nav-link">Careers</a>
+                    <a href="#" class="nav-link">Projects</a>
+                    <a href="#" class="nav-link">Careers</a>
                 </div>
 
                 <!-- Desktop Auth -->
@@ -1062,7 +1062,7 @@ use Illuminate\Support\Facades\Route;
                     <a href="{{ route('water-supply') }}" @click="mobileMenuOpen = false">Water Supply</a>
                     <a href="{{ route('sewerage') }}" @click="mobileMenuOpen = false">Sewerage Services</a>
                     <a href="{{ route('water-connection') }}" @click="mobileMenuOpen = false">New Water Connections</a>
-                    <a href="{{ route('payments') }}" @click="mobileMenuOpen = false">Bill Payments</a>
+                    <a href="#" @click="mobileMenuOpen = false">Bill Payments</a>
                 </div>
             </div>
 
@@ -1076,92 +1076,91 @@ use Illuminate\Support\Facades\Route;
         @endguest
     </div>
 
-   <!-- Replace the Sign Up Modal section in your app.blade.php with this: -->
-<!-- Sign Up Modal -->
-<div x-show="signupOpen" x-cloak class="modal-overlay">
-    <div class="modal-container">
-        <div class="modal-header">
-            <h2 class="text-2xl font-bold">Create Your Account</h2>
-            <button @click="signupOpen = false" class="modal-close">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <div class="modal-body">
-            <div class="mb-6 justify-center flex">
-                <a href="{{ route('home') }}" class="flex items-center">
-                    <img src="{{ asset('img/Logo.png') }}" class="h-16 w-auto">
-                </a>
+    <!-- Sign Up Modal -->
+    <div x-show="signupOpen" x-cloak class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2 class="text-2xl font-bold">Create Your Account</h2>
+                <button @click="signupOpen = false" class="modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-
-            <x-validation-errors class="mb-4" />
-
-            <form method="POST" action="{{ route('register') }}" id="registrationForm">
-                @csrf
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <x-label for="name" value="Full Name *" />
-                        <x-input id="name" type="text" name="name" :value="old('name')" required autofocus class="form-input w-full mt-1" />
-                    </div>
-                    <div>
-                        <x-label for="email" value="Email Address *" />
-                        <x-input id="email" type="email" name="email" :value="old('email')" required class="form-input w-full mt-1" />
-                    </div>
+            <div class="modal-body">
+                <div class="mb-6 justify-center flex">
+                    <a href="{{ route('home') }}" class="flex items-center">
+                        <img src="{{ asset('img/Logo.png') }}" class="h-16 w-auto">
+                    </a>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <x-label for="phone" value="Phone Number *" />
-                        <x-input id="phone" type="tel" name="phone" :value="old('phone')" required class="form-input w-full mt-1" placeholder="+254 XXX XXX XXX" />
+                <x-validation-errors class="mb-4" />
+
+                <form method="POST" action="{{ route('register') }}" id="registrationForm">
+                    @csrf
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <x-label for="name" value="Full Name *" />
+                            <x-input id="name" type="text" name="name" :value="old('name')" required autofocus class="form-input w-full mt-1" />
+                        </div>
+                        <div>
+                            <x-label for="email" value="Email Address *" />
+                            <x-input id="email" type="email" name="email" :value="old('email')" required class="form-input w-full mt-1" />
+                        </div>
                     </div>
-                    <div>
-                        <x-label for="id_number" value="ID Number *" />
-                        <x-input id="id_number" type="text" name="id_number" :value="old('id_number')" required class="form-input w-full mt-1" />
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <x-label for="phone" value="Phone Number *" />
+                            <x-input id="phone" type="tel" name="phone" :value="old('phone')" required class="form-input w-full mt-1" placeholder="+254 XXX XXX XXX" />
+                        </div>
+                        <div>
+                            <x-label for="id_number" value="ID Number *" />
+                            <x-input id="id_number" type="text" name="id_number" :value="old('id_number')" required class="form-input w-full mt-1" />
+                        </div>
                     </div>
-                </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <x-label for="password" value="Password *" />
-                        <x-input id="password" type="password" name="password" required autocomplete="new-password" class="form-input w-full mt-1" />
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <x-label for="password" value="Password *" />
+                            <x-input id="password" type="password" name="password" required autocomplete="new-password" class="form-input w-full mt-1" />
+                        </div>
+                        <div>
+                            <x-label for="password_confirmation" value="Confirm Password *" />
+                            <x-input id="password_confirmation" type="password" name="password_confirmation" required class="form-input w-full mt-1" />
+                        </div>
                     </div>
-                    <div>
-                        <x-label for="password_confirmation" value="Confirm Password *" />
-                        <x-input id="password_confirmation" type="password" name="password_confirmation" required class="form-input w-full mt-1" />
+
+                    <div class="mb-4">
+                        <x-label for="address" value="Physical Address *" />
+                        <textarea id="address" name="address" required class="form-input w-full mt-1" rows="3" placeholder="Enter your complete physical address">{{ old('address') }}</textarea>
                     </div>
-                </div>
 
-                <div class="mb-4">
-                    <x-label for="address" value="Physical Address *" />
-                    <textarea id="address" name="address" required class="form-input w-full mt-1" rows="3" placeholder="Enter your complete physical address">{{ old('address') }}</textarea>
-                </div>
+                    <div class="mb-6">
+                        <label class="flex items-center">
+                            <input type="checkbox" name="terms" required class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                            <span class="ml-2 text-sm text-gray-600">
+                                I agree to the <a href="{{ route('terms') }}" class="text-blue-600 hover:text-blue-800">Terms of Service</a> and <a href="{{ route('privacy') }}" class="text-blue-600 hover:text-blue-800">Privacy Policy</a>
+                            </span>
+                        </label>
+                    </div>
 
-                <div class="mb-6">
-                    <label class="flex items-center">
-                        <input type="checkbox" name="terms" required class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
-                        <span class="ml-2 text-sm text-gray-600">
-                            I agree to the <a href="{{ route('terms') }}" class="text-blue-600 hover:text-blue-800">Terms of Service</a> and <a href="{{ route('privacy') }}" class="text-blue-600 hover:text-blue-800">Privacy Policy</a>
-                        </span>
-                    </label>
-                </div>
+                    <div class="mt-6">
+                        <button type="submit" class="w-full btn-primary font-medium py-3 px-4 rounded-lg transition duration-200">
+                            Create Account
+                        </button>
+                    </div>
+                </form>
 
-                <div class="mt-6">
-                    <button type="submit" class="w-full btn-primary font-medium py-3 px-4 rounded-lg transition duration-200">
-                        Create Account
-                    </button>
+                <div class="mt-6 text-center">
+                    <span class="text-sm text-gray-600">
+                        Already have an account?
+                        <button type="button" @click="signupOpen = false; loginOpen = true" class="text-blue-600 hover:text-blue-800 font-medium transition-colors ml-1">
+                            Log in
+                        </button>
+                    </span>
                 </div>
-            </form>
-
-            <div class="mt-6 text-center">
-                <span class="text-sm text-gray-600">
-                    Already have an account?
-                    <button type="button" @click="signupOpen = false; loginOpen = true" class="text-blue-600 hover:text-blue-800 font-medium transition-colors ml-1">
-                        Log in
-                    </button>
-                </span>
             </div>
         </div>
     </div>
-</div>
 
     <!-- Replace the Login Modal section in your app.blade.php with this: -->
     <!-- Login Modal -->
@@ -1246,7 +1245,7 @@ use Illuminate\Support\Facades\Route;
     </main>
 
     <!-- Footer -->
-    <footer class="footer-bg">
+    <footer class="footer-bg" style="background-color:#2567ac;">
         <div class="footer-container">
             <div class="footer-grid">
                 <!-- Company Info -->
