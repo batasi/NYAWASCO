@@ -16,13 +16,35 @@
                 <h1 class="text-3xl font-bold text-blue-700">Record Meter Reading</h1>
                 <p class="text-gray-600">Record new meter reading for customer</p>
             </div>
-            <a href="{{ $customer ? route('admin.customers.show', $customer) : route('admin.meter-readings.index') }}" 
-               class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition duration-200 flex items-center">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                </svg>
-                Back
-            </a>
+            <div class="flex space-x-3">
+                <!-- Bill Management Button -->
+                <a href="{{ route('bills.index') }}" 
+                   class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition duration-200 flex items-center shadow-md">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    Bill Management
+                </a>
+                
+                <!-- Customer Profile Button -->
+                @if($customer)
+                <a href="{{ route('admin.customers.show', $customer) }}" 
+                   class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition duration-200 flex items-center shadow-md">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                    </svg>
+                    {{ $customer->first_name }}'s Profile
+                </a>
+                @else
+                <a href="{{ route('admin.meter-readings.index') }}" 
+                   class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition duration-200 flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Back to Readings
+                </a>
+                @endif
+            </div>
         </div>
 
         <!-- Customer Information Card -->
@@ -187,18 +209,57 @@
                 </div>
 
                 <!-- Submit Button -->
-                <div class="mt-8 flex justify-end space-x-4">
-                    <a href="{{ $customer ? route('admin.customers.show', $customer) : route('admin.meter-readings.index') }}" 
-                       class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition duration-200 flex items-center">
-                        Cancel
-                    </a>
-                    <button type="submit" 
-                            class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg transition duration-200 flex items-center shadow-md">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
-                        Record Reading
-                    </button>
+                <div class="mt-8 flex justify-between items-center">
+                    <div class="flex space-x-3">
+                        <!-- Bill Management Button -->
+                        <a href="{{ route('bills.index') }}" 
+                           class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition duration-200 flex items-center shadow-md">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            Bill Management
+                        </a>
+                        
+                        <!-- Customer Profile Button -->
+                        @if($customer)
+                        <a href="{{ route('admin.customers.show', $customer) }}" 
+                           class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition duration-200 flex items-center shadow-md">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                            </svg>
+                            {{ $customer->first_name }}'s Profile
+                        </a>
+                        @else
+                        <a href="{{ route('admin.meter-readings.index') }}" 
+                           class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition duration-200 flex items-center">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                            </svg>
+                            Back to Readings
+                        </a>
+                        @endif
+                    </div>
+                    
+                    <div class="flex space-x-4">
+                        @if($customer)
+                        <a href="{{ route('admin.customers.show', $customer) }}" 
+                           class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition duration-200 flex items-center">
+                            Cancel
+                        </a>
+                        @else
+                        <a href="{{ route('admin.meter-readings.index') }}" 
+                           class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition duration-200 flex items-center">
+                            Cancel
+                        </a>
+                        @endif
+                        <button type="submit" 
+                                class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg transition duration-200 flex items-center shadow-md">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Record Reading
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>

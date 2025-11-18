@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', $title)
+@section('title', $title ?? 'Bill Details - NYAWASCO')
 
 @section('content')
 <div class="min-h-screen bg-gray-50">
@@ -12,239 +12,449 @@
                     <nav class="flex mb-4" aria-label="Breadcrumb">
                         <ol class="flex items-center space-x-4">
                             <li>
-                                <a href="{{ route('organizers.index') }}" class="text-gray-400 hover:text-gray-500">
-                                    <svg class="flex-shrink-0 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                                    </svg>
-                                    <span class="sr-only">Back to Organizers</span>
+                                <a href="{{ route('bills.index') }}" class="text-gray-400 hover:text-gray-500">
+                                    <i class="fas fa-arrow-left mr-1"></i>
+                                    Back to Bills
                                 </a>
                             </li>
                             <li>
-                                <a href="{{ route('organizers.index') }}" class="text-sm font-medium text-gray-500 hover:text-gray-700">Organizers</a>
-                            </li>
-                            <li>
-                                <span class="text-gray-300">/</span>
-                            </li>
-                            <li>
-                                <span class="text-sm font-medium text-gray-900">{{ $organizer->name }}</span>
+                                <div class="flex items-center">
+                                    <span class="text-gray-400">/</span>
+                                    <span class="ml-4 text-sm font-medium text-gray-500">Bill Details</span>
+                                </div>
                             </li>
                         </ol>
                     </nav>
-                    <div class="flex items-center space-x-6">
-                        <!-- Organizer Avatar -->
-                        <div class="flex-shrink-0">
-                            @if($organizer->avatar)
-                                <img src="{{ Storage::url($organizer->avatar) }}"
-                                     alt="{{ $organizer->name }}"
-                                     class="w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg">
-                            @else
-                                <div class="w-20 h-20 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold border-4 border-white shadow-lg">
-                                    {{ strtoupper(substr($organizer->name, 0, 1)) }}
-                                </div>
-                            @endif
-                        </div>
-
-                        <!-- Organizer Info -->
-                        <div class="flex-1 min-w-0">
-                            <h1 class="text-3xl font-bold text-gray-900">{{ $organizer->name }}</h1>
-                            @if($organizerProfile && $organizerProfile->company_name)
-                                <p class="text-xl text-gray-600 mt-1">{{ $organizerProfile->company_name }}</p>
-                            @endif
-
-                            <!-- Badges -->
-                            <div class="flex flex-wrap gap-2 mt-2">
-                                @if($organizerProfile && $organizerProfile->is_verified)
-                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                        </svg>
-                                        Verified Organizer
-                                    </span>
-                                @endif
-                                @if($organizerProfile && $organizerProfile->is_featured)
-                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
-                                        Featured Organizer
-                                    </span>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
+                    <h1 class="text-2xl font-bold text-gray-900">Bill #{{ $bill->bill_number }}</h1>
+                    <p class="text-gray-600 mt-1">Detailed view of water consumption bill</p>
                 </div>
-
-                <!-- Stats -->
-                <div class="hidden md:flex space-x-8 text-center">
-                    <div>
-                        <div class="text-2xl font-bold text-gray-900">{{ $organizer->organized_events_count }}</div>
-                        <div class="text-sm text-gray-500">Events</div>
-                    </div>
-                    <div>
-                        <div class="text-2xl font-bold text-gray-900">{{ $organizer->organized_voting_contests_count }}</div>
-                        <div class="text-sm text-gray-500">Voting Contests</div>
-                    </div>
+                <div class="flex space-x-3">
+                    <a href="{{ route('bills.edit', $bill) }}" 
+                       class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200 flex items-center">
+                        <i class="fas fa-edit mr-2"></i>
+                        Edit Bill
+                    </a>
+                    <button onclick="window.print()" 
+                            class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition duration-200 flex items-center">
+                        <i class="fas fa-print mr-2"></i>
+                        Print
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Main Content -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            <!-- Sidebar -->
-            <div class="lg:col-span-1 space-y-6">
-                <!-- Organizer Details -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left Column - Bill Details -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Bill Summary Card -->
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Organizer Details</h3>
-                    <div class="space-y-3">
-                        @if($organizerProfile && $organizerProfile->website)
-                            <div class="flex items-center text-sm text-gray-600">
-                                <svg class="flex-shrink-0 mr-3 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9"></path>
-                                </svg>
-                                <a href="{{ $organizerProfile->website }}" target="_blank" class="text-blue-600 hover:text-blue-700 truncate">
-                                    {{ $organizerProfile->website }}
-                                </a>
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Bill Summary</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Customer Information -->
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-900 mb-3">Customer Information</h3>
+                            <div class="space-y-2">
+                                <div>
+                                    <label class="text-sm text-gray-500">Customer Name</label>
+                                    <p class="font-medium text-gray-900">
+                                        <a href="{{ route('admin.customers.show', $bill->customer) }}" 
+                                           class="text-blue-600 hover:text-blue-800">
+                                            {{ $bill->customer->first_name }} {{ $bill->customer->last_name }}
+                                        </a>
+                                    </p>
+                                </div>
+                                <div>
+                                    <label class="text-sm text-gray-500">Customer Number</label>
+                                    <p class="font-medium text-blue-600">{{ $bill->customer->customer_number }}</p>
+                                </div>
+                                <div>
+                                    <label class="text-sm text-gray-500">Location</label>
+                                    <p class="font-medium text-gray-900">
+                                        {{ $bill->customer->plot_number }}, {{ $bill->customer->house_number }}
+                                        @if($bill->customer->estate)
+                                            , {{ $bill->customer->estate }}
+                                        @endif
+                                    </p>
+                                </div>
                             </div>
-                        @endif
+                        </div>
 
-                        @if($organizerProfile && ($organizerProfile->city || $organizerProfile->country))
-                            <div class="flex items-center text-sm text-gray-600">
-                                <svg class="flex-shrink-0 mr-3 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                </svg>
-                                <span>{{ $organizerProfile->full_address }}</span>
+                        <!-- Billing Period -->
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-900 mb-3">Billing Information</h3>
+                            <div class="space-y-2">
+                                <div>
+                                    <label class="text-sm text-gray-500">Billing Period</label>
+                                    <p class="font-medium text-gray-900">
+                                        @if($bill->billing_period_start && $bill->billing_period_end)
+                                            {{ $bill->billing_period_start->format('M d, Y') }} - {{ $bill->billing_period_end->format('M d, Y') }}
+                                        @else
+                                            N/A
+                                        @endif
+                                    </p>
+                                </div>
+                                <div>
+                                    <label class="text-sm text-gray-500">Due Date</label>
+                                    <p class="font-medium {{ $bill->is_overdue ? 'text-red-600' : 'text-gray-900' }}">
+                                        {{ $bill->formatted_due_date ?? 'N/A' }}
+                                        @if($bill->is_overdue)
+                                            <span class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded ml-2">OVERDUE</span>
+                                        @endif
+                                    </p>
+                                </div>
+                                <div>
+                                    <label class="text-sm text-gray-500">Bill Status</label>
+                                    <p class="font-medium">
+                                        @php
+                                            $statusColors = [
+                                                'paid' => 'bg-green-100 text-green-800',
+                                                'unpaid' => 'bg-red-100 text-red-800',
+                                                'partial' => 'bg-yellow-100 text-yellow-800'
+                                            ];
+                                        @endphp
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusColors[$bill->bill_status] ?? 'bg-gray-100 text-gray-800' }}">
+                                            {{ ucfirst($bill->bill_status) }}
+                                        </span>
+                                    </p>
+                                </div>
                             </div>
-                        @endif
-
-                        @if($organizerProfile && $organizerProfile->phone)
-                            <div class="flex items-center text-sm text-gray-600">
-                                <svg class="flex-shrink-0 mr-3 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
-                                </svg>
-                                <span>{{ $organizerProfile->phone }}</span>
-                            </div>
-                        @endif
+                        </div>
                     </div>
                 </div>
 
-                <!-- Social Links -->
-                @if($organizerProfile && $organizerProfile->social_links)
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Follow</h3>
-                        <div class="flex space-x-3">
-                            @foreach($organizerProfile->social_links as $platform => $url)
-                                <a href="{{ $url }}" target="_blank" class="text-gray-400 hover:text-gray-500">
-                                    <span class="sr-only">{{ ucfirst($platform) }}</span>
-                                    @if($platform === 'facebook')
-                                        <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                                        </svg>
-                                    @elseif($platform === 'twitter')
-                                        <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84"/>
-                                        </svg>
-                                    @elseif($platform === 'instagram')
-                                        <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
-                                            <path fill-rule="evenodd" d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 6.62 5.367 11.987 11.988 11.987c6.62 0 11.987-5.367 11.987-11.987C24.014 5.367 18.637.001 12.017.001zM8.449 16.988c-1.297 0-2.448-.611-3.223-1.561c-.775-.95-1.172-2.238-1.061-3.537c.111-1.298.718-2.489 1.682-3.253c.964-.764 2.201-1.027 3.423-.741c1.222.286 2.257 1.109 2.822 2.255c.565 1.146.595 2.491.083 3.662c-.512 1.171-1.524 2.038-2.726 2.375v-.001zm7.718 1.151c-.557.395-1.208.637-1.899.703-.69.066-1.392-.046-2.032-.323a3.719 3.719 0 01-1.532-1.129 3.972 3.972 0 01-.782-1.796 4.106 4.106 0 01.121-1.863c.239-.619.637-1.162 1.148-1.565a3.69 3.69 0 011.654-.703c.59-.111 1.198-.064 1.767.137.569.201 1.071.57 1.446 1.065.375.495.607 1.095.67 1.724.063.629-.045 1.262-.312 1.826-.267.565-.682 1.038-1.201 1.369l-.002.001z" clip-rule="evenodd"/>
-                                        </svg>
-                                    @elseif($platform === 'linkedin')
-                                        <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
-                                        </svg>
-                                    @endif
-                                </a>
-                            @endforeach
-                        </div>
+                <!-- Consumption & Charges Card -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Consumption & Charges</h2>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <!-- Base Charge -->
+                                <tr>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                                        Water Service Charge
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                        1
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                        KSh {{ number_format($bill->base_charge, 2) }}
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        KSh {{ number_format($bill->base_charge, 2) }}
+                                    </td>
+                                </tr>
+
+                                <!-- Consumption Charge -->
+                                <tr>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                                        Water Consumption
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                        {{ number_format($bill->consumption, 2) }} m³
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                        KSh {{ number_format($bill->consumption_charge / max($bill->consumption, 1), 2) }}/m³
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        KSh {{ number_format($bill->consumption_charge, 2) }}
+                                    </td>
+                                </tr>
+
+                                <!-- Tax -->
+                                <tr>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                                        VAT (16%)
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                        -
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                        16%
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        KSh {{ number_format($bill->tax_amount, 2) }}
+                                    </td>
+                                </tr>
+
+                                <!-- Late Fee (if applicable) -->
+                                @if($bill->late_fee > 0)
+                                <tr>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                                        Late Payment Fee
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                        1
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                        KSh {{ number_format($bill->late_fee, 2) }}
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        KSh {{ number_format($bill->late_fee, 2) }}
+                                    </td>
+                                </tr>
+                                @endif
+
+                                <!-- Total Row -->
+                                <tr class="bg-gray-50">
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-900" colspan="3">
+                                        TOTAL AMOUNT DUE
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm font-bold text-blue-600">
+                                        KSh {{ number_format($bill->total_amount, 2) }}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
+                </div>
+
+                <!-- Payment History -->
+                @if($bill->payments->count() > 0)
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Payment History</h2>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Method</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reference</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                @foreach($bill->payments as $payment)
+                                <tr>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                                        {{ $payment->payment_date?->format('M d, Y') ?? 'N/A' }}
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 capitalize">
+                                        {{ $payment->payment_method }}
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                        {{ $payment->transaction_reference ?? 'N/A' }}
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-600">
+                                        KSh {{ number_format($payment->amount, 2) }}
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            Completed
+                                        </span>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
                 @endif
             </div>
 
-            <!-- Main Content -->
-            <div class="lg:col-span-3 space-y-8">
-                <!-- About Section -->
-                @if($organizerProfile && $organizerProfile->about)
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                        <h2 class="text-2xl font-bold text-gray-900 mb-4">About</h2>
-                        <div class="prose prose-blue max-w-none">
-                            <p class="text-gray-700 leading-relaxed">{{ $organizerProfile->about }}</p>
-                        </div>
-                    </div>
-                @endif
-
-                <!-- Upcoming Events -->
+            <!-- Right Column - Payment Summary & Actions -->
+            <div class="space-y-6">
+                <!-- Payment Summary Card -->
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <div class="flex items-center justify-between mb-6">
-                        <h2 class="text-2xl font-bold text-gray-900">Upcoming Events</h2>
-                        <a href="{{ route('events.index', ['organizer' => $organizer->id]) }}" class="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                            View all events →
-                        </a>
-                    </div>
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Payment Summary</h2>
+                    
+                    <div class="space-y-4">
+                        <!-- Progress Bar -->
+                        <div>
+                            <div class="flex justify-between text-sm text-gray-600 mb-1">
+                                <span>Payment Progress</span>
+                                <span>{{ number_format($paymentPercentage, 1) }}%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-green-600 h-2 rounded-full" style="width: {{ $paymentPercentage }}%"></div>
+                            </div>
+                        </div>
 
-                    @if($events->count() > 0)
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            @foreach($events as $event)
-                                <div class="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors duration-200">
-                                    <h3 class="font-semibold text-gray-900 mb-2">{{ $event->name }}</h3>
-                                    <div class="flex items-center text-sm text-gray-500 mb-2">
-                                        <svg class="flex-shrink-0 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                        </svg>
-                                        {{ $event->start_date->format('M j, Y') }}
-                                    </div>
-                                    <a href="{{ route('events.show', $event) }}" class="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                                        View details →
-                                    </a>
-                                </div>
-                            @endforeach
+                        <!-- Amount Breakdown -->
+                        <div class="space-y-2">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Total Amount:</span>
+                                <span class="font-medium">KSh {{ number_format($bill->total_amount, 2) }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Amount Paid:</span>
+                                <span class="font-medium text-green-600">KSh {{ number_format($paidAmount, 2) }}</span>
+                            </div>
+                            <div class="flex justify-between border-t pt-2">
+                                <span class="text-gray-800 font-semibold">Balance Due:</span>
+                                <span class="font-semibold {{ $dueAmount > 0 ? 'text-red-600' : 'text-green-600' }}">
+                                    KSh {{ number_format($dueAmount, 2) }}
+                                </span>
+                            </div>
                         </div>
-                    @else
-                        <div class="text-center py-8">
-                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                            </svg>
-                            <h3 class="mt-2 text-sm font-medium text-gray-900">No upcoming events</h3>
-                            <p class="mt-1 text-sm text-gray-500">This organizer doesn't have any upcoming events.</p>
+
+                        <!-- Payment Actions -->
+                        @if($dueAmount > 0)
+                        <div class="mt-4 space-y-2">
+                            <a href="{{ route('payments.create', ['bill_id' => $bill->id]) }}" 
+                               class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center font-medium">
+                                <i class="fas fa-credit-card mr-2"></i>
+                                Record Payment
+                            </a>
+                            <button onclick="showPaymentOptions()" 
+                                    class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200 flex items-center justify-center text-sm">
+                                <i class="fas fa-mobile-alt mr-2"></i>
+                                Pay Online
+                            </button>
                         </div>
-                    @endif
+                        @else
+                        <div class="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <div class="flex items-center">
+                                <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                                <span class="text-green-800 font-medium">Fully Paid</span>
+                            </div>
+                        </div>
+                        @endif
+                    </div>
                 </div>
 
-                <!-- Active Voting Contests -->
+                <!-- Bill Actions Card -->
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <div class="flex items-center justify-between mb-6">
-                        <h2 class="text-2xl font-bold text-gray-900">Active Voting Contests</h2>
-                        <a href="{{ route('voting.index', ['organizer' => $organizer->id]) }}" class="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                            View all contests →
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Bill Actions</h2>
+                    
+                    <div class="space-y-3">
+                        <a href="{{ route('bills.edit', $bill) }}" 
+                           class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
+                            <i class="fas fa-edit mr-2"></i>
+                            Edit Bill Details
                         </a>
-                    </div>
+                        
+                        <a href="{{ route('admin.customers.show', $bill->customer) }}" 
+                           class="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
+                            <i class="fas fa-user mr-2"></i>
+                            View Customer Profile
+                        </a>
 
-                    @if($votingContests->count() > 0)
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            @foreach($votingContests as $contest)
-                                <div class="border border-gray-200 rounded-lg p-4 hover:border-purple-300 transition-colors duration-200">
-                                    <h3 class="font-semibold text-gray-900 mb-2">{{ $contest->title }}</h3>
-                                    <div class="flex items-center text-sm text-gray-500 mb-2">
-                                        <svg class="flex-shrink-0 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                        </svg>
-                                        {{ $contest->total_votes }} votes
-                                    </div>
-                                    <a href="{{ route('voting.show', $contest) }}" class="text-purple-600 hover:text-purple-700 text-sm font-medium">
-                                        {{ $contest->isOngoing() ? 'Vote now' : 'View results' }} →
-                                    </a>
-                                </div>
-                            @endforeach
+                        <button onclick="window.print()" 
+                                class="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
+                            <i class="fas fa-print mr-2"></i>
+                            Print Bill
+                        </button>
+
+                        <form action="{{ route('bills.destroy', $bill) }}" method="POST" class="mt-2" onsubmit="return confirm('Are you sure you want to delete this bill? This action cannot be undone.')">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" 
+                                    class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
+                                <i class="fas fa-trash mr-2"></i>
+                                Delete Bill
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Bill Information -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Bill Information</h2>
+                    
+                    <div class="space-y-3 text-sm">
+                        <div>
+                            <label class="text-gray-500">Created By</label>
+                            <p class="font-medium text-gray-900">{{ $bill->creator->name ?? 'System' }}</p>
                         </div>
-                    @else
-                        <div class="text-center py-8">
-                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            <h3 class="mt-2 text-sm font-medium text-gray-900">No active voting contests</h3>
-                            <p class="mt-1 text-sm text-gray-500">This organizer doesn't have any active voting contests.</p>
+                        <div>
+                            <label class="text-gray-500">Created Date</label>
+                            <p class="font-medium text-gray-900">{{ $bill->created_at->format('M d, Y') }}</p>
                         </div>
-                    @endif
+                        <div>
+                            <label class="text-gray-500">Last Updated</label>
+                            <p class="font-medium text-gray-900">{{ $bill->updated_at->format('M d, Y') }}</p>
+                        </div>
+                        @if($bill->notes)
+                        <div>
+                            <label class="text-gray-500">Notes</label>
+                            <p class="font-medium text-gray-900">{{ $bill->notes }}</p>
+                        </div>
+                        @endif
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Payment Options Modal -->
+<div id="paymentModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Choose Payment Method</h3>
+            
+            <div class="space-y-3">
+                <button class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
+                    <i class="fas fa-mobile-alt mr-2"></i>
+                    M-Pesa
+                </button>
+                
+                <button class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
+                    <i class="fas fa-credit-card mr-2"></i>
+                    Credit/Debit Card
+                </button>
+                
+                <button class="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
+                    <i class="fas fa-university mr-2"></i>
+                    Bank Transfer
+                </button>
+            </div>
+            
+            <div class="flex justify-end space-x-3 mt-6">
+                <button onclick="closePaymentModal()" class="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition duration-200">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showPaymentOptions() {
+    document.getElementById('paymentModal').classList.remove('hidden');
+}
+
+function closePaymentModal() {
+    document.getElementById('paymentModal').classList.add('hidden');
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('paymentModal');
+    if (event.target === modal) {
+        closePaymentModal();
+    }
+}
+</script>
+
+<style>
+@media print {
+    .bg-gray-50 {
+        background: white !important;
+    }
+    .flex.justify-between.items-center,
+    .bg-white.rounded-lg.shadow-sm.border.border-gray-200.p-6:last-child {
+        display: none !important;
+    }
+    .bg-white {
+        border: 1px solid #e5e7eb !important;
+        box-shadow: none !important;
+    }
+}
+</style>
 @endsection

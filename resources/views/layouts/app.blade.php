@@ -1448,6 +1448,9 @@ use Illuminate\Support\Facades\Route;
         });
     </script>
 
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+    <script src="{{ asset('js/services/OCRService.js') }}"></script>
+
 
     <!-- Livewire Scripts -->
     @livewireScripts

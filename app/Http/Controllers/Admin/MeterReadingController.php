@@ -7,9 +7,11 @@ use Illuminate\Http\Request;
 use App\Models\MeterReading;
 use App\Models\Customer;
 use App\Models\Meter;
+use App\Models\Bill;
 use App\Services\OCRService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class MeterReadingController extends Controller
 {
@@ -42,6 +44,32 @@ class MeterReadingController extends Controller
 
     public function store(Request $request)
     {
+
+
+        $readingPeriod = Carbon::parse($request->reading_date)->format('F Y');
+        $existingReading = MeterReading::where('customer_id', $request->customer_id)
+            ->where('reading_period', $readingPeriod)
+            ->first();
+
+        if ($existingReading && !$request->has('force_duplicate')) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "A meter reading for {$readingPeriod} already exists. Are you sure you want to create another reading for the same period?",
+                    'requires_confirmation' => true,
+                    'existing_reading' => [
+                        'id' => $existingReading->id,
+                        'reading_date' => $existingReading->reading_date,
+                        'current_reading' => $existingReading->current_reading,
+                        'reading_period' => $existingReading->reading_period
+                    ]
+                ], 422);
+            }
+            
+            throw new \Exception("Meter reading for {$readingPeriod} has already been recorded.");
+        }
+
+
         $request->validate([
             'customer_id' => 'required|exists:customers,id',
             'current_reading' => 'required|numeric|min:0',
@@ -50,111 +78,126 @@ class MeterReadingController extends Controller
             'notes' => 'nullable|string|max:500',
         ]);
 
-        // Get customer and meter
-        $customer = Customer::findOrFail($request->customer_id);
-        $meter = $customer->meter;
-
-        if (!$meter) {
-            return back()->with('error', 'Customer does not have a meter assigned.');
-        }
-
-        // Check for duplicate reading in the same period
-        $readingPeriod = Carbon::parse($request->reading_date)->format('F Y');
-        $existingReading = MeterReading::where('customer_id', $request->customer_id)
-            ->where('reading_period', $readingPeriod)
-            ->first();
-
-        if ($existingReading) {
-            return back()->withInput()->with('warning', 'Meter reading for ' . $readingPeriod . ' has already been recorded. Please wait until next month to record again.');
-        }
-
-        // Get previous reading
-        $previousReading = MeterReading::where('customer_id', $request->customer_id)
-            ->latest()
-            ->first();
-
-        $previousReadingValue = $previousReading ? $previousReading->current_reading : ($meter->initial_reading ?? 0);
-
-        // Handle image upload and OCR processing
-        $imagePath = null;
-        $ocrReading = null;
-
-        if ($request->hasFile('reading_image')) {
-            // Store the image
-            $imagePath = $request->file('reading_image')->store('meter-readings', 'public');
-            
-            // Perform OCR on the uploaded image
-            $ocrService = new OCRService();
-            $fullImagePath = storage_path('app/public/' . $imagePath);
-            
-            $ocrReading = $ocrService->extractMeterReading($fullImagePath);
-            
-            // If OCR detected a valid reading, use it (user can still override manually)
-            if ($ocrReading !== null && $ocrReading > $previousReadingValue) {
-                // Update the request with OCR reading
-                $request->merge(['current_reading' => $ocrReading]);
-                
-                // Log OCR success
-                \Log::info("OCR successfully detected reading: {$ocrReading} for customer: {$customer->id}");
-            } else if ($ocrReading !== null) {
-                // OCR detected reading but it's not valid (less than previous)
-                \Log::warning("OCR detected reading {$ocrReading} is less than previous reading {$previousReadingValue} for customer: {$customer->id}");
-            }
-        }
-
-        // Check if current reading is valid (after potential OCR update)
-        if ($request->current_reading < $previousReadingValue) {
-            return back()->withInput()->with('error', 'Current reading cannot be less than previous reading (' . number_format($previousReadingValue, 2) . ' m³).');
-        }
-
         try {
-            // Create reading
-            $readingData = [
-                'customer_id' => $request->customer_id,
-                'current_reading' => $request->current_reading,
-                'previous_reading' => $previousReadingValue,
-                'reading_date' => $request->reading_date,
-                'reading_type' => 'monthly',
-                'reading_period' => $readingPeriod,
-                'read_by' => auth()->id(),
-                'reading_image' => $imagePath,
-                'notes' => $request->notes,
-                'consumption' => $request->current_reading - $previousReadingValue,
-            ];
+            DB::transaction(function () use ($request) {
+                // Get customer and meter
+                $customer = Customer::findOrFail($request->customer_id);
+                $meter = $customer->meter;
 
-            // Add OCR info if available (you can store this in notes or a separate field if you add the migration later)
-            if ($ocrReading !== null) {
-                $readingData['notes'] = $request->notes . "\n[OCR Detected: " . $ocrReading . " m³]";
-            }
+                if (!$meter) {
+                    throw new \Exception('Customer does not have a meter assigned.');
+                }
 
-            $reading = MeterReading::create($readingData);
+                // Check for duplicate reading in the same period
+                $readingPeriod = Carbon::parse($request->reading_date)->format('F Y');
+                $existingReading = MeterReading::where('customer_id', $request->customer_id)
+                    ->where('reading_period', $readingPeriod)
+                    ->first();
 
-            // Update meter's current reading
-            if ($meter) {
+                if ($existingReading) {
+                    throw new \Exception('Meter reading for ' . $readingPeriod . ' has already been recorded. Please wait until next month to record again.');
+                }
+
+                // Get previous reading
+                $previousReading = MeterReading::where('customer_id', $request->customer_id)
+                    ->latest()
+                    ->first();
+
+                $previousReadingValue = $previousReading ? $previousReading->current_reading : ($meter->initial_reading ?? 0);
+
+                // Validate current reading
+                if ($request->current_reading < $previousReadingValue) {
+                    throw new \Exception('Current reading cannot be less than previous reading (' . number_format($previousReadingValue, 2) . ' m³).');
+                }
+
+                // Calculate consumption
+                $consumption = $request->current_reading - $previousReadingValue;
+
+                // Handle image upload
+                $imagePath = null;
+                if ($request->hasFile('reading_image')) {
+                    $imagePath = $request->file('reading_image')->store('meter-readings', 'public');
+                }
+
+                // Create reading
+                $reading = MeterReading::create([
+                    'customer_id' => $request->customer_id,
+                    'current_reading' => $request->current_reading,
+                    'previous_reading' => $previousReadingValue,
+                    'consumption' => $consumption,
+                    'reading_date' => $request->reading_date,
+                    'reading_type' => 'monthly',
+                    'reading_period' => $readingPeriod,
+                    'billed' => false,
+                    'reading_image' => $imagePath,
+                    'notes' => $request->notes,
+                    'read_by' => auth()->id(),
+                ]);
+
+                // Update meter's current reading
                 $meter->update([
                     'current_reading' => $request->current_reading
                 ]);
-            }
 
-            // Add OCR info to success message if applicable
-            $successMessage = 'Meter reading recorded successfully!';
-            if ($ocrReading !== null && (float)$request->current_reading === (float)$ocrReading) {
-                $successMessage .= ' (Reading automatically detected from photo)';
-            }
+                // AUTO-GENERATE BILL
+                $this->generateBill($reading, $customer, $consumption);
+            });
 
-            return redirect()->route('admin.customers.show', $customer)
-                ->with('success', $successMessage);
+            return redirect()->route('admin.customers.show', $request->customer_id)
+                ->with('success', 'Meter reading recorded and bill generated successfully!');
 
-        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
-            return back()->withInput()->with('warning', 'Meter reading for ' . $readingPeriod . ' has already been recorded. Please wait until next month to record again.');
         } catch (\Exception $e) {
-            \Log::error('Error creating meter reading: ' . $e->getMessage());
-            return back()->withInput()->with('error', 'An error occurred while recording the reading. Please try again.');
+            return back()->withInput()->with('error', $e->getMessage());
         }
     }
 
     /**
-     * API endpoint for OCR processing (optional - for real-time OCR)
+     * Generate bill automatically after meter reading
+     */
+    private function generateBill(MeterReading $reading, Customer $customer, $consumption)
+    {
+        // Calculate billing amounts
+        $baseCharge = 100; // Fixed base charge
+        $consumptionRate = 50; // Rate per cubic meter
+        $consumptionCharge = $consumption * $consumptionRate;
+        $taxRate = 0.16; // 16% VAT
+        $taxAmount = ($baseCharge + $consumptionCharge) * $taxRate;
+        $totalAmount = $baseCharge + $consumptionCharge + $taxAmount;
+
+        // Generate bill number
+        $latestBill = Bill::latest()->first();
+        $billNumber = 'BILL-' . str_pad(($latestBill ? $latestBill->id : 0) + 1, 6, '0', STR_PAD_LEFT);
+
+        // Create bill
+        $bill = Bill::create([
+            'user_id' => $customer->id, // Using customer as user for now
+            'meter_id' => $customer->meter->id,
+            'bill_number' => $billNumber,
+            'billing_period_start' => Carbon::parse($reading->reading_date)->startOfMonth(),
+            'billing_period_end' => Carbon::parse($reading->reading_date)->endOfMonth(),
+            'consumption' => $consumption,
+            'base_charge' => $baseCharge,
+            'consumption_charge' => $consumptionCharge,
+            'tax_amount' => $taxAmount,
+            'total_amount' => $totalAmount,
+            'due_date' => Carbon::parse($reading->reading_date)->addDays(30),
+            'bill_status' => 'unpaid',
+            'notes' => 'Auto-generated from meter reading #' . $reading->id,
+            'created_by' => auth()->id(),
+        ]);
+
+        // Mark reading as billed
+        $reading->update([
+            'billed' => true,
+            'billed_by' => auth()->id(),
+            'billed_at' => now(),
+        ]);
+
+        return $bill;
+    }
+
+    /**
+     * API endpoint for OCR processing
      */
     public function processOCR(Request $request)
     {
