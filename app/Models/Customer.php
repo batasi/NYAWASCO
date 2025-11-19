@@ -68,7 +68,7 @@ class Customer extends Model
 
     public function bills()
     {
-        return $this->hasMany(Bill::class, 'user_id')->orderBy('created_at', 'desc');
+        return $this->hasMany(Bill::class, 'customer_id')->orderBy('created_at', 'desc');
     }
 
     public function payments()
@@ -101,7 +101,7 @@ class Customer extends Model
     {
         $readingsCount = $this->meterReadings()->count();
         if ($readingsCount === 0) return 0;
-        
+
         return $this->total_consumption / $readingsCount;
     }
 

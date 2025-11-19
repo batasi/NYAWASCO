@@ -17,9 +17,9 @@ class BillController extends Controller
         $sort = $request->get('sort', 'newest');
         $customerId = $request->get('customer');
 
-        $bills = Bill::with(['customer', 'meter', 'payments'])
+        $bills = Bill::with(['customer', 'meter'])
             ->when($customerId, function($query) use ($customerId) {
-                return $query->where('user_id', $customerId);
+                return $query->where('customer_id', $customerId);
             })
             ->when($status && $status !== 'all', function($query) use ($status) {
                 return $query->where('bill_status', $status);
