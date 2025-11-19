@@ -27,29 +27,79 @@ class Bill extends Model
         'notes',
         'created_by',
     ];
-    // app/Models/Bill.php
+
     protected $casts = [
         'billing_period_start' => 'date',
         'billing_period_end' => 'date',
         'due_date' => 'date',
+        'payment_date' => 'date',
+        'base_charge' => 'decimal:2',
+        'consumption_charge' => 'decimal:2',
+        'tax_amount' => 'decimal:2',
+        'late_fee' => 'decimal:2',
+        'total_amount' => 'decimal:2',
+        'consumption' => 'decimal:2',
     ];
 
     // Relationships
-
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
     // Bill.php
-public function user() {
-    return $this->belongsTo(User::class, 'created_by');
-}
-public function customer() {
-    return $this->belongsTo(Customer::class, 'customer_id');
-}
+    public function user() {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+    public function customer() {
+        return $this->belongsTo(Customer::class, 'customer_id');
+    }
 
-public function payments() {
-    return $this->hasMany(Payment::class);
-}
 
+
+    public function meter()
+    {
+        return $this->belongsTo(Meter::class);
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    public function meterReading()
+    {
+        return $this->hasOne(MeterReading::class, 'id', 'meter_reading_id');
+    }
+
+    // Scopes
+    public function scopeUnpaid($query)
+    {
+        return $query->where('bill_status', 'unpaid');
+    }
+
+    public function scopePaid($query)
+    {
+        return $query->where('bill_status', 'paid');
+    }
+
+    public function scopeOverdue($query)
+    {
+        return $query->where('due_date', '<', now())->unpaid();
+    }
+
+    // Accessors
+    public function getFormattedTotalAttribute()
+    {
+        return 'KSh ' . number_format($this->total_amount, 2);
+    }
+
+    public function getFormattedDueDateAttribute()
+    {
+        return $this->due_date?->format('M d, Y');
+    }
+
+    public function getIsOverdueAttribute()
+    {
+        return $this->due_date && $this->due_date->lt(now()) && $this->bill_status === 'unpaid';
+    }
 }

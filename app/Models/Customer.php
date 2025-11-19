@@ -61,14 +61,60 @@ class Customer extends Model
         return $this->hasOne(Meter::class);
     }
 
-    public function meterReadings()
+     public function meterReadings()
     {
-        return $this->hasMany(MeterReading::class);
+        return $this->hasMany(MeterReading::class)->orderBy('reading_date', 'desc');
     }
 
     public function bills()
     {
-        return $this->hasMany(Bill::class);
+        return $this->hasMany(Bill::class, 'user_id')->orderBy('created_at', 'desc');
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(Payment::class, 'user_id')->orderBy('payment_date', 'desc');
+    }
+
+    // Account balance calculation
+    public function getAccountBalanceAttribute()
+    {
+        $totalPaid = $this->payments()->sum('amount');
+        $totalBilled = $this->bills()->sum('total_amount');
+        return $totalPaid - $totalBilled;
+    }
+
+    // Get current outstanding balance (unpaid bills)
+    public function getOutstandingBalanceAttribute()
+    {
+        return $this->bills()->where('bill_status', 'unpaid')->sum('total_amount');
+    }
+
+    // Get total consumption
+    public function getTotalConsumptionAttribute()
+    {
+        return $this->meterReadings()->sum('consumption');
+    }
+
+    // Get average monthly consumption
+    public function getAverageMonthlyConsumptionAttribute()
+    {
+        $readingsCount = $this->meterReadings()->count();
+        if ($readingsCount === 0) return 0;
+        
+        return $this->total_consumption / $readingsCount;
+    }
+
+    // Get recent bills (last 6 months)
+    public function recentBills($limit = 6)
+    {
+        return $this->bills()->with('payments')->latest()->limit($limit)->get();
+    }
+
+    // Get payment history
+    public function paymentHistory($limit = 10)
+    {
+        return $this->payments()->latest()->limit($limit)->get();
     }
 
     // Scopes
