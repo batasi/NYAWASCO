@@ -15,7 +15,7 @@ return new class extends Migration
             $table->string('meter_model')->nullable();
             $table->string('manufacturer')->nullable();
             $table->string('status')->default('available'); // available, assigned, faulty, maintenance
-            $table->foreignId('customer_id')->nullable()->constrained()->onDelete('set null');
+            $table->unsignedBigInteger('customer_id')->nullable();
             $table->string('installation_address')->nullable();
             $table->date('installation_date')->nullable();
             $table->date('last_maintenance_date')->nullable();

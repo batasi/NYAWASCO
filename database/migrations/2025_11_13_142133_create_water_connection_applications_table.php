@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('water_connection_applications', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('customer_id')->nullable()->constrained()->onDelete('cascade');
+            $table->unsignedBigInteger('customer_id')->nullable();
             $table->string('first_name');
             $table->string('last_name');
             $table->string('email');

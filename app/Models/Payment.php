@@ -13,7 +13,7 @@ class Payment extends Model
      * The attributes that are mass assignable.
      */
     protected $fillable = [
-        'bill_id',
+        'meter_id',
         'user_id',
         'payment_no',
         'payment_date',
@@ -39,7 +39,10 @@ class Payment extends Model
     {
         return $this->belongsTo(User::class);
     }
-
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class);
+    }
     /**
      * Payment belongs to a bill.
      */

@@ -146,56 +146,68 @@
             <div class="px-6 py-4 overflow-y-auto" style="max-height: calc(100vh - 8rem);">
                 <form action="{{ route('payments.store') }}" method="POST">
                     @csrf
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <!-- Bill -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Bill</label>
-                            <select name="bill_id" id="billSelect" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                <option value="">-- Select Bill --</option>
-                                @foreach($bills as $bill)
-                                    <option value="{{ $bill->id }}">{{ $bill->bill_number }} - {{ $bill->user?->name }}</option>
-                                @endforeach
-                            </select>
+
+                        <!-- Search by Meter Number -->
+                        <div class="form-group">
+                            <label class="block text-sm font-medium text-gray-700">Meter Number</label>
+                            <input type="text" name="meter_no" id="meter_no" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Enter Meter Number">
+                            <p id="meter_error" class="text-red-600 text-sm mt-1 hidden"></p>
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">User</label>
-                            <input type="text" id="userName" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm bg-gray-100" readonly>
-                            <input type="hidden" name="user_id" id="userId">
+                        <!-- Meter Model -->
+                        <div class="form-group">
+                            <label class="block text-sm font-medium text-gray-700">Meter Model</label>
+                            <input type="text" id="meter_model" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm bg-gray-100" readonly>
                         </div>
 
-
-                        <!-- Payment Number -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Payment Number</label>
-                            <input type="text" name="payment_no" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" readonly value="{{ 'PAY-'.Str::upper(Str::random(6)) }}">
+                        <!-- Meter Type -->
+                        <div class="form-group">
+                            <label class="block text-sm font-medium text-gray-700">Meter Type</label>
+                            <input type="text" id="meter_type" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm bg-gray-100" readonly>
                         </div>
 
-                        <!-- Payment Date -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Payment Date</label>
-                            <input type="date" name="payment_date" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                        <!-- Auto-filled Customer Name -->
+                        <div class="form-group">
+                            <label class="block text-sm font-medium text-gray-700">Customer</label>
+                            <input type="text" id="customer_name" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm bg-gray-100" readonly>
                         </div>
 
-                        <!-- Amount -->
+                    </div>
+                    <!-- Unpaid Bills Table -->
+                    <h4 class="mt-6 font-semibold text-gray-700">Unpaid Bills</h4>
+                    <table id="unpaid-bills-table" class="table-auto w-full mt-2 border">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="border px-2 py-1">Bill No</th>
+                                <th class="border px-2 py-1">Total</th>
+                                <th class="border px-2 py-1">Due</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                    <br>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                        <!-- Total Unpaid Amount -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Due Amount</label>
-                            <input type="number" id="dueAmount" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm bg-gray-100" readonly>
+                            <label class="block text-sm font-medium text-gray-700">Total Due Amount</label>
+                            <input type="text" id="due_amount" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm bg-gray-100" readonly>
                         </div>
 
+                        <!-- Amount to Pay -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Amount to Pay</label>
-                            <input type="number" name="amount" step="0.01" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                            <input type="number" name="amount" step="0.01" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
                         </div>
-
-
-                        <!-- Payment Method -->
+                         <!-- Payment Method -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Payment Method</label>
                             <select name="payment_method" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                <option value="cash">Cash</option>
+                                <option>-*-select-*-</option>
                                 <option value="mpesa">MPESA</option>
-                                <option value="bank">Bank Transfer</option>
+                                <option value="bank">Bank</option>
                             </select>
                         </div>
 
@@ -205,37 +217,26 @@
                             <input type="text" name="transaction_reference" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
                         </div>
 
-                        <!-- Payment Status -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Status</label>
-                            <select name="payment_status" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                <option value="pending">Pending</option>
-                                <option value="completed">Completed</option>
-                                <option value="failed">Failed</option>
-                            </select>
-                        </div>
 
-                        <!-- Notes -->
-                        <div class="col-span-2">
-                            <label class="block text-sm font-medium text-gray-700">Notes</label>
-                            <textarea name="notes" rows="3" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"></textarea>
-                        </div>
                     </div>
+
+
 
                     <!-- Footer -->
                     <div class="mt-6 flex justify-end space-x-2 border-t pt-4 sticky bottom-0 bg-white z-10">
-                        <button type="button" onclick="closePaymentModal()"
-                            class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">Cancel</button>
-                        <button type="submit"
-                            class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">Save Payment</button>
+                        <button type="button" onclick="closePaymentModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">Cancel</button>
+                        <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">Save Payment</button>
                     </div>
+
                 </form>
             </div>
         </div>
     </div>
 </div>
-
+<!-- jQuery CDN -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script>
+/* Modal Open/Close */
 function openPaymentModal() {
     const modal = document.getElementById('paymentModal');
     const modalContent = document.getElementById('paymentModalContent');
@@ -243,51 +244,82 @@ function openPaymentModal() {
     modal.classList.remove('hidden');
     document.body.classList.add('overflow-hidden');
 
-    // Animate modal from bottom
-    setTimeout(() => {
-        modalContent.classList.remove('translate-y-full');
-    }, 10);
+    setTimeout(() => modalContent.classList.remove('translate-y-full'), 10);
 }
 
 function closePaymentModal() {
     const modal = document.getElementById('paymentModal');
     const modalContent = document.getElementById('paymentModalContent');
 
-    // Animate modal down
     modalContent.classList.add('translate-y-full');
 
     setTimeout(() => {
         modal.classList.add('hidden');
         document.body.classList.remove('overflow-hidden');
-    }, 300); // match transition duration
+    }, 300);
 }
 
-// Close modal when clicking outside
 window.addEventListener('click', function (event) {
     const modal = document.getElementById('paymentModal');
-    if (event.target === modal) {
-        closePaymentModal();
-    }
+    if (event.target === modal) closePaymentModal();
 });
 
-document.getElementById('billSelect').addEventListener('change', function() {
-    const billId = this.value;
-    if (!billId) {
-        document.getElementById('userName').value = '';
-        document.getElementById('userId').value = '';
-        document.getElementById('dueAmount').value = '';
-        return;
-    }
 
-    fetch(`/bills/${billId}/info`)
-        .then(res => res.json())
-        .then(data => {
-            document.getElementById('userName').value = data.user_name;
-            document.getElementById('userId').value = data.user_id;
-            document.getElementById('dueAmount').value = data.due_amount.toFixed(2);
-        })
-        .catch(err => console.error(err));
+$(document).on('keyup', '#meter_no', function () {
+    let meter = $(this).val().trim();
+    if (meter.length < 3) return; // only search when at least 3 chars typed
+
+    $.ajax({
+        url: `/bills/info/meter/${meter}`,
+        method: 'GET',
+        success: function (response) {
+            // --- Clear error message ---
+            $("#meter_error").addClass("hidden").text("");
+            // Customer Info
+            $('#customer_name').val(response.customer.name);
+
+            // Meter Info
+            $('#meter_model').val(response.meter.model);
+            $('#meter_type').val(response.meter.type);
+
+            // Total Due
+            $('#due_amount').val(response.total_due);
+
+            // Bills
+            let table = $('#unpaid-bills-table tbody');
+            table.empty();
+
+            response.unpaid_bills.forEach(bill => {
+                table.append(`
+                    <tr>
+                        <td class="border px-2 py-1">${bill.bill_number}</td>
+                        <td class="border px-2 py-1">${bill.total_amount}</td>
+                        <td class="border px-2 py-1">${bill.due}</td>
+                    </tr>
+                `);
+            });
+        },
+
+
+        error: function (xhr) {
+            if (xhr.status === 404) {
+                // Show error
+                $("#meter_error")
+                    .removeClass("hidden")
+                    .text("Meter number not found.");
+
+                // Clear all fields
+                $('#customer_name').val("");
+                $('#meter_model').val("");
+                $('#meter_type').val("");
+                $('#due_amount').val("");
+                $('#unpaid-bills-table tbody').empty();
+            }
+        }
+    });
 });
+
+
 </script>
 
 @endsection

@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('meter_readings', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('customer_id')->nullable()->constrained()->onDelete('cascade');
+            $table->unsignedBigInteger('customer_id')->nullable();
             $table->decimal('current_reading', 10, 2);
             $table->decimal('previous_reading', 10, 2)->default(0);
             $table->decimal('consumption', 10, 2)->default(0); // current_reading - previous_reading
@@ -18,11 +18,11 @@ return new class extends Migration
             $table->enum('reading_type', ['initial', 'monthly', 'special', 'correction'])->default('monthly');
             $table->string('reading_period'); // e.g., "January 2024", "February 2024"
             $table->boolean('billed')->default(false);
-            $table->foreignId('billed_by')->nullable()->constrained('users');
+            $table->unsignedBigInteger('billed_by')->nullable();
             $table->timestamp('billed_at')->nullable();
             $table->text('notes')->nullable();
             $table->string('reading_image')->nullable(); // For evidence
-            $table->foreignId('read_by')->constrained('users');
+            $table->unsignedBigInteger('read_by')->nullable();
             $table->timestamps();
 
             // Ensure unique reading per customer per period

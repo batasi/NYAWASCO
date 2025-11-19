@@ -48,6 +48,8 @@ Route::prefix('payments')->group(function () {
 });
 // web.php
 Route::get('/bills/{bill}/info', [BillController::class, 'info']);
+Route::get('/bills/info/customer/{customer}', [BillController::class, 'infoByCustomer']);
+Route::get('/bills/info/meter/{meter}', [BillController::class, 'infoByMeter']);
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/bills', [BillController::class, 'index'])->name('bills.index');

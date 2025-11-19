@@ -9,7 +9,7 @@ return new class extends Migration
     public function up()
     {
         Schema::table('meter_readings', function (Blueprint $table) {
-            $table->foreignId('meter_id')->nullable()->after('customer_id')->constrained()->onDelete('cascade');
+            $table->unsignedBigInteger('meter_id')->nullable()->after('customer_id');
         });
     }
 

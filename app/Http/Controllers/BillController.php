@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Bill;
+use App\Models\Meter;
+use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -118,6 +120,68 @@ class BillController extends Controller
         'due_amount' => $dueAmount,
     ]);
 }
+public function infoByCustomer($customerId)
+{
+    // Get the customer
+    $customer = Customer::findOrFail($customerId);
+
+    // Fetch all unpaid bills
+    $unpaidBills = Bill::where('customer_id', $customerId)
+        ->get()
+        ->map(function ($bill) {
+            $bill->due = $bill->total_amount - $bill->payments()->sum('amount');
+            return $bill;
+        })
+        ->filter(function ($bill) {
+            return $bill->due > 0;
+        });
+
+    // Total due across all bills
+    $totalDue = $unpaidBills->sum('due');
+
+    return response()->json([
+        'customer_id'   => $customer->id,
+        'customer_name' => $customer->first_name,
+        'total_due'     => $totalDue,
+        'unpaid_bills'  => $unpaidBills->values(), // optional
+    ]);
+}
+public function infoByMeter($meter)
+{
+    $meterRecord = Meter::where('meter_number', $meter)->first();
+
+    if (!$meterRecord) {
+        return response()->json(['error' => 'Meter not found'], 404);
+    }
+
+    $customer = $meterRecord->customer;
+
+    $unpaidBills = Bill::where('meter_id', $meterRecord->id)
+        ->whereColumn('total_amount', '>', 'paid_amount')
+        ->get();
+
+    $totalDue = $unpaidBills->sum(fn($b) => $b->total_amount - $b->paid_amount);
+
+    return response()->json([
+        'customer' => [
+            'id' => $customer->id,
+            'name' => $customer->first_name . ' ' . $customer->last_name,
+        ],
+        'meter' => [
+            'model' => $meterRecord->meter_model,
+            'type' => $meterRecord->meter_type,
+        ],
+        'unpaid_bills' => $unpaidBills->map(function ($b) {
+            return [
+                'bill_number' => $b->bill_number,
+                'total_amount' => $b->total_amount,
+                'due' => $b->total_amount - $b->paid_amount,
+            ];
+        }),
+        'total_due' => $totalDue,
+    ]);
+}
+
 
 
 }

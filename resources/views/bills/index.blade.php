@@ -8,6 +8,7 @@
     use Illuminate\Support\Facades\Storage;
     use Illuminate\Support\Facades\Auth;
 @endphp
+
 @can('view bills')
 <div class="min-h-screen bg-gray-50">
     <!-- Header Section -->

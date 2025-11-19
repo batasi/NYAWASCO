@@ -13,9 +13,9 @@ return new class extends Migration
     {
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('bill_id')->constrained('bills')->onDelete('cascade');
-            $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->string('payment_no')->unique();
+            $table->unsignedBigInteger('meter_id');
+            $table->unsignedBigInteger('user_id')->nullable();
+            $table->string('payment_no')->unique()->nullable();
             $table->date('payment_date')->nullable();
             $table->decimal('amount', 10, 2)->default(0);
             $table->string('payment_method')->nullable(); // e.g., MPESA, Cash, Bank
