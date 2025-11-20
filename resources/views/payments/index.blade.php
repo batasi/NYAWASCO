@@ -65,7 +65,6 @@
                     <tr class="bg-blue-50 border-b border-blue-200">
                         <th class="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Payment #</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Customer</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Bill #</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Amount</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Payment Method</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Status</th>
@@ -81,7 +80,6 @@
                             <div class="text-sm font-medium text-gray-900">{{ $payment->user?->name ?? 'N/A' }}</div>
                             <div class="text-sm text-gray-500">{{ $payment->user?->email ?? '-' }}</div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $payment->bill?->bill_number ?? 'N/A' }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">KSh {{ number_format($payment->amount, 2) }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ ucfirst($payment->payment_method) ?? '—' }}</td>
                         <td class="px-6 py-4 whitespace-nowrap">
@@ -131,17 +129,15 @@
 </div>
 
 <!-- Modal -->
-<div id="paymentModal" class="hidden fixed inset-0 z-60 bg-gray-900 bg-opacity-50 flex items-end justify-center overflow-y-auto">
-    <div class="flex items-end justify-center w-full min-h-screen px-4 pb-8">
-        <!-- Modal Content -->
-        <div class="relative w-full max-w-2xl bg-white rounded-t-lg shadow-lg flex flex-col overflow-hidden transform translate-y-full transition-transform duration-300" id="paymentModalContent">
 
+    <div id="paymentModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+    <div class="flex items-end justify-center w-full min-h-screen px-4 pb-8">
+    <div class="relative bg-white rounded-lg shadow-lg w-full max-w-4xl mx-auto my-8" id="paymentModalContent">
             <!-- Header -->
-            <div class="flex justify-between items-center border-b px-6 py-4 sticky top-0 bg-white z-20">
+            <div class="flex justify-between items-center border-b px-6 py-4 sticky top-0 bg-white z-10">
                 <h3 class="text-lg font-semibold text-gray-800">Create New Payment</h3>
                 <button onclick="closePaymentModal()" class="text-gray-500 hover:text-gray-700 text-2xl leading-none">&times;</button>
             </div>
-
             <!-- Body -->
             <div class="px-6 py-4 overflow-y-auto" style="max-height: calc(100vh - 8rem);">
                 <form action="{{ route('payments.store') }}" method="POST">
@@ -152,7 +148,7 @@
                         <!-- Search by Meter Number -->
                         <div class="form-group">
                             <label class="block text-sm font-medium text-gray-700">Meter Number</label>
-                            <input type="text" name="meter_no" id="meter_no" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Enter Meter Number">
+                            <input type="text" name="meter_no" id="meter_no" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Search using Meter Number">
                             <p id="meter_error" class="text-red-600 text-sm mt-1 hidden"></p>
                         </div>
 
@@ -232,7 +228,7 @@
             </div>
         </div>
     </div>
-</div>
+    </div>
 <!-- jQuery CDN -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script>
@@ -251,7 +247,7 @@ function closePaymentModal() {
     const modal = document.getElementById('paymentModal');
     const modalContent = document.getElementById('paymentModalContent');
 
-    modalContent.classList.add('translate-y-full');
+
 
     setTimeout(() => {
         modal.classList.add('hidden');
