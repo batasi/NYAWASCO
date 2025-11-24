@@ -533,8 +533,8 @@
                             <div>
                                 <h4 class="font-semibold text-gray-900 mb-1">Phone Numbers</h4>
                                 <p class="text-gray-600">
-                                    +254 728 725 559<br>
-                                    +254 714 725 559
+                                    +254 787080455<br>
+
                                 </p>
                             </div>
                         </div>

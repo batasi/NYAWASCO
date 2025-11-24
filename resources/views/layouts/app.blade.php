@@ -933,7 +933,7 @@ use Illuminate\Support\Facades\Route;
             <div class="mobile-contact">
                 <a href="tel:+254728725559">
                     <i class="fas fa-phone-alt"></i>
-                    <span class="desktop-only">+254 700 00 0000</span>
+                    <span class="desktop-only">+254 787 080 455</span>
                 </a>
                 <a href="mailto:info@nyawasco.co.ke">
                     <i class="fas fa-envelope"></i>
@@ -1287,7 +1287,7 @@ use Illuminate\Support\Facades\Route;
                         </li>
                         <li class="flex items-center">
                             <i class="fas fa-phone-alt mr-3 text-blue-400"></i>
-                            <span>+254 700 00 0000</span>
+                            <span>+254 787 080 455</span>
                         </li>
                         <li class="flex items-center">
                             <i class="fas fa-envelope mr-3 text-blue-400"></i>
