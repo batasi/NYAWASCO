@@ -145,6 +145,10 @@ private function getAdminData()
                         ->where('due_date', '<', now())->count(),
     ];
 
+    //spartie permissions
+    $permissions_list = \Spatie\Permission\Models\Permission::all();
+    $roles = \Spatie\Permission\Models\Role::all();
+
     return [
         'total_customers'      => $total_customers,
         'active_customers'     => $active_customers,
@@ -180,6 +184,10 @@ private function getAdminData()
         'monthly_billed' => array_values($monthly_billed),
         'monthly_collected' => array_values($monthly_collected),
         'bill_status_counts' => $bill_status_counts,
+
+         //permissions list
+        'permissions_list' => $permissions_list,
+        'roles'=>$roles,
     ];
 }
 

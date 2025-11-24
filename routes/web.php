@@ -59,6 +59,13 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/bills/{bill}', [BillController::class, 'destroy'])->name('bills.destroy');
 });
 
+// Fetch user permissions
+Route::get('/admin/users/{user}/permissions', [App\Http\Controllers\Admin\UserController::class, 'getPermissions'])
+    ->name('admin.users.permissions');
+
+// Update user permissions
+Route::post('/admin/users/{user}/permissions', [App\Http\Controllers\Admin\UserController::class, 'updatePermissions'])
+    ->name('admin.users.permissions.update');
 /*
 |--------------------------------------------------------------------------
 | EMAIL VERIFICATION (JETSTREAM / FORTIFY)
@@ -220,7 +227,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
     Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
 });
 
-Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+Route::prefix('admin')->name('admin.')->group(function () {
     // Dashboard
     Route::get('dashboard', [UserController::class, 'index'])->name('dashboard');
 
@@ -250,7 +257,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
         })->name('customers.address');
     });
 
-    
+
 
 
     // Meter Readings Management

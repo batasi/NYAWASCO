@@ -22,6 +22,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'bio',
         'avatar',
         'is_active',
+        'email_verified_at',
         'preferences',
         // Organizer fields
         'company_name',
