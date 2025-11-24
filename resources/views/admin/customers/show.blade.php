@@ -643,11 +643,11 @@
                         View All Bills
                     </a>
 
-                    <a href="{{ route('payments.index') }}?customer={{ $customer->id }}"
+                    <!-- <a href="{{ route('payments.index') }}?customer={{ $customer->id }}"
                        class="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
                         <i class="fas fa-credit-card mr-2"></i>
                         Record Payment
-                    </a>
+                    </a> -->
 
                     <button onclick="window.print()"
                             class="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
