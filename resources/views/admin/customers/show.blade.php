@@ -17,14 +17,14 @@
         </div>
 
         <!-- Bill Management Button -->
-        <a href="{{ route('bills.index') }}" 
+        <a href="{{ route('bills.index') }}"
             class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition duration-200 flex items-center shadow-md">
             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
             </svg>
             Bill Management
         </a>
-        <a href="{{ route('admin.customers.index') }}" 
+        <a href="{{ route('admin.customers.index') }}"
            class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 rounded-lg transition duration-200 flex items-center justify-center w-20px md:w-auto no-print text-sm">
             <i class="fas fa-arrow-left mr-2"></i>
             Back to Customers
@@ -177,11 +177,11 @@
                                 </td>
                                 <td class="px-3 py-2 md:px-4 md:py-3 whitespace-nowrap text-sm font-medium no-print">
                                     <div class="flex space-x-2">
-                                        <a href="{{ route('bills.show', $bill->id) }}" 
+                                        <a href="{{ route('bills.show', $bill->id) }}"
                                            class="text-blue-600 hover:text-blue-900 transition duration-150 p-1 rounded">
                                             <i class="fas fa-eye"></i>
                                         </a>
-                                        <a href="{{ route('bills.edit', $bill->id) }}" 
+                                        <a href="{{ route('bills.edit', $bill->id) }}"
                                            class="text-green-600 hover:text-green-900 transition duration-150 p-1 rounded">
                                             <i class="fas fa-edit"></i>
                                         </a>
@@ -209,11 +209,11 @@
                         <i class="fas fa-tachometer-alt mr-2 text-green-600"></i>
                         Meter Reading History
                     </h2>
-                    <a href="{{ route('admin.meter-readings.create', ['customer' => $customer->id]) }}" 
+                    <!-- <a href="{{ route('admin.meter-readings.create', ['customer' => $customer->id]) }}"
                        class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg transition duration-200 flex items-center text-sm no-print">
                         <i class="fas fa-plus mr-2"></i>
                         New Reading
-                    </a>
+                    </a> -->
                 </div>
 
                 @if($customer->meterReadings->count() > 0)
@@ -288,7 +288,7 @@
                     <i class="fas fa-history mr-2 text-purple-600"></i>
                     Recent Activity
                 </h2>
-                
+
                 <div class="space-y-4">
                     @forelse($recentActivity as $activity)
                     <div class="flex items-start space-x-3">
@@ -325,7 +325,7 @@
                     <i class="fas fa-user-circle mr-2 text-blue-600"></i>
                     Customer Information
                 </h2>
-                
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                     <!-- Personal Information -->
                     <div class="print-break-inside-avoid">
@@ -407,7 +407,7 @@
                     <i class="fas fa-file-alt mr-2 text-blue-600"></i>
                     Application Documents
                 </h2>
-                
+
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <!-- National ID -->
                     <div class="border border-gray-200 rounded-lg p-3 hover:shadow-md transition duration-200 card-hover">
@@ -425,13 +425,13 @@
                         </div>
                         @if($customer->waterApplication->national_id_file)
                             <div class="flex flex-col space-y-2">
-                                <a href="{{ Storage::url($customer->waterApplication->national_id_file) }}" 
+                                <a href="{{ Storage::url($customer->waterApplication->national_id_file) }}"
                                    target="_blank"
                                    class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs flex items-center justify-center transition duration-200">
                                     <i class="fas fa-eye mr-1"></i>
                                     View
                                 </a>
-                                <a href="{{ Storage::url($customer->waterApplication->national_id_file) }}" 
+                                <a href="{{ Storage::url($customer->waterApplication->national_id_file) }}"
                                    download
                                    class="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs flex items-center justify-center transition duration-200">
                                     <i class="fas fa-download mr-1"></i>
@@ -459,13 +459,13 @@
                         </div>
                         @if($customer->waterApplication->kra_pin_file)
                             <div class="flex flex-col space-y-2">
-                                <a href="{{ Storage::url($customer->waterApplication->kra_pin_file) }}" 
+                                <a href="{{ Storage::url($customer->waterApplication->kra_pin_file) }}"
                                    target="_blank"
                                    class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs flex items-center justify-center transition duration-200">
                                     <i class="fas fa-eye mr-1"></i>
                                     View
                                 </a>
-                                <a href="{{ Storage::url($customer->waterApplication->kra_pin_file) }}" 
+                                <a href="{{ Storage::url($customer->waterApplication->kra_pin_file) }}"
                                    download
                                    class="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs flex items-center justify-center transition duration-200">
                                     <i class="fas fa-download mr-1"></i>
@@ -493,13 +493,13 @@
                         </div>
                         @if($customer->waterApplication->title_document)
                             <div class="flex flex-col space-y-2">
-                                <a href="{{ Storage::url($customer->waterApplication->title_document) }}" 
+                                <a href="{{ Storage::url($customer->waterApplication->title_document) }}"
                                    target="_blank"
                                    class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs flex items-center justify-center transition duration-200">
                                     <i class="fas fa-eye mr-1"></i>
                                     View
                                 </a>
-                                <a href="{{ Storage::url($customer->waterApplication->title_document) }}" 
+                                <a href="{{ Storage::url($customer->waterApplication->title_document) }}"
                                    download
                                    class="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs flex items-center justify-center transition duration-200">
                                     <i class="fas fa-download mr-1"></i>
@@ -549,7 +549,7 @@
             </div>
             @endif
 
-           
+
         </div>
 
         <!-- Right Column -->
@@ -561,7 +561,7 @@
                     <i class="fas fa-tachometer-alt mr-2 text-green-600"></i>
                     Meter Information
                 </h2>
-                
+
                 <div class="space-y-4">
                     <div>
                         <label class="text-xs md:text-sm text-gray-500 block">Meter Number</label>
@@ -619,7 +619,7 @@
             </div>
             @endif
 
-            
+
 
             <!-- Quick Actions -->
             <div class="bg-white rounded-xl shadow-md p-4 md:p-6 border border-gray-100 no-print">
@@ -627,29 +627,29 @@
                     <i class="fas fa-bolt mr-2 text-yellow-500"></i>
                     Quick Actions
                 </h2>
-                
+
                 <div class="space-y-3">
-                    @if($customer->meter)
-                    <a href="{{ route('admin.meter-readings.create', ['customer' => $customer->id]) }}" 
+                    <!-- @if($customer->meter)
+                    <a href="{{ route('admin.meter-readings.create', ['customer' => $customer->id]) }}"
                        class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
                         <i class="fas fa-tachometer-alt mr-2"></i>
                         Record Meter Reading
                     </a>
-                    @endif
-                    
-                    <a href="{{ route('bills.index') }}?customer={{ $customer->id }}" 
+                    @endif -->
+
+                    <a href="{{ route('bills.index') }}?customer={{ $customer->id }}"
                        class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
                         <i class="fas fa-file-invoice mr-2"></i>
                         View All Bills
                     </a>
 
-                    <a href="{{ route('payments.index') }}?customer={{ $customer->id }}" 
+                    <a href="{{ route('payments.index') }}?customer={{ $customer->id }}"
                        class="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
                         <i class="fas fa-credit-card mr-2"></i>
                         Record Payment
                     </a>
 
-                    <button onclick="window.print()" 
+                    <button onclick="window.print()"
                             class="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
                         <i class="fas fa-print mr-2"></i>
                         Print Profile
@@ -664,7 +664,7 @@
     .card-hover {
         transition: all 0.3s ease;
     }
-    
+
     .card-hover:hover {
         transform: translateY(-2px);
         box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
@@ -681,23 +681,23 @@
         .no-print {
             display: none !important;
         }
-        
+
         .print-break-inside-avoid {
             break-inside: avoid;
         }
-        
+
         .bg-white {
             background: white !important;
         }
-        
+
         .fixed {
             display: none !important;
         }
-        
+
         .shadow-md {
             box-shadow: none !important;
         }
-        
+
         .border {
             border: 1px solid #e5e7eb !important;
         }
