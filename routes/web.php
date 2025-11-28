@@ -32,6 +32,7 @@ use App\Http\Controllers\Admin\MeterController;
 use App\Http\Controllers\BillController;
 use App\Http\Controllers\Admin\MeterReadingController;
 use App\Http\Controllers\Admin\WaterConnectionController;
+use App\Http\Controllers\Admin\MeterCategoryController;
 
 use App\Models\Customer;
 
@@ -58,7 +59,6 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/bills/{bill}', [BillController::class, 'update'])->name('bills.edit');
     Route::delete('/bills/{bill}', [BillController::class, 'destroy'])->name('bills.destroy');
 });
-
 // Fetch user permissions
 Route::get('/admin/users/{user}/permissions', [App\Http\Controllers\Admin\UserController::class, 'getPermissions'])
     ->name('admin.users.permissions');
@@ -66,6 +66,9 @@ Route::get('/admin/users/{user}/permissions', [App\Http\Controllers\Admin\UserCo
 // Update user permissions
 Route::post('/admin/users/{user}/permissions', [App\Http\Controllers\Admin\UserController::class, 'updatePermissions'])
     ->name('admin.users.permissions.update');
+
+
+
 /*
 |--------------------------------------------------------------------------
 | EMAIL VERIFICATION (JETSTREAM / FORTIFY)
@@ -215,23 +218,32 @@ Route::get('/water-connection/apply', [WaterConnectionController::class, 'create
 Route::post('/water-connection/submit', [WaterConnectionController::class, 'store'])->name('water-connection.submit');
 
 // Admin routes group
-Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
+// Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
 
-    // Water applications routes
-    Route::get('/water-applications', [WaterConnectionController::class, 'index'])->name('water-applications.index');
-    Route::get('/water-applications/{application}', [WaterConnectionController::class, 'show'])->name('water-applications.show');
-    Route::post('/water-applications/{application}/approve', [WaterConnectionController::class, 'approve'])->name('water-applications.approve');
-    Route::post('/water-applications/{application}/decline', [WaterConnectionController::class, 'decline'])->name('water-applications.decline');
+//     // Water applications routes
+//     Route::get('/water-applications', [WaterConnectionController::class, 'index'])->name('water-applications.index');
+//     Route::get('/water-applications/{application}', [WaterConnectionController::class, 'show'])->name('water-applications.show');
+//     Route::post('/water-applications/{application}/approve', [WaterConnectionController::class, 'approve'])->name('water-applications.approve');
+//     Route::post('/water-applications/{application}/decline', [WaterConnectionController::class, 'decline'])->name('water-applications.decline');
 
-    // Customers routes
-    Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
+//     // Customers routes
+//     Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
+// });
+
+Route::prefix('admin/water-applications')->name('admin.water-applications.')->group(function () {
+    Route::get('/', [WaterConnectionController::class, 'index'])->name('index');
+    Route::get('/{application}', [WaterConnectionController::class, 'show'])->name('show');
+    Route::post('/{application}/approve', [WaterConnectionController::class, 'approve'])->name('approve');
+    Route::post('/{application}/decline', [WaterConnectionController::class, 'decline'])->name('decline');
 });
 
-Route::prefix('admin')->name('admin.')->group(function () {
+
+
+Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     // Dashboard
     Route::get('dashboard', [UserController::class, 'index'])->name('dashboard');
 
-    // Customer Management Routes
+    // Customer Management Routes - FIXED VERSION
     Route::prefix('customers')->name('customers.')->group(function () {
         Route::get('/', [CustomerController::class, 'index'])->name('index');
         Route::get('/create', [CustomerController::class, 'create'])->name('create');
@@ -240,24 +252,52 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/{customer}/edit', [CustomerController::class, 'edit'])->name('edit');
         Route::put('/{customer}', [CustomerController::class, 'update'])->name('update');
         Route::delete('/{customer}', [CustomerController::class, 'destroy'])->name('destroy');
-
+        
+        // Status Management
+        Route::patch('/{customer}/update-status', [CustomerController::class, 'updateStatus'])
+            ->name('update-status');
+        
+        // Meter Assignment
+        Route::post('/{customer}/assign-meter', [CustomerController::class, 'assignMeter'])->name('assign-meter');
+        
+        // FIXED: Use consistent naming
+        Route::post('/{customer}/unassign-meter/{meter}', [CustomerController::class, 'unassignMeter'])
+            ->name('unassign-meter');
+        Route::post('/{customer}/unassign-all-meters', [CustomerController::class, 'unassignAllMeters'])
+            ->name('unassign-all-meters');
+            
         // Meter Readings
         Route::get('/{customer}/readings', [CustomerController::class, 'meterReadings'])->name('meter-readings');
         Route::get('/{customer}/readings/create', [CustomerController::class, 'createReading'])->name('readings.create');
         Route::post('/{customer}/readings', [CustomerController::class, 'storeReading'])->name('readings.store');
 
+        Route::get('/admin/meter-readings/create', [MeterReadingController::class, 'create'])
+            ->name('admin.meter-readings.create');
+
+        Route::post('/admin/meter-readings', [MeterReadingController::class, 'store'])
+            ->name('admin.meter-readings.store');
+
         // Billing
         Route::post('/{customer}/readings/{reading}/generate-bill', [CustomerController::class, 'generateBill'])->name('generate-bill');
         Route::get('/{customer}/bills', [CustomerController::class, 'bills'])->name('bills');
 
-         Route::get('/customers/{customer}/address', function (Customer $customer) {
-            return response()->json([
-                'address' => $customer->physical_address
-            ]);
-        })->name('customers.address');
+        // AJAX endpoints
+        Route::get('/get-available-meters', [CustomerController::class, 'getAvailableMeters'])->name('get-available-meters');
+        Route::get('/{customer}/get-address', [CustomerController::class, 'getCustomerAddress'])->name('get-address');
+        Route::get('/{customer}/meters', [CustomerController::class, 'getCustomerMeters'])
+            ->name('get-customer-meters');
+
+        Route::get('/admin/meter-readings/last-reading', [MeterReadingController::class, 'getLastReading'])
+            ->name('admin.meter-readings.last-reading');
+
     });
 
+      Route::get('/meters/available-json', [MeterController::class, 'getAvailableMeters'])
+        ->name('meters.available.json');
 
+    
+    
+    
 
 
     // Meter Readings Management
@@ -286,6 +326,23 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::put('/{meter}', [MeterController::class, 'update'])->name('update');
         Route::post('/{meter}/assign', [MeterController::class, 'assignToCustomer'])->name('assign');
         Route::post('/{meter}/unassign', [MeterController::class, 'unassign'])->name('unassign');
+    });
+
+
+    // Meter Categories Management
+    Route::prefix('meter-categories')->name('meter-categories.')->group(function () {
+        Route::get('/', [MeterCategoryController::class, 'index'])->name('index');
+        Route::get('/create', [MeterCategoryController::class, 'create'])->name('create');
+        Route::post('/', [MeterCategoryController::class, 'store'])->name('store');
+        Route::get('/{meterCategory}', [MeterCategoryController::class, 'show'])->name('show');
+        Route::get('/{meterCategory}/edit', [MeterCategoryController::class, 'edit'])->name('edit');
+        Route::put('/{meterCategory}', [MeterCategoryController::class, 'update'])->name('update');
+        Route::delete('/{meterCategory}', [MeterCategoryController::class, 'destroy'])->name('destroy');
+        Route::post('/meter-categories/{meterCategory}/calculate', [MeterCategoryController::class, 'calculateCharge'])->name('meter-categories.calculate');
+        // Pricing Tiers
+        Route::post('/{meterCategory}/tiers', [MeterCategoryController::class, 'storeTier'])->name('tiers.store');
+        Route::put('/{meterCategory}/tiers/{pricingTier}', [MeterCategoryController::class, 'updateTier'])->name('tiers.update');
+        Route::delete('/{meterCategory}/tiers/{pricingTier}', [MeterCategoryController::class, 'destroyTier'])->name('tiers.destroy');
     });
 
 

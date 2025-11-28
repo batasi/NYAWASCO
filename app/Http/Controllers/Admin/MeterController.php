@@ -5,17 +5,25 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Meter;
 use App\Models\Customer;
+use App\Models\MeterCategory;
 use App\Models\MeterReading;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class MeterController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $meters = Meter::with(['customer', 'meterReadings' => function($query) {
+        $categoryId = $request->get('category');
+        
+        $meters = Meter::with(['customer', 'meterCategory', 'meterReadings' => function($query) {
             $query->latest()->limit(1);
-        }])->latest()->paginate(20);
+        }])
+        ->when($categoryId, function($query) use ($categoryId) {
+            return $query->where('meter_category_id', $categoryId);
+        })
+        ->latest()
+        ->paginate(20);
 
         $stats = [
             'total' => Meter::count(),
@@ -24,13 +32,15 @@ class MeterController extends Controller
             'faulty' => Meter::where('status', 'faulty')->count(),
         ];
 
-        return view('admin.meters.index', compact('meters', 'stats'));
+        $categories = MeterCategory::active()->ordered()->withCount('meters')->get();
+
+        return view('admin.meters.index', compact('meters', 'stats', 'categories'));
     }
 
     public function available()
     {
         $meters = Meter::available()
-            ->with(['customer', 'meterReadings' => function($query) {
+            ->with(['customer', 'meterCategory', 'meterReadings' => function($query) {
                 $query->latest()->limit(1);
             }])
             ->latest()
@@ -42,7 +52,7 @@ class MeterController extends Controller
     public function assigned()
     {
         $meters = Meter::assigned()
-            ->with(['customer', 'meterReadings' => function($query) {
+            ->with(['customer', 'meterCategory', 'meterReadings' => function($query) {
                 $query->latest()->limit(1);
             }])
             ->latest()
@@ -54,7 +64,7 @@ class MeterController extends Controller
     public function byLocation(Request $request)
     {
         $location = $request->get('location', '');
-        $meters = Meter::with(['customer', 'meterReadings' => function($query) {
+        $meters = Meter::with(['customer', 'meterCategory', 'meterReadings' => function($query) {
                 $query->latest()->limit(1);
             }])
             ->when($location, function($query) use ($location) {
@@ -71,18 +81,33 @@ class MeterController extends Controller
         $validated = $request->validate([
             'meter_number' => 'required|string|max:50|unique:meters,meter_number',
             'meter_type' => 'required|string|in:domestic,commercial,industrial,institutional,smart,mechanical',
+            'meter_category_id' => 'required|exists:meter_categories,id',
             'meter_model' => 'nullable|string|max:100',
             'customer_id' => 'nullable|exists:customers,id',
             'installation_address' => 'nullable|string|max:500',
             'installation_date' => 'nullable|date',
             'initial_reading' => 'required|numeric|min:0',
+            'installation_fee' => 'nullable|numeric|min:0',
+            'connection_fee' => 'nullable|numeric|min:0',
+            'deposit_amount' => 'nullable|numeric|min:0',
+            'balance_bf' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string|max:1000',
         ]);
 
         try {
             DB::transaction(function () use ($validated) {
+                // Get category to set default fees
+                $category = MeterCategory::find($validated['meter_category_id']);
+                $additionalCharges = $category->additional_charges ?? [];
+
                 // Determine status based on customer assignment
                 $validated['status'] = $validated['customer_id'] ? 'assigned' : 'available';
+
+                // Set default fees from category if not provided
+                $validated['installation_fee'] = $validated['installation_fee'] ?? ($additionalCharges['installation_fee'] ?? 0);
+                $validated['connection_fee'] = $validated['connection_fee'] ?? ($additionalCharges['connection_fee'] ?? 0);
+                $validated['deposit_amount'] = $validated['deposit_amount'] ?? ($additionalCharges['deposit'] ?? 0);
+                $validated['current_balance'] = $validated['balance_bf'] ?? 0;
 
                 // Create meter
                 $meter = Meter::create($validated);
@@ -101,7 +126,7 @@ class MeterController extends Controller
 
                     // Create initial meter reading with customer_id
                     MeterReading::create([
-                        'customer_id' => $customer->id, // This is provided for assigned meters
+                        'customer_id' => $customer->id,
                         'meter_id' => $meter->id,
                         'current_reading' => $validated['initial_reading'],
                         'previous_reading' => 0,
@@ -127,7 +152,6 @@ class MeterController extends Controller
                         'read_by' => auth()->id(),
                         'notes' => 'Initial meter reading for unassigned meter',
                     ]);
-                    // Note: customer_id is not set for unassigned meters
                 }
             });
 
@@ -157,8 +181,10 @@ class MeterController extends Controller
 
     public function show(Meter $meter)
     {
-        $meter->load(['customer', 'meterReadings' => function($query) {
+        $meter->load(['customer', 'meterCategory', 'meterReadings' => function($query) {
             $query->latest()->limit(10);
+        }, 'bills' => function($query) {
+            $query->latest()->limit(5);
         }]);
 
         return view('admin.meters.show', compact('meter'));
@@ -175,6 +201,7 @@ class MeterController extends Controller
             'mechanical' => 'Mechanical',
         ];
 
+        $categories = MeterCategory::active()->ordered()->get();
         $customers = Customer::active()->get();
         $statuses = [
             'available' => 'Available',
@@ -183,7 +210,7 @@ class MeterController extends Controller
             'maintenance' => 'Maintenance',
         ];
 
-        return view('admin.meters.edit', compact('meter', 'meterTypes', 'customers', 'statuses'));
+        return view('admin.meters.edit', compact('meter', 'meterTypes', 'categories', 'customers', 'statuses'));
     }
 
     public function update(Request $request, Meter $meter)
@@ -191,14 +218,24 @@ class MeterController extends Controller
         $validated = $request->validate([
             'meter_number' => 'required|string|max:50|unique:meters,meter_number,' . $meter->id,
             'meter_type' => 'required|string|in:domestic,commercial,industrial,institutional,smart,mechanical',
+            'meter_category_id' => 'required|exists:meter_categories,id',
             'meter_model' => 'nullable|string|max:100',
             'customer_id' => 'nullable|exists:customers,id',
             'installation_address' => 'nullable|string|max:500',
             'installation_date' => 'nullable|date',
             'status' => 'required|string|in:available,assigned,faulty,maintenance',
             'initial_reading' => 'nullable|numeric|min:0',
+            'installation_fee' => 'nullable|numeric|min:0',
+            'connection_fee' => 'nullable|numeric|min:0',
+            'deposit_amount' => 'nullable|numeric|min:0',
+            'balance_bf' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string|max:1000',
         ]);
+
+        // Update current balance if balance brought forward changes
+        if ($validated['balance_bf'] != $meter->balance_bf) {
+            $validated['current_balance'] = $validated['balance_bf'];
+        }
 
         $meter->update($validated);
 
@@ -206,114 +243,28 @@ class MeterController extends Controller
             ->with('success', 'Meter updated successfully!');
     }
 
-    public function assignToCustomer(Request $request, Meter $meter)
-    {
-        $validated = $request->validate([
-            'customer_id' => 'required|exists:customers,id',
-            'installation_address' => 'required|string|max:500',
-            'installation_date' => 'required|date',
-            'initial_reading' => 'nullable|numeric|min:0',
-        ]);
-
-        $customer = Customer::findOrFail($validated['customer_id']);
-
-        DB::transaction(function () use ($meter, $customer, $validated) {
-            $meter->update([
-                'customer_id' => $customer->id,
-                'installation_address' => $validated['installation_address'],
-                'installation_date' => $validated['installation_date'],
-                'status' => 'assigned',
-                'initial_reading' => $validated['initial_reading'] ?? $meter->initial_reading,
-            ]);
-
-            // Update customer's meter info
-            $customer->update([
+   
+public function getAvailableMeters(Request $request)
+{
+    $categoryId = $request->get('category_id');
+    
+    $meters = Meter::where('status', 'available')
+        ->when($categoryId, function($query) use ($categoryId) {
+            return $query->where('meter_category_id', $categoryId);
+        })
+        ->with('meterCategory')
+        ->get()
+        ->map(function($meter) {
+            return [
+                'id' => $meter->id,
                 'meter_number' => $meter->meter_number,
                 'meter_type' => $meter->meter_type,
-                'initial_meter_reading' => $validated['initial_reading'] ?? $meter->initial_reading,
-                'initial_reading_date' => $validated['installation_date'],
-            ]);
-
-            // Create initial meter reading if not exists
-            if (!$meter->meterReadings()->exists()) {
-                MeterReading::create([
-                    'customer_id' => $customer->id,
-                    'meter_id' => $meter->id,
-                    'current_reading' => $validated['initial_reading'] ?? $meter->initial_reading,
-                    'previous_reading' => 0,
-                    'consumption' => $validated['initial_reading'] ?? $meter->initial_reading,
-                    'reading_date' => $validated['installation_date'],
-                    'reading_type' => 'initial',
-                    'reading_period' => 'Initial Installation',
-                    'billed' => false,
-                    'read_by' => auth()->id(),
-                    'notes' => 'Initial meter reading upon customer assignment',
-                ]);
-            }
+                'meter_model' => $meter->meter_model,
+                'initial_reading' => $meter->initial_reading,
+                'category_name' => $meter->meterCategory->name ?? 'No Category'
+            ];
         });
-
-        return redirect()->route('admin.meters.show', $meter)
-            ->with('success', "Meter assigned to {$customer->full_name} successfully!");
-    }
-
-    public function unassign(Meter $meter)
-    {
-        if ($meter->customer) {
-            $customerName = $meter->customer->full_name;
-            
-            DB::transaction(function () use ($meter) {
-                $customer = $meter->customer;
-                $meter->update([
-                    'customer_id' => null,
-                    'status' => 'available',
-                    'installation_address' => null,
-                    'installation_date' => null,
-                ]);
-
-                // Clear customer's meter info
-                $customer->update([
-                    'meter_number' => null,
-                    'meter_type' => null,
-                ]);
-            });
-
-            return redirect()->route('admin.meters.show', $meter)
-                ->with('success', "Meter unassigned from {$customerName} successfully!");
-        }
-
-        return redirect()->back()->with('error', 'Meter is not assigned to any customer.');
-    }
-
-    // Update meter reading when customer reading is updated
-    public function updateMeterReading(Meter $meter, Request $request)
-    {
-        $validated = $request->validate([
-            'current_reading' => 'required|numeric|min:0',
-            'reading_date' => 'required|date',
-            'notes' => 'nullable|string',
-        ]);
-
-        $latestReading = $meter->meterReadings()->latest()->first();
-        $previousReading = $latestReading ? $latestReading->current_reading : $meter->initial_reading;
-
-        $meterReading = MeterReading::create([
-            'customer_id' => $meter->customer_id,
-            'meter_id' => $meter->id,
-            'current_reading' => $validated['current_reading'],
-            'previous_reading' => $previousReading,
-            'consumption' => $validated['current_reading'] - $previousReading,
-            'reading_date' => $validated['reading_date'],
-            'reading_type' => 'monthly',
-            'reading_period' => \Carbon\Carbon::parse($validated['reading_date'])->format('F Y'),
-            'billed' => false,
-            'read_by' => auth()->id(),
-            'notes' => $validated['notes'],
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Meter reading updated successfully!',
-            'reading' => $meterReading
-        ]);
-    }
+    
+    return response()->json($meters);
+}
 }

@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\MeterReading;
 use App\Models\Customer;
 use App\Models\Meter;
+use App\Models\MeterCategory;
 
 class WaterConnectionController extends Controller
 {
@@ -115,23 +116,53 @@ class WaterConnectionController extends Controller
 
     public function show(WaterConnectionApplication $application)
     {
-        return view('admin.water-applications.show', compact('application'));
+        // Load relationships
+        $application->load(['customer', 'processedBy']);
+        
+        // Get meter categories for the approval modal
+        $categories = MeterCategory::active()->ordered()->get();
+        
+        return view('admin.water-applications.show', compact('application', 'categories'));
     }
 
-    // Simple approve/decline methods
-    public function approve(Request $request, WaterConnectionApplication $application)
+
+   public function decline(Request $request, WaterConnectionApplication $application)
 {
     $validated = $request->validate([
-        'meter_number' => 'required|string|max:50|unique:customers,meter_number',
-        'meter_type' => 'required|string|in:domestic,commercial,industrial,institutional',
-        'connection_type' => 'required|string|in:residential,commercial,industrial,public',
-        'initial_meter_reading' => 'required|numeric|min:0',
+        'reason' => 'required|string|max:1000',
+    ]);
+
+    try {
+        $application->update([
+            'status' => 'declined',
+            'decline_reason' => $validated['reason'],
+            'processed_by' => auth()->id(),
+            'processed_at' => now(),
+        ]);
+
+        return redirect()->route('admin.water-applications.index')
+            ->with('success', 'Application declined successfully!');
+
+    } catch (\Exception $e) {
+        return redirect()->back()
+            ->with('error', 'Error declining application: ' . $e->getMessage());
+    }
+}
+
+public function approve(Request $request, WaterConnectionApplication $application)
+{
+    $validated = $request->validate([
+        'meter_category_id' => 'nullable|exists:meter_categories,id',
+        'meter_id' => 'nullable|exists:meters,id',
         'connection_date' => 'required|date',
         'notes' => 'nullable|string|max:1000',
     ]);
 
     try {
         DB::transaction(function () use ($application, $validated) {
+            // Use the connection date provided (this is when billing starts)
+            $connectionDate = $validated['connection_date'];
+            
             // Create Customer
             $customer = Customer::create([
                 'first_name' => $application->first_name,
@@ -143,73 +174,74 @@ class WaterConnectionController extends Controller
                 'plot_number' => $application->plot_number,
                 'house_number' => $application->house_number,
                 'estate' => $application->estate,
-                'meter_number' => $validated['meter_number'],
-                'meter_type' => $validated['meter_type'],
-                'connection_type' => $validated['connection_type'],
-                'initial_meter_reading' => $validated['initial_meter_reading'],
-                'connection_date' => $validated['connection_date'],
-                'status' => 'active',
+                'connection_type' => 'residential', // Default, can be updated based on category
+                'status' => 'active', // Set to active since they're approved
                 'kra_pin' => $application->kra_pin,
                 'property_owner' => $application->property_owner,
                 'expected_users' => $application->expected_users,
-                'notes' => $validated['notes'] ?? 'Approved water connection application',
+                'balance_bf' => 0,
+                'current_balance' => 0,
+                'connection_date' => $connectionDate, // This is when billing starts
+                'notes' => $validated['notes'] ?? 'Approved water connection application. Billing starts from: ' . $connectionDate,
             ]);
 
-            // Create or Assign Meter
-            $meter = Meter::create([
-                'meter_number' => $validated['meter_number'],
-                'meter_type' => $validated['meter_type'],
-                'customer_id' => $customer->id,
-                'installation_address' => $application->plot_number . ', ' . $application->house_number . ($application->estate ? ', ' . $application->estate : ''),
-                'installation_date' => $validated['connection_date'],
-                'initial_reading' => $validated['initial_meter_reading'],
-                'status' => 'assigned',
-                'notes' => 'Assigned during application approval',
-            ]);
+            // Assign meter if provided
+            if (!empty($validated['meter_id'])) {
+                $meter = Meter::findOrFail($validated['meter_id']);
+                
+                $meter->update([
+                    'customer_id' => $customer->id,
+                    'meter_category_id' => $validated['meter_category_id'],
+                    'installation_address' => $customer->full_address,
+                    'installation_date' => $connectionDate, // Use the same connection date
+                    'status' => 'assigned',
+                ]);
 
-            // Create initial meter reading
-            MeterReading::create([
-                'customer_id' => $customer->id,
-                'meter_id' => $meter->id,
-                'current_reading' => $validated['initial_meter_reading'],
-                'previous_reading' => 0,
-                'consumption' => $validated['initial_meter_reading'],
-                'reading_date' => $validated['connection_date'],
-                'reading_type' => 'initial',
-                'reading_period' => 'Initial Installation',
-                'billed' => false,
-                'read_by' => auth()->id(),
-                'notes' => 'Initial meter reading upon connection approval',
-            ]);
+                // Update customer with meter info
+                $customer->update([
+                    'meter_number' => $meter->meter_number,
+                    'meter_type' => $meter->meter_type,
+                    'initial_meter_reading' => $meter->initial_reading,
+                ]);
+
+                // Create initial meter reading with connection date
+                if ($meter->initial_reading > 0) {
+                    MeterReading::create([
+                        'customer_id' => $customer->id,
+                        'meter_id' => $meter->id,
+                        'current_reading' => $meter->initial_reading,
+                        'previous_reading' => 0,
+                        'consumption' => $meter->initial_reading,
+                        'reading_date' => $connectionDate, // Use connection date for first reading
+                        'reading_type' => 'initial',
+                        'reading_period' => 'Initial Installation',
+                        'billed' => false,
+                        'read_by' => auth()->id(),
+                        'notes' => 'Initial meter reading upon connection approval. Billing starts from this date.',
+                    ]);
+                }
+            }
 
             // Update application status and link to customer
             $application->update([
                 'status' => 'approved',
                 'customer_id' => $customer->id,
+                'processed_by' => auth()->id(),
+                'processed_at' => now(),
             ]);
         });
 
+        $message = empty($validated['meter_id']) 
+            ? 'Application approved successfully! Customer created without meter assignment. Billing starts from: ' . $validated['connection_date']
+            : 'Application approved successfully! Customer created and meter assigned. Billing starts from: ' . $validated['connection_date'];
+
         return redirect()->route('admin.water-applications.index')
-            ->with('success', 'Application approved successfully! Customer created and meter ' . $validated['meter_number'] . ' assigned.');
+            ->with('success', $message);
 
     } catch (\Exception $e) {
         return redirect()->back()
+            ->withInput()
             ->with('error', 'Error approving application: ' . $e->getMessage());
     }
 }
-
-    public function decline(Request $request, WaterConnectionApplication $application)
-    {
-        $validated = $request->validate([
-            'decline_reason' => 'required|string|max:1000',
-        ]);
-
-        $application->update([
-            'status' => 'declined',
-            'decline_reason' => $validated['decline_reason'],
-        ]);
-
-        return redirect()->route('admin.water-applications.index')
-            ->with('success', 'Application declined successfully.');
-    }
 }

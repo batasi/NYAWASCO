@@ -540,35 +540,7 @@ async function performSearch(searchTerm) {
     }
 }
 
-// function selectCustomer(customer) {
-//     selectedCustomer = customer;
-//     document.getElementById('selectedCustomerId').value = customer.id;
-    
-//     // Hide search results
-//     document.getElementById('modalSearchResults').classList.add('hidden');
-//     document.getElementById('noResultsMessage').classList.add('hidden');
-//     document.getElementById('modalCustomerSearch').value = '';
-    
-//     // Show success message briefly, then auto-advance
-//     Swal.fire({
-//         icon: 'success',
-//         title: 'Customer Selected',
-//         html: `
-//             <div class="text-left">
-//                 <p class="font-semibold">${customer.first_name} ${customer.last_name}</p>
-//                 <p class="text-sm">Customer #: ${customer.customer_number}</p>
-//                 <p class="text-sm">Meter: ${customer.meter ? customer.meter.meter_number : 'No Meter'}</p>
-//                 <p class="text-sm">Location: ${customer.plot_number}, ${customer.house_number}</p>
-//             </div>
-//         `,
-//         timer: 1500,
-//         showConfirmButton: false,
-//         didClose: () => {
-//             // Auto-advance to next step after modal closes
-//             nextStep();
-//         }
-//     });
-// }
+
 
 function selectCustomer(customer) {
     // Show warning if customer has recent reading
@@ -681,39 +653,6 @@ function proceedWithCustomerSelection(customer) {
     });
 }
 
-// function loadCustomerInfo() {
-//     if (!selectedCustomer) return;
-    
-//     const customerInfo = document.getElementById('customerInfo');
-//     customerInfo.innerHTML = `
-//         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-//             <div>
-//                 <strong class="text-gray-700">Customer:</strong> ${selectedCustomer.first_name} ${selectedCustomer.last_name}<br>
-//                 <strong class="text-gray-700">Customer #:</strong> ${selectedCustomer.customer_number}<br>
-//                 <strong class="text-gray-700">Phone:</strong> ${selectedCustomer.phone}<br>
-//                 <strong class="text-gray-700">Email:</strong> ${selectedCustomer.email || 'N/A'}
-//             </div>
-//             <div>
-//                 <strong class="text-gray-700">Meter #:</strong> ${selectedCustomer.meter ? selectedCustomer.meter.meter_number : 'N/A'}<br>
-//                 <strong class="text-gray-700">Meter Type:</strong> ${selectedCustomer.meter ? selectedCustomer.meter.meter_type : 'N/A'}<br>
-//                 <strong class="text-gray-700">Location:</strong> ${selectedCustomer.plot_number}, ${selectedCustomer.house_number}, ${selectedCustomer.estate}<br>
-//                 <strong class="text-gray-700">Last Reading:</strong> ${selectedCustomer.last_reading ? parseFloat(selectedCustomer.last_reading.current_reading).toFixed(2) + ' m³ (' + new Date(selectedCustomer.last_reading.reading_date).toLocaleDateString() + ')' : 'No previous readings'}
-//             </div>
-//         </div>
-//     `;
-    
-//     const currentReadingInput = document.getElementById('current_reading');
-//     if (selectedCustomer.last_reading) {
-//         currentReadingInput.min = selectedCustomer.last_reading.current_reading;
-//         currentReadingInput.placeholder = `Minimum: ${parseFloat(selectedCustomer.last_reading.current_reading).toFixed(2)} m³ (Last reading)`;
-//     } else if (selectedCustomer.meter?.initial_reading) {
-//         currentReadingInput.min = selectedCustomer.meter.initial_reading;
-//         currentReadingInput.placeholder = `Minimum: ${parseFloat(selectedCustomer.meter.initial_reading).toFixed(2)} m³ (Initial reading)`;
-//     } else {
-//         currentReadingInput.min = 0;
-//         currentReadingInput.placeholder = 'Enter current reading';
-//     }
-// }
 
 
 function loadCustomerInfo() {

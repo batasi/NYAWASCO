@@ -14,6 +14,7 @@ class Payment extends Model
      */
     protected $fillable = [
         'meter_id',
+        'customer_id',
         'user_id',
         'payment_no',
         'payment_date',

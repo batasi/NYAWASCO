@@ -14,12 +14,19 @@ class Meter extends Model
         'meter_number',
         'meter_type',
         'meter_model',
+        'meter_category_id',
         'status',
         'customer_id',
         'installation_address',
         'installation_date',
         'last_maintenance_date',
         'initial_reading',
+        'installation_fee',
+        'connection_fee',
+        'deposit_amount',
+        'balance_bf',
+        'current_balance',
+        'additional_charges',
         'notes',
     ];
 
@@ -27,6 +34,12 @@ class Meter extends Model
         'installation_date' => 'date',
         'last_maintenance_date' => 'date',
         'initial_reading' => 'decimal:2',
+        'installation_fee' => 'decimal:2',
+        'connection_fee' => 'decimal:2',
+        'deposit_amount' => 'decimal:2',
+        'balance_bf' => 'decimal:2',
+        'current_balance' => 'decimal:2',
+        'additional_charges' => 'array',
     ];
 
     protected static function boot()
@@ -46,6 +59,11 @@ class Meter extends Model
         return $this->belongsTo(Customer::class);
     }
 
+    public function meterCategory()
+    {
+        return $this->belongsTo(MeterCategory::class);
+    }
+
     public function meterReadings()
     {
         return $this->hasMany(MeterReading::class);
@@ -54,6 +72,11 @@ class Meter extends Model
     public function latestReading()
     {
         return $this->hasOne(MeterReading::class)->latestOfMany();
+    }
+
+    public function bills()
+    {
+        return $this->hasMany(Bill::class);
     }
 
     // Scopes
@@ -70,6 +93,11 @@ class Meter extends Model
     public function scopeFaulty($query)
     {
         return $query->where('status', 'faulty');
+    }
+
+    public function scopeByCategory($query, $categoryId)
+    {
+        return $query->where('meter_category_id', $categoryId);
     }
 
     public function scopeByLocation($query, $location)
@@ -96,6 +124,46 @@ class Meter extends Model
     public function getIsAssignedAttribute()
     {
         return $this->status === 'assigned' && $this->customer_id !== null;
+    }
+
+    public function getCategoryNameAttribute()
+    {
+        return $this->meterCategory ? $this->meterCategory->name : 'Uncategorized';
+    }
+
+    public function getTotalChargesAttribute()
+    {
+        return $this->installation_fee + $this->connection_fee + $this->deposit_amount;
+    }
+
+    public function getOutstandingBalanceAttribute()
+    {
+        return $this->current_balance - $this->deposit_amount;
+    }
+
+    // Methods
+    public function calculateBill($consumption)
+    {
+        if (!$this->meterCategory) {
+            return 0;
+        }
+
+        $consumptionCharge = $this->meterCategory->calculateCharge($consumption);
+        $baseCharge = $this->meterCategory->base_charge;
+        $meterRent = $this->meterCategory->meter_rent;
+
+        return $baseCharge + $meterRent + $consumptionCharge;
+    }
+
+    public function updateBalance($amount, $type = 'charge')
+    {
+        if ($type === 'charge') {
+            $this->current_balance += $amount;
+        } elseif ($type === 'payment') {
+            $this->current_balance -= $amount;
+        }
+        
+        $this->save();
     }
 
     // Get initial reading with date

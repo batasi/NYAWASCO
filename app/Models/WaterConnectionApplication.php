@@ -30,10 +30,13 @@ class WaterConnectionApplication extends Model
         'date',
         'status',
         'decline_reason',
+        'processed_by',
+        'processed_at',
     ];
 
     protected $casts = [
         'date' => 'date',
+        'processed_at' => 'datetime',
         'expected_users' => 'integer',
     ];
 
@@ -43,6 +46,12 @@ class WaterConnectionApplication extends Model
         return $this->belongsTo(Customer::class);
     }
 
+    public function processedBy()
+    {
+        return $this->belongsTo(User::class, 'processed_by');
+    }
+
+    
     // Scopes
     public function scopePending($query)
     {

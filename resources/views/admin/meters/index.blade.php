@@ -17,6 +17,15 @@
             'color' => 'bg-green-600 hover:bg-green-700'
         ];
     }
+
+    if (auth()->user()->can('manage categories')) {
+        $actionButtons[] = [
+            'text' => 'Manage Categories',
+            'href' => route('admin.meter-categories.index'),
+            'icon' => 'fas fa-tags',
+            'color' => 'bg-purple-600 hover:bg-purple-700'
+        ];
+    }
     @endphp
 
     @include('components.dashboard-header',[
@@ -24,6 +33,7 @@
         'subtitle' => 'Meters Management Platform',
         'actionButtons' => $actionButtons
     ])
+
     <!-- Statistics -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div class="bg-white rounded-lg shadow p-6 text-center">
@@ -45,7 +55,7 @@
     </div>
 
     <!-- Quick Actions -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <a href="{{ route('admin.meters.available') }}" class="bg-orange-500 hover:bg-orange-600 text-white p-4 rounded-lg text-center transition duration-200">
             <div class="text-lg font-semibold">Unassigned Meters</div>
             <div class="text-sm">View available meters</div>
@@ -58,6 +68,29 @@
             <div class="text-lg font-semibold">Meters by Location</div>
             <div class="text-sm">Search by address</div>
         </a>
+        <a href="{{ route('admin.meter-categories.index') }}" class="bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-lg text-center transition duration-200">
+            <div class="text-lg font-semibold">Categories</div>
+            <div class="text-sm">Manage categories & pricing</div>
+        </a>
+    </div>
+
+    <!-- Category Filter -->
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <h3 class="text-lg font-semibold text-gray-800">Filter by Category</h3>
+            <div class="flex flex-wrap gap-2">
+                <a href="{{ route('admin.meters.index') }}" 
+                   class="px-4 py-2 rounded-lg {{ !request('category') ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
+                    All Categories
+                </a>
+                @foreach($categories as $category)
+                <a href="{{ route('admin.meters.index', ['category' => $category->id]) }}" 
+                   class="px-4 py-2 rounded-lg {{ request('category') == $category->id ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
+                    {{ $category->name }} ({{ $category->meters_count }})
+                </a>
+                @endforeach
+            </div>
+        </div>
     </div>
 
     <!-- Meters Table -->
@@ -67,10 +100,12 @@
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Meter Number</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Balance</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Reading</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
@@ -80,6 +115,16 @@
                     <tr>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm font-medium text-gray-900">{{ $meter->meter_number }}</div>
+                            <div class="text-xs text-gray-500">{{ $meter->meter_model ?? 'No model' }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            @if($meter->meterCategory)
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    {{ $meter->meterCategory->name }}
+                                </span>
+                            @else
+                                <span class="text-gray-500 text-sm">Uncategorized</span>
+                            @endif
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm text-gray-900 capitalize">{{ $meter->meter_type }}</div>
@@ -89,6 +134,7 @@
                                 <a href="{{ route('admin.customers.show', $meter->customer) }}" class="text-blue-600 hover:text-blue-900 font-medium">
                                     {{ $meter->customer->first_name }} {{ $meter->customer->last_name }}
                                 </a>
+                                <div class="text-xs text-gray-500">{{ $meter->customer->customer_number }}</div>
                             @else
                                 <span class="text-gray-500">Not assigned</span>
                             @endif
@@ -112,6 +158,14 @@
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium {{ $meter->current_balance > 0 ? 'text-red-600' : 'text-green-600' }}">
+                                KSh {{ number_format($meter->current_balance, 2) }}
+                            </div>
+                            @if($meter->deposit_amount > 0)
+                            <div class="text-xs text-gray-500">Deposit: KSh {{ number_format($meter->deposit_amount, 2) }}</div>
+                            @endif
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm text-gray-900">
                                 @if($meter->meterReadings->count() > 0)
                                     {{ number_format($meter->meterReadings->first()->current_reading) }} m³
@@ -130,13 +184,24 @@
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <a href="{{ route('admin.meters.show', $meter) }}" class="text-blue-600 hover:text-blue-900 mr-3">View</a>
-                            <a href="{{ route('admin.meters.edit', $meter) }}" class="text-green-600 hover:text-green-900 mr-3">Edit</a>
+                            <div class="flex space-x-2">
+                                <a href="{{ route('admin.meters.show', $meter) }}" class="text-blue-600 hover:text-blue-900" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{{ route('admin.meters.edit', $meter) }}" class="text-green-600 hover:text-green-900" title="Edit Meter">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                @if($meter->customer)
+                                <a href="{{ route('admin.meter-readings.create', ['customer' => $meter->customer->id]) }}" class="text-purple-600 hover:text-purple-900" title="Record Reading">
+                                    <i class="fas fa-tachometer-alt"></i>
+                                </a>
+                                @endif
+                            </div>
                         </td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">
+                        <td colspan="9" class="px-6 py-4 text-center text-sm text-gray-500">
                            No meters found. <button onclick="openMeterModal()" class="text-blue-600 hover:text-blue-900 font-medium">Register the first meter</button>.
                         </td>
                     </tr>
@@ -150,10 +215,10 @@
         </div>
     </div>
 
-    <!-- Register Meter Modal - UPDATED FOR RESPONSIVENESS -->
+    <!-- Register Meter Modal - UPDATED FOR CATEGORIES -->
     <div id="registerMeterModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
         <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-auto">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-2xl mx-auto">
                 <!-- Modal Header -->
                 <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t">
                     <h3 class="text-xl font-bold text-blue-700">Register New Meter</h3>
@@ -170,32 +235,83 @@
                     @csrf
 
                     <div class="space-y-4 max-h-96 overflow-y-auto pr-2">
-                        <div>
-                            <label for="modal_meter_number" class="block text-sm font-medium text-gray-700 mb-1">Meter Number *</label>
-                            <input type="text" name="meter_number" id="modal_meter_number" required
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm"
-                                   placeholder="MTR20241215001">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="modal_meter_number" class="block text-sm font-medium text-gray-700 mb-1">Meter Number *</label>
+                                <input type="text" name="meter_number" id="modal_meter_number" required
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm"
+                                       placeholder="MTR20241215001">
+                            </div>
+
+                            <div>
+                                <label for="modal_meter_category_id" class="block text-sm font-medium text-gray-700 mb-1">Category *</label>
+                                <select name="meter_category_id" id="modal_meter_category_id" required
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm">
+                                    <option value="">Select Category</option>
+                                    @foreach($categories as $category)
+                                        <option value="{{ $category->id }}" data-fees="{{ json_encode($category->additional_charges) }}">
+                                            {{ $category->name }} - {{ $category->code }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
                         </div>
 
-                        <div>
-                            <label for="modal_meter_type" class="block text-sm font-medium text-gray-700 mb-1">Meter Type *</label>
-                            <select name="meter_type" id="modal_meter_type" required
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm">
-                                <option value="">Select Meter Type</option>
-                                <option value="domestic">Domestic - Single Phase</option>
-                                <option value="commercial">Commercial - Three Phase</option>
-                                <option value="industrial">Industrial - High Capacity</option>
-                                <option value="institutional">Institutional - Bulk Meter</option>
-                                <option value="smart">Smart Meter - Digital</option>
-                                <option value="mechanical">Mechanical - Analog</option>
-                            </select>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="modal_meter_type" class="block text-sm font-medium text-gray-700 mb-1">Meter Type *</label>
+                                <select name="meter_type" id="modal_meter_type" required
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm">
+                                    <option value="">Select Meter Type</option>
+                                    <option value="domestic">Domestic - Single Phase</option>
+                                    <option value="commercial">Commercial - Three Phase</option>
+                                    <option value="industrial">Industrial - High Capacity</option>
+                                    <option value="institutional">Institutional - Bulk Meter</option>
+                                    <option value="smart">Smart Meter - Digital</option>
+                                    <option value="mechanical">Mechanical - Analog</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label for="modal_meter_model" class="block text-sm font-medium text-gray-700 mb-1">Model</label>
+                                <input type="text" name="meter_model" id="modal_meter_model"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm"
+                                       placeholder="e.g., K-1000, S-2000">
+                            </div>
+                        </div>
+
+                        <!-- Charges Section -->
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <h4 class="text-sm font-semibold text-gray-700 mb-3">Installation Charges</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div>
+                                    <label for="modal_installation_fee" class="block text-sm font-medium text-gray-700 mb-1">Installation Fee</label>
+                                    <input type="number" name="installation_fee" id="modal_installation_fee" step="0.01" min="0"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm"
+                                        placeholder="0.00">
+                                </div>
+
+                                <div>
+                                    <label for="modal_connection_fee" class="block text-sm font-medium text-gray-700 mb-1">Connection Fee</label>
+                                    <input type="number" name="connection_fee" id="modal_connection_fee" step="0.01" min="0"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm"
+                                        placeholder="0.00">
+                                </div>
+
+                                <div>
+                                    <label for="modal_deposit_amount" class="block text-sm font-medium text-gray-700 mb-1">Deposit Amount</label>
+                                    <input type="number" name="deposit_amount" id="modal_deposit_amount" step="0.01" min="0"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm"
+                                        placeholder="0.00">
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Initial Reading and Installation Date -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label for="modal_initial_reading" class="block text-sm font-medium text-gray-700 mb-1">Initial Reading (m³)</label>
-                                <input type="number" name="initial_reading" id="modal_initial_reading" step="0.01" min="0"
+                                <label for="modal_initial_reading" class="block text-sm font-medium text-gray-700 mb-1">Initial Reading (m³) *</label>
+                                <input type="number" name="initial_reading" id="modal_initial_reading" step="0.01" min="0" required
                                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm"
                                     placeholder="0.00"
                                     value="0">
@@ -209,17 +325,27 @@
                             </div>
                         </div>
 
-                        <div>
-                            <label for="modal_customer_id" class="block text-sm font-medium text-gray-700 mb-1">Assign to Customer (Optional)</label>
-                            <select name="customer_id" id="modal_customer_id"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm">
-                                <option value="">Select Customer (Leave empty if not assigned)</option>
-                                @foreach(App\Models\Customer::active()->get() as $customer)
-                                    <option value="{{ $customer->id }}">
-                                        {{ $customer->customer_number }} - {{ $customer->first_name }} {{ $customer->last_name }}
-                                    </option>
-                                @endforeach
-                            </select>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="modal_balance_bf" class="block text-sm font-medium text-gray-700 mb-1">Balance B/F</label>
+                                <input type="number" name="balance_bf" id="modal_balance_bf" step="0.01" min="0"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm"
+                                    placeholder="0.00"
+                                    value="0">
+                            </div>
+
+                            <div>
+                                <label for="modal_customer_id" class="block text-sm font-medium text-gray-700 mb-1">Assign to Customer (Optional)</label>
+                                <select name="customer_id" id="modal_customer_id"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm">
+                                    <option value="">Select Customer (Leave empty if not assigned)</option>
+                                    @foreach(App\Models\Customer::active()->get() as $customer)
+                                        <option value="{{ $customer->id }}">
+                                            {{ $customer->customer_number }} - {{ $customer->first_name }} {{ $customer->last_name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
                         </div>
 
                         <div id="customer_installation_fields" class="hidden">
@@ -229,13 +355,6 @@
                                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm"
                                     placeholder="Customer's installation address">
                             </div>
-                        </div>
-
-                        <div>
-                            <label for="modal_meter_model" class="block text-sm font-medium text-gray-700 mb-1">Model</label>
-                            <input type="text" name="meter_model" id="modal_meter_model"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm"
-                                   placeholder="e.g., K-1000, S-2000">
                         </div>
 
                         <div>
@@ -294,6 +413,37 @@
         }
     });
 
+    // Handle category change to auto-fill fees
+    document.getElementById('modal_meter_category_id').addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const fees = selectedOption ? JSON.parse(selectedOption.getAttribute('data-fees') || '{}') : {};
+
+        document.getElementById('modal_installation_fee').value = fees.installation_fee || '';
+        document.getElementById('modal_connection_fee').value = fees.connection_fee || '';
+        document.getElementById('modal_deposit_amount').value = fees.deposit || '';
+    });
+
+    // Handle customer selection
+    document.getElementById('modal_customer_id').addEventListener('change', function() {
+        const customerFields = document.getElementById('customer_installation_fields');
+        const installationAddress = document.getElementById('modal_installation_address');
+
+        if (this.value) {
+            customerFields.classList.remove('hidden');
+            // Auto-fill installation address if customer is selected
+            fetch(`/admin/customers/${this.value}/address`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.address) {
+                        installationAddress.value = data.address;
+                    }
+                });
+        } else {
+            customerFields.classList.add('hidden');
+            installationAddress.value = '';
+        }
+    });
+
     // Handle form submission
     document.getElementById('meterRegistrationForm').addEventListener('submit', function(e) {
         e.preventDefault();
@@ -329,27 +479,6 @@
             submitBtn.textContent = originalText;
             submitBtn.disabled = false;
         });
-    });
-
-    // Handle customer selection
-    document.getElementById('modal_customer_id').addEventListener('change', function() {
-        const customerFields = document.getElementById('customer_installation_fields');
-        const installationAddress = document.getElementById('modal_installation_address');
-
-        if (this.value) {
-            customerFields.classList.remove('hidden');
-            // Auto-fill installation address if customer is selected
-            fetch(`/admin/customers/${this.value}/address`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.address) {
-                        installationAddress.value = data.address;
-                    }
-                });
-        } else {
-            customerFields.classList.add('hidden');
-            installationAddress.value = '';
-        }
     });
 
     // Set today's date as default for installation date

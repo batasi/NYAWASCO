@@ -12,12 +12,13 @@ use App\Services\OCRService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class MeterReadingController extends Controller
 {
     public function index()
     {
-        $readings = MeterReading::with('customer', 'reader')
+        $readings = MeterReading::with('customer', 'reader', 'meter')
             ->latest()
             ->paginate(20);
             
@@ -27,27 +28,40 @@ class MeterReadingController extends Controller
     public function create(Request $request)
     {
         $customerId = $request->get('customer');
+        $meterId = $request->get('meter');
         $customer = null;
         $lastReading = null;
         $meter = null;
+        $meters = [];
 
         if ($customerId) {
-            $customer = Customer::with('meter')->findOrFail($customerId);
-            $meter = $customer->meter;
+            $customer = Customer::with('meters')->findOrFail($customerId);
+            $meters = $customer->meters;
+            
+            // If specific meter is selected, get that meter
+            if ($meterId) {
+                $meter = $meters->firstWhere('id', $meterId);
+            }
+            
+            // Get last reading for the specific meter or all meters
             $lastReading = MeterReading::where('customer_id', $customerId)
+                ->when($meterId, function($query) use ($meterId) {
+                    return $query->where('meter_id', $meterId);
+                })
                 ->latest()
                 ->first();
         }
 
-        return view('admin.meter-readings.create', compact('customer', 'lastReading', 'meter'));
+        return view('admin.meter-readings.create', compact('customer', 'lastReading', 'meter', 'meters'));
     }
 
     public function store(Request $request)
     {
-
-
         $readingPeriod = Carbon::parse($request->reading_date)->format('F Y');
+        
+        // Check for duplicate reading for the same meter and period
         $existingReading = MeterReading::where('customer_id', $request->customer_id)
+            ->where('meter_id', $request->meter_id)
             ->where('reading_period', $readingPeriod)
             ->first();
 
@@ -55,23 +69,24 @@ class MeterReadingController extends Controller
             if ($request->ajax()) {
                 return response()->json([
                     'success' => false,
-                    'message' => "A meter reading for {$readingPeriod} already exists. Are you sure you want to create another reading for the same period?",
+                    'message' => "A meter reading for meter {$existingReading->meter->meter_number} in {$readingPeriod} already exists. Are you sure you want to create another reading for the same period?",
                     'requires_confirmation' => true,
                     'existing_reading' => [
                         'id' => $existingReading->id,
                         'reading_date' => $existingReading->reading_date,
                         'current_reading' => $existingReading->current_reading,
-                        'reading_period' => $existingReading->reading_period
+                        'reading_period' => $existingReading->reading_period,
+                        'meter_number' => $existingReading->meter->meter_number
                     ]
                 ], 422);
             }
             
-            throw new \Exception("Meter reading for {$readingPeriod} has already been recorded.");
+            throw new \Exception("Meter reading for {$readingPeriod} has already been recorded for this meter.");
         }
-
 
         $request->validate([
             'customer_id' => 'required|exists:customers,id',
+            'meter_id' => 'required|exists:meters,id',
             'current_reading' => 'required|numeric|min:0',
             'reading_date' => 'required|date',
             'reading_image' => 'nullable|image|max:2048',
@@ -82,24 +97,27 @@ class MeterReadingController extends Controller
             DB::transaction(function () use ($request) {
                 // Get customer and meter
                 $customer = Customer::findOrFail($request->customer_id);
-                $meter = $customer->meter;
+                $meter = Meter::findOrFail($request->meter_id);
 
-                if (!$meter) {
-                    throw new \Exception('Customer does not have a meter assigned.');
+                // Verify the meter belongs to the customer
+                if ($meter->customer_id != $customer->id) {
+                    throw new \Exception('Selected meter does not belong to this customer.');
                 }
 
-                // Check for duplicate reading in the same period
+                // Check for duplicate reading in the same period for this meter
                 $readingPeriod = Carbon::parse($request->reading_date)->format('F Y');
                 $existingReading = MeterReading::where('customer_id', $request->customer_id)
+                    ->where('meter_id', $request->meter_id)
                     ->where('reading_period', $readingPeriod)
                     ->first();
 
                 if ($existingReading) {
-                    throw new \Exception('Meter reading for ' . $readingPeriod . ' has already been recorded. Please wait until next month to record again.');
+                    throw new \Exception('Meter reading for meter ' . $meter->meter_number . ' in ' . $readingPeriod . ' has already been recorded. Please wait until next month to record again.');
                 }
 
-                // Get previous reading
+                // Get previous reading for this specific meter
                 $previousReading = MeterReading::where('customer_id', $request->customer_id)
+                    ->where('meter_id', $request->meter_id)
                     ->latest()
                     ->first();
 
@@ -122,6 +140,7 @@ class MeterReadingController extends Controller
                 // Create reading
                 $reading = MeterReading::create([
                     'customer_id' => $request->customer_id,
+                    'meter_id' => $request->meter_id,
                     'current_reading' => $request->current_reading,
                     'previous_reading' => $previousReadingValue,
                     'consumption' => $consumption,
@@ -134,13 +153,16 @@ class MeterReadingController extends Controller
                     'read_by' => auth()->id(),
                 ]);
 
-                // Update meter's current reading
+                // UPDATE METER'S CURRENT READING
                 $meter->update([
                     'current_reading' => $request->current_reading
                 ]);
 
                 // AUTO-GENERATE BILL
-                $this->generateBill($reading, $customer, $consumption);
+                $bill = $this->generateBill($reading, $customer, $meter, $consumption);
+
+                // UPDATE METER AND CUSTOMER BALANCES
+                $this->updateBalances($meter, $customer, $bill->total_amount);
             });
 
             return redirect()->route('admin.customers.show', $request->customer_id)
@@ -154,7 +176,7 @@ class MeterReadingController extends Controller
     /**
      * Generate bill automatically after meter reading
      */
-    private function generateBill(MeterReading $reading, Customer $customer, $consumption)
+    private function generateBill(MeterReading $reading, Customer $customer, Meter $meter, $consumption)
     {
         // Calculate billing amounts
         $baseCharge = 100; // Fixed base charge
@@ -170,8 +192,8 @@ class MeterReadingController extends Controller
 
         // Create bill
         $bill = Bill::create([
-            'user_id' => $customer->id, // Using customer as user for now
-            'meter_id' => $customer->meter->id,
+            'customer_id' => $customer->id,
+            'meter_id' => $meter->id,
             'bill_number' => $billNumber,
             'billing_period_start' => Carbon::parse($reading->reading_date)->startOfMonth(),
             'billing_period_end' => Carbon::parse($reading->reading_date)->endOfMonth(),
@@ -182,7 +204,7 @@ class MeterReadingController extends Controller
             'total_amount' => $totalAmount,
             'due_date' => Carbon::parse($reading->reading_date)->addDays(30),
             'bill_status' => 'unpaid',
-            'notes' => 'Auto-generated from meter reading #' . $reading->id,
+            'notes' => 'Auto-generated from meter reading #' . $reading->id . ' for meter ' . $meter->meter_number,
             'created_by' => auth()->id(),
         ]);
 
@@ -194,6 +216,85 @@ class MeterReadingController extends Controller
         ]);
 
         return $bill;
+    }
+
+    /**
+     * Update meter and customer balances after bill generation
+     */
+    private function updateBalances(Meter $meter, Customer $customer, $billAmount)
+    {
+        // Update meter balance
+        $newMeterBalance = $meter->current_balance + $billAmount;
+        $meter->update([
+            'current_balance' => $newMeterBalance
+        ]);
+
+        // Update customer balance (sum of all meter balances)
+        $totalCustomerBalance = $customer->meters->sum('current_balance');
+        $customer->update([
+            'current_balance' => $totalCustomerBalance
+        ]);
+
+        Log::info("Balances updated - Meter: {$meter->meter_number}, New Balance: {$newMeterBalance}, Customer: {$customer->customer_number}, Total Balance: {$totalCustomerBalance}");
+    }
+
+    /**
+     * Get meter readings for a specific customer and meter
+     */
+    public function getMeterReadings(Request $request)
+    {
+        $request->validate([
+            'customer_id' => 'required|exists:customers,id',
+            'meter_id' => 'required|exists:meters,id'
+        ]);
+
+        $readings = MeterReading::where('customer_id', $request->customer_id)
+            ->where('meter_id', $request->meter_id)
+            ->with('reader')
+            ->latest()
+            ->get()
+            ->map(function($reading) {
+                return [
+                    'id' => $reading->id,
+                    'current_reading' => $reading->current_reading,
+                    'previous_reading' => $reading->previous_reading,
+                    'consumption' => $reading->consumption,
+                    'reading_date' => $reading->reading_date->format('M d, Y'),
+                    'reading_period' => $reading->reading_period,
+                    'billed' => $reading->billed,
+                    'reader' => $reading->reader->name ?? 'System'
+                ];
+            });
+
+        return response()->json($readings);
+    }
+
+    /**
+     * Get last reading for a specific meter
+     */
+    public function getLastReading(Request $request)
+    {
+        $request->validate([
+            'customer_id' => 'required|exists:customers,id',
+            'meter_id' => 'required|exists:meters,id'
+        ]);
+
+        $lastReading = MeterReading::where('customer_id', $request->customer_id)
+            ->where('meter_id', $request->meter_id)
+            ->latest()
+            ->first();
+
+        $meter = Meter::find($request->meter_id);
+
+        return response()->json([
+            'last_reading' => $lastReading ? $lastReading->current_reading : ($meter->initial_reading ?? 0),
+            'previous_reading_date' => $lastReading ? $lastReading->reading_date->format('M d, Y') : 'No previous reading',
+            'meter_info' => [
+                'meter_number' => $meter->meter_number,
+                'current_reading' => $meter->current_reading,
+                'initial_reading' => $meter->initial_reading
+            ]
+        ]);
     }
 
     /**
@@ -222,7 +323,7 @@ class MeterReadingController extends Controller
             ]);
             
         } catch (\Exception $e) {
-            \Log::error('OCR API Error: ' . $e->getMessage());
+            Log::error('OCR API Error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Error processing image: ' . $e->getMessage()

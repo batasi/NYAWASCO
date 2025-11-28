@@ -1,457 +1,695 @@
 @extends('layouts.app')
 
-@section('title', 'Review Application - NYAWASCO')
+@php
+    // Ensure categories variable exists
+    $categories = $categories ?? collect();
+@endphp
+
+@section('title', 'Application Review - NYAWASCO')
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
-    <div class="max-w-6xl mx-auto">
-        <div class="flex justify-between items-center mb-6">
-            <h1 class="text-3xl font-bold text-blue-700">Review Water Connection Application</h1>
-            <a href="{{ route('admin.water-applications.index') }}" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg">
+@can('view applications')
+<!-- Background Image -->
+<div class="fixed inset-0 -z-10">
+    <div class="absolute inset-0 bg-gradient-to-br from-blue-50/80 to-white/90"></div>
+</div>
+
+<div class="container mx-auto px-4 py-8 relative z-10">
+    <!-- Header -->
+    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-bold text-blue-800">Application Review</h1>
+            <p class="text-gray-600 mt-2">Application #{{ $application->id }} - {{ $application->full_name }}</p>
+        </div>
+        <div class="flex flex-wrap gap-3">
+            <a href="{{ route('admin.water-applications.index') }}" 
+               class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition duration-200 flex items-center">
+                <i class="fas fa-arrow-left mr-2"></i>
                 Back to Applications
             </a>
         </div>
+    </div>
 
-        <!-- Application Details -->
-        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <h2 class="text-xl font-semibold text-blue-700 mb-4">Application Details</h2>
-            
-            <div class="grid md:grid-cols-2 gap-6">
-                <!-- Applicant Information -->
-                <div>
-                    <h3 class="text-lg font-medium text-gray-900 mb-3">Applicant Information</h3>
-                    <div class="space-y-2">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Left Column - Application Details -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Application Information -->
+            <div class="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+                <h2 class="text-xl font-semibold text-blue-800 mb-4 flex items-center">
+                    <i class="fas fa-user-circle mr-2 text-blue-600"></i>
+                    Applicant Information
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-4">
                         <div>
-                            <label class="text-sm text-gray-500">Full Name</label>
-                            <p class="font-medium">{{ $application->first_name }} {{ $application->last_name }}</p>
+                            <label class="block text-sm font-medium text-gray-700">Full Name</label>
+                            <p class="mt-1 text-lg font-semibold text-gray-900">{{ $application->full_name }}</p>
                         </div>
                         <div>
-                            <label class="text-sm text-gray-500">Email</label>
-                            <p class="font-medium">{{ $application->email }}</p>
+                            <label class="block text-sm font-medium text-gray-700">Email</label>
+                            <p class="mt-1 text-gray-900">{{ $application->email }}</p>
                         </div>
                         <div>
-                            <label class="text-sm text-gray-500">Phone</label>
-                            <p class="font-medium">{{ $application->phone }}</p>
-                        </div>
-                        <div>
-                            <label class="text-sm text-gray-500">Gender</label>
-                            <p class="font-medium">{{ $application->gender }}</p>
-                        </div>
-                        <div>
-                            <label class="text-sm text-gray-500">National ID</label>
-                            <p class="font-medium">{{ $application->national_id }}</p>
-                        </div>
-                        <div>
-                            <label class="text-sm text-gray-500">KRA Pin</label>
-                            <p class="font-medium">{{ $application->kra_pin }}</p>
+                            <label class="block text-sm font-medium text-gray-700">Phone</label>
+                            <p class="mt-1 text-gray-900">{{ $application->phone }}</p>
                         </div>
                     </div>
-                </div>
-
-                <!-- Property Information -->
-                <div>
-                    <h3 class="text-lg font-medium text-gray-900 mb-3">Property Information</h3>
-                    <div class="space-y-2">
+                    
+                    <div class="space-y-4">
                         <div>
-                            <label class="text-sm text-gray-500">Plot Number</label>
-                            <p class="font-medium">{{ $application->plot_number }}</p>
+                            <label class="block text-sm font-medium text-gray-700">National ID</label>
+                            <p class="mt-1 text-gray-900">{{ $application->national_id }}</p>
                         </div>
                         <div>
-                            <label class="text-sm text-gray-500">House Number</label>
-                            <p class="font-medium">{{ $application->house_number }}</p>
+                            <label class="block text-sm font-medium text-gray-700">KRA Pin</label>
+                            <p class="mt-1 text-gray-900">{{ $application->kra_pin ?? 'Not provided' }}</p>
                         </div>
                         <div>
-                            <label class="text-sm text-gray-500">Estate</label>
-                            <p class="font-medium">{{ $application->estate ?? 'N/A' }}</p>
-                        </div>
-                        <div>
-                            <label class="text-sm text-gray-500">Expected Users</label>
-                            <p class="font-medium">{{ $application->expected_users ?? 'N/A' }}</p>
-                        </div>
-                        <div>
-                            <label class="text-sm text-gray-500">Property Owner</label>
-                            <p class="font-medium">{{ $application->property_owner }}</p>
+                            <label class="block text-sm font-medium text-gray-700">Property Owner</label>
+                            <p class="mt-1 text-gray-900">{{ $application->property_owner }}</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Documents Section -->
-            <div class="mt-6">
-                <h3 class="text-lg font-medium text-gray-900 mb-3">Attached Documents</h3>
-                <div class="grid md:grid-cols-3 gap-4">
-                    <!-- National ID -->
-                    <div class="border border-gray-200 rounded-lg p-4">
-                        <div class="flex items-center justify-between mb-2">
-                            <h4 class="font-medium text-gray-700">National ID</h4>
+            <!-- Property Information -->
+            <div class="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+                <h2 class="text-xl font-semibold text-green-700 mb-4 flex items-center">
+                    <i class="fas fa-home mr-2 text-green-600"></i>
+                    Property Information
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Plot Number</label>
+                            <p class="mt-1 text-lg font-semibold text-gray-900">{{ $application->plot_number }}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">House Number</label>
+                            <p class="mt-1 text-gray-900">{{ $application->house_number }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Estate/Area</label>
+                            <p class="mt-1 text-gray-900">{{ $application->estate ?? 'Not specified' }}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Expected Users</label>
+                            <p class="mt-1 text-gray-900">{{ $application->expected_users ?? 'Not specified' }}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <label class="block text-sm font-medium text-gray-700">Physical Address</label>
+                    <p class="mt-1 text-gray-900">{{ $application->plot_number }}, {{ $application->house_number }}{{ $application->estate ? ', ' . $application->estate : '' }}</p>
+                </div>
+            </div>
+
+            <!-- Application Documents -->
+            <div class="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+                <h2 class="text-xl font-semibold text-purple-700 mb-4 flex items-center">
+                    <i class="fas fa-file-alt mr-2 text-purple-600"></i>
+                    Application Documents
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- National ID Document -->
+                    <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition duration-200">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="font-medium text-gray-700">National ID</h3>
                             @if($application->national_id_file)
-                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Uploaded</span>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded flex items-center">
+                                    <i class="fas fa-check mr-1 text-xs"></i>
+                                    Uploaded
+                                </span>
                             @else
-                                <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">Missing</span>
+                                <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded flex items-center">
+                                    <i class="fas fa-times mr-1 text-xs"></i>
+                                    Missing
+                                </span>
                             @endif
                         </div>
                         @if($application->national_id_file)
-                            <div class="flex space-x-2">
+                            <div class="flex flex-col space-y-2">
                                 <a href="{{ asset('storage/' . $application->national_id_file) }}" 
                                    target="_blank"
-                                   class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm flex items-center">
-                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                                    </svg>
-                                    View
+                                   class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm flex items-center justify-center transition duration-200">
+                                    <i class="fas fa-eye mr-2"></i>
+                                    View Document
                                 </a>
                                 <a href="{{ asset('storage/' . $application->national_id_file) }}" 
                                    download
-                                   class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm flex items-center">
-                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-                                    </svg>
+                                   class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm flex items-center justify-center transition duration-200">
+                                    <i class="fas fa-download mr-2"></i>
                                     Download
                                 </a>
                             </div>
                         @else
-                            <p class="text-sm text-gray-500 italic">No document uploaded</p>
+                            <p class="text-sm text-gray-500 italic text-center py-2">Document not uploaded</p>
                         @endif
                     </div>
 
-                    <!-- KRA Pin -->
-                    <div class="border border-gray-200 rounded-lg p-4">
-                        <div class="flex items-center justify-between mb-2">
-                            <h4 class="font-medium text-gray-700">KRA Pin Certificate</h4>
+                    <!-- KRA Pin Certificate -->
+                    <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition duration-200">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="font-medium text-gray-700">KRA Pin Certificate</h3>
                             @if($application->kra_pin_file)
-                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Uploaded</span>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded flex items-center">
+                                    <i class="fas fa-check mr-1 text-xs"></i>
+                                    Uploaded
+                                </span>
                             @else
-                                <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">Missing</span>
+                                <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded flex items-center">
+                                    <i class="fas fa-times mr-1 text-xs"></i>
+                                    Missing
+                                </span>
                             @endif
                         </div>
                         @if($application->kra_pin_file)
-                            <div class="flex space-x-2">
+                            <div class="flex flex-col space-y-2">
                                 <a href="{{ asset('storage/' . $application->kra_pin_file) }}" 
                                    target="_blank"
-                                   class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm flex items-center">
-                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                                    </svg>
-                                    View
+                                   class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm flex items-center justify-center transition duration-200">
+                                    <i class="fas fa-eye mr-2"></i>
+                                    View Document
                                 </a>
                                 <a href="{{ asset('storage/' . $application->kra_pin_file) }}" 
                                    download
-                                   class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm flex items-center">
-                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-                                    </svg>
+                                   class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm flex items-center justify-center transition duration-200">
+                                    <i class="fas fa-download mr-2"></i>
                                     Download
                                 </a>
                             </div>
                         @else
-                            <p class="text-sm text-gray-500 italic">No document uploaded</p>
+                            <p class="text-sm text-gray-500 italic text-center py-2">Document not uploaded</p>
                         @endif
                     </div>
 
                     <!-- Title Document -->
-                    <div class="border border-gray-200 rounded-lg p-4">
-                        <div class="flex items-center justify-between mb-2">
-                            <h4 class="font-medium text-gray-700">Title Document</h4>
+                    <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition duration-200">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="font-medium text-gray-700">Title Document</h3>
                             @if($application->title_document)
-                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Uploaded</span>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded flex items-center">
+                                    <i class="fas fa-check mr-1 text-xs"></i>
+                                    Uploaded
+                                </span>
                             @else
-                                <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">Missing</span>
+                                <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded flex items-center">
+                                    <i class="fas fa-times mr-1 text-xs"></i>
+                                    Missing
+                                </span>
                             @endif
                         </div>
                         @if($application->title_document)
-                            <div class="flex space-x-2">
+                            <div class="flex flex-col space-y-2">
                                 <a href="{{ asset('storage/' . $application->title_document) }}" 
                                    target="_blank"
-                                   class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm flex items-center">
-                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                                    </svg>
-                                    View
+                                   class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm flex items-center justify-center transition duration-200">
+                                    <i class="fas fa-eye mr-2"></i>
+                                    View Document
                                 </a>
                                 <a href="{{ asset('storage/' . $application->title_document) }}" 
                                    download
-                                   class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm flex items-center">
-                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-                                    </svg>
+                                   class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm flex items-center justify-center transition duration-200">
+                                    <i class="fas fa-download mr-2"></i>
                                     Download
                                 </a>
                             </div>
                         @else
-                            <p class="text-sm text-gray-500 italic">No document uploaded</p>
+                            <p class="text-sm text-gray-500 italic text-center py-2">Document not uploaded</p>
+                        @endif
+                    </div>
+                </div>
+
+                <!-- Document Status Summary -->
+                <div class="mt-6 pt-4 border-t border-gray-200">
+                    @php
+                        $uploadedDocs = 0;
+                        $totalDocs = 3;
+                        if ($application->national_id_file) $uploadedDocs++;
+                        if ($application->kra_pin_file) $uploadedDocs++;
+                        if ($application->title_document) $uploadedDocs++;
+                    @endphp
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium text-gray-700">Document Completion</span>
+                        <span class="text-sm font-semibold {{ $uploadedDocs === $totalDocs ? 'text-green-600' : 'text-yellow-600' }}">
+                            {{ $uploadedDocs }}/{{ $totalDocs }} documents
+                        </span>
+                    </div>
+                    <div class="mt-2 w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-{{ $uploadedDocs === $totalDocs ? 'green' : 'yellow' }}-600 h-2 rounded-full" 
+                             style="width: {{ ($uploadedDocs / $totalDocs) * 100 }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - Actions & Status -->
+        <div class="space-y-6">
+            <!-- Application Status -->
+            <div class="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-info-circle mr-2 text-blue-600"></i>
+                    Application Status
+                </h2>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Current Status</label>
+                        @php
+                            $statusColors = [
+                                'pending' => 'bg-yellow-100 text-yellow-800',
+                                'approved' => 'bg-green-100 text-green-800',
+                                'declined' => 'bg-red-100 text-red-800'
+                            ];
+                        @endphp
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {{ $statusColors[$application->status] }}">
+                            <i class="fas fa-circle mr-2 text-xs"></i>
+                            {{ ucfirst($application->status) }}
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Application Date</label>
+                        <p class="text-gray-900">{{ $application->created_at->format('M d, Y') }}</p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Reference ID</label>
+                        <p class="text-blue-600 font-mono font-semibold">#WC{{ $application->id }}</p>
+                    </div>
+                    
+                    @if($application->processed_by && $application->processed_at)
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Processed By</label>
+                        <p class="text-gray-900">{{ $application->processedBy->name ?? 'System' }}</p>
+                        <p class="text-sm text-gray-500">{{ $application->processed_at->format('M d, Y H:i') }}</p>
+                    </div>
+                    @endif
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-bolt mr-2 text-yellow-500"></i>
+                    Quick Actions
+                </h2>
+                
+                <div class="space-y-3">
+                    @if($application->status === 'pending')
+                    <button onclick="showApproveModal()" 
+                            class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
+                        <i class="fas fa-check mr-2"></i>
+                        Approve Application
+                    </button>
+                    
+                    <button onclick="showDeclineModal()" 
+                            class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
+                        <i class="fas fa-times mr-2"></i>
+                        Decline Application
+                    </button>
+                    @endif
+                    
+                    @if($application->customer)
+                    <a href="{{ route('admin.customers.show', $application->customer) }}" 
+                       class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
+                        <i class="fas fa-user mr-2"></i>
+                        View Customer
+                    </a>
+                    @endif
+                </div>
+            </div>
+
+            <!-- Document Checklist -->
+            <div class="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-clipboard-check mr-2 text-green-600"></i>
+                    Document Checklist
+                </h2>
+                
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium text-gray-700">National ID</span>
+                        @if($application->national_id_file)
+                        <i class="fas fa-check-circle text-green-500"></i>
+                        @else
+                        <i class="fas fa-times-circle text-red-500"></i>
+                        @endif
+                    </div>
+                    
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium text-gray-700">KRA Pin Certificate</span>
+                        @if($application->kra_pin_file)
+                        <i class="fas fa-check-circle text-green-500"></i>
+                        @else
+                        <i class="fas fa-times-circle text-red-500"></i>
+                        @endif
+                    </div>
+                    
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium text-gray-700">Title Document</span>
+                        @if($application->title_document)
+                        <i class="fas fa-check-circle text-green-500"></i>
+                        @else
+                        <i class="fas fa-times-circle text-red-500"></i>
                         @endif
                     </div>
                 </div>
             </div>
         </div>
+    </div>
+</div>
 
-        <!-- Meter Details Section (For Approved Applications) -->
-        @if($application->status == 'approved' && $application->customer && $application->customer->meter)
-        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <h2 class="text-xl font-semibold text-blue-700 mb-4">Meter Assignment Details</h2>
-            
-            <div class="grid md:grid-cols-2 gap-6">
-                <!-- Meter Information -->
-                <div>
-                    <h3 class="text-lg font-medium text-gray-900 mb-3">Meter Information</h3>
-                    <div class="space-y-2">
-                        <div>
-                            <label class="text-sm text-gray-500">Meter Number</label>
-                            <p class="font-medium text-blue-600">{{ $application->customer->meter->meter_number }}</p>
-                        </div>
-                        <div>
-                            <label class="text-sm text-gray-500">Meter Type</label>
-                            <p class="font-medium capitalize">{{ $application->customer->meter->meter_type }}</p>
-                        </div>
-                        <div>
-                            <label class="text-sm text-gray-500">Connection Type</label>
-                            <p class="font-medium capitalize">{{ $application->customer->meter->connection_type }}</p>
-                        </div>
-                        <div>
-                            <label class="text-sm text-gray-500">Initial Reading</label>
-                            <p class="font-medium">{{ number_format($application->customer->meter->initial_reading, 2) }} m³</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Installation Information -->
-                <div>
-                    <h3 class="text-lg font-medium text-gray-900 mb-3">Installation Details</h3>
-                    <div class="space-y-2">
-                        <div>
-                            <label class="text-sm text-gray-500">Connection Date</label>
-                            <p class="font-medium">{{ \Carbon\Carbon::parse($application->customer->meter->connection_date)->format('M d, Y') }}</p>
-                        </div>
-                        <div>
-                            <label class="text-sm text-gray-500">Installation Status</label>
-                            <p class="font-medium">
-                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Active</span>
-                            </p>
-                        </div>
-                        <div>
-                            <label class="text-sm text-gray-500">Current Reading</label>
-                            <p class="font-medium text-green-600">{{ number_format($application->customer->meter->current_reading, 2) }} m³</p>
-                        </div>
-                        <div>
-                            <label class="text-sm text-gray-500">Total Consumption</label>
-                            <p class="font-medium text-blue-600">{{ number_format($application->customer->meter->current_reading - $application->customer->meter->initial_reading, 2) }} m³</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            @if($application->customer->meter->notes)
-            <div class="mt-4 p-4 bg-gray-50 rounded-lg">
-                <h4 class="font-medium text-gray-700 mb-2">Installation Notes</h4>
-                <p class="text-gray-600">{{ $application->customer->meter->notes }}</p>
-            </div>
-            @endif
+<!-- Approve Application Modal -->
+<div id="approveModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold">Approve Application</h3>
+            <button onclick="closeApproveModal()" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
-        @endif
-
-        <!-- Customer Details Section (For Approved Applications) -->
-        @if($application->status == 'approved' && $application->customer)
-        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <h2 class="text-xl font-semibold text-blue-700 mb-4">Customer Account Details</h2>
-            
-            <div class="grid md:grid-cols-2 gap-6">
+        
+        <form method="POST" action="{{ route('admin.water-applications.approve', $application) }}" id="approveForm">
+            @csrf
+            <div class="space-y-4">
+                <!-- Connection Information -->
                 <div>
-                    <h3 class="text-lg font-medium text-gray-900 mb-3">Account Information</h3>
-                    <div class="space-y-2">
-                        <div>
-                            <label class="text-sm text-gray-500">Customer ID</label>
-                            <p class="font-medium">{{ $application->customer->account_number }}</p>
-                        </div>
-                        <div>
-                            <label class="text-sm text-gray-500">Account Status</label>
-                            <p class="font-medium">
-                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Active</span>
-                            </p>
-                        </div>
-                        <div>
-                            <label class="text-sm text-gray-500">Registration Date</label>
-                            <p class="font-medium">{{ \Carbon\Carbon::parse($application->customer->created_at)->format('M d, Y') }}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div>
-                    <h3 class="text-lg font-medium text-gray-900 mb-3">Contact Information</h3>
-                    <div class="space-y-2">
-                        <div>
-                            <label class="text-sm text-gray-500">Email</label>
-                            <p class="font-medium">{{ $application->customer->email }}</p>
-                        </div>
-                        <div>
-                            <label class="text-sm text-gray-500">Phone</label>
-                            <p class="font-medium">{{ $application->customer->phone }}</p>
-                        </div>
-                        <div>
-                            <label class="text-sm text-gray-500">Address</label>
-                            <p class="font-medium">
-                                {{ $application->customer->address }}<br>
-                                Plot: {{ $application->plot_number }}, House: {{ $application->house_number }}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        @endif
-
-        <!-- Approval Actions -->
-        @if($application->status == 'pending')
-        <div class="bg-white rounded-lg shadow-lg p-6">
-            <h2 class="text-xl font-semibold text-blue-700 mb-4">Approve Application & Assign Meter</h2>
-            
-            <form action="{{ route('admin.water-applications.approve', $application) }}" method="POST">
-                @csrf
-                
-                <div class="grid md:grid-cols-2 gap-6">
-                    <!-- Meter Information -->
-                    <div class="space-y-4">
-                        <h3 class="text-lg font-medium text-gray-900">Meter Assignment</h3>
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Meter Number *</label>
-                            <input type="text" name="meter_number" required
-                                class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
-                                value="{{ old('meter_number', 'MTR' . date('Ymd') . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT)) }}"
-                                placeholder="Enter unique meter number">
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Meter Type *</label>
-                            <select name="meter_type" required class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500">
-                                <option value="">Select Meter Type</option>
-                                <option value="domestic" {{ old('meter_type') == 'domestic' ? 'selected' : '' }}>Domestic - Single Phase</option>
-                                <option value="commercial" {{ old('meter_type') == 'commercial' ? 'selected' : '' }}>Commercial - Three Phase</option>
-                                <option value="industrial" {{ old('meter_type') == 'industrial' ? 'selected' : '' }}>Industrial - High Capacity</option>
-                                <option value="institutional" {{ old('meter_type') == 'institutional' ? 'selected' : '' }}>Institutional - Bulk Meter</option>
-                            </select>
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Connection Type *</label>
-                            <select name="connection_type" required class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500">
-                                <option value="">Select Connection Type</option>
-                                <option value="residential" {{ old('connection_type') == 'residential' ? 'selected' : '' }}>Residential</option>
-                                <option value="commercial" {{ old('connection_type') == 'commercial' ? 'selected' : '' }}>Commercial</option>
-                                <option value="industrial" {{ old('connection_type') == 'industrial' ? 'selected' : '' }}>Industrial</option>
-                                <option value="public" {{ old('connection_type') == 'public' ? 'selected' : '' }}>Public Institution</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Installation Details -->
-                    <div class="space-y-4">
-                        <h3 class="text-lg font-medium text-gray-900">Installation Details</h3>
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Initial Meter Reading (m³) *</label>
-                            <input type="number" step="0.01" name="initial_meter_reading" required min="0"
-                                class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
-                                value="{{ old('initial_meter_reading', 0) }}"
-                                placeholder="0.00">
-                        </div>
-                        
+                    <h4 class="text-md font-medium text-gray-900 mb-3">Connection Information</h4>
+                    <div class="grid grid-cols-1 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Connection Date *</label>
-                            <input type="date" name="connection_date" required
-                                class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
-                                value="{{ old('connection_date', date('Y-m-d')) }}">
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
-                            <textarea name="notes" rows="3" 
-                                    class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
-                                    placeholder="Additional notes about this installation...">{{ old('notes') }}</textarea>
+                            <input type="date" name="connection_date" value="{{ date('Y-m-d') }}" 
+                                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                         </div>
                     </div>
                 </div>
-                
-                <!-- Customer Preview -->
-                <div class="mt-6 p-4 bg-blue-50 rounded-lg">
-                    <h3 class="text-lg font-medium text-blue-900 mb-2">Customer Profile Preview</h3>
-                    <div class="grid md:grid-cols-2 gap-4 text-sm">
-                        <div>
-                            <strong>Name:</strong> {{ $application->first_name }} {{ $application->last_name }}
-                        </div>
-                        <div>
-                            <strong>Email:</strong> {{ $application->email }}
-                        </div>
-                        <div>
-                            <strong>Phone:</strong> {{ $application->phone }}
-                        </div>
-                        <div>
-                            <strong>Location:</strong> {{ $application->plot_number }}, {{ $application->house_number }} {{ $application->estate ? ', ' . $application->estate : '' }}
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="mt-6 flex justify-end space-x-4">
-                    <button type="button" onclick="showDeclineForm()" 
-                            class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg">
-                        Decline
-                    </button>
-                    <button type="submit" 
-                            class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg">
-                        Approve & Create Customer
-                    </button>
-                </div>
-            </form>
-            
-            <!-- Decline Form -->
-            <div id="declineForm" class="mt-6 p-4 border border-red-300 rounded-lg bg-red-50 hidden">
-                <form action="{{ route('admin.water-applications.decline', $application) }}" method="POST">
-                    @csrf
+
+                <!-- Meter Assignment Section -->
+                <div>
+                    <h4 class="text-md font-medium text-gray-900 mb-3">Meter Assignment (Optional)</h4>
+                    
+                    <!-- Meter Category Selection -->
                     <div class="mb-4">
-                        <label class="block text-sm font-medium text-red-700 mb-2">Reason for Decline *</label>
-                        <textarea name="decline_reason" required rows="4" 
-                                  class="w-full border border-red-300 rounded px-3 py-2 focus:ring-2 focus:ring-red-500"
-                                  placeholder="Please provide a detailed reason for declining this application...">{{ old('decline_reason') }}</textarea>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Select Meter Category</label>
+                        <select id="meterCategorySelect" name="meter_category_id" 
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Select a category (Optional)</option>
+                            @if($categories && $categories->count() > 0)
+                                @foreach($categories as $category)
+                                <option value="{{ $category->id }}">
+                                    {{ $category->name }} - {{ $category->code }}
+                                </option>
+                                @endforeach
+                            @else
+                                <option value="" disabled>No categories available</option>
+                            @endif
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">
+                            @if($categories && $categories->count() > 0)
+                                Select a category to view available meters (shows first 5 available)
+                            @else
+                                No meter categories available. Please create categories first.
+                            @endif
+                        </p>
                     </div>
-                    <div class="flex justify-end space-x-4">
-                        <button type="button" onclick="hideDeclineForm()" 
-                                class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">
-                            Cancel
-                        </button>
-                        <button type="submit" 
-                                class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded">
-                            Confirm Decline
-                        </button>
+
+                    <!-- Available Meters -->
+                    <div id="availableMetersSection" class="hidden">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Available Meters</label>
+                        <div id="availableMetersList" class="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3 bg-gray-50">
+                            <!-- Meters will be loaded here via AJAX -->
+                        </div>
+                        <input type="hidden" id="selectedMeterId" name="meter_id">
                     </div>
-                </form>
+
+                    <!-- Selected Meter Info -->
+                    <div id="selectedMeterInfo" class="hidden mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <h5 class="font-medium text-blue-900 mb-2">Selected Meter</h5>
+                        <div class="grid grid-cols-2 gap-2 text-sm">
+                            <div>
+                                <span class="text-gray-600">Meter Number:</span>
+                                <span id="selectedMeterNumber" class="font-semibold text-blue-700"></span>
+                            </div>
+                            <div>
+                                <span class="text-gray-600">Type:</span>
+                                <span id="selectedMeterType" class="font-semibold"></span>
+                            </div>
+                            <div>
+                                <span class="text-gray-600">Model:</span>
+                                <span id="selectedMeterModel" class="font-semibold"></span>
+                            </div>
+                            <div>
+                                <span class="text-gray-600">Initial Reading:</span>
+                                <span id="selectedMeterReading" class="font-semibold"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Approval Notes</label>
+                    <textarea name="notes" rows="3" 
+                              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                              placeholder="Any additional notes for this approval..."></textarea>
+                </div>
             </div>
-        </div>
-        @else
-        <!-- Application Status Display -->
-        <div class="bg-white rounded-lg shadow-lg p-6 text-center">
-            <h2 class="text-xl font-semibold text-gray-700 mb-2">
-                This application has been <span class="{{ $application->status == 'approved' ? 'text-green-600' : 'text-red-600' }}">{{ $application->status }}</span>
-            </h2>
-            @if($application->status == 'declined' && $application->decline_reason)
-            <div class="mt-4 p-4 bg-gray-100 rounded-lg text-left">
-                <h3 class="font-semibold text-gray-800">Reason for Decline:</h3>
-                <p class="text-gray-600 mt-1">{{ $application->decline_reason }}</p>
+            
+            <div class="flex justify-end space-x-3 mt-6">
+                <button type="button" onclick="closeApproveModal()" 
+                        class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition duration-200">
+                    Cancel
+                </button>
+                <button type="submit" 
+                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition duration-200 flex items-center">
+                    <i class="fas fa-check mr-2"></i>
+                    Approve Application
+                </button>
             </div>
-            @endif
+        </form>
+    </div>
+</div>
+
+<!-- Decline Application Modal -->
+<div id="declineModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-md mx-4">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold">Decline Application</h3>
+            <button onclick="closeDeclineModal()" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
-        @endif
+        
+        <form method="POST" action="{{ route('admin.water-applications.decline', $application) }}">
+            @csrf
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Reason for Decline *</label>
+                    <textarea name="reason" rows="4" 
+                              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                              placeholder="Please provide the reason for declining this application..." required></textarea>
+                </div>
+            </div>
+            
+            <div class="flex justify-end space-x-3 mt-6">
+                <button type="button" onclick="closeDeclineModal()" 
+                        class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition duration-200">
+                    Cancel
+                </button>
+                <button type="submit" 
+                        class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition duration-200 flex items-center">
+                    <i class="fas fa-times mr-2"></i>
+                    Decline Application
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
 <script>
-function showDeclineForm() {
-    document.getElementById('declineForm').classList.remove('hidden');
+// Modal Functions
+function showApproveModal() {
+    document.getElementById('approveModal').classList.remove('hidden');
 }
 
-function hideDeclineForm() {
-    document.getElementById('declineForm').classList.add('hidden');
+function closeApproveModal() {
+    document.getElementById('approveModal').classList.add('hidden');
+    resetMeterSelection();
 }
+
+function showDeclineModal() {
+    document.getElementById('declineModal').classList.remove('hidden');
+}
+
+function closeDeclineModal() {
+    document.getElementById('declineModal').classList.add('hidden');
+}
+
+// Meter Assignment Logic
+function resetMeterSelection() {
+    const metersSection = document.getElementById('availableMetersSection');
+    const meterInfo = document.getElementById('selectedMeterInfo');
+    const meterIdInput = document.getElementById('selectedMeterId');
+    
+    if (metersSection) metersSection.classList.add('hidden');
+    if (meterInfo) meterInfo.classList.add('hidden');
+    if (meterIdInput) meterIdInput.value = '';
+}
+
+// Load available meters when category changes
+document.addEventListener('DOMContentLoaded', function() {
+    const categorySelect = document.getElementById('meterCategorySelect');
+    if (categorySelect) {
+        categorySelect.addEventListener('change', function() {
+            const categoryId = this.value;
+            const metersSection = document.getElementById('availableMetersSection');
+            const metersList = document.getElementById('availableMetersList');
+            
+            console.log('Category changed to:', categoryId);
+            
+            if (!categoryId) {
+                resetMeterSelection();
+                return;
+            }
+            
+            metersList.innerHTML = '<p class="text-gray-500 text-sm">Loading available meters...</p>';
+            metersSection.classList.remove('hidden');
+            
+            // Use the correct path - this should match your route
+            const url = `{{ route('admin.customers.get-available-meters') }}?category_id=${categoryId}`;
+            console.log('Fetching from URL:', url);
+            
+            fetch(url, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(meters => {
+                console.log('Meters received:', meters);
+                
+                if (!meters || meters.length === 0) {
+                    metersList.innerHTML = '<p class="text-red-500 text-sm">No available meters found in this category</p>';
+                    return;
+                }
+                
+                if (meters.error) {
+                    metersList.innerHTML = '<p class="text-red-500 text-sm">Error: ' + meters.error + '</p>';
+                    return;
+                }
+                
+                metersList.innerHTML = meters.map(meter => `
+                    <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 cursor-pointer meter-option" 
+                         data-meter-id="${meter.id}"
+                         data-meter-number="${meter.meter_number}"
+                         data-meter-type="${meter.meter_type}"
+                         data-meter-model="${meter.meter_model}"
+                         data-initial-reading="${meter.initial_reading}">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="font-medium text-gray-900">${meter.meter_number}</div>
+                                <div class="text-sm text-gray-500">${meter.meter_type} • ${meter.meter_model}</div>
+                                <div class="text-xs text-gray-400">${meter.category_name}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-sm font-semibold text-green-600">Available</div>
+                                <div class="text-xs text-gray-500">Init: ${meter.initial_reading}m³</div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                
+                // Add click handlers to meter options
+                document.querySelectorAll('.meter-option').forEach(option => {
+                    option.addEventListener('click', function() {
+                        // Remove previous selection
+                        document.querySelectorAll('.meter-option').forEach(opt => {
+                            opt.classList.remove('border-blue-500', 'bg-blue-50');
+                        });
+                        
+                        // Add selection to clicked option
+                        this.classList.add('border-blue-500', 'bg-blue-50');
+                        
+                        // Update selected meter info
+                        const meterId = this.dataset.meterId;
+                        const meterNumber = this.dataset.meterNumber;
+                        const meterType = this.dataset.meterType;
+                        const meterModel = this.dataset.meterModel;
+                        const initialReading = this.dataset.initialReading;
+                        
+                        document.getElementById('selectedMeterId').value = meterId;
+                        document.getElementById('selectedMeterNumber').textContent = meterNumber;
+                        document.getElementById('selectedMeterType').textContent = meterType;
+                        document.getElementById('selectedMeterModel').textContent = meterModel;
+                        document.getElementById('selectedMeterReading').textContent = initialReading + ' m³';
+                        
+                        // Show selected meter info
+                        document.getElementById('selectedMeterInfo').classList.remove('hidden');
+                    });
+                });
+            })
+            .catch(error => {
+                console.error('Fetch error:', error);
+                metersList.innerHTML = '<p class="text-red-500 text-sm">Error loading meters: ' + error.message + '</p>';
+            });
+        });
+    }
+
+    // Form validation for approve form
+    const approveForm = document.getElementById('approveForm');
+    if (approveForm) {
+        approveForm.addEventListener('submit', function(e) {
+            const categorySelected = document.getElementById('meterCategorySelect').value;
+            const meterSelected = document.getElementById('selectedMeterId').value;
+            
+            if (categorySelected && !meterSelected) {
+                e.preventDefault();
+                alert('Please select a meter from the available options or clear the category selection.');
+                return false;
+            }
+        });
+    }
+});
+
+// Close modals when clicking outside
+document.getElementById('approveModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeApproveModal();
+    }
+});
+
+document.getElementById('declineModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeDeclineModal();
+    }
+});
 </script>
+
+<style>
+.meter-option {
+    transition: all 0.2s ease;
+}
+
+.meter-option:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+</style>
+@endcan
 @endsection

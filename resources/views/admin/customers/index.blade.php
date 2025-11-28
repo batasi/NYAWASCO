@@ -1,28 +1,5 @@
 @extends('layouts.app')
-@php
-use Illuminate\Support\Facades\Auth;
 
-// Prepare action buttons based on permissions
-$actionButtons = [];
-
-if (auth()->user()->can('view applications')) {
-    $actionButtons[] = [
-        'text' => 'Applications',
-        'href' => route('admin.water-applications.index'),
-        'icon' => 'fas fa-folder-open',
-        'color' => 'bg-green-600 hover:bg-green-700'
-    ];
-}
-
-if (auth()->user()->can('add customers')) {
-    $actionButtons[] = [
-        'text' => 'Add',
-        'href' => route('water-connection.apply'),
-        'icon' => 'fas fa-plus',
-        'color' => 'bg-green-600 hover:bg-green-700'
-    ];
-}
-@endphp
 @section('title', 'Customers - NYAWASCO')
 
 @section('content')
@@ -35,179 +12,176 @@ if (auth()->user()->can('add customers')) {
 <div class="container mx-auto px-4 py-8 relative z-10">
 
     <!-- Header Section -->
-    @include('components.dashboard-header', [
-        'title' => 'Customer Management',
-        'subtitle' => 'Manage applications and customer accounts',
-        'actionButtons' => $actionButtons
-    ])
-
-    <!-- Dashboard Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <!-- Total Applications -->
-        <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border-l-4 border-blue-500 transform hover:-translate-y-1 transition duration-300">
-            <div class="flex items-center">
-                <div class="p-3 bg-blue-100 rounded-lg">
-                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                    </svg>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-600">Total Applications</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ \App\Models\WaterConnectionApplication::count() }}</p>
-                </div>
-            </div>
+    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-bold text-blue-800">Customer Management</h1>
+            <p class="text-gray-600 mt-2">Manage all customer accounts, statuses, and meter assignments</p>
         </div>
-
-        <!-- Pending Applications -->
-        <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border-l-4 border-yellow-500 transform hover:-translate-y-1 transition duration-300">
-            <div class="flex items-center">
-                <div class="p-3 bg-yellow-100 rounded-lg">
-                    <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-600">Pending Review</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ \App\Models\WaterConnectionApplication::where('status', 'pending')->count() }}</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Approved Applications -->
-        <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border-l-4 border-green-500 transform hover:-translate-y-1 transition duration-300">
-            <div class="flex items-center">
-                <div class="p-3 bg-green-100 rounded-lg">
-                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-600">Approved</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ \App\Models\WaterConnectionApplication::where('status', 'approved')->count() }}</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Declined Applications -->
-        <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border-l-4 border-red-500 transform hover:-translate-y-1 transition duration-300">
-            <div class="flex items-center">
-                <div class="p-3 bg-red-100 rounded-lg">
-                    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-600">Declined</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ \App\Models\WaterConnectionApplication::where('status', 'declined')->count() }}</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Quick Actions -->
-    <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 mb-8 border border-white/20">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4">Quick Actions</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <a href="{{ route('water-connection.apply') }}" class="bg-blue-50/80 hover:bg-blue-100 border border-blue-200 rounded-xl p-4 text-center transition duration-200 transform hover:-translate-y-1 hover:shadow-lg">
-                <div class="text-blue-600 mb-2">
-                    <svg class="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                    </svg>
-                </div>
-                <h3 class="font-semibold text-blue-700">New Application</h3>
-                <p class="text-sm text-gray-600 mt-1">Create new water connection request</p>
+        
+        <div class="flex flex-wrap gap-3">
+            @can('add customers')
+            <a href="{{ route('admin.customers.create') }}" 
+               class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition duration-200 flex items-center shadow-md">
+                <i class="fas fa-plus mr-2"></i>
+                Add Customer
             </a>
-
-            <a href="{{ route('admin.water-applications.index') }}" class="bg-green-50/80 hover:bg-green-100 border border-green-200 rounded-xl p-4 text-center transition duration-200 transform hover:-translate-y-1 hover:shadow-lg">
-                <div class="text-green-600 mb-2">
-                    <svg class="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                    </svg>
-                </div>
-                <h3 class="font-semibold text-green-700">All Applications</h3>
-                <p class="text-sm text-gray-600 mt-1">View and manage all applications</p>
-            </a>
-
-            <a href="{{ route('admin.water-applications.index') }}?status=pending" class="bg-yellow-50/80 hover:bg-yellow-100 border border-yellow-200 rounded-xl p-4 text-center transition duration-200 transform hover:-translate-y-1 hover:shadow-lg">
-                <div class="text-yellow-600 mb-2">
-                    <svg class="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
-                <h3 class="font-semibold text-yellow-700">Pending Review</h3>
-                <p class="text-sm text-gray-600 mt-1">Review pending applications</p>
-            </a>
-
-            <a href="{{ route('admin.water-applications.index') }}?status=approved" class="bg-purple-50/80 hover:bg-purple-100 border border-purple-200 rounded-xl p-4 text-center transition duration-200 transform hover:-translate-y-1 hover:shadow-lg">
-                <div class="text-purple-600 mb-2">
-                    <svg class="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                    </svg>
-                </div>
-                <h3 class="font-semibold text-purple-700">Approved Customers</h3>
-                <p class="text-sm text-gray-600 mt-1">View approved customers</p>
+            @endcan
+            
+            <a href="{{ route('admin.water-applications.index') }}" 
+               class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200 flex items-center shadow-md">
+                <i class="fas fa-folder-open mr-2"></i>
+                View Applications
             </a>
         </div>
     </div>
 
-    <!-- Active Customers Section -->
+    <!-- Status Filter Tabs -->
     <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 mb-8 border border-white/20">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-xl font-semibold text-green-700">Active Customers</h2>
-            <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                {{ $activeCustomers->total() }} customers
-            </span>
+        <div class="flex flex-wrap gap-2 mb-6">
+            <a href="{{ route('admin.customers.index') }}" 
+               class="px-4 py-2 rounded-lg font-medium transition duration-200 {{ !request('status') ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
+                All <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs ml-1">{{ $statusCounts['all'] }}</span>
+            </a>
+            @foreach(['new', 'active', 'pending_payment', 'sealed', 'terminated'] as $status)
+            <a href="{{ route('admin.customers.index', ['status' => $status]) }}" 
+               class="px-4 py-2 rounded-lg font-medium transition duration-200 {{ request('status') == $status ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
+                {{ ucfirst(str_replace('_', ' ', $status)) }} 
+                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs ml-1">{{ $statusCounts[$status] }}</span>
+            </a>
+            @endforeach
         </div>
 
-        @if($activeCustomers->count())
+        <!-- Search Box -->
+        <div class="mb-6">
+            <form method="GET" action="{{ route('admin.customers.index') }}" class="flex gap-2">
+                <div class="flex-1 relative">
+                    <input type="text" 
+                           name="search" 
+                           value="{{ request('search') }}" 
+                           placeholder="Search by name, account number, phone, meter number..." 
+                           class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                </div>
+                @if(request('status'))
+                    <input type="hidden" name="status" value="{{ request('status') }}">
+                @endif
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition duration-200">
+                    Search
+                </button>
+                @if(request('search') || request('status'))
+                <a href="{{ route('admin.customers.index') }}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition duration-200 flex items-center">
+                    Clear
+                </a>
+                @endif
+            </form>
+        </div>
+    </div>
+
+    <!-- Customers Table -->
+    <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/20">
+        @if($customers->count())
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50/80">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer ID</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Account Info</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Meter Details</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Connection</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Meter & Category</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Balance</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white/50 divide-y divide-gray-200">
-                    @foreach($activeCustomers as $customer)
-                    <tr class="hover:bg-green-50/50 transition duration-150">
-                        <td class="px-6 py-4 whitespace-nowrap">
+                    @foreach($customers as $customer)
+                    <tr class="hover:bg-gray-50/50 transition duration-150">
+                        <!-- Account Info -->
+                        <td class="px-6 py-4">
                             <div class="text-sm font-mono text-blue-600 font-semibold">{{ $customer->customer_number }}</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm font-medium text-gray-900">{{ $customer->first_name }} {{ $customer->last_name }}</div>
                             <div class="text-sm text-gray-500">{{ $customer->plot_number }}, {{ $customer->house_number }}</div>
+                            <div class="text-xs text-gray-400">{{ $customer->id_number }}</div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900">{{ $customer->email }}</div>
-                            <div class="text-sm text-gray-500">{{ $customer->phone }}</div>
+
+                        <!-- Contact -->
+                        <td class="px-6 py-4">
+                            <div class="text-sm text-gray-900">{{ $customer->phone }}</div>
+                            <div class="text-sm text-gray-500 break-all">{{ $customer->email }}</div>
+                            <div class="text-xs text-gray-400">{{ $customer->connection_type }}</div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm font-medium text-gray-900">{{ $customer->meter_number }}</div>
-                            <div class="text-sm text-gray-500 capitalize">{{ $customer->meter_type }}</div>
-                            <div class="text-xs text-gray-400">Reading: {{ $customer->current_meter_reading ?? '0' }} m³</div>
+
+                        <!-- Meter & Category -->
+                        <td class="px-6 py-4">
+                            @if($customer->meter)
+                                <div class="text-sm font-medium text-gray-900">{{ $customer->meter->meter_number }}</div>
+                                <div class="text-sm text-gray-500">{{ $customer->meter->meterCategory->name ?? 'No Category' }}</div>
+                                <div class="text-xs text-gray-400 capitalize">{{ $customer->meter->meter_type }}</div>
+                            @else
+                                <div class="text-sm text-red-600 font-medium">No Meter</div>
+                                <div class="text-xs text-gray-500">Not assigned</div>
+                            @endif
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900 capitalize">{{ $customer->connection_type }}</div>
-                            <div class="text-sm text-gray-500">{{ $customer->connection_date?->format('M d, Y') ?? 'N/A' }}</div>
+
+                        <!-- Balance -->
+                        <td class="px-6 py-4">
+                            <div class="text-sm font-semibold {{ $customer->current_balance >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                                KSh {{ number_format(abs($customer->current_balance), 2) }}
+                            </div>
+                            <div class="text-xs text-gray-500">
+                                B/F: KSh {{ number_format($customer->balance_bf, 2) }}
+                            </div>
+                            @if($customer->arrears > 0)
+                                <div class="text-xs text-red-500">
+                                    Arrears: KSh {{ number_format($customer->arrears, 2) }}
+                                </div>
+                            @endif
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <div class="flex space-x-2">
+
+                        <!-- Status -->
+                        <td class="px-6 py-4">
+                            @php
+                                $statusColors = [
+                                    'new' => 'bg-blue-100 text-blue-800',
+                                    'active' => 'bg-green-100 text-green-800',
+                                    'pending_payment' => 'bg-yellow-100 text-yellow-800',
+                                    'sealed' => 'bg-red-100 text-red-800',
+                                    'terminated' => 'bg-gray-100 text-gray-800',
+                                ];
+                            @endphp
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusColors[$customer->status] }}">
+                                <i class="fas fa-circle mr-1 text-xs"></i>
+                                {{ ucfirst(str_replace('_', ' ', $customer->status)) }}
+                            </span>
+                            
+                            @if($customer->status === 'new' && !$customer->canBeActivated())
+                                <div class="mt-1 text-xs text-red-600">
+                                    Requirements pending
+                                </div>
+                            @endif
+                        </td>
+
+                        <!-- Actions -->
+                        <td class="px-6 py-4">
+                            <div class="flex flex-col space-y-2">
                                 <a href="{{ route('admin.customers.show', $customer) }}"
-                                   class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition duration-200 flex items-center">
+                                   class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition duration-200 flex items-center justify-center">
+                                    <i class="fas fa-eye mr-1"></i>
                                     View
                                 </a>
-                                <!-- <a href="{{ route('admin.meter-readings.create', ['customer' => $customer->id]) }}"
-                                    class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm transition duration-200 flex items-center">
-                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                        </svg>
-                                        Record Reading
-                                </a> -->
+                                
+                                @if($customer->meter)
+                                <a href="{{ route('admin.meter-readings.create', ['customer' => $customer->id]) }}"
+                                    class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm transition duration-200 flex items-center justify-center">
+                                    <i class="fas fa-tachometer-alt mr-1"></i>
+                                    Reading
+                                </a>
+                                @else
+                                <button onclick="assignMeter({{ $customer->id }})"
+                                        class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-sm transition duration-200 flex items-center justify-center">
+                                    <i class="fas fa-plus mr-1"></i>
+                                    Assign Meter
+                                </button>
+                                @endif
                             </div>
                         </td>
                     </tr>
@@ -217,222 +191,201 @@ if (auth()->user()->can('add customers')) {
         </div>
 
         <!-- Pagination -->
-        <div class="mt-4">
-            {{ $activeCustomers->links() }}
+        <div class="mt-6">
+            {{ $customers->links() }}
         </div>
         @else
-        <div class="text-center py-8">
-            <svg class="w-16 h-16 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-            </svg>
-            <h3 class="mt-4 text-lg font-medium text-gray-900">
-                @if($search ?? '')
+        <div class="text-center py-12">
+            <i class="fas fa-users text-4xl text-gray-400 mb-4"></i>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">
+                @if(request('search'))
                     No customers found
                 @else
-                    No active customers
+                    No customers in this status
                 @endif
             </h3>
-            <p class="mt-2 text-gray-500">
-                @if($search ?? '')
+            <p class="text-gray-500 mb-4">
+                @if(request('search'))
                     No customers match your search criteria.
                 @else
-                    Approved applications will appear here as active customers.
+                    There are no customers with the selected status.
                 @endif
             </p>
+            @can('add customers')
+            <a href="{{ route('admin.customers.create') }}" 
+               class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition duration-200 inline-flex items-center">
+                <i class="fas fa-plus mr-2"></i>
+                Add New Customer
+            </a>
+            @endcan
         </div>
         @endif
-    </div>
-
-    <!-- Pending Applications Section -->
-    <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 mb-8 border border-white/20">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-xl font-semibold text-blue-700">
-                @if($search ?? '')
-                    Search Results
-                @else
-                    Pending Water Connection Applications
-                @endif
-            </h2>
-            <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
-                {{ $pendingApplications->count() }}
-                @if($search ?? '')
-                    found
-                @else
-                    pending
-                @endif
-            </span>
-        </div>
-
-        @if($pendingApplications->count())
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50/80">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ref ID</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Applicant</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Applied</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white/50 divide-y divide-gray-200">
-                    @foreach($pendingApplications as $application)
-                    <tr class="hover:bg-blue-50/50 transition duration-150">
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm font-mono text-blue-600 font-semibold">#WC{{ $application->id }}</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="flex items-center">
-                                <div class="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                    <span class="text-blue-600 font-semibold">{{ substr($application->first_name, 0, 1) }}{{ substr($application->last_name, 0, 1) }}</span>
-                                </div>
-                                <div class="ml-4">
-                                    <div class="text-sm font-medium text-gray-900">{{ $application->first_name }} {{ $application->last_name }}</div>
-                                    <div class="text-sm text-gray-500">ID: {{ $application->national_id }}</div>
-                                </div>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900">{{ $application->email }}</div>
-                            <div class="text-sm text-gray-500">{{ $application->phone }}</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900">{{ $application->plot_number }}, {{ $application->house_number }}</div>
-                            <div class="text-sm text-gray-500">{{ $application->estate ?? 'N/A' }}</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <div>{{ $application->created_at->format('M d, Y') }}</div>
-                            <div class="text-xs text-gray-400">{{ $application->created_at->diffForHumans() }}</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <div class="flex space-x-2">
-                                <a href="/admin/water-applications/{{ $application->id }}"
-                                   class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm transition duration-200 flex items-center shadow hover:shadow-md">
-                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                                    </svg>
-                                    Review
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
-        @else
-        <div class="text-center py-8">
-            <svg class="w-16 h-16 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-            </svg>
-            <h3 class="mt-4 text-lg font-medium text-gray-900">
-                @if($search ?? '')
-                    No applications found
-                @else
-                    No pending applications
-                @endif
-            </h3>
-            <p class="mt-2 text-gray-500">
-                @if($search ?? '')
-                    No applications match your search criteria.
-                @else
-                    All water connection applications have been processed.
-                @endif
-            </p>
-            @if($search ?? '')
-            <a href="{{ route('admin.customers.index') }}" class="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition duration-200">
-                Clear Search
-            </a>
-            @else
-            <a href="{{ route('water-connection.apply') }}" class="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition duration-200">
-                Create New Application
-            </a>
-            @endif
-        </div>
-        @endif
-    </div>
-
-    <!-- Recent Activity Section -->
-    <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/20">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4">Recent Activity</h2>
-        <div class="space-y-4">
-            @php
-                $recentApplications = \App\Models\WaterConnectionApplication::latest()->take(5)->get();
-            @endphp
-
-            @foreach($recentApplications as $recentApp)
-            <div class="flex items-center space-x-4 p-3 border border-gray-100 rounded-lg hover:bg-gray-50/50 transition duration-150">
-                <div class="flex-shrink-0">
-                    @if($recentApp->status == 'approved')
-                    <div class="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
-                        <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
-                    </div>
-                    @elseif($recentApp->status == 'declined')
-                    <div class="h-8 w-8 bg-red-100 rounded-full flex items-center justify-center">
-                        <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </div>
-                    @else
-                    <div class="h-8 w-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                        <svg class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                    </div>
-                    @endif
-                </div>
-                <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium text-gray-900">
-                        {{ $recentApp->first_name }} {{ $recentApp->last_name }}
-                    </p>
-                    <p class="text-sm text-gray-500">
-                        Application {{ ucfirst($recentApp->status) }} • {{ $recentApp->created_at->diffForHumans() }}
-                    </p>
-                </div>
-                <div class="flex-shrink-0">
-                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                        {{ $recentApp->status == 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                           ($recentApp->status == 'approved' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800') }}">
-                        {{ ucfirst($recentApp->status) }}
-                    </span>
-                </div>
-            </div>
-            @endforeach
-        </div>
     </div>
 </div>
 
-<!-- JavaScript for Enhanced Search -->
+<!-- Meter Assignment Modal -->
+<div id="meterAssignmentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-2xl mx-4">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold">Assign Meter to Customer</h3>
+            <button onclick="closeMeterModal()" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <form id="assignMeterForm" method="POST">
+            @csrf
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Select Meter Category</label>
+                    <select id="meterCategorySelect" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Select Category</option>
+                        @foreach($categories ?? [] as $category)
+                        <option value="{{ $category->id }}">{{ $category->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Available Meters</label>
+                    <div id="availableMetersList" class="space-y-2 max-h-60 overflow-y-auto">
+                        <p class="text-gray-500 text-sm">Select a category to view available meters</p>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Initial Reading</label>
+                        <input type="number" step="0.01" name="initial_reading" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="0.00">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Balance B/F</label>
+                        <input type="number" step="0.01" name="balance_bf" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="0.00">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Installation Date</label>
+                    <input type="date" name="installation_date" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" value="{{ date('Y-m-d') }}">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                    <textarea name="notes" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Any installation notes..."></textarea>
+                </div>
+            </div>
+            
+            <div class="flex justify-end space-x-3 mt-6">
+                <button type="button" onclick="closeMeterModal()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition duration-200">
+                    Cancel
+                </button>
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200">
+                    Assign Meter
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.querySelector('input[name="search"]');
+let currentCustomerId = null;
 
-    if (searchInput) {
-        // Focus on search input when page loads if there's a search term
-        if (searchInput.value) {
-            searchInput.focus();
-        }
+function assignMeter(customerId) {
+    currentCustomerId = customerId;
+    const modal = document.getElementById('meterAssignmentModal');
+    const form = document.getElementById('assignMeterForm');
+    
+    form.action = `/admin/customers/${customerId}/assign-meter`;
+    modal.classList.remove('hidden');
+}
 
-        // Add real-time search suggestions (optional enhancement)
-        searchInput.addEventListener('input', function() {
-            // You can add AJAX real-time search here if needed
-        });
+function closeMeterModal() {
+    const modal = document.getElementById('meterAssignmentModal');
+    modal.classList.add('hidden');
+    currentCustomerId = null;
+}
+
+// Load available meters when category changes
+document.getElementById('meterCategorySelect')?.addEventListener('change', function() {
+    const categoryId = this.value;
+    const metersList = document.getElementById('availableMetersList');
+    
+    if (!categoryId) {
+        metersList.innerHTML = '<p class="text-gray-500 text-sm">Select a category to view available meters</p>';
+        return;
     }
-
-    // Add keyboard shortcut for search (Ctrl+K or Cmd+K)
-    document.addEventListener('keydown', function(e) {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-            e.preventDefault();
-            if (searchInput) {
-                searchInput.focus();
+    
+    metersList.innerHTML = '<p class="text-gray-500 text-sm">Loading meters...</p>';
+    
+    fetch(`/admin/customers/get-available-meters?category_id=${categoryId}`)
+        .then(response => response.json())
+        .then(meters => {
+            if (meters.length === 0) {
+                metersList.innerHTML = '<p class="text-red-500 text-sm">No available meters in this category</p>';
+                return;
             }
-        }
-    });
+            
+            metersList.innerHTML = meters.map(meter => `
+                <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 cursor-pointer meter-option" data-meter-id="${meter.id}">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <div class="font-medium text-gray-900">${meter.meter_number}</div>
+                            <div class="text-sm text-gray-500">${meter.meter_type} • ${meter.meter_model}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm font-semibold text-green-600">Available</div>
+                            <div class="text-xs text-gray-500">Init: ${meter.initial_reading}m³</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Add click handlers
+            document.querySelectorAll('.meter-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    // Remove previous selection
+                    document.querySelectorAll('.meter-option').forEach(opt => {
+                        opt.classList.remove('border-blue-500', 'bg-blue-50');
+                    });
+                    
+                    // Add selection to clicked option
+                    this.classList.add('border-blue-500', 'bg-blue-50');
+                    
+                    // Add hidden input for meter_id
+                    let meterInput = document.querySelector('input[name="meter_id"]');
+                    if (!meterInput) {
+                        meterInput = document.createElement('input');
+                        meterInput.type = 'hidden';
+                        meterInput.name = 'meter_id';
+                        document.getElementById('assignMeterForm').appendChild(meterInput);
+                    }
+                    meterInput.value = this.dataset.meterId;
+                });
+            });
+        })
+        .catch(error => {
+            metersList.innerHTML = '<p class="text-red-500 text-sm">Error loading meters</p>';
+            console.error('Error:', error);
+        });
+});
+
+// Close modal when clicking outside
+document.getElementById('meterAssignmentModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeMeterModal();
+    }
 });
 </script>
+
+<style>
+.meter-option {
+    transition: all 0.2s ease;
+}
+
+.meter-option:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+</style>
 @endcan
 @endsection
