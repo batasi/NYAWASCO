@@ -15,66 +15,61 @@ class MeterController extends Controller
     public function index(Request $request)
     {
         $categoryId = $request->get('category');
+        $filter = $request->get('filter', 'all'); // all, available, assigned, location
         
-        $meters = Meter::with(['customer', 'meterCategory', 'meterReadings' => function($query) {
+        $query = Meter::with(['customer', 'meterCategory', 'meterReadings' => function($query) {
             $query->latest()->limit(1);
-        }])
-        ->when($categoryId, function($query) use ($categoryId) {
-            return $query->where('meter_category_id', $categoryId);
-        })
-        ->latest()
-        ->paginate(20);
+        }]);
+
+        // Apply filters based on the filter parameter
+        switch ($filter) {
+            case 'available':
+                $query->where('status', 'available')->whereNull('customer_id');
+                break;
+            case 'assigned':
+                $query->where('status', 'assigned')->whereNotNull('customer_id');
+                break;
+            case 'location':
+                // For location filter, we'll handle it separately in the view
+                break;
+            default:
+                // 'all' - no additional filters
+                break;
+        }
+
+        // Category filter
+        if ($categoryId) {
+            $query->where('meter_category_id', $categoryId);
+        }
+
+        // Location search for location filter
+        if ($filter === 'location' && $request->filled('location')) {
+            $location = $request->get('location');
+            $query->where(function($q) use ($location) {
+                $q->where('installation_address', 'like', "%{$location}%")
+                  ->orWhereHas('customer', function($q) use ($location) {
+                      $q->where('estate', 'like', "%{$location}%")
+                        ->orWhere('plot_number', 'like', "%{$location}%")
+                        ->orWhere('house_number', 'like', "%{$location}%");
+                  });
+            });
+        }
+
+        $meters = $query->latest()->paginate(20);
 
         $stats = [
             'total' => Meter::count(),
-            'assigned' => Meter::where('status', 'assigned')->count(),
-            'unassigned' => Meter::where('status', 'available')->count(),
+            'assigned' => Meter::where('status', 'assigned')->whereNotNull('customer_id')->count(),
+            'unassigned' => Meter::where('status', 'available')->whereNull('customer_id')->count(),
             'faulty' => Meter::where('status', 'faulty')->count(),
         ];
 
         $categories = MeterCategory::active()->ordered()->withCount('meters')->get();
 
-        return view('admin.meters.index', compact('meters', 'stats', 'categories'));
+        return view('admin.meters.index', compact('meters', 'stats', 'categories', 'filter'));
     }
 
-    public function available()
-    {
-        $meters = Meter::available()
-            ->with(['customer', 'meterCategory', 'meterReadings' => function($query) {
-                $query->latest()->limit(1);
-            }])
-            ->latest()
-            ->paginate(20);
-
-        return view('admin.meters.available', compact('meters'));
-    }
-
-    public function assigned()
-    {
-        $meters = Meter::assigned()
-            ->with(['customer', 'meterCategory', 'meterReadings' => function($query) {
-                $query->latest()->limit(1);
-            }])
-            ->latest()
-            ->paginate(20);
-
-        return view('admin.meters.assigned', compact('meters'));
-    }
-
-    public function byLocation(Request $request)
-    {
-        $location = $request->get('location', '');
-        $meters = Meter::with(['customer', 'meterCategory', 'meterReadings' => function($query) {
-                $query->latest()->limit(1);
-            }])
-            ->when($location, function($query) use ($location) {
-                return $query->where('installation_address', 'like', "%{$location}%");
-            })
-            ->latest()
-            ->paginate(20);
-
-        return view('admin.meters.by-location', compact('meters', 'location'));
-    }
+    // Remove the separate available(), assigned(), byLocation() methods since we're handling everything in index()
 
     public function store(Request $request)
     {
@@ -243,28 +238,46 @@ class MeterController extends Controller
             ->with('success', 'Meter updated successfully!');
     }
 
-   
-public function getAvailableMeters(Request $request)
-{
-    $categoryId = $request->get('category_id');
-    
-    $meters = Meter::where('status', 'available')
-        ->when($categoryId, function($query) use ($categoryId) {
-            return $query->where('meter_category_id', $categoryId);
-        })
-        ->with('meterCategory')
-        ->get()
-        ->map(function($meter) {
-            return [
-                'id' => $meter->id,
-                'meter_number' => $meter->meter_number,
-                'meter_type' => $meter->meter_type,
-                'meter_model' => $meter->meter_model,
-                'initial_reading' => $meter->initial_reading,
-                'category_name' => $meter->meterCategory->name ?? 'No Category'
-            ];
-        });
-    
-    return response()->json($meters);
-}
+    public function getAvailableMeters(Request $request)
+    {
+        $categoryId = $request->get('category_id');
+        
+        $meters = Meter::where('status', 'available')
+            ->when($categoryId, function($query) use ($categoryId) {
+                return $query->where('meter_category_id', $categoryId);
+            })
+            ->with('meterCategory')
+            ->get()
+            ->map(function($meter) {
+                return [
+                    'id' => $meter->id,
+                    'meter_number' => $meter->meter_number,
+                    'meter_type' => $meter->meter_type,
+                    'meter_model' => $meter->meter_model,
+                    'initial_reading' => $meter->initial_reading,
+                    'category_name' => $meter->meterCategory->name ?? 'No Category'
+                ];
+            });
+        
+        return response()->json($meters);
+    }
+
+    /**
+     * Get customer address for auto-filling installation address
+     */
+    public function getCustomerAddress($customerId)
+    {
+        $customer = Customer::find($customerId);
+        
+        if (!$customer) {
+            return response()->json(['address' => '']);
+        }
+
+        $address = $customer->plot_number . ', ' . $customer->house_number;
+        if ($customer->estate) {
+            $address .= ', ' . $customer->estate;
+        }
+
+        return response()->json(['address' => $address]);
+    }
 }

@@ -36,55 +36,118 @@
 
     <!-- Statistics -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div class="bg-white rounded-lg shadow p-6 text-center">
-            <div class="text-3xl font-bold text-blue-600">{{ $stats['total'] }}</div>
-            <div class="text-gray-600">Total Meters</div>
+        <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6 text-center hover:shadow-xl transition-all duration-300 hover:border-blue-200">
+            <div class="text-3xl font-bold text-blue-600 mb-2">{{ $stats['total'] }}</div>
+            <div class="text-gray-700 font-medium">Total Meters</div>
+            <div class="text-xs text-gray-500 mt-1">All registered meters</div>
         </div>
-        <div class="bg-white rounded-lg shadow p-6 text-center">
-            <div class="text-3xl font-bold text-green-600">{{ $stats['assigned'] }}</div>
-            <div class="text-gray-600">Assigned</div>
+        
+        <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6 text-center hover:shadow-xl transition-all duration-300 hover:border-green-200">
+            <div class="text-3xl font-bold text-green-600 mb-2">{{ $stats['assigned'] }}</div>
+            <div class="text-gray-700 font-medium">Assigned</div>
+            <div class="text-xs text-gray-500 mt-1">Active customer meters</div>
         </div>
-        <div class="bg-white rounded-lg shadow p-6 text-center">
-            <div class="text-3xl font-bold text-orange-600">{{ $stats['unassigned'] }}</div>
-            <div class="text-gray-600">Unassigned</div>
+        
+        <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6 text-center hover:shadow-xl transition-all duration-300 hover:border-orange-200">
+            <div class="text-3xl font-bold text-orange-600 mb-2">{{ $stats['unassigned'] }}</div>
+            <div class="text-gray-700 font-medium">Unassigned</div>
+            <div class="text-xs text-gray-500 mt-1">Available for assignment</div>
         </div>
-        <div class="bg-white rounded-lg shadow p-6 text-center">
-            <div class="text-3xl font-bold text-red-600">{{ $stats['faulty'] }}</div>
-            <div class="text-gray-600">Faulty</div>
+        
+        <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6 text-center hover:shadow-xl transition-all duration-300 hover:border-red-200">
+            <div class="text-3xl font-bold text-red-600 mb-2">{{ $stats['faulty'] }}</div>
+            <div class="text-gray-700 font-medium">Faulty</div>
+            <div class="text-xs text-gray-500 mt-1">Requires maintenance</div>
         </div>
     </div>
 
-    <!-- Quick Actions -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <a href="{{ route('admin.meters.available') }}" class="bg-orange-500 hover:bg-orange-600 text-white p-4 rounded-lg text-center transition duration-200">
-            <div class="text-lg font-semibold">Unassigned Meters</div>
-            <div class="text-sm">View available meters</div>
+    <!-- Quick Actions with Active Filter Indicators -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-1 mb-3">
+        <a href="{{ route('admin.meters.index', ['filter' => 'all']) }}" 
+           class="bg-blue-500 hover:bg-blue-600 text-white p-6 rounded-xl text-center transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 {{ ($filter ?? 'all') == 'all' ? 'ring-2 ring-blue-300 ring-opacity-50' : '' }}">
+            <div class="text-xl font-semibold mb-2">All Meters</div>
+            <div class="text-sm opacity-90">View all meters</div>
+            <div class="mt-3 text-2xl opacity-80">
+                <i class="fas fa-tachometer-alt"></i>
+            </div>
         </a>
-        <a href="{{ route('admin.meters.assigned') }}" class="bg-green-500 hover:bg-green-600 text-white p-4 rounded-lg text-center transition duration-200">
-            <div class="text-lg font-semibold">Assigned Meters</div>
-            <div class="text-sm">View customer meters</div>
+        
+        <a href="{{ route('admin.meters.index', ['filter' => 'available']) }}" 
+           class="bg-orange-500 hover:bg-orange-600 text-white p-6 rounded-xl text-center transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 {{ ($filter ?? '') == 'available' ? 'ring-2 ring-orange-300 ring-opacity-50' : '' }}">
+            <div class="text-xl font-semibold mb-2">Unassigned Meters</div>
+            <div class="text-sm opacity-90">View available meters</div>
+            <div class="mt-3 text-2xl opacity-80">
+                <i class="fas fa-box-open"></i>
+            </div>
         </a>
-        <a href="{{ route('admin.meters.by-location') }}" class="bg-purple-500 hover:bg-purple-600 text-white p-4 rounded-lg text-center transition duration-200">
-            <div class="text-lg font-semibold">Meters by Location</div>
-            <div class="text-sm">Search by address</div>
+        
+        <a href="{{ route('admin.meters.index', ['filter' => 'assigned']) }}" 
+           class="bg-green-500 hover:bg-green-600 text-white p-6 rounded-xl text-center transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 {{ ($filter ?? '') == 'assigned' ? 'ring-2 ring-green-300 ring-opacity-50' : '' }}">
+            <div class="text-xl font-semibold mb-2">Assigned Meters</div>
+            <div class="text-sm opacity-90">View customer meters</div>
+            <div class="mt-3 text-2xl opacity-80">
+                <i class="fas fa-user-check"></i>
+            </div>
         </a>
-        <a href="{{ route('admin.meter-categories.index') }}" class="bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-lg text-center transition duration-200">
-            <div class="text-lg font-semibold">Categories</div>
-            <div class="text-sm">Manage categories & pricing</div>
+        
+        <a href="{{ route('admin.meters.index', ['filter' => 'location']) }}" 
+           class="bg-purple-500 hover:bg-purple-600 text-white p-6 rounded-xl text-center transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 {{ ($filter ?? '') == 'location' ? 'ring-2 ring-purple-300 ring-opacity-50' : '' }}">
+            <div class="text-xl font-semibold mb-2">Meters by Location</div>
+            <div class="text-sm opacity-90">Search by address</div>
+            <div class="mt-3 text-2xl opacity-80">
+                <i class="fas fa-map-marker-alt"></i>
+            </div>
+        </a>
+
+         <a href="{{ route('admin.meter-categories.index') }}" class="bg-blue-500 hover:bg-blue-600 text-white p-6 rounded-xl text-center transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1">
+            <div class="text-xl font-semibold mb-2">Categories</div>
+            <div class="text-sm opacity-90">Manage categories & pricing</div>
+            <div class="mt-3 text-2xl opacity-80">
+                <i class="fas fa-tags"></i>
+            </div>
         </a>
     </div>
+
+    <!-- Location Search (only show when location filter is active) -->
+    @if(($filter ?? '') == 'location')
+    <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+        <form method="GET" action="{{ route('admin.meters.index') }}" class="flex gap-4">
+            <input type="hidden" name="filter" value="location">
+            <div class="flex-1">
+                <input type="text" name="location" value="{{ request('location') }}" 
+                       placeholder="Search by estate, plot number, or house number..."
+                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition">
+            </div>
+            <button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold transition duration-200">
+                <i class="fas fa-search mr-2"></i>Search
+            </button>
+            @if(request('location'))
+            <a href="{{ route('admin.meters.index', ['filter' => 'location']) }}" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold transition duration-200">
+                Clear
+            </a>
+            @endif
+        </form>
+    </div>
+    @endif
 
     <!-- Category Filter -->
     <div class="bg-white rounded-lg shadow p-6 mb-6">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <h3 class="text-lg font-semibold text-gray-800">Filter by Category</h3>
             <div class="flex flex-wrap gap-2">
-                <a href="{{ route('admin.meters.index') }}" 
+                @php
+                    $currentParams = request()->all();
+                    $baseParams = array_merge($currentParams, ['category' => null]);
+                @endphp
+                <a href="{{ route('admin.meters.index', $baseParams) }}" 
                    class="px-4 py-2 rounded-lg {{ !request('category') ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
                     All Categories
                 </a>
                 @foreach($categories as $category)
-                <a href="{{ route('admin.meters.index', ['category' => $category->id]) }}" 
+                @php
+                    $categoryParams = array_merge($currentParams, ['category' => $category->id]);
+                @endphp
+                <a href="{{ route('admin.meters.index', $categoryParams) }}" 
                    class="px-4 py-2 rounded-lg {{ request('category') == $category->id ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
                     {{ $category->name }} ({{ $category->meters_count }})
                 </a>
@@ -141,7 +204,22 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm text-gray-900">
-                                {{ $meter->installation_address ?? 'N/A' }}
+                                @if($meter->customer && $meter->customer->estate)
+                                    <!-- For assigned meters, use customer's estate as location -->
+                                    <i class="fas fa-map-marker-alt text-purple-500 mr-1"></i>
+                                    {{ $meter->customer->estate }}
+                                    @if($meter->customer->plot_number || $meter->customer->house_number)
+                                        <div class="text-xs text-gray-500">
+                                            @if($meter->customer->plot_number)Plot {{ $meter->customer->plot_number }}@endif
+                                            @if($meter->customer->house_number)@if($meter->customer->plot_number),@endif House {{ $meter->customer->house_number }}@endif
+                                        </div>
+                                    @endif
+                                @elseif($meter->installation_address)
+                                    <!-- For unassigned meters, use installation address -->
+                                    {{ $meter->installation_address }}
+                                @else
+                                    <span class="text-gray-500">Location not set</span>
+                                @endif
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
@@ -202,7 +280,17 @@
                     @empty
                     <tr>
                         <td colspan="9" class="px-6 py-4 text-center text-sm text-gray-500">
-                           No meters found. <button onclick="openMeterModal()" class="text-blue-600 hover:text-blue-900 font-medium">Register the first meter</button>.
+                            @if(($filter ?? '') == 'available')
+                                No unassigned meters found.
+                            @elseif(($filter ?? '') == 'assigned')
+                                No assigned meters found.
+                            @elseif(($filter ?? '') == 'location' && request('location'))
+                                No meters found for location "{{ request('location') }}".
+                            @elseif(($filter ?? '') == 'location')
+                                Use the search bar above to find meters by location.
+                            @else
+                                No meters found. <button onclick="openMeterModal()" class="text-blue-600 hover:text-blue-900 font-medium">Register the first meter</button>.
+                            @endif
                         </td>
                     </tr>
                     @endforelse
@@ -215,7 +303,7 @@
         </div>
     </div>
 
-    <!-- Register Meter Modal - UPDATED FOR CATEGORIES -->
+    <!-- Register Meter Modal -->
     <div id="registerMeterModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
         <div class="flex items-center justify-center min-h-screen p-4">
             <div class="relative bg-white rounded-lg shadow-xl w-full max-w-2xl mx-auto">

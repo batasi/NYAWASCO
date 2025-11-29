@@ -66,7 +66,7 @@ class Meter extends Model
 
     public function meterReadings()
     {
-        return $this->hasMany(MeterReading::class);
+        return $this->hasMany(MeterReading::class)->orderBy('reading_date', 'desc');
     }
 
     public function latestReading()
