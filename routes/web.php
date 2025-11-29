@@ -111,6 +111,7 @@ Route::get('/search', [SearchController::class, 'index'])->name('search.index');
 |--------------------------------------------------------------------------
 */
 
+
 Route::prefix('api')->group(function () {
     Route::get('/live-activities', [LiveActivityController::class, 'index'])->name('api.live-activities');
     Route::get('/search', [SearchApiController::class, 'search'])->name('api.search');
@@ -197,6 +198,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/{payment}', [PaymentController::class, 'update'])->name('payments.update');
         Route::delete('/{payment}', [PaymentController::class, 'destroy'])->name('payments.destroy');
     });
+
+        // Meter details route for AJAX
+    Route::get('/payments/meter-details/{meterNumber}', [PaymentController::class, 'getMeterDetails'])
+        ->name('payments.meter-details')
+        ->middleware('auth');
+
+    Route::get('/payments/search-meters', [PaymentController::class, 'searchMeters'])
+        ->name('payments.search-meters')
+        ->middleware('auth');
+
+    
 
     // Payment Processing
     Route::get('/payment/{type}/{id}', [PaymentController::class, 'process'])->name('payments.process');
@@ -360,7 +372,10 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
         Route::put('/{meter}', [MeterController::class, 'update'])->name('update');
         Route::post('/{meter}/assign', [MeterController::class, 'assignToCustomer'])->name('assign');
         Route::post('/{meter}/unassign', [MeterController::class, 'unassign'])->name('unassign');
+
     });
+
+
 
     // Meter Readings Management
     Route::prefix('meter-readings')->name('meter-readings.')->group(function () {
@@ -368,6 +383,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
         Route::get('/create', [MeterReadingController::class, 'create'])->name('create');
         Route::post('/', [MeterReadingController::class, 'store'])->name('store');
         Route::get('/last-reading', [MeterReadingController::class, 'getLastReading'])->name('last-reading');
+        
     });
 
     // Meter Categories Management

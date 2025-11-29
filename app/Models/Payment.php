@@ -14,7 +14,6 @@ class Payment extends Model
      */
     protected $fillable = [
         'meter_id',
-        'customer_id',
         'user_id',
         'payment_no',
         'payment_date',
@@ -40,15 +39,28 @@ class Payment extends Model
     {
         return $this->belongsTo(User::class);
     }
-    public function customer()
-    {
-        return $this->belongsTo(Customer::class);
-    }
+
     /**
-     * Payment belongs to a bill.
+     * Payment belongs to a meter.
+     */
+    public function meter()
+    {
+        return $this->belongsTo(Meter::class);
+    }
+
+    /**
+     * Payment belongs to a bill (optional - through meter)
      */
     public function bill()
     {
         return $this->belongsTo(Bill::class);
+    }
+
+    /**
+     * Get customer through meter
+     */
+    public function customer()
+    {
+        return $this->hasOneThrough(Customer::class, Meter::class, 'id', 'id', 'meter_id', 'customer_id');
     }
 }
