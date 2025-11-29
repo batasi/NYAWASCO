@@ -50,7 +50,7 @@ class Customer extends Model
             if (empty($customer->customer_number)) {
                 $customer->customer_number = 'CUST' . date('Ymd') . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT);
             }
-            
+
             // Set default status if not provided
             if (empty($customer->status)) {
                 $customer->status = 'new';
@@ -140,7 +140,7 @@ class Customer extends Model
 
         // Fix: Check water application and files properly
         $waterApp = $this->waterApplication;
-        
+
         if (!$waterApp) {
             $requirements[] = 'Water application missing';
         } else {
@@ -178,7 +178,7 @@ class Customer extends Model
         return $totalPaid - $totalBilled;
     }
 
-    
+
     public function getArrearsAttribute()
     {
         // Arrears are unpaid bills that are overdue
@@ -188,14 +188,7 @@ class Customer extends Model
             ->sum('total_amount');
     }
 
-    public function getCurrentBalanceAttribute()
-    {
-        // Use the stored current_balance, but calculate if needed
-        if ($this->attributes['current_balance'] === null) {
-            return $this->balance_bf + $this->account_balance;
-        }
-        return $this->attributes['current_balance'];
-    }
+
 
     public function updateBalance($amount, $type = 'charge')
     {
@@ -204,7 +197,7 @@ class Customer extends Model
         } elseif ($type === 'payment') {
             $this->current_balance -= $amount;
         }
-        
+
         $this->save();
     }
 
@@ -234,7 +227,7 @@ class Customer extends Model
     }
 
     // Get total consumption
-   
+
 
     // Get recent bills (last 6 months)
     public function recentBills($limit = 6)
@@ -314,8 +307,8 @@ class Customer extends Model
     public function getCategoryNameAttribute()
     {
         $meter = $this->meters()->first();
-        return $meter && $meter->meterCategory 
-            ? $meter->meterCategory->name 
+        return $meter && $meter->meterCategory
+            ? $meter->meterCategory->name
             : 'No Category';
     }
 

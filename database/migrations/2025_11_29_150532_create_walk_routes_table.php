@@ -11,8 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('nominees', function (Blueprint $table) {
-            $table->string('code')->unique()->nullable();
+        Schema::create('walk_routes', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('zone_id')->constrained('zones')->onDelete('cascade');
+            $table->string('name');
+            $table->integer('route_order')->nullable();
+            $table->timestamps();
         });
     }
 
@@ -21,8 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('nominees', function (Blueprint $table) {
-            $table->dropColumn('code')->unique()->nullable();
-        });
+        Schema::dropIfExists('walk_routes');
     }
 };

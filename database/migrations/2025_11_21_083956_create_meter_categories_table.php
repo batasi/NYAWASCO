@@ -13,6 +13,9 @@ return new class extends Migration
             $table->string('name');
             $table->string('code')->unique();
             $table->text('description')->nullable();
+            $table->decimal('installation_fee', 10, 2)->default(0.00);
+            $table->decimal('connection_fee', 10, 2)->default(0.00);
+            $table->decimal('deposit_amount', 10, 2)->default(0.00);
             $table->decimal('base_charge', 10, 2)->default(0);
             $table->decimal('meter_rent', 10, 2)->default(0);
             $table->boolean('has_tiers')->default(false);

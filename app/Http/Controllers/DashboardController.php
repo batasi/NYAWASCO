@@ -29,22 +29,7 @@ class DashboardController extends Controller
         // Base data available for all dashboards
         $data = [
             'user' => $user,
-            'recent_events' => Event::with('category')
-                ->where('is_active', true)
-                ->where('start_date', '>=', now())
-                ->orderBy('start_date')
-                ->take(5)
-                ->paginate(10),
 
-            'active_voting' => VotingContest::with('category')
-                ->where('is_active', true)
-                ->where(function ($query) {
-                    $query->where('end_date', '>=', now())
-                        ->orWhereNull('end_date');
-                })
-                ->orderBy('end_date', 'asc')
-                ->take(5)
-                ->get(),
         ];
 
         // Safeguard for users without assigned roles

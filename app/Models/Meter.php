@@ -54,6 +54,14 @@ class Meter extends Model
     }
 
     // Relationships
+    public function zone() {
+        return $this->belongsTo(Zone::class);
+    }
+
+    public function walkroute() {
+        return $this->belongsTo(WalkRoute::class);
+    }
+
     public function customer()
     {
         return $this->belongsTo(Customer::class, 'customer_id');
@@ -162,7 +170,7 @@ class Meter extends Model
         } elseif ($type === 'payment') {
             $this->current_balance -= $amount;
         }
-        
+
         $this->save();
     }
 

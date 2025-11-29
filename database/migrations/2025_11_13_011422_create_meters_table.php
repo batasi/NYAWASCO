@@ -14,6 +14,8 @@ return new class extends Migration
             $table->string('meter_type')->default('domestic');
             $table->string('meter_model')->nullable();
             $table->string('manufacturer')->nullable();
+            $table->decimal('latitude', 10, 7)->nullable();
+            $table->decimal('longtitude', 10, 7)->nullable();
             $table->string('status')->default('available'); // available, assigned, faulty, maintenance
             $table->unsignedBigInteger('customer_id')->nullable();
             $table->string('installation_address')->nullable();

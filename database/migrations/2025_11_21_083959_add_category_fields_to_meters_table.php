@@ -10,10 +10,7 @@ return new class extends Migration
     {
         Schema::table('meters', function (Blueprint $table) {
             $table->foreignId('meter_category_id')->nullable()->after('meter_type')->constrained()->nullOnDelete();
-            $table->decimal('installation_fee', 10, 2)->default(0)->after('initial_reading');
-            $table->decimal('connection_fee', 10, 2)->default(0)->after('installation_fee');
-            $table->decimal('deposit_amount', 10, 2)->default(0)->after('connection_fee');
-            $table->decimal('balance_bf', 10, 2)->default(0)->after('deposit_amount'); // Balance brought forward
+            $table->decimal('balance_bf', 10, 2)->default(0); // Balance brought forward
             $table->decimal('current_balance', 10, 2)->default(0)->after('balance_bf');
             $table->json('additional_charges')->nullable()->after('current_balance');
         });
@@ -25,7 +22,7 @@ return new class extends Migration
             $table->dropForeign(['meter_category_id']);
             $table->dropColumn([
                 'meter_category_id',
-                'installation_fee', 
+                'installation_fee',
                 'connection_fee',
                 'deposit_amount',
                 'balance_bf',
