@@ -11,6 +11,7 @@ class MeterReading extends Model
 
     protected $fillable = [
         'customer_id',
+        'meter_id',
         'current_reading',
         'previous_reading',
         'consumption',
@@ -55,7 +56,7 @@ class MeterReading extends Model
         });
     }
 
-      // Add this to allow null customer_id
+    // Add this to allow null customer_id
     public function __construct(array $attributes = [])
     {
         parent::__construct($attributes);
@@ -66,6 +67,11 @@ class MeterReading extends Model
     public function customer()
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function meter()
+    {
+        return $this->belongsTo(Meter::class);
     }
 
     public function reader()
@@ -80,7 +86,7 @@ class MeterReading extends Model
 
     public function bill()
     {
-        return $this->hasOne(Bill::class);
+        return $this->hasOne(Bill::class, 'meter_reading_id');
     }
 
     // Scopes
@@ -109,6 +115,11 @@ class MeterReading extends Model
         return $query->where('reading_period', now()->format('F Y'));
     }
 
+    public function scopeForMeter($query, $meterId)
+    {
+        return $query->where('meter_id', $meterId);
+    }
+
     // Helper methods
     public function getFormattedConsumptionAttribute()
     {
@@ -118,5 +129,15 @@ class MeterReading extends Model
     public function isBillable()
     {
         return !$this->billed && $this->reading_type === 'monthly' && $this->consumption > 0;
+    }
+
+    public function getMeterNumberAttribute()
+    {
+        return $this->meter ? $this->meter->meter_number : 'N/A';
+    }
+
+    public function getCustomerNameAttribute()
+    {
+        return $this->customer ? $this->customer->first_name . ' ' . $this->customer->last_name : 'N/A';
     }
 }

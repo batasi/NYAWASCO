@@ -35,21 +35,24 @@ class MeterReadingController extends Controller
         $meters = [];
 
         if ($customerId) {
-            $customer = Customer::with('meters')->findOrFail($customerId);
+            $customer = Customer::with('meters.meterCategory')->findOrFail($customerId);
             $meters = $customer->meters;
             
             // If specific meter is selected, get that meter
             if ($meterId) {
                 $meter = $meters->firstWhere('id', $meterId);
+            } else {
+                // Default to first meter if none selected
+                $meter = $meters->first();
             }
             
-            // Get last reading for the specific meter or all meters
-            $lastReading = MeterReading::where('customer_id', $customerId)
-                ->when($meterId, function($query) use ($meterId) {
-                    return $query->where('meter_id', $meterId);
-                })
-                ->latest()
-                ->first();
+            // Get last reading for the specific meter
+            if ($meter) {
+                $lastReading = MeterReading::where('customer_id', $customerId)
+                    ->where('meter_id', $meter->id)
+                    ->latest()
+                    ->first();
+            }
         }
 
         return view('admin.meter-readings.create', compact('customer', 'lastReading', 'meter', 'meters'));
@@ -94,7 +97,10 @@ class MeterReadingController extends Controller
         ]);
 
         try {
-            DB::transaction(function () use ($request) {
+            // Define meter variable outside the transaction
+            $meter = null;
+            
+            DB::transaction(function () use ($request, $readingPeriod, &$meter) {
                 // Get customer and meter
                 $customer = Customer::findOrFail($request->customer_id);
                 $meter = Meter::findOrFail($request->meter_id);
@@ -102,17 +108,6 @@ class MeterReadingController extends Controller
                 // Verify the meter belongs to the customer
                 if ($meter->customer_id != $customer->id) {
                     throw new \Exception('Selected meter does not belong to this customer.');
-                }
-
-                // Check for duplicate reading in the same period for this meter
-                $readingPeriod = Carbon::parse($request->reading_date)->format('F Y');
-                $existingReading = MeterReading::where('customer_id', $request->customer_id)
-                    ->where('meter_id', $request->meter_id)
-                    ->where('reading_period', $readingPeriod)
-                    ->first();
-
-                if ($existingReading) {
-                    throw new \Exception('Meter reading for meter ' . $meter->meter_number . ' in ' . $readingPeriod . ' has already been recorded. Please wait until next month to record again.');
                 }
 
                 // Get previous reading for this specific meter
@@ -158,31 +153,44 @@ class MeterReadingController extends Controller
                     'current_reading' => $request->current_reading
                 ]);
 
-                // AUTO-GENERATE BILL
+                // AUTO-GENERATE BILL FOR SPECIFIC METER
                 $bill = $this->generateBill($reading, $customer, $meter, $consumption);
 
                 // UPDATE METER AND CUSTOMER BALANCES
                 $this->updateBalances($meter, $customer, $bill->total_amount);
+
+                Log::info("Meter reading recorded and bill generated", [
+                    'customer_id' => $customer->id,
+                    'meter_id' => $meter->id,
+                    'reading_id' => $reading->id,
+                    'bill_id' => $bill->id,
+                    'consumption' => $consumption,
+                    'amount' => $bill->total_amount
+                ]);
             });
 
+            // Now $meter is available for the success message
             return redirect()->route('admin.customers.show', $request->customer_id)
-                ->with('success', 'Meter reading recorded and bill generated successfully!');
+                ->with('success', 'Meter reading recorded and bill generated successfully for meter ' . $meter->meter_number . '!');
 
         } catch (\Exception $e) {
+            Log::error('Meter reading creation error: ' . $e->getMessage());
             return back()->withInput()->with('error', $e->getMessage());
         }
     }
-
     /**
-     * Generate bill automatically after meter reading
+     * Generate bill automatically after meter reading for specific meter
      */
     private function generateBill(MeterReading $reading, Customer $customer, Meter $meter, $consumption)
     {
-        // Calculate billing amounts
-        $baseCharge = 100; // Fixed base charge
-        $consumptionRate = 50; // Rate per cubic meter
-        $consumptionCharge = $consumption * $consumptionRate;
+        // Get meter category pricing
+        $category = $meter->meterCategory;
+        $baseCharge = $category->base_charge ?? 100; // Default base charge
+        $consumptionRate = $category->rate_per_unit ?? 50; // Rate per cubic meter
         $taxRate = 0.16; // 16% VAT
+
+        // Calculate charges
+        $consumptionCharge = $consumption * $consumptionRate;
         $taxAmount = ($baseCharge + $consumptionCharge) * $taxRate;
         $totalAmount = $baseCharge + $consumptionCharge + $taxAmount;
 
@@ -190,10 +198,11 @@ class MeterReadingController extends Controller
         $latestBill = Bill::latest()->first();
         $billNumber = 'BILL-' . str_pad(($latestBill ? $latestBill->id : 0) + 1, 6, '0', STR_PAD_LEFT);
 
-        // Create bill
+        // Create bill linked to specific meter and reading
         $bill = Bill::create([
             'customer_id' => $customer->id,
             'meter_id' => $meter->id,
+            'meter_reading_id' => $reading->id,
             'bill_number' => $billNumber,
             'billing_period_start' => Carbon::parse($reading->reading_date)->startOfMonth(),
             'billing_period_end' => Carbon::parse($reading->reading_date)->endOfMonth(),
@@ -262,7 +271,8 @@ class MeterReadingController extends Controller
                     'reading_date' => $reading->reading_date->format('M d, Y'),
                     'reading_period' => $reading->reading_period,
                     'billed' => $reading->billed,
-                    'reader' => $reading->reader->name ?? 'System'
+                    'reader' => $reading->reader->name ?? 'System',
+                    'meter_number' => $reading->meter->meter_number ?? 'N/A'
                 ];
             });
 
@@ -292,7 +302,8 @@ class MeterReadingController extends Controller
             'meter_info' => [
                 'meter_number' => $meter->meter_number,
                 'current_reading' => $meter->current_reading,
-                'initial_reading' => $meter->initial_reading
+                'initial_reading' => $meter->initial_reading,
+                'category_name' => $meter->meterCategory->name ?? 'No Category'
             ]
         ]);
     }

@@ -17,7 +17,6 @@
                 <p class="text-gray-600">Record new meter reading for customer</p>
             </div>
             <div class="flex space-x-3">
-                <!-- Bill Management Button -->
                 <a href="{{ route('bills.index') }}" 
                    class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition duration-200 flex items-center shadow-md">
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -26,7 +25,6 @@
                     Bill Management
                 </a>
                 
-                <!-- Customer Profile Button -->
                 @if($customer)
                 <a href="{{ route('admin.customers.show', $customer) }}" 
                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition duration-200 flex items-center shadow-md">
@@ -65,17 +63,62 @@
                     <p class="font-semibold text-gray-900">{{ $customer->plot_number }}, {{ $customer->house_number }}</p>
                 </div>
                 <div>
-                    <p class="text-sm text-gray-500">Meter Number</p>
-                    <p class="font-semibold text-green-600">{{ $meter->meter_number ?? 'N/A' }}</p>
+                    <p class="text-sm text-gray-500">Total Meters</p>
+                    <p class="font-semibold text-green-600">{{ $customer->meters->count() }}</p>
                 </div>
             </div>
         </div>
         @endif
 
+        <!-- Meter Selection Card -->
+        @if($customer && $meters->count() > 0)
+        <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 mb-8 border border-white/20">
+            <h2 class="text-xl font-semibold text-green-700 mb-4">Select Meter</h2>
+            
+            <div class="space-y-4">
+                @foreach($meters as $meterOption)
+                <div class="border border-gray-200 rounded-lg p-4 hover:border-green-300 transition duration-200 cursor-pointer meter-option 
+                         {{ $meter && $meter->id == $meterOption->id ? 'border-green-500 bg-green-50' : '' }}"
+                     data-meter-id="{{ $meterOption->id }}"
+                     onclick="selectMeter({{ $meterOption->id }})">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h4 class="font-semibold text-gray-900">{{ $meterOption->meter_number }}</h4>
+                            <p class="text-sm text-gray-600">{{ $meterOption->meterCategory->name ?? 'No Category' }} • {{ ucfirst($meterOption->meter_type) }}</p>
+                            <p class="text-xs text-gray-500 mt-1">Current Reading: {{ number_format($meterOption->current_reading, 2) }} m³</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                {{ ucfirst($meterOption->status) }}
+                            </span>
+                            <p class="text-xs text-gray-500 mt-1">Installed: {{ $meterOption->installation_date?->format('M d, Y') ?? 'N/A' }}</p>
+                        </div>
+                    </div>
+                </div>
+                @endforeach
+            </div>
+        </div>
+        @endif
+
         <!-- Reading Information Card -->
+        @if($meter)
         <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 mb-8 border border-white/20">
             <h2 class="text-xl font-semibold text-green-700 mb-4">Reading Information</h2>
             
+            <!-- Selected Meter Info -->
+            <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h3 class="font-semibold text-green-800">Selected Meter</h3>
+                        <p class="text-green-700">{{ $meter->meter_number }} • {{ $meter->meterCategory->name ?? 'No Category' }}</p>
+                        <p class="text-sm text-green-600">Current: {{ number_format($meter->current_reading, 2) }} m³</p>
+                    </div>
+                    <button type="button" onclick="resetMeterSelection()" class="text-green-600 hover:text-green-800 text-sm font-medium">
+                        Change Meter
+                    </button>
+                </div>
+            </div>
+
             <!-- Previous Reading Info -->
             @if($lastReading)
             <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
@@ -91,7 +134,7 @@
                     </div>
                 </div>
             </div>
-            @elseif($meter && $meter->initial_reading)
+            @else
             <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
                 <h3 class="font-semibold text-yellow-800 mb-2">Initial Meter Reading</h3>
                 <p class="text-sm text-yellow-700">This is the first reading for this meter. Initial reading: <strong>{{ number_format($meter->initial_reading, 2) }} m³</strong></p>
@@ -102,7 +145,8 @@
             <form action="{{ route('admin.meter-readings.store') }}" method="POST" enctype="multipart/form-data" id="readingForm">
                 @csrf
                 
-                <input type="hidden" name="customer_id" value="{{ $customer->id ?? '' }}">
+                <input type="hidden" name="customer_id" value="{{ $customer->id }}">
+                <input type="hidden" name="meter_id" id="selected_meter_id" value="{{ $meter->id }}" required>
 
                 <div class="grid md:grid-cols-2 gap-6">
                     <!-- Current Reading -->
@@ -117,6 +161,7 @@
                                value="{{ old('current_reading') }}"
                                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition duration-200"
                                placeholder="Enter current reading">
+                        <div id="readingValidation" class="mt-1 text-sm"></div>
                         @error('current_reading')
                             <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                         @enderror
@@ -211,7 +256,6 @@
                 <!-- Submit Button -->
                 <div class="mt-8 flex justify-between items-center">
                     <div class="flex space-x-3">
-                        <!-- Bill Management Button -->
                         <a href="{{ route('bills.index') }}" 
                            class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition duration-200 flex items-center shadow-md">
                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -220,7 +264,6 @@
                             Bill Management
                         </a>
                         
-                        <!-- Customer Profile Button -->
                         @if($customer)
                         <a href="{{ route('admin.customers.show', $customer) }}" 
                            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition duration-200 flex items-center shadow-md">
@@ -263,6 +306,16 @@
                 </div>
             </form>
         </div>
+        @else
+        <!-- No Meter Selected State -->
+        <div class="bg-yellow-50 border border-yellow-200 rounded-2xl p-8 text-center">
+            <svg class="w-16 h-16 text-yellow-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+            </svg>
+            <h3 class="text-xl font-semibold text-yellow-800 mb-2">No Meter Selected</h3>
+            <p class="text-yellow-600 mb-4">Please select a meter from the list above to record a reading.</p>
+        </div>
+        @endif
     </div>
 </div>
 
@@ -271,6 +324,52 @@
 
 <!-- Camera and OCR JavaScript -->
 <script>
+let selectedMeterId = {{ $meter ? $meter->id : 'null' }};
+
+function selectMeter(meterId) {
+    selectedMeterId = meterId;
+    document.getElementById('selected_meter_id').value = meterId;
+    
+    // Update UI to show selected meter
+    document.querySelectorAll('.meter-option').forEach(option => {
+        option.classList.remove('border-green-500', 'bg-green-50');
+        if (option.dataset.meterId == meterId) {
+            option.classList.add('border-green-500', 'bg-green-50');
+        }
+    });
+    
+    // Reload page with selected meter
+    const url = new URL(window.location.href);
+    url.searchParams.set('meter', meterId);
+    window.location.href = url.toString();
+}
+
+function resetMeterSelection() {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('meter');
+    window.location.href = url.toString();
+}
+
+// Real-time reading validation
+document.getElementById('current_reading')?.addEventListener('input', function() {
+    const currentReading = parseFloat(this.value);
+    const minReading = parseFloat(this.getAttribute('min'));
+    const validationDiv = document.getElementById('readingValidation');
+    
+    if (currentReading < minReading) {
+        validationDiv.innerHTML = `<div class="text-red-600 flex items-center">
+            <i class="fas fa-exclamation-triangle mr-2"></i>
+            Reading (${currentReading}) is less than previous reading (${minReading})
+        </div>`;
+    } else {
+        const consumption = (currentReading - minReading).toFixed(2);
+        validationDiv.innerHTML = `<div class="text-green-600 flex items-center">
+            <i class="fas fa-check-circle mr-2"></i>
+            Consumption: ${consumption} m³
+        </div>`;
+    }
+});
+
 document.addEventListener('DOMContentLoaded', function() {
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
@@ -290,7 +389,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let tesseractWorker = null;
 
     // Start Camera
-    startCamera.addEventListener('click', async function() {
+    startCamera?.addEventListener('click', async function() {
         try {
             stream = await navigator.mediaDevices.getUserMedia({ 
                 video: { 
@@ -310,7 +409,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Capture Photo and Perform OCR
-    capture.addEventListener('click', async function() {
+    capture?.addEventListener('click', async function() {
         const context = canvas.getContext('2d');
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
@@ -497,7 +596,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Retake Photo
-    retake.addEventListener('click', function() {
+    retake?.addEventListener('click', function() {
         imagePreview.classList.add('hidden');
         cameraPreview.classList.remove('hidden');
         preview.src = '';
@@ -511,7 +610,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Handle file input change
-    fileInput.addEventListener('change', function() {
+    fileInput?.addEventListener('change', function() {
         if (this.files && this.files[0]) {
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -574,7 +673,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Form validation
-    document.getElementById('readingForm').addEventListener('submit', function(e) {
+    document.getElementById('readingForm')?.addEventListener('submit', function(e) {
         const currentReading = parseFloat(currentReadingInput.value);
         const minReading = parseFloat(currentReadingInput.getAttribute('min'));
         
@@ -602,7 +701,6 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- SweetAlert2 Script -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    
 document.addEventListener('DOMContentLoaded', function() {
     // Enhanced warning message with custom styling
    

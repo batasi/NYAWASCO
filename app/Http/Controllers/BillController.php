@@ -10,45 +10,69 @@ use Illuminate\Support\Facades\Auth;
 
 class BillController extends Controller
 {
-   public function index(Request $request)
-    {
-        // Get bills with filters
-        $status = $request->get('status');
-        $sort = $request->get('sort', 'newest');
-        $customerId = $request->get('customer');
+    public function index(Request $request)
+{
+    // Get bills with proper relationships and filters
+    $status = $request->get('status');
+    $sort = $request->get('sort', 'newest');
 
-        $bills = Bill::with(['customer', 'meter'])
-            ->when($customerId, function($query) use ($customerId) {
-                return $query->where('customer_id', $customerId);
-            })
-            ->when($status && $status !== 'all', function($query) use ($status) {
-                return $query->where('bill_status', $status);
-            })
-            ->when($sort, function($query) use ($sort) {
-                switch ($sort) {
-                    case 'oldest':
-                        return $query->oldest();
-                    case 'amount_high':
-                        return $query->orderBy('total_amount', 'desc');
-                    case 'amount_low':
-                        return $query->orderBy('total_amount', 'asc');
-                    default:
-                        return $query->latest();
-                }
-            })
-            ->paginate(10);
+    $bills = Bill::with([
+        'customer', 
+        'meter.meterCategory', 
+        'payments',
+        'meterReading'
+    ])
+    ->when($status && $status !== 'all', function($query) use ($status) {
+        if ($status === 'overdue') {
+            return $query->where('due_date', '<', now())
+                        ->where('bill_status', 'unpaid');
+        }
+        return $query->where('bill_status', $status);
+    })
+    ->when($sort, function($query) use ($sort) {
+        switch ($sort) {
+            case 'oldest':
+                return $query->oldest();
+            case 'amount_high':
+                return $query->orderBy('total_amount', 'desc');
+            case 'amount_low':
+                return $query->orderBy('total_amount', 'asc');
+            default:
+                return $query->latest();
+        }
+    })
+    ->paginate(10);
 
-        // Get active customers for quick actions (only show one bill per customer)
-        $customers = Customer::with(['meter', 'bills' => function($query) {
-            $query->latest()->first();
-        }])
-        ->where('status', 'active')
-        ->whereHas('bills')
-        ->latest()
-        ->paginate(10);
+    // Get TOTAL counts from the entire dataset (not filtered)
+    $totalBillsCount = Bill::count();
+    $unpaidBillsCount = Bill::where('bill_status', 'unpaid')->count();
+    $paidBillsCount = Bill::where('bill_status', 'paid')->count();
+    $partialBillsCount = Bill::where('bill_status', 'partial')->count();
+    $overdueBillsCount = Bill::where('due_date', '<', now())
+                            ->where('bill_status', 'unpaid')
+                            ->count();
 
-        return view('bills.index', compact('bills', 'customers'));
-    }
+    // Get stats for the cards (from filtered data for display)
+    $totalRevenue = $bills->sum('total_amount');
+    $outstandingBalance = $bills->where('bill_status', '!=', 'paid')->sum('total_amount');
+    $totalBills = $bills->total();
+    $paidBills = $bills->where('bill_status', 'paid')->count();
+    $collectionRate = $totalBills > 0 ? ($paidBills / $totalBills) * 100 : 0;
+
+    return view('bills.index', compact(
+        'bills', 
+        'totalRevenue', 
+        'outstandingBalance', 
+        'totalBills', 
+        'collectionRate',
+        'totalBillsCount',
+        'unpaidBillsCount',
+        'paidBillsCount',
+        'partialBillsCount',
+        'overdueBillsCount'
+    ));
+}
+    
 
     /**
      * Store a newly created bill in storage.
@@ -56,25 +80,26 @@ class BillController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'user_id' => 'nullable|exists:users,id',
-            'meter_id' => 'nullable|numeric',
-            'billing_period_start' => 'nullable|date',
-            'billing_period_end' => 'nullable|date',
-            'consumption' => 'nullable|numeric',
-            'base_charge' => 'nullable|numeric',
-            'consumption_charge' => 'nullable|numeric',
-            'tax_amount' => 'nullable|numeric',
-            'late_fee' => 'nullable|numeric',
-            'total_amount' => 'nullable|numeric',
-            'due_date' => 'nullable|date',
-            'bill_status' => 'nullable|string',
-            'payment_date' => 'nullable|date',
-            'notes' => 'nullable|string',
+            'customer_id' => 'required|exists:customers,id',
+            'meter_id' => 'required|exists:meters,id',
+            'meter_reading_id' => 'nullable|exists:meter_readings,id',
+            'billing_period_start' => 'required|date',
+            'billing_period_end' => 'required|date',
+            'consumption' => 'required|numeric|min:0',
+            'base_charge' => 'required|numeric|min:0',
+            'consumption_charge' => 'required|numeric|min:0',
+            'tax_amount' => 'required|numeric|min:0',
+            'late_fee' => 'nullable|numeric|min:0',
+            'total_amount' => 'required|numeric|min:0',
+            'due_date' => 'required|date',
+            'bill_status' => 'required|in:paid,unpaid,partial',
+            'notes' => 'nullable|string|max:500',
         ]);
 
         // Auto-generate unique bill number
-        $latestId = Bill::max('id') + 1;
-        $billNumber = 'BILL-' . str_pad($latestId, 5, '0', STR_PAD_LEFT);
+        $latestBill = Bill::latest()->first();
+        $latestId = $latestBill ? $latestBill->id + 1 : 1;
+        $billNumber = 'BILL-' . str_pad($latestId, 6, '0', STR_PAD_LEFT);
 
         $bill = Bill::create([
             ...$validated,
@@ -85,11 +110,11 @@ class BillController extends Controller
         if ($request->expectsJson()) {
             return response()->json([
                 'message' => 'Bill created successfully',
-                'bill' => $bill,
+                'bill' => $bill->load(['customer', 'meter.meterCategory']),
             ]);
         }
 
-        return redirect()->back()->with('success', 'Bill created successfully.');
+        return redirect()->route('bills.index')->with('success', 'Bill created successfully.');
     }
 
     /**
@@ -97,17 +122,13 @@ class BillController extends Controller
      */
     public function show(Bill $bill)
     {
-        $bill->load(['customer', 'payments', 'creator']);
+        $bill->load(['customer', 'meter.meterCategory', 'payments', 'creator', 'meterReading']);
 
-        // Set the page title
-        $title = "Bill #{$bill->bill_number} - {$bill->customer->first_name} {$bill->customer->last_name}";
-
-        // Calculate payment summary
         $paidAmount = $bill->payments->sum('amount');
         $dueAmount = $bill->total_amount - $paidAmount;
         $paymentPercentage = $bill->total_amount > 0 ? ($paidAmount / $bill->total_amount) * 100 : 0;
 
-        return view('bills.show', compact('bill', 'title', 'paidAmount', 'dueAmount', 'paymentPercentage'));
+        return view('bills.show', compact('bill', 'paidAmount', 'dueAmount', 'paymentPercentage'));
     }
 
     /**
@@ -116,25 +137,24 @@ class BillController extends Controller
     public function update(Request $request, Bill $bill)
     {
         $validated = $request->validate([
-            'billing_period_start' => 'nullable|date',
-            'billing_period_end' => 'nullable|date',
-            'consumption' => 'nullable|numeric',
-            'base_charge' => 'nullable|numeric',
-            'consumption_charge' => 'nullable|numeric',
-            'tax_amount' => 'nullable|numeric',
-            'late_fee' => 'nullable|numeric',
-            'total_amount' => 'nullable|numeric',
-            'due_date' => 'nullable|date',
-            'bill_status' => 'nullable|string',
-            'payment_date' => 'nullable|date',
-            'notes' => 'nullable|string',
+            'billing_period_start' => 'required|date',
+            'billing_period_end' => 'required|date',
+            'consumption' => 'required|numeric|min:0',
+            'base_charge' => 'required|numeric|min:0',
+            'consumption_charge' => 'required|numeric|min:0',
+            'tax_amount' => 'required|numeric|min:0',
+            'late_fee' => 'nullable|numeric|min:0',
+            'total_amount' => 'required|numeric|min:0',
+            'due_date' => 'required|date',
+            'bill_status' => 'required|in:paid,unpaid,partial',
+            'notes' => 'nullable|string|max:500',
         ]);
 
         $bill->update($validated);
 
         return response()->json([
             'message' => 'Bill updated successfully',
-            'bill' => $bill,
+            'bill' => $bill->load(['customer', 'meter.meterCategory']),
         ]);
     }
 
@@ -148,80 +168,27 @@ class BillController extends Controller
         return response()->json(['message' => 'Bill deleted successfully.']);
     }
 
-    public function info(Bill $bill)
+    // Simple API for AJAX features
+    public function search(Request $request)
     {
-        $bill->load('user', 'payments');
-        $paidAmount = $bill->payments->sum('amount');
-        $dueAmount = $bill->total_amount - $paidAmount;
+        $search = $request->get('search');
+        
+        $bills = Bill::with(['customer', 'meter.meterCategory', 'payments'])
+            ->where(function($query) use ($search) {
+                $query->where('bill_number', 'like', "%{$search}%")
+                      ->orWhereHas('customer', function($q) use ($search) {
+                          $q->where('first_name', 'like', "%{$search}%")
+                            ->orWhere('last_name', 'like', "%{$search}%")
+                            ->orWhere('customer_number', 'like', "%{$search}%")
+                            ->orWhere('phone', 'like', "%{$search}%");
+                      })
+                      ->orWhereHas('meter', function($q) use ($search) {
+                          $q->where('meter_number', 'like', "%{$search}%");
+                      });
+            })
+            ->limit(10)
+            ->get();
 
-    return response()->json([
-        'user_id' => $bill->user_id,
-        'user_name' => $bill->user?->name ?? 'Unknown',
-        'due_amount' => $dueAmount,
-    ]);
-}
-public function infoByCustomer($customerId)
-{
-    // Get the customer
-    $customer = Customer::findOrFail($customerId);
-
-    // Fetch all unpaid bills
-    $unpaidBills = Bill::where('customer_id', $customerId)
-        ->get()
-        ->map(function ($bill) {
-            $bill->due = $bill->total_amount - $bill->payments()->sum('amount');
-            return $bill;
-        })
-        ->filter(function ($bill) {
-            return $bill->due > 0;
-        });
-
-    // Total due across all bills
-    $totalDue = $unpaidBills->sum('due');
-
-    return response()->json([
-        'customer_id'   => $customer->id,
-        'customer_name' => $customer->first_name,
-        'total_due'     => $totalDue,
-        'unpaid_bills'  => $unpaidBills->values(), // optional
-    ]);
-}
-public function infoByMeter($meter)
-{
-    $meterRecord = Meter::where('meter_number', $meter)->first();
-
-    if (!$meterRecord) {
-        return response()->json(['error' => 'Meter not found'], 404);
+        return response()->json($bills);
     }
-
-    $customer = $meterRecord->customer;
-
-    $unpaidBills = Bill::where('meter_id', $meterRecord->id)
-        ->whereColumn('total_amount', '>', 'paid_amount')
-        ->get();
-
-    $totalDue = $unpaidBills->sum(fn($b) => $b->total_amount - $b->paid_amount);
-
-    return response()->json([
-        'customer' => [
-            'id' => $customer->id,
-            'name' => $customer->first_name . ' ' . $customer->last_name,
-        ],
-        'meter' => [
-            'model' => $meterRecord->meter_model,
-            'type' => $meterRecord->meter_type,
-        ],
-        'unpaid_bills' => $unpaidBills->map(function ($b) {
-            return [
-                'bill_number' => $b->bill_number,
-                'total_amount' => $b->total_amount,
-                'due' => $b->total_amount - $b->paid_amount,
-            ];
-        }),
-        'total_due' => $totalDue,
-    ]);
-}
-
-
-
 }

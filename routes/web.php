@@ -237,7 +237,23 @@ Route::prefix('admin/water-applications')->name('admin.water-applications.')->gr
     Route::post('/{application}/decline', [WaterConnectionController::class, 'decline'])->name('decline');
 });
 
+ Route::get('/admin/customers/get-available-meters', [CustomerController::class, 'getAvailableMeters'])
+    ->name('admin.customers.get-available-meters')
+    ->middleware('can:view meters');
+// Document upload routes
+Route::post('/admin/customers/{customer}/upload-documents', [CustomerController::class, 'uploadDocuments'])
+     ->name('admin.customers.upload-documents')
+     ->middleware('can:edit customers');
 
+Route::get('/admin/customers/export-pdf', [CustomerController::class, 'exportPDF'])->name('admin.customers.export-pdf');
+
+// Route::prefix('bills')->group(function () {
+//     Route::get('/', [BillController::class, 'apiIndex']);
+//     Route::get('/recent-activity', [BillController::class, 'recentActivity']);
+//     Route::post('/{bill}/send-reminder', [BillController::class, 'sendReminder']);
+//     Route::get('/export', [BillController::class, 'export']);
+//     Route::get('/search', [BillController::class, 'search']);
+// });
 
 Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     // Dashboard
@@ -290,6 +306,8 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
         Route::get('/admin/meter-readings/last-reading', [MeterReadingController::class, 'getLastReading'])
             ->name('admin.meter-readings.last-reading');
 
+        
+    
     });
 
       Route::get('/meters/available-json', [MeterController::class, 'getAvailableMeters'])
@@ -343,10 +361,11 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
         Route::post('/{meterCategory}/tiers', [MeterCategoryController::class, 'storeTier'])->name('tiers.store');
         Route::put('/{meterCategory}/tiers/{pricingTier}', [MeterCategoryController::class, 'updateTier'])->name('tiers.update');
         Route::delete('/{meterCategory}/tiers/{pricingTier}', [MeterCategoryController::class, 'destroyTier'])->name('tiers.destroy');
+
     });
 
 
-
+   
 
 });
 

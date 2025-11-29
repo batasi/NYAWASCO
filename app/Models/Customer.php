@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 
 class Customer extends Model
 {
@@ -21,8 +22,6 @@ class Customer extends Model
         'plot_number',
         'house_number',
         'estate',
-        'meter_number',
-        'meter_type',
         'connection_type',
         'initial_meter_reading',
         'connection_date',
@@ -73,12 +72,13 @@ class Customer extends Model
     }
 
     public function meters()
-{
-    return $this->hasMany(Meter::class);
-}
+    {
+        return $this->hasMany(Meter::class);
+    }
+
     public function meter()
     {
-        return $this->hasOne(Meter::class);
+        return $this->hasOne(Meter::class)->latestOfMany();
     }
 
     public function meterReadings()
@@ -88,12 +88,12 @@ class Customer extends Model
 
     public function bills()
     {
-        return $this->hasMany(Bill::class, 'customer_id')->orderBy('created_at', 'desc');
+        return $this->hasMany(Bill::class)->orderBy('created_at', 'desc');
     }
 
     public function payments()
     {
-        return $this->hasMany(Payment::class, 'customer_id')->orderBy('payment_date', 'desc');
+        return $this->hasMany(Payment::class)->orderBy('payment_date', 'desc');
     }
 
     // Status Management Methods
@@ -126,38 +126,50 @@ class Customer extends Model
 
     public function canBeActivated()
     {
-        // Check if customer has all requirements to be activated
-        $hasMeter = $this->meter()->exists();
-        $hasValidDocuments = $this->waterApplication && 
-                            $this->waterApplication->national_id_file && 
-                            $this->waterApplication->kra_pin_file;
-        
-        return $hasMeter && $hasValidDocuments && $this->current_balance >= 0;
+        $requirements = $this->getActivationRequirements();
+        return empty($requirements);
     }
 
     public function getActivationRequirements()
     {
         $requirements = [];
 
-        if (!$this->meter()->exists()) {
+        if (!$this->meters()->exists()) {
             $requirements[] = 'No meter assigned';
         }
 
-        if (!$this->waterApplication || !$this->waterApplication->national_id_file) {
-            $requirements[] = 'National ID document missing';
+        // Fix: Check water application and files properly
+        $waterApp = $this->waterApplication;
+        
+        if (!$waterApp) {
+            $requirements[] = 'Water application missing';
+        } else {
+            // Check if files exist and are not empty strings
+            if (empty($waterApp->national_id_file)) {
+                $requirements[] = 'National ID document missing';
+            } else {
+                // Verify file actually exists in storage
+                if (!Storage::disk('public')->exists($waterApp->national_id_file)) {
+                    $requirements[] = 'National ID file not found in storage';
+                }
+            }
+
+            if (empty($waterApp->kra_pin_file)) {
+                $requirements[] = 'KRA PIN certificate missing';
+            } else {
+                if (!Storage::disk('public')->exists($waterApp->kra_pin_file)) {
+                    $requirements[] = 'KRA PIN file not found in storage';
+                }
+            }
         }
 
-        if (!$this->waterApplication || !$this->waterApplication->kra_pin_file) {
-            $requirements[] = 'KRA PIN certificate missing';
-        }
-
-        if ($this->current_balance < 0) {
-            $requirements[] = 'Outstanding balance exists';
+        // FIX: Check for positive balance (debt)
+        if ($this->current_balance > 0) {
+            $requirements[] = 'Outstanding balance exists: ' . number_format($this->current_balance, 2);
         }
 
         return $requirements;
     }
-
     // Balance Calculations
     public function getAccountBalanceAttribute()
     {
@@ -166,11 +178,7 @@ class Customer extends Model
         return $totalPaid - $totalBilled;
     }
 
-    public function getOutstandingBalanceAttribute()
-    {
-        return $this->bills()->where('bill_status', 'unpaid')->sum('total_amount');
-    }
-
+    
     public function getArrearsAttribute()
     {
         // Arrears are unpaid bills that are overdue
@@ -200,20 +208,33 @@ class Customer extends Model
         $this->save();
     }
 
-    // Get total consumption
+
+    // Add to your Customer model
     public function getTotalConsumptionAttribute()
     {
-        return $this->meterReadings()->sum('consumption');
+        return $this->meterReadings->sum('consumption');
     }
 
-    // Get average monthly consumption
     public function getAverageMonthlyConsumptionAttribute()
     {
-        $readingsCount = $this->meterReadings()->count();
-        if ($readingsCount === 0) return 0;
-        
-        return $this->total_consumption / $readingsCount;
+        $readingsCount = $this->meterReadings->count();
+        return $readingsCount > 0 ? $this->total_consumption / $readingsCount : 0;
     }
+
+    public function getOutstandingBalanceAttribute()
+    {
+        return $this->bills()->where('bill_status', '!=', 'paid')->sum('total_amount');
+    }
+
+    // Add these scopes to your Bill model if needed
+    public function scopeOverdue($query)
+    {
+        return $query->where('due_date', '<', now())
+                    ->where('bill_status', '!=', 'paid');
+    }
+
+    // Get total consumption
+   
 
     // Get recent bills (last 6 months)
     public function recentBills($limit = 6)
@@ -281,7 +302,7 @@ class Customer extends Model
     public function getCurrentMeterReadingAttribute()
     {
         $latestReading = $this->meterReadings()->latest()->first();
-        return $latestReading ? $latestReading->current_reading : $this->initial_meter_reading;
+        return $latestReading ? $latestReading->current_reading : ($this->meters()->first()->initial_reading ?? 0);
     }
 
     public function getLastReadingDateAttribute()
@@ -292,14 +313,16 @@ class Customer extends Model
 
     public function getCategoryNameAttribute()
     {
-        return $this->meter && $this->meter->meterCategory 
-            ? $this->meter->meterCategory->name 
+        $meter = $this->meters()->first();
+        return $meter && $meter->meterCategory 
+            ? $meter->meterCategory->name 
             : 'No Category';
     }
 
     public function getMeterNumberAttribute()
     {
-        return $this->meter ? $this->meter->meter_number : 'Not Assigned';
+        $meter = $this->meters()->first();
+        return $meter ? $meter->meter_number : 'Not Assigned';
     }
 
     // Static methods for dropdowns
