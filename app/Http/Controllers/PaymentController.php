@@ -181,7 +181,7 @@ class PaymentController extends Controller
         return redirect()->route('payments.index')->with('success', 'Payment deleted successfully.');
     }
 
-    
+
 
 /**
  * Get meter details for AJAX request - FIXED CUSTOMER ACCESS
@@ -191,12 +191,12 @@ public function getMeterDetails($meterNumber)
     try {
         // Trim the meter number
         $meterNumber = trim($meterNumber);
-        
+
         Log::info('Searching for assigned meter:', ['meter_number' => $meterNumber]);
 
         // First try exact match
         $meter = Meter::with([
-            'customer', 
+            'customer',
             'meterCategory',
             'bills' => function($query) {
                 $query->whereColumn('total_amount', '>', 'paid_amount')
@@ -211,7 +211,7 @@ public function getMeterDetails($meterNumber)
         // If exact match not found, try partial match from autocomplete
         if (!$meter) {
             $meter = Meter::with([
-                'customer', 
+                'customer',
                 'meterCategory',
                 'bills' => function($query) {
                     $query->whereColumn('total_amount', '>', 'paid_amount')
@@ -256,7 +256,7 @@ public function getMeterDetails($meterNumber)
                 'total_amount' => number_format($bill->total_amount, 2),
                 'paid_amount' => number_format($bill->paid_amount, 2),
                 'due' => number_format($bill->total_amount - $bill->paid_amount, 2),
-                'billing_period' => $bill->billing_period_start ? 
+                'billing_period' => $bill->billing_period_start ?
                     \Carbon\Carbon::parse($bill->billing_period_start)->format('M Y') : 'N/A'
             ];
         });
@@ -275,11 +275,11 @@ public function getMeterDetails($meterNumber)
 
         if ($meter->customer) {
             // Try different possible name fields
-            $name = $meter->customer->name 
-                  ?? $meter->customer->full_name 
-                  ?? $meter->customer->customer_name 
+            $name = $meter->customer->name
+                  ?? $meter->customer->full_name
+                  ?? $meter->customer->customer_name
                   ?? 'Unknown Customer';
-                  
+
             $customerInfo = [
                 'name' => $name,
                 'email' => $meter->customer->email ?? 'N/A',
@@ -316,7 +316,7 @@ public function getMeterDetails($meterNumber)
     } catch (\Exception $e) {
         Log::error('Error fetching assigned meter details: ' . $e->getMessage());
         Log::error('Stack trace: ' . $e->getTraceAsString());
-        
+
         return response()->json([
             'success' => false,
             'message' => 'Error fetching meter details'
@@ -330,14 +330,13 @@ public function getMeterDetails($meterNumber)
 public function searchMeters(Request $request)
 {
     $search = $request->get('search', '');
-    
+
     if (strlen($search) < 2) {
         return response()->json([]);
     }
 
     // Search assigned meters with partial match
     $meters = Meter::with('customer')
-        ->where('status', 'assigned')
         ->whereNotNull('customer_id')
         ->where('meter_number', 'LIKE', $search . '%') // Partial match from start
         ->limit(10)
