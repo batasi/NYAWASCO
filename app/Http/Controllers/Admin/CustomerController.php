@@ -8,11 +8,15 @@ use App\Models\Meter;
 use App\Models\MeterCategory;
 use App\Models\WaterConnectionApplication;
 use App\Models\MeterReading;
+use App\Models\Zone;
+use App\Models\Bill;
+use App\Models\WalkRoute;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Carbon\Carbon;
 
 class CustomerController extends Controller
 {
@@ -20,7 +24,7 @@ class CustomerController extends Controller
     {
         $status = $request->get('status');
         $search = $request->get('search');
-        
+
         $customers = Customer::with(['meters.meterCategory', 'bills', 'payments'])
             ->when($status && $status !== 'all', function($query) use ($status) {
                 return $query->where('status', $status);
@@ -42,13 +46,13 @@ class CustomerController extends Controller
             ->latest()
             ->paginate(20);
 
+        // Update status counts to match database enum
         $statusCounts = [
             'all' => Customer::count(),
-            'new' => Customer::new()->count(),
-            'active' => Customer::active()->count(),
-            'pending_payment' => Customer::pendingPayment()->count(),
-            'sealed' => Customer::sealed()->count(),
-            'terminated' => Customer::terminated()->count(),
+            'active' => Customer::where('status', 'active')->count(),
+            'inactive' => Customer::where('status', 'inactive')->count(),
+            'pending' => Customer::where('status', 'pending')->count(),
+            'suspended' => Customer::where('status', 'suspended')->count(),
         ];
 
         $categories = MeterCategory::active()->ordered()->get();
@@ -58,41 +62,83 @@ class CustomerController extends Controller
 
     public function create()
     {
-        $categories = MeterCategory::active()->ordered()->get();
-        $availableMeters = Meter::available()->with('meterCategory')->get();
-        
-        return view('admin.customers.create', compact('categories', 'availableMeters'));
+        $categories = MeterCategory::active()->ordered()->with(['meters' => function($query) {
+            $query->available();
+        }])->get();
+
+        $zones = Zone::with('walkRoutes')->get();
+        $walkRoutes = WalkRoute::with('zone')->orderBy('zone_id')->orderBy('route_order')->get();
+
+        return view('admin.customers.create', compact('categories', 'zones', 'walkRoutes'));
     }
 
     public function store(Request $request)
     {
+        // Enhanced validation with comprehensive rules
         $validated = $request->validate([
+            // Personal Information
             'first_name' => 'required|string|max:50',
-            'last_name' => 'required|string|max:50',
+            'last_name' => 'nullable|string|max:50',
             'email' => 'required|email|unique:customers,email',
-            'phone' => 'required|string|max:20',
+            'phone' => 'required|string|max:20|unique:customers,phone',
             'id_number' => 'required|string|max:20|unique:customers,id_number',
+            'kra_pin' => 'nullable|string|max:20|unique:customers,kra_pin',
+
+            // Property Information
             'physical_address' => 'required|string|max:500',
             'plot_number' => 'required|string|max:50',
             'house_number' => 'required|string|max:50',
             'estate' => 'nullable|string|max:100',
-            'connection_type' => 'required|string|in:residential,commercial,industrial,public',
-            'kra_pin' => 'nullable|string|max:20',
             'property_owner' => 'required|string|max:100',
-            'expected_users' => 'nullable|integer|min:1',
-            'balance_bf' => 'nullable|numeric|min:0',
-            'status' => 'required|string|in:new,active,pending_payment,sealed,terminated',
+            'expected_users' => 'nullable|integer|min:1|max:1000',
+
+            // Meter Information
             'meter_id' => 'nullable|exists:meters,id',
-            'connection_date' => 'nullable|date',
+            'meter_category_id' => 'nullable|exists:meter_categories,id',
+            'meter_number' => 'nullable|required_without:meter_id|string|max:50|unique:meters,meter_number',
+            'meter_type' => 'nullable|required_with:meter_number|string|in:domestic,commercial,industrial',
+            'meter_model' => 'nullable|string|max:100',
+            'manufacturer' => 'nullable|string|max:100',
+            'initial_reading' => 'nullable|numeric|min:0',
+
+            // Zone and Route Information
+            'zone_id' => 'nullable|exists:zones,id',
+            'walk_route_id' => 'nullable|exists:walk_routes,id',
+
+            // Financial Information
+            'installation_fee' => 'nullable|numeric|min:0',
+            'connection_fee' => 'nullable|numeric|min:0',
+            'deposit_amount' => 'nullable|numeric|min:0',
+            'balance_bf' => 'nullable|numeric',
+
+            // Account Information
+            'status' => 'required|string|in:active,inactive,pending,suspended',
+            'status_reason' => 'nullable|string|max:255',
             'notes' => 'nullable|string|max:1000',
+        ], [
+            'phone.unique' => 'This phone number is already registered.',
+            'id_number.unique' => 'This ID number is already registered.',
+            'kra_pin.unique' => 'This KRA PIN is already registered.',
+            'meter_number.required_without' => 'Meter number is required when creating a new meter.',
+            'meter_number.unique' => 'This meter number already exists.',
         ]);
 
         try {
-            DB::transaction(function () use ($validated) {
-                // Create customer
-                $customer = Customer::create([
+            DB::transaction(function () use ($validated, $request) {
+                // Generate unique customer number
+                $customerNumber = $this->generateCustomerNumber();
+
+                // Generate bill number if applicable
+                $billNumber = null;
+                if ($request->has('generate_initial_bill') && $request->input('generate_initial_bill') == '1') {
+                    $billNumber = $this->generateBillNumber();
+                }
+
+                // Prepare customer data
+                $customerData = [
+                    'customer_number' => $customerNumber,
                     'first_name' => $validated['first_name'],
-                    'last_name' => $validated['last_name'],
+                    'last_name' => $validated['last_name'] ?? null,
                     'email' => $validated['email'],
                     'phone' => $validated['phone'],
                     'id_number' => $validated['id_number'],
@@ -100,62 +146,234 @@ class CustomerController extends Controller
                     'plot_number' => $validated['plot_number'],
                     'house_number' => $validated['house_number'],
                     'estate' => $validated['estate'] ?? null,
-                    'connection_type' => $validated['connection_type'],
                     'kra_pin' => $validated['kra_pin'] ?? null,
                     'property_owner' => $validated['property_owner'],
                     'expected_users' => $validated['expected_users'] ?? null,
-                    'balance_bf' => $validated['balance_bf'] ?? 0,
-                    'current_balance' => $validated['balance_bf'] ?? 0,
                     'status' => $validated['status'],
-                    'connection_date' => $validated['connection_date'] ?? now(),
+                    'status_reason' => $validated['status_reason'] ?? null,
+                    'status_updated_at' => now(),
                     'notes' => $validated['notes'] ?? null,
-                ]);
+                ];
 
-                // Assign meter if provided
+                // Create customer
+                $customer = Customer::create($customerData);
+
+                // Handle meter assignment or creation
+                $meter = null;
                 if (!empty($validated['meter_id'])) {
+                    // Assign existing meter
                     $meter = Meter::findOrFail($validated['meter_id']);
-                    
                     $meter->update([
                         'customer_id' => $customer->id,
                         'status' => 'assigned',
                         'installation_address' => $customer->physical_address,
-                        'installation_date' => $customer->connection_date,
+                        'installation_date' => now(),
+                        'zone_id' => $validated['zone_id'] ?? null,
+                        'walk_route_id' => $validated['walk_route_id'] ?? null,
+                        'balance_bf' => $validated['balance_bf'] ?? 0,
+                        'current_balance' => $validated['balance_bf'] ?? 0,
+                        'notes' => $validated['notes'] ?? null,
                     ]);
+                } elseif (!empty($validated['meter_number'])) {
+                    // Create new meter
+                    $meter = Meter::create([
+                        'meter_number' => $validated['meter_number'],
+                        'meter_type' => $validated['meter_type'] ?? 'domestic',
+                        'meter_category_id' => $validated['meter_category_id'],
+                        'meter_model' => $validated['meter_model'] ?? null,
+                        'manufacturer' => $validated['manufacturer'] ?? null,
+                        'status' => 'assigned',
+                        'customer_id' => $customer->id,
+                        'installation_address' => $customer->physical_address,
+                        'installation_date' => now(),
+                        'initial_reading' => $validated['initial_reading'] ?? 0,
+                        'current_reading' => $validated['initial_reading'] ?? 0,
+                        'zone_id' => $validated['zone_id'] ?? null,
+                        'walk_route_id' => $validated['walk_route_id'] ?? null,
+                        'balance_bf' => $validated['balance_bf'] ?? 0,
+                        'current_balance' => $validated['balance_bf'] ?? 0,
+                        'notes' => $validated['notes'] ?? null,
+                    ]);
+                }
 
-                    // Create initial meter reading
-                    if ($meter->initial_reading > 0) {
-                        MeterReading::create([
+                // Create initial meter reading if meter exists
+                if ($meter && $meter->initial_reading > 0) {
+                    MeterReading::create([
+                        'customer_id' => $customer->id,
+                        'meter_id' => $meter->id,
+                        'current_reading' => $meter->initial_reading,
+                        'previous_reading' => 0,
+                        'consumption' => $meter->initial_reading,
+                        'reading_date' => now(),
+                        'reading_type' => 'initial',
+                        'reading_period' => 'Initial Installation',
+                        'billed' => false,
+                        'read_by' => auth()->id(),
+                        'notes' => 'Initial meter reading upon customer creation',
+                    ]);
+                }
+
+                // Generate initial bill if requested
+                if ($billNumber && $meter) {
+                    $meterCategory = $meter->meterCategory;
+
+                    // Calculate initial charges
+                    $baseCharge = $meterCategory->base_charge ?? 0;
+                    $meterRent = $meterCategory->meter_rent ?? 0;
+                    $depositAmount = $meterCategory->deposit_amount ?? 0;
+
+                    // Check if installation and connection fees were paid
+                    $installationFee = ($request->input('installation_fee_paid') == '1') ? 0 : ($meterCategory->installation_fee ?? 0);
+                    $connectionFee = ($request->input('connection_fee_paid') == '1') ? 0 : ($meterCategory->connection_fee ?? 0);
+
+                    $totalAmount = $baseCharge + $meterRent + $depositAmount + $installationFee + $connectionFee;
+
+                    if ($totalAmount > 0) {
+                        Bill::create([
                             'customer_id' => $customer->id,
                             'meter_id' => $meter->id,
-                            'current_reading' => $meter->initial_reading,
-                            'previous_reading' => 0,
-                            'consumption' => $meter->initial_reading,
-                            'reading_date' => $customer->connection_date,
-                            'reading_type' => 'initial',
-                            'reading_period' => 'Initial Installation',
-                            'billed' => false,
-                            'read_by' => auth()->id(),
-                            'notes' => 'Initial meter reading upon customer creation',
+                            'bill_number' => $billNumber,
+                            'billing_period_start' => now(),
+                            'billing_period_end' => now()->addMonth(),
+                            'consumption' => 0,
+                            'base_charge' => $baseCharge,
+                            'consumption_charge' => 0,
+                            'tax_amount' => 0,
+                            'late_fee' => 0,
+                            'total_amount' => $totalAmount,
+                            'paid_amount' => 0,
+                            'due_date' => now()->addDays(30),
+                            'bill_status' => 'unpaid',
+                            'notes' => 'Initial connection bill',
+                            'created_by' => auth()->id(),
                         ]);
                     }
                 }
+
+                // Log the customer creation
+                Log::info('Customer created successfully', [
+                    'customer_id' => $customer->id,
+                    'customer_number' => $customerNumber,
+                    'meter_assigned' => $meter ? $meter->meter_number : 'none',
+                    'initial_bill' => $billNumber ?? 'not generated',
+                    'created_by' => auth()->id(),
+                ]);
             });
 
             return redirect()->route('admin.customers.index')
                 ->with('success', 'Customer created successfully!');
 
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
-            Log::error('Customer creation error: ' . $e->getMessage());
+            Log::error('Customer creation error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->except(['_token'])
+            ]);
+
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'Error creating customer: ' . $e->getMessage());
         }
     }
 
+    private function generateCustomerNumber()
+    {
+        $year = date('Y');
+        $prefix = 'CUST';
+
+        // Check for existing customer numbers
+        $lastCustomer = Customer::where('customer_number', 'like', "{$prefix}{$year}%")
+            ->orderBy('customer_number', 'desc')
+            ->first();
+
+        if ($lastCustomer) {
+            $lastNumber = (int) substr($lastCustomer->customer_number, strlen($prefix) + 4);
+            $nextNumber = str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
+        } else {
+            $nextNumber = '0001';
+        }
+
+        return "{$prefix}{$year}{$nextNumber}";
+    }
+
+    private function generateBillNumber()
+    {
+        $year = date('Y');
+        $month = date('m');
+        $prefix = 'INV';
+
+        $lastBill = Bill::where('bill_number', 'like', "{$prefix}{$year}{$month}%")
+            ->orderBy('bill_number', 'desc')
+            ->first();
+
+        if ($lastBill) {
+            $lastNumber = (int) substr($lastBill->bill_number, strlen($prefix) + 6);
+            $nextNumber = str_pad($lastNumber + 1, 3, '0', STR_PAD_LEFT);
+        } else {
+            $nextNumber = '001';
+        }
+
+        return "{$prefix}{$year}{$month}{$nextNumber}";
+    }
+
+    // Additional API method for checking meter availability
+    public function checkMeterAvailability(Request $request)
+    {
+        try {
+            $meterNumber = $request->get('meter_number');
+
+            if (empty($meterNumber)) {
+                return response()->json(['available' => false, 'message' => 'Meter number is required']);
+            }
+
+            $exists = Meter::where('meter_number', $meterNumber)->exists();
+
+            return response()->json([
+                'available' => !$exists,
+                'message' => $exists ? 'Meter number already exists' : 'Meter number is available'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Meter availability check error: ' . $e->getMessage());
+            return response()->json(['available' => false, 'message' => 'Error checking meter availability'], 500);
+        }
+    }
+
+    // Method to get meter category details
+    public function getMeterCategoryDetails($id)
+    {
+        try {
+            $category = MeterCategory::findOrFail($id);
+
+            return response()->json([
+                'success' => true,
+                'category' => [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                    'code' => $category->code,
+                    'installation_fee' => $category->installation_fee,
+                    'connection_fee' => $category->connection_fee,
+                    'deposit_amount' => $category->deposit_amount,
+                    'base_charge' => $category->base_charge,
+                    'meter_rent' => $category->meter_rent,
+                    'default_rate' => $category->default_rate,
+                    'has_tiers' => $category->has_tiers,
+                    'additional_charges' => $category->additional_charges,
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Get meter category details error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Category not found'], 404);
+        }
+    }
+
+
     public function show(Customer $customer)
     {
         $customer->load([
-            'meters.meterCategory', 
+            'meters.meterCategory',
             'meterReadings' => function($query) {
                 $query->latest()->limit(10);
             },
@@ -168,12 +386,14 @@ class CustomerController extends Controller
             'waterApplication'
         ]);
 
-        // Calculate billing statistics
+        // Calculate billing statistics from meters
+        $accountBalance = $customer->meters->sum('current_balance');
+
         $billingStats = [
             'total_bills' => $customer->bills->count(),
             'unpaid_bills' => $customer->bills()->where('bill_status', 'unpaid')->count(),
             'paid_bills' => $customer->bills()->where('bill_status', 'paid')->count(),
-            'account_balance' => $customer->current_balance,
+            'account_balance' => $accountBalance,
             'outstanding_balance' => $customer->bills()->where('bill_status', '!=', 'paid')->sum('total_amount'),
             'arrears' => $customer->bills()->overdue()->sum('total_amount'),
         ];
@@ -182,7 +402,7 @@ class CustomerController extends Controller
         $readingStats = [
             'total_readings' => $customer->meterReadings->count(),
             'total_consumption' => $customer->meterReadings->sum('consumption'),
-            'average_monthly_consumption' => $customer->meterReadings->count() > 0 ? 
+            'average_monthly_consumption' => $customer->meterReadings->count() > 0 ?
                 $customer->meterReadings->sum('consumption') / max(1, $customer->meterReadings->count()) : 0,
         ];
 
@@ -224,9 +444,9 @@ class CustomerController extends Controller
         $categories = MeterCategory::active()->ordered()->get();
 
         return view('admin.customers.show', compact(
-            'customer', 
-            'billingStats', 
-            'readingStats', 
+            'customer',
+            'billingStats',
+            'readingStats',
             'recentActivity',
             'availableMeters',
             'categories'
@@ -240,8 +460,8 @@ class CustomerController extends Controller
         $assignedMeters = $customer->meters;
 
         return view('admin.customers.edit', compact(
-            'customer', 
-            'categories', 
+            'customer',
+            'categories',
             'availableMeters',
             'assignedMeters'
         ));
@@ -259,17 +479,20 @@ class CustomerController extends Controller
             'plot_number' => 'required|string|max:50',
             'house_number' => 'required|string|max:50',
             'estate' => 'nullable|string|max:100',
-            'connection_type' => 'required|string|in:residential,commercial,industrial,public',
             'kra_pin' => 'nullable|string|max:20',
             'property_owner' => 'required|string|max:100',
             'expected_users' => 'nullable|integer|min:1',
-            'balance_bf' => 'nullable|numeric|min:0',
-            'status' => 'required|string|in:new,active,pending_payment,sealed,terminated',
-            'connection_date' => 'nullable|date',
+            'status' => 'required|string|in:active,inactive,pending,suspended',
+            'status_reason' => 'nullable|string|max:255',
             'notes' => 'nullable|string|max:1000',
         ]);
 
         try {
+            // Check if status is being changed
+            if ($customer->status !== $validated['status']) {
+                $validated['status_updated_at'] = now();
+            }
+
             $customer->update($validated);
 
             return redirect()->route('admin.customers.show', $customer)
@@ -313,8 +536,7 @@ class CustomerController extends Controller
         }
     }
 
-    // Enhanced Status Management Method
-   public function updateStatus(Request $request, Customer $customer)
+    public function updateStatus(Request $request, Customer $customer)
     {
         Log::info('=== UPDATE STATUS CALLED ===', [
             'customer_id' => $customer->id,
@@ -323,11 +545,9 @@ class CustomerController extends Controller
         ]);
 
         $validated = $request->validate([
-            'status' => 'required|string|in:new,active,pending_payment,sealed,terminated',
+            'status' => 'required|string|in:active,inactive,pending,suspended',
             'notes' => 'required|string|max:500',
-            'pending_payment_reason' => 'nullable|string|max:100',
-            'sealed_reason' => 'nullable|string|max:100',
-            'terminated_reason' => 'nullable|string|max:100',
+            'status_reason' => 'required|string|max:255',
         ]);
 
         try {
@@ -340,51 +560,33 @@ class CustomerController extends Controller
                 'new_status' => $newStatus
             ]);
 
-            // Check if activation requirements are met
-            if ($newStatus === 'active' && !$customer->canBeActivated()) {
-                $requirements = $customer->getActivationRequirements();
-                Log::warning('Activation requirements not met', ['requirements' => $requirements]);
-                return redirect()->back()
-                    ->with('error', 'Cannot activate customer. Requirements not met: ' . implode(', ', $requirements));
-            }
-
-            // Determine the specific reason based on status
-            $statusReason = null;
-            if ($newStatus === 'pending_payment') {
-                $statusReason = $validated['pending_payment_reason'];
-            } elseif ($newStatus === 'sealed') {
-                $statusReason = $validated['sealed_reason'];
-            } elseif ($newStatus === 'terminated') {
-                $statusReason = $validated['terminated_reason'];
-            }
-
-            // Build status note for the general notes field
+            // Build status note
             $statusNote = "Status changed from {$oldStatus} to {$newStatus} on " . now()->format('Y-m-d H:i:s');
-            
-            // Add specific reason if provided
-            if ($statusReason) {
-                $statusNote .= "\nReason: " . $statusReason;
+
+            // Add reason
+            if ($validated['status_reason']) {
+                $statusNote .= "\nReason: " . $validated['status_reason'];
             }
-            
+
             // Add admin notes
             if ($validated['notes']) {
                 $statusNote .= "\nNotes: " . $validated['notes'];
             }
 
-            // Update customer with separate status reason and notes
+            // Update customer
             $customer->update([
                 'status' => $newStatus,
-                'status_reason' => $statusReason, // Store the specific reason
-                'status_notes' => $validated['notes'], // Store the administrative notes separately
-                'status_updated_at' => now(), // Track when status was last changed
-                'notes' => $customer->notes . "\n" . $statusNote, // Keep in general notes too
+                'status_reason' => $validated['status_reason'],
+                'status_notes' => $validated['notes'],
+                'status_updated_at' => now(),
+                'notes' => $customer->notes . "\n" . $statusNote,
             ]);
 
             Log::info('Status update successful', [
                 'customer_id' => $customer->id,
                 'old_status' => $oldStatus,
                 'new_status' => $customer->fresh()->status,
-                'status_reason' => $statusReason
+                'status_reason' => $validated['status_reason']
             ]);
 
             return redirect()->back()
@@ -399,6 +601,7 @@ class CustomerController extends Controller
                 ->with('error', 'Error updating customer status: ' . $e->getMessage());
         }
     }
+
     // Meter Assignment Methods
     public function assignMeter(Request $request, Customer $customer)
     {
@@ -426,7 +629,6 @@ class CustomerController extends Controller
                     'installation_address' => $customer->physical_address,
                     'installation_date' => $request->installation_date,
                     'initial_reading' => $request->initial_reading,
-                    'current_reading' => $request->initial_reading,
                     'balance_bf' => $request->balance_bf ?? 0,
                     'current_balance' => $request->balance_bf ?? 0,
                     'status' => 'assigned',
@@ -446,11 +648,6 @@ class CustomerController extends Controller
                     'billed' => false,
                     'read_by' => auth()->id(),
                     'notes' => 'Initial meter reading upon assignment',
-                ]);
-
-                // Update customer's current balance
-                $customer->update([
-                    'current_balance' => ($customer->current_balance + ($request->balance_bf ?? 0))
                 ]);
             });
 
@@ -528,17 +725,17 @@ class CustomerController extends Controller
         try {
             $categoryId = $request->get('category_id');
             $searchTerm = $request->get('search', '');
-            
+
             Log::info('Fetching meters for category: ' . $categoryId . ', search: ' . $searchTerm);
-            
+
             // Query for available meters
             $query = Meter::where('status', 'available')
                 ->whereNull('customer_id');
-                
+
             if ($categoryId) {
                 $query->where('meter_category_id', $categoryId);
             }
-            
+
             // Apply search filter if provided
             if ($searchTerm) {
                 $query->where(function($q) use ($searchTerm) {
@@ -547,13 +744,13 @@ class CustomerController extends Controller
                     ->orWhere('meter_type', 'like', "%{$searchTerm}%");
                 });
             }
-            
+
             $meters = $query->with('meterCategory')
                 ->orderBy('meter_number')
                 ->get();
 
             Log::info('Found ' . $meters->count() . ' meters');
-            
+
             $formattedMeters = $meters->map(function($meter) {
                 return [
                     'id' => $meter->id,
@@ -566,7 +763,7 @@ class CustomerController extends Controller
             });
 
             return response()->json($formattedMeters);
-            
+
         } catch (\Exception $e) {
             Log::error('Error in getAvailableMeters: ' . $e->getMessage());
             return response()->json(['error' => $e->getMessage()], 500);
@@ -600,7 +797,7 @@ class CustomerController extends Controller
     }
 
     // Document Upload Method
-   public function uploadDocuments(Request $request, Customer $customer)
+    public function uploadDocuments(Request $request, Customer $customer)
     {
         $request->validate([
             'national_id_file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:2048',
@@ -613,7 +810,7 @@ class CustomerController extends Controller
             DB::transaction(function () use ($request, $customer) {
                 // Check if customer has a water application
                 $application = $customer->waterApplication;
-                
+
                 Log::info('Starting document upload', [
                     'customer_id' => $customer->id,
                     'has_application' => !is_null($application),
@@ -670,7 +867,7 @@ class CustomerController extends Controller
                     $application->national_id_file = $nationalIdPath;
                     Log::info('National ID file saved', ['path' => $nationalIdPath]);
                 }
-                
+
                 if ($request->hasFile('kra_pin_file')) {
                     Log::info('Uploading KRA PIN file');
                     if ($application->kra_pin_file && Storage::disk('public')->exists($application->kra_pin_file)) {
@@ -680,7 +877,7 @@ class CustomerController extends Controller
                     $application->kra_pin_file = $kraPinPath;
                     Log::info('KRA PIN file saved', ['path' => $kraPinPath]);
                 }
-                
+
                 if ($request->hasFile('title_document')) {
                     Log::info('Uploading title document');
                     if ($application->title_document && Storage::disk('public')->exists($application->title_document)) {
@@ -714,7 +911,7 @@ class CustomerController extends Controller
             });
 
             return redirect()->back()
-                ->with('success', 'Documents uploaded successfully! Customer can now be activated.');
+                ->with('success', 'Documents uploaded successfully!');
 
         } catch (\Exception $e) {
             Log::error('Document upload error: ' . $e->getMessage(), [
@@ -727,43 +924,43 @@ class CustomerController extends Controller
     }
 
     public function exportPDF(Request $request)
-{
-    $status = $request->get('status');
-    $search = $request->get('search');
-    
-    // Get customers with their meters and balances
-    $customers = Customer::with(['meters', 'meters.meterCategory'])
-        ->when($status && $status !== 'all', function($query) use ($status) {
-            return $query->where('status', $status);
-        })
-        ->when($search, function($query) use ($search) {
-            return $query->where(function($q) use ($search) {
-                $q->where('first_name', 'like', "%{$search}%")
-                  ->orWhere('last_name', 'like', "%{$search}%")
-                  ->orWhere('customer_number', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%")
-                  ->orWhere('plot_number', 'like', "%{$search}%");
-            });
-        })
-        ->orderBy('estate')
-        ->orderBy('customer_number')
-        ->get();
+    {
+        $status = $request->get('status');
+        $search = $request->get('search');
 
-    // Group customers by estate
-    $groupedCustomers = $customers->groupBy('estate');
-    
-    $data = [
-        'groupedCustomers' => $groupedCustomers,
-        'status' => $status ?: 'All',
-        'search' => $search,
-        'totalCustomers' => $customers->count(),
-        'exportDate' => now()->format('Y-m-d H:i:s'),
-    ];
+        // Get customers with their meters and balances
+        $customers = Customer::with(['meters', 'meters.meterCategory'])
+            ->when($status && $status !== 'all', function($query) use ($status) {
+                return $query->where('status', $status);
+            })
+            ->when($search, function($query) use ($search) {
+                return $query->where(function($q) use ($search) {
+                    $q->where('first_name', 'like', "%{$search}%")
+                      ->orWhere('last_name', 'like', "%{$search}%")
+                      ->orWhere('customer_number', 'like', "%{$search}%")
+                      ->orWhere('phone', 'like', "%{$search}%")
+                      ->orWhere('plot_number', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy('estate')
+            ->orderBy('customer_number')
+            ->get();
 
-    $pdf = PDF::loadView('admin.customers.pdf-export', $data);
-    
-    $filename = 'customers_' . ($status ?: 'all') . '_' . now()->format('Y_m_d') . '.pdf';
-    
-    return $pdf->download($filename);
-}
+        // Group customers by estate
+        $groupedCustomers = $customers->groupBy('estate');
+
+        $data = [
+            'groupedCustomers' => $groupedCustomers,
+            'status' => $status ?: 'All',
+            'search' => $search,
+            'totalCustomers' => $customers->count(),
+            'exportDate' => now()->format('Y-m-d H:i:s'),
+        ];
+
+        $pdf = PDF::loadView('admin.customers.pdf-export', $data);
+
+        $filename = 'customers_' . ($status ?: 'all') . '_' . now()->format('Y_m_d') . '.pdf';
+
+        return $pdf->download($filename);
+    }
 }

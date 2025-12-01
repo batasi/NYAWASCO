@@ -337,6 +337,7 @@ public function searchMeters(Request $request)
 
     // Search assigned meters with partial match
     $meters = Meter::with('customer')
+        ->where('status', 'active')
         ->whereNotNull('customer_id')
         ->where('meter_number', 'LIKE', $search . '%') // Partial match from start
         ->limit(10)

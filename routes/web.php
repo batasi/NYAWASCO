@@ -208,7 +208,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('payments.search-meters')
         ->middleware('auth');
 
-    
+
 
     // Payment Processing
     Route::get('/payment/{type}/{id}', [PaymentController::class, 'process'])->name('payments.process');
@@ -265,11 +265,11 @@ Route::middleware(['auth', 'verified', 'role:organizer'])->prefix('organizer')->
     Route::put('/voting/{contest}', [OrganizerController::class, 'updateVoting'])->name('organizer.voting.update');
     Route::delete('/voting/{contest}', [OrganizerController::class, 'destroyVoting'])->name('organizer.voting.destroy');
     Route::post('/voting/store', [VotingController::class, 'store'])->name('voting.store');
-    
+
     // Categories
     Route::post('/categories/store', [VotingCategoryController::class, 'store'])->name('categories.store');
     Route::post('/voting-category/store', [VotingCategoryController::class, 'store'])->name('voting-category.store');
-    
+
     // Nominee Categories
     Route::resource('nominee-categories', NomineeCategoryController::class);
 });
@@ -322,42 +322,52 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
         Route::get('/{role}/permissions', [RoleController::class, 'getPermissions'])->name('permissions');
     });
 
-    // Customer Management
-    Route::prefix('customers')->name('customers.')->group(function () {
-        Route::get('/', [CustomerController::class, 'index'])->name('index');
-        Route::get('/create', [CustomerController::class, 'create'])->name('create');
-        Route::post('/', [CustomerController::class, 'store'])->name('store');
-        Route::get('/{customer}', [CustomerController::class, 'show'])->name('show');
-        Route::get('/{customer}/edit', [CustomerController::class, 'edit'])->name('edit');
-        Route::put('/{customer}', [CustomerController::class, 'update'])->name('update');
-        Route::delete('/{customer}', [CustomerController::class, 'destroy'])->name('destroy');
-        Route::get('/export-pdf', [CustomerController::class, 'exportPDF'])->name('export-pdf');
-        
+  // Customer Management
+Route::prefix('customers')->name('customers.')->group(function () {
+    // AJAX endpoints (should come BEFORE dynamic routes)
+    Route::get('/get-available-meters', [CustomerController::class, 'getAvailableMeters'])->name('get-available-meters');
+    Route::get('/check-meter-availability', [CustomerController::class, 'checkMeterAvailability'])->name('check-meter-availability');
+    Route::get('/meter-category/{id}/details', [CustomerController::class, 'getMeterCategoryDetails'])->name('meter-category.details');
+    Route::get('/export-pdf', [CustomerController::class, 'exportPDF'])->name('export-pdf');
+
+    // Customer CRUD
+    Route::get('/', [CustomerController::class, 'index'])->name('index');
+    Route::get('/create', [CustomerController::class, 'create'])->name('create');
+    Route::post('/', [CustomerController::class, 'store'])->name('store');
+
+    // Customer-specific routes (these come AFTER the AJAX routes)
+    Route::prefix('{customer}')->group(function () {
+        // Customer details
+        Route::get('/', [CustomerController::class, 'show'])->name('show');
+        Route::get('/edit', [CustomerController::class, 'edit'])->name('edit');
+        Route::put('/', [CustomerController::class, 'update'])->name('update');
+        Route::delete('/', [CustomerController::class, 'destroy'])->name('destroy');
+
         // Status Management
-        Route::patch('/{customer}/update-status', [CustomerController::class, 'updateStatus'])->name('update-status');
-        
+        Route::patch('/update-status', [CustomerController::class, 'updateStatus'])->name('update-status');
+
         // Meter Assignment
-        Route::post('/{customer}/assign-meter', [CustomerController::class, 'assignMeter'])->name('assign-meter');
-        Route::post('/{customer}/unassign-meter/{meter}', [CustomerController::class, 'unassignMeter'])->name('unassign-meter');
-        Route::post('/{customer}/unassign-all-meters', [CustomerController::class, 'unassignAllMeters'])->name('unassign-all-meters');
-        
+        Route::post('/assign-meter', [CustomerController::class, 'assignMeter'])->name('assign-meter');
+        Route::post('/unassign-meter/{meter}', [CustomerController::class, 'unassignMeter'])->name('unassign-meter');
+        Route::post('/unassign-all-meters', [CustomerController::class, 'unassignAllMeters'])->name('unassign-all-meters');
+
         // Document Upload
-        Route::post('/{customer}/upload-documents', [CustomerController::class, 'uploadDocuments'])->name('upload-documents');
-            
+        Route::post('/upload-documents', [CustomerController::class, 'uploadDocuments'])->name('upload-documents');
+
         // Meter Readings
-        Route::get('/{customer}/readings', [CustomerController::class, 'meterReadings'])->name('meter-readings');
-        Route::get('/{customer}/readings/create', [CustomerController::class, 'createReading'])->name('readings.create');
-        Route::post('/{customer}/readings', [CustomerController::class, 'storeReading'])->name('readings.store');
+        Route::get('/readings', [CustomerController::class, 'meterReadings'])->name('meter-readings');
+        Route::get('/readings/create', [CustomerController::class, 'createReading'])->name('readings.create');
+        Route::post('/readings', [CustomerController::class, 'storeReading'])->name('readings.store');
 
         // Billing
-        Route::post('/{customer}/readings/{reading}/generate-bill', [CustomerController::class, 'generateBill'])->name('generate-bill');
-        Route::get('/{customer}/bills', [CustomerController::class, 'bills'])->name('bills');
+        Route::post('/readings/{reading}/generate-bill', [CustomerController::class, 'generateBill'])->name('generate-bill');
+        Route::get('/bills', [CustomerController::class, 'bills'])->name('bills');
 
-        // AJAX endpoints
-        Route::get('/get-available-meters', [CustomerController::class, 'getAvailableMeters'])->name('get-available-meters');
-        Route::get('/{customer}/get-address', [CustomerController::class, 'getCustomerAddress'])->name('get-address');
-        Route::get('/{customer}/meters', [CustomerController::class, 'getCustomerMeters'])->name('get-customer-meters');
+        // AJAX endpoints for specific customer
+        Route::get('/get-address', [CustomerController::class, 'getCustomerAddress'])->name('get-address');
+        Route::get('/meters', [CustomerController::class, 'getCustomerMeters'])->name('get-customer-meters');
     });
+});
 
     // Meter Management
     Route::prefix('meters')->name('meters.')->group(function () {
@@ -383,7 +393,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
         Route::get('/create', [MeterReadingController::class, 'create'])->name('create');
         Route::post('/', [MeterReadingController::class, 'store'])->name('store');
         Route::get('/last-reading', [MeterReadingController::class, 'getLastReading'])->name('last-reading');
-        
+
     });
 
     // Meter Categories Management
@@ -396,7 +406,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
         Route::put('/{meterCategory}', [MeterCategoryController::class, 'update'])->name('update');
         Route::delete('/{meterCategory}', [MeterCategoryController::class, 'destroy'])->name('destroy');
         Route::post('/{meterCategory}/calculate', [MeterCategoryController::class, 'calculateCharge'])->name('calculate');
-        
+
         // Pricing Tiers
         Route::post('/{meterCategory}/tiers', [MeterCategoryController::class, 'storeTier'])->name('tiers.store');
         Route::put('/{meterCategory}/tiers/{pricingTier}', [MeterCategoryController::class, 'updateTier'])->name('tiers.update');

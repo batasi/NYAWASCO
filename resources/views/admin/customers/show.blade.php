@@ -81,7 +81,7 @@
                 <div>
                     <p class="text-sm font-medium text-gray-500">Avg Monthly Usage</p>
                     <p class="text-xl md:text-2xl font-bold mt-1 text-purple-600">
-                        {{ number_format($customer->average_monthly_consumption, 2) }} m³
+                        {{ number_format($readingStats['average_monthly_consumption'], 2) }} m³
                     </p>
                     <p class="text-xs text-gray-500 mt-1">Based on history</p>
                 </div>
@@ -117,40 +117,19 @@
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        
+
                         <!-- Current Status Panel -->
                         <div class="space-y-4">
                             <h3 class="text-lg font-medium text-gray-900">Current Status</h3>
-                            
+
                             @php
                                 $statusConfig = [
-                                    'new' => ['color' => 'blue', 'icon' => 'clock', 'description' => 'New application pending activation'],
                                     'active' => ['color' => 'green', 'icon' => 'check-circle', 'description' => 'Account is active and operational'],
-                                    'pending_payment' => ['color' => 'yellow', 'icon' => 'exclamation-triangle', 'description' => 'Awaiting payment resolution'],
-                                    'sealed' => ['color' => 'red', 'icon' => 'lock', 'description' => 'Account temporarily suspended'],
-                                    'terminated' => ['color' => 'gray', 'icon' => 'ban', 'description' => 'Account permanently closed'],
+                                    'inactive' => ['color' => 'gray', 'icon' => 'ban', 'description' => 'Account is not active'],
+                                    'pending' => ['color' => 'yellow', 'icon' => 'clock', 'description' => 'Account is pending activation'],
+                                    'suspended' => ['color' => 'red', 'icon' => 'lock', 'description' => 'Account temporarily suspended'],
                                 ];
                                 $currentStatus = $statusConfig[$customer->status];
-                                
-                                // Map reason codes to human-readable text
-                                $reasonLabels = [
-                                    'connection_fee_pending' => 'Connection Fee Pending',
-                                    'deposit_pending' => 'Security Deposit Pending',
-                                    'outstanding_balance' => 'Outstanding Balance',
-                                    'payment_plan' => 'On Payment Plan',
-                                    'non_payment' => 'Non-payment of Bills',
-                                    'meter_tampering' => 'Meter Tampering Detected',
-                                    'illegal_connection' => 'Illegal Connection',
-                                    'bypass_detected' => 'Meter Bypass Detected',
-                                    'vacant_premises' => 'Premises Vacant',
-                                    'maintenance' => 'Maintenance Work',
-                                    'customer_request' => 'Customer Request',
-                                    'non_payment_chronic' => 'Chronic Non-payment',
-                                    'illegal_activities' => 'Illegal Activities',
-                                    'property_demolished' => 'Property Demolished',
-                                    'deceased' => 'Customer Deceased',
-                                    'other' => 'Other Reason'
-                                ];
                             @endphp
 
                             <div class="bg-{{ $currentStatus['color'] }}-50 border border-{{ $currentStatus['color'] }}-200 rounded-lg p-4">
@@ -161,7 +140,7 @@
                                     <div class="flex-1">
                                         <div class="flex flex-wrap items-center gap-3 mb-2">
                                             <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-{{ $currentStatus['color'] }}-100 text-{{ $currentStatus['color'] }}-800 capitalize">
-                                                {{ str_replace('_', ' ', $customer->status) }}
+                                                {{ $customer->status }}
                                             </span>
                                             @if($customer->status === 'active')
                                                 <span class="flex h-2 w-2">
@@ -170,9 +149,9 @@
                                                 </span>
                                             @endif
                                         </div>
-                                        
+
                                         <p class="text-sm text-{{ $currentStatus['color'] }}-800 mb-3">{{ $currentStatus['description'] }}</p>
-                                        
+
                                         <!-- Status Details -->
                                         <div class="space-y-2 text-sm">
                                             @if($customer->status_reason)
@@ -181,12 +160,12 @@
                                                 <div>
                                                     <span class="font-medium text-gray-700">Reason:</span>
                                                     <span class="ml-2 text-gray-600 capitalize">
-                                                        {{ $reasonLabels[$customer->status_reason] ?? str_replace('_', ' ', $customer->status_reason) }}
+                                                        {{ str_replace('_', ' ', $customer->status_reason) }}
                                                     </span>
                                                 </div>
                                             </div>
                                             @endif
-                                            
+
                                             @if($customer->status_notes)
                                             <div class="flex items-start space-x-2">
                                                 <i class="fas fa-comment text-{{ $currentStatus['color'] }}-600 mt-0.5"></i>
@@ -196,7 +175,7 @@
                                                 </div>
                                             </div>
                                             @endif
-                                            
+
                                             @if($customer->status_updated_at)
                                             <div class="flex items-center space-x-2 text-gray-500">
                                                 <i class="fas fa-clock text-sm"></i>
@@ -207,38 +186,12 @@
                                     </div>
                                 </div>
                             </div>
-
-                            <!-- Activation Requirements -->
-                            @if($customer->status === 'new')
-                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                <div class="flex items-center space-x-2 mb-3">
-                                    <i class="fas fa-clipboard-list text-blue-600"></i>
-                                    <h4 class="font-medium text-blue-900">Activation Checklist</h4>
-                                </div>
-                                @php $requirements = $customer->getActivationRequirements(); @endphp
-                                @if(empty($requirements))
-                                    <div class="flex items-center space-x-2 text-green-600">
-                                        <i class="fas fa-check-circle"></i>
-                                        <span class="text-sm font-medium">All requirements met - Ready for activation</span>
-                                    </div>
-                                @else
-                                    <ul class="space-y-2">
-                                        @foreach($requirements as $requirement)
-                                        <li class="flex items-center space-x-3 text-sm">
-                                            <i class="fas fa-times text-red-500"></i>
-                                            <span class="text-blue-800">{{ $requirement }}</span>
-                                        </li>
-                                        @endforeach
-                                    </ul>
-                                @endif
-                            </div>
-                            @endif
                         </div>
 
                         <!-- Status Update Panel -->
                         <div class="space-y-4">
                             <h3 class="text-lg font-medium text-gray-900">Update Status</h3>
-                            
+
                             <!-- Display Success Messages -->
                             @if(session('success'))
                                 <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg mb-4 flex items-center">
@@ -246,7 +199,7 @@
                                     <span>{{ session('success') }}</span>
                                 </div>
                             @endif
-                            
+
                             <!-- Display Error Messages -->
                             @if(session('error'))
                                 <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4 flex items-center">
@@ -258,15 +211,15 @@
                             <form method="POST" action="{{ route('admin.customers.update-status', $customer) }}" class="space-y-4">
                                 @csrf
                                 @method('PATCH')
-                                
+
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">New Status</label>
                                     <select name="status" id="statusSelect" required
                                             class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200">
                                         <option value="">Select new status...</option>
-                                        @foreach(['active', 'pending_payment', 'sealed', 'terminated'] as $status)
+                                        @foreach(['active', 'inactive', 'pending', 'suspended'] as $status)
                                             @if($status !== $customer->status)
-                                            <option value="{{ $status }}">{{ ucfirst(str_replace('_', ' ', $status)) }}</option>
+                                            <option value="{{ $status }}">{{ ucfirst($status) }}</option>
                                             @endif
                                         @endforeach
                                     </select>
@@ -275,55 +228,18 @@
                                     @enderror
                                 </div>
 
-                                <!-- Status-specific reason fields -->
-                                <div id="statusReasons" class="hidden space-y-4">
-                                    <!-- Pending Payment Reasons -->
-                                    <div id="pendingPaymentReasons" class="hidden">
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                                            Reason for Pending Payment Status
-                                        </label>
-                                        <select name="pending_payment_reason" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                            <option value="">Select reason...</option>
-                                            <option value="connection_fee_pending">Connection fee not paid</option>
-                                            <option value="deposit_pending">Security deposit not paid</option>
-                                            <option value="outstanding_balance">Outstanding balance</option>
-                                            <option value="payment_plan">On payment plan</option>
-                                            <option value="other">Other</option>
-                                        </select>
-                                    </div>
-
-                                    <!-- Sealed/Disconnected Reasons -->
-                                    <div id="sealedReasons" class="hidden">
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                                            Reason for Sealing/Disconnection
-                                        </label>
-                                        <select name="sealed_reason" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                            <option value="">Select reason...</option>
-                                            <option value="non_payment">Non-payment of bills</option>
-                                            <option value="meter_tampering">Meter tampering detected</option>
-                                            <option value="illegal_connection">Illegal connection</option>
-                                            <option value="bypass_detected">Meter bypass detected</option>
-                                            <option value="vacant_premises">Premises vacant</option>
-                                            <option value="maintenance">Maintenance work</option>
-                                            <option value="other">Other</option>
-                                        </select>
-                                    </div>
-
-                                    <!-- Termination Reasons -->
-                                    <div id="terminatedReasons" class="hidden">
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                                            Reason for Termination
-                                        </label>
-                                        <select name="terminated_reason" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                            <option value="">Select reason...</option>
-                                            <option value="customer_request">Customer request</option>
-                                            <option value="non_payment_chronic">Chronic non-payment</option>
-                                            <option value="illegal_activities">Illegal activities</option>
-                                            <option value="property_demolished">Property demolished</option>
-                                            <option value="deceased">Customer deceased</option>
-                                            <option value="other">Other</option>
-                                        </select>
-                                    </div>
+                                <!-- Status Reason Field -->
+                                <div id="statusReasonField" class="hidden">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Reason for Status Change
+                                        <span class="text-gray-400 font-normal">(Required)</span>
+                                    </label>
+                                    <textarea name="status_reason" rows="2" id="statusReasonInput"
+                                            class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 resize-none"
+                                            placeholder="Document the reason for this status change..." required></textarea>
+                                    @error('status_reason')
+                                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                    @enderror
                                 </div>
 
                                 <div>
@@ -333,13 +249,13 @@
                                     </label>
                                     <textarea name="notes" rows="3" id="statusNotes"
                                             class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 resize-none"
-                                            placeholder="Document the reason for this status change..." required></textarea>
+                                            placeholder="Document any additional notes for this status change..." required></textarea>
                                     @error('notes')
                                         <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                                     @enderror
                                 </div>
 
-                                <button type="submit" 
+                                <button type="submit"
                                         class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center space-x-2 shadow-sm">
                                     <i class="fas fa-sync-alt"></i>
                                     <span>Update Account Status</span>
@@ -385,7 +301,7 @@
                                     <p class="text-xs text-gray-500 mt-1">Installed: {{ $meter->installation_date?->format('M d, Y') ?? 'N/A' }}</p>
                                 </div>
                             </div>
-                            
+
                             <!-- Meter details -->
                             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                                 <div>
@@ -411,30 +327,30 @@
                             <!-- Individual Meter Actions -->
                             <div class="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-100">
                                 @if($customer->status === 'active')
-                                    <a href="{{ route('admin.meter-readings.create', ['customer' => $customer->id, 'meter_id' => $meter->id]) }}" 
+                                    <a href="{{ route('admin.meter-readings.create', ['customer' => $customer->id, 'meter_id' => $meter->id]) }}"
                                     class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition duration-200 flex items-center">
                                         <i class="fas fa-tachometer-alt mr-1"></i>
                                         Record Reading
                                     </a>
                                 @else
-                                    <button class="bg-gray-400 cursor-not-allowed text-white px-3 py-1 rounded text-sm flex items-center" 
+                                    <button class="bg-gray-400 cursor-not-allowed text-white px-3 py-1 rounded text-sm flex items-center"
                                             title="Cannot record reading - Customer status is {{ $customer->status }}">
                                         <i class="fas fa-tachometer-alt mr-1"></i>
                                         Record Reading
                                     </button>
                                 @endif
-                                
-                                <a href="{{ route('admin.meters.show', $meter) }}" 
+
+                                <a href="{{ route('admin.meters.show', $meter) }}"
                                 class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm transition duration-200 flex items-center">
                                     <i class="fas fa-eye mr-1"></i>
                                     View Meter
                                 </a>
-                                
-                                <form method="POST" action="{{ route('admin.customers.unassign-meter', [$customer, $meter]) }}" 
+
+                                <form method="POST" action="{{ route('admin.customers.unassign-meter', [$customer, $meter]) }}"
                                     onsubmit="return confirmUnassignMeter('{{ $meter->meter_number }}')" class="inline">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" 
+                                    <button type="submit"
                                             class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm transition duration-200 flex items-center">
                                         <i class="fas fa-unlink mr-1"></i>
                                         Unassign
@@ -474,19 +390,19 @@
                             </div>
                         </div>
 
-                       
+
                         <!-- Quick Actions -->
                         <div class="space-y-4">
                             <h3 class="text-lg font-medium text-gray-900">Quick Actions</h3>
                             <div class="space-y-3">
-                                <button onclick="showMeterAssignment()" 
+                                <button onclick="showMeterAssignment()"
                                         class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center space-x-2 shadow-sm">
                                     <i class="fas fa-plus"></i>
                                     <span>Add Another Meter</span>
                                 </button>
-                                
+
                                 @if($customer->status === 'active')
-                                    <a href="{{ route('admin.meter-readings.create', ['customer' => $customer->id]) }}" 
+                                    <a href="{{ route('admin.meter-readings.create', ['customer' => $customer->id]) }}"
                                     class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center space-x-2 shadow-sm">
                                         <i class="fas fa-tachometer-alt"></i>
                                         <span>Record Reading</span>
@@ -506,19 +422,19 @@
                             <h3 class="text-lg font-medium text-gray-900">Administrative</h3>
                             <div class="space-y-3">
                                 @if($customer->meters->count() > 1)
-                                <form method="POST" action="{{ route('admin.customers.unassign-all-meters', $customer) }}" 
+                                <form method="POST" action="{{ route('admin.customers.unassign-all-meters', $customer) }}"
                                     onsubmit="return confirmUnassignAllMeters()">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" 
+                                    <button type="submit"
                                             class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center space-x-2 shadow-sm">
                                         <i class="fas fa-unlink"></i>
                                         <span>Unassign All Meters</span>
                                     </button>
                                 </form>
                                 @endif
-                                
-                                <a href="{{ route('admin.meters.index', ['customer' => $customer->id]) }}" 
+
+                                <a href="{{ route('admin.meters.index', ['customer' => $customer->id]) }}"
                                 class="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center space-x-2 shadow-sm">
                                     <i class="fas fa-list"></i>
                                     <span>View All Meters</span>
@@ -538,12 +454,12 @@
                             <h3 class="text-lg font-semibold text-yellow-800 mb-2">No Meters Assigned</h3>
                             <p class="text-yellow-700 mb-4">This customer does not have any water meters assigned yet.</p>
                             <div class="flex flex-wrap gap-3">
-                                <button onclick="showMeterAssignment()" 
+                                <button onclick="showMeterAssignment()"
                                         class="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg transition duration-200 flex items-center space-x-2 shadow-sm">
                                     <i class="fas fa-plus"></i>
                                     <span>Assign Meter</span>
                                 </button>
-                                <a href="{{ route('admin.meters.available') }}" 
+                                <a href="{{ route('admin.meters.available') }}"
                                 class="bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 px-5 py-2.5 rounded-lg transition duration-200 flex items-center space-x-2 shadow-sm">
                                     <i class="fas fa-search"></i>
                                     <span>Browse Inventory</span>
@@ -734,7 +650,7 @@
                     <i class="fas fa-user-circle mr-2 text-blue-600"></i>
                     Customer Information
                 </h2>
-                
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                     <!-- Personal Information -->
                     <div class="print-break-inside-avoid">
@@ -763,6 +679,10 @@
                                 <label class="text-xs md:text-sm text-gray-500 block">ID Number</label>
                                 <p class="font-medium">{{ $customer->id_number }}</p>
                             </div>
+                            <div>
+                                <label class="text-xs md:text-sm text-gray-500 block">KRA PIN</label>
+                                <p class="font-medium">{{ $customer->kra_pin ?? 'N/A' }}</p>
+                            </div>
                         </div>
                     </div>
 
@@ -790,13 +710,44 @@
                                 <p class="font-medium">{{ $customer->physical_address }}</p>
                             </div>
                             <div>
-                                <label class="text-xs md:text-sm text-gray-500 block">Connection Type</label>
-                                <p class="font-medium capitalize">{{ $customer->connection_type }}</p>
+                                <label class="text-xs md:text-sm text-gray-500 block">Property Owner</label>
+                                <p class="font-medium">{{ $customer->property_owner }}</p>
                             </div>
                             <div>
-                                <label class="text-xs md:text-sm text-gray-500 block">Connection Date</label>
-                                <p class="font-medium">{{ $customer->connection_date?->format('M d, Y') ?? 'N/A' }}</p>
+                                <label class="text-xs md:text-sm text-gray-500 block">Expected Users</label>
+                                <p class="font-medium">{{ $customer->expected_users ?? 'N/A' }}</p>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Customer Notes -->
+                @if($customer->notes)
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <h3 class="text-base md:text-lg font-medium text-gray-900 mb-3 flex items-center">
+                        <i class="fas fa-sticky-note mr-2 text-gray-500 text-sm"></i>
+                        Customer Notes
+                    </h3>
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <p class="text-sm text-gray-700 whitespace-pre-line">{{ $customer->notes }}</p>
+                    </div>
+                </div>
+                @endif
+
+                <!-- Account Information -->
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <h3 class="text-base md:text-lg font-medium text-gray-900 mb-3 flex items-center">
+                        <i class="fas fa-info-circle mr-2 text-gray-500 text-sm"></i>
+                        Account Information
+                    </h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                        <div>
+                            <label class="text-gray-500 block">Created On</label>
+                            <p class="font-medium">{{ $customer->created_at->format('M d, Y') }}</p>
+                        </div>
+                        <div>
+                            <label class="text-gray-500 block">Last Updated</label>
+                            <p class="font-medium">{{ $customer->updated_at->format('M d, Y') }}</p>
                         </div>
                     </div>
                 </div>
@@ -808,7 +759,7 @@
                         <i class="fas fa-file-alt mr-2 text-blue-600"></i>
                         Application Documents
                     </h3>
-                    
+
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <!-- National ID Document -->
                         <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition duration-200 card-hover">
@@ -828,13 +779,13 @@
                             </div>
                             @if($customer->waterApplication->national_id_file)
                                 <div class="flex flex-col space-y-2">
-                                    <a href="{{ Storage::url($customer->waterApplication->national_id_file) }}" 
+                                    <a href="{{ Storage::url($customer->waterApplication->national_id_file) }}"
                                     target="_blank"
                                     class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm flex items-center justify-center transition duration-200">
                                         <i class="fas fa-eye mr-2"></i>
                                         View Document
                                     </a>
-                                    <a href="{{ Storage::url($customer->waterApplication->national_id_file) }}" 
+                                    <a href="{{ Storage::url($customer->waterApplication->national_id_file) }}"
                                     download
                                     class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm flex items-center justify-center transition duration-200">
                                         <i class="fas fa-download mr-2"></i>
@@ -864,13 +815,13 @@
                             </div>
                             @if($customer->waterApplication->kra_pin_file)
                                 <div class="flex flex-col space-y-2">
-                                    <a href="{{ Storage::url($customer->waterApplication->kra_pin_file) }}" 
+                                    <a href="{{ Storage::url($customer->waterApplication->kra_pin_file) }}"
                                     target="_blank"
                                     class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm flex items-center justify-center transition duration-200">
                                         <i class="fas fa-eye mr-2"></i>
                                         View Document
                                     </a>
-                                    <a href="{{ Storage::url($customer->waterApplication->kra_pin_file) }}" 
+                                    <a href="{{ Storage::url($customer->waterApplication->kra_pin_file) }}"
                                     download
                                     class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm flex items-center justify-center transition duration-200">
                                         <i class="fas fa-download mr-2"></i>
@@ -900,13 +851,13 @@
                             </div>
                             @if($customer->waterApplication->title_document)
                                 <div class="flex flex-col space-y-2">
-                                    <a href="{{ Storage::url($customer->waterApplication->title_document) }}" 
+                                    <a href="{{ Storage::url($customer->waterApplication->title_document) }}"
                                     target="_blank"
                                     class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm flex items-center justify-center transition duration-200">
                                         <i class="fas fa-eye mr-2"></i>
                                         View Document
                                     </a>
-                                    <a href="{{ Storage::url($customer->waterApplication->title_document) }}" 
+                                    <a href="{{ Storage::url($customer->waterApplication->title_document) }}"
                                     download
                                     class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm flex items-center justify-center transition duration-200">
                                         <i class="fas fa-download mr-2"></i>
@@ -935,7 +886,7 @@
                             </span>
                         </div>
                         <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div class="bg-{{ $uploadedDocs === $totalDocs ? 'green' : 'yellow' }}-600 h-2 rounded-full" 
+                            <div class="bg-{{ $uploadedDocs === $totalDocs ? 'green' : 'yellow' }}-600 h-2 rounded-full"
                                 style="width: {{ ($uploadedDocs / $totalDocs) * 100 }}%"></div>
                         </div>
                     </div>
@@ -981,12 +932,12 @@
 
                 <!-- Document Upload Section -->
                 @if(!$customer->waterApplication || ($customer->waterApplication && (!$customer->waterApplication->national_id_file || !$customer->waterApplication->kra_pin_file)))
-                <div class="bg-white rounded-xl shadow-md p-4 md:p-6 border border-gray-100">
+                <div class="mt-6 pt-6 border-t border-gray-200">
                     <h2 class="text-lg md:text-xl font-semibold text-blue-800 mb-4 flex items-center">
                         <i class="fas fa-file-upload mr-2 text-blue-600"></i>
                         Upload Missing Documents
                     </h2>
-                    
+
                     <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
                         <div class="flex items-start">
                             <i class="fas fa-exclamation-triangle text-yellow-500 text-sm mr-2 mt-0.5"></i>
@@ -999,13 +950,13 @@
 
                     <form method="POST" action="{{ route('admin.customers.upload-documents', $customer) }}" enctype="multipart/form-data" class="space-y-4">
                         @csrf
-                        
+
                         @if(!$customer->waterApplication || !$customer->waterApplication->national_id_file)
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">
                                 National ID Document <span class="text-red-500">*</span>
                             </label>
-                            <input type="file" name="national_id_file" 
+                            <input type="file" name="national_id_file"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                                 accept=".pdf,.jpg,.jpeg,.png"
                                 required>
@@ -1018,7 +969,7 @@
                             <label class="block text-sm font-medium text-gray-700 mb-2">
                                 KRA Pin Certificate <span class="text-red-500">*</span>
                             </label>
-                            <input type="file" name="kra_pin_file" 
+                            <input type="file" name="kra_pin_file"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                                 accept=".pdf,.jpg,.jpeg,.png"
                                 required>
@@ -1031,7 +982,7 @@
                             <label class="block text-sm font-medium text-gray-700 mb-2">
                                 Title Document <span class="text-gray-500">(Optional)</span>
                             </label>
-                            <input type="file" name="title_document" 
+                            <input type="file" name="title_document"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                                 accept=".pdf,.jpg,.jpeg,.png">
                             <p class="text-xs text-gray-500 mt-1">Max: 2MB • PDF, JPG, JPEG, PNG</p>
@@ -1045,7 +996,7 @@
                                     placeholder="Any notes about these documents..."></textarea>
                         </div>
 
-                        <button type="submit" 
+                        <button type="submit"
                                 class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center space-x-2">
                             <i class="fas fa-upload mr-2"></i>
                             <span>Upload Documents</span>
@@ -1061,29 +1012,35 @@
                     <i class="fas fa-bolt mr-2 text-yellow-500"></i>
                     Quick Actions
                 </h2>
-                
+
                 <div class="space-y-3">
                     @if($customer->meters->count() > 0)
-                    <a href="{{ route('admin.meter-readings.create', ['customer' => $customer->id]) }}" 
+                    <a href="{{ route('admin.meter-readings.create', ['customer' => $customer->id]) }}"
                        class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
                         <i class="fas fa-tachometer-alt mr-2"></i>
                         Record Meter Reading
                     </a>
                     @endif
-                    
-                    <a href="{{ route('bills.index') }}?customer={{ $customer->id }}" 
+
+                    <a href="{{ route('bills.index') }}?customer={{ $customer->id }}"
                        class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
                         <i class="fas fa-file-invoice mr-2"></i>
                         View All Bills
                     </a>
 
-                    <a href="{{ route('payments.index') }}?customer={{ $customer->id }}" 
+                    <a href="{{ route('payments.index') }}?customer={{ $customer->id }}"
                        class="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
                         <i class="fas fa-credit-card mr-2"></i>
                         Record Payment
                     </a>
 
-                    <button onclick="window.print()" 
+                    <a href="{{ route('admin.customers.edit', $customer) }}"
+                       class="w-full bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
+                        <i class="fas fa-edit mr-2"></i>
+                        Edit Customer
+                    </a>
+
+                    <button onclick="window.print()"
                             class="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
                         <i class="fas fa-print mr-2"></i>
                         Print Profile
@@ -1103,7 +1060,7 @@
                 <i class="fas fa-times"></i>
             </button>
         </div>
-        
+
         <form method="POST" action="{{ route('admin.customers.assign-meter', $customer) }}" id="meterAssignmentForm">
             @csrf
             <div class="space-y-4">
@@ -1116,51 +1073,51 @@
                         @endforeach
                     </select>
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Available Meters</label>
                     <div id="availableMetersList" class="space-y-2 max-h-60 overflow-y-auto border border-gray-200 rounded-lg p-3">
                         <p class="text-gray-500 text-sm">Select a category to view available meters</p>
                     </div>
-                    
+
                     <input type="hidden" name="meter_id" id="selectedMeterId" required>
                     <div id="meterSelectionError" class="text-red-500 text-sm mt-1 hidden">
                         Please select a meter from the list above.
                     </div>
                 </div>
-                
+
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Initial Reading</label>
-                        <input type="number" step="0.01" name="initial_reading" 
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                        <input type="number" step="0.01" name="initial_reading"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                placeholder="0.00" value="0" required>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Balance B/F</label>
-                        <input type="number" step="0.01" name="balance_bf" 
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                        <input type="number" step="0.01" name="balance_bf"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                placeholder="0.00" value="0">
                     </div>
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Installation Date</label>
-                    <input type="date" name="installation_date" 
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                    <input type="date" name="installation_date"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                            value="{{ date('Y-m-d') }}" required>
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
-                    <textarea name="notes" rows="3" 
-                              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                    <textarea name="notes" rows="3"
+                              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                               placeholder="Any installation notes..."></textarea>
                 </div>
             </div>
-            
+
             <div class="flex justify-end space-x-3 mt-6">
-                <button type="button" onclick="closeMeterModal()" 
+                <button type="button" onclick="closeMeterModal()"
                         class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition duration-200">
                     Cancel
                 </button>
@@ -1200,12 +1157,12 @@ function resetMeterSelection() {
     const meterIdInput = document.getElementById('selectedMeterId');
     const errorDiv = document.getElementById('meterSelectionError');
     const assignButton = document.getElementById('assignMeterButton');
-    
+
     if (metersList) metersList.innerHTML = '<p class="text-gray-500 text-sm">Select a category to view available meters</p>';
     if (meterIdInput) meterIdInput.value = '';
     if (errorDiv) errorDiv.classList.add('hidden');
     if (assignButton) assignButton.disabled = true;
-    
+
     // Reset category select
     const categorySelect = document.getElementById('meterCategorySelect');
     if (categorySelect) categorySelect.value = '';
@@ -1218,24 +1175,24 @@ document.getElementById('meterCategorySelect')?.addEventListener('change', funct
     const meterIdInput = document.getElementById('selectedMeterId');
     const errorDiv = document.getElementById('meterSelectionError');
     const assignButton = document.getElementById('assignMeterButton');
-    
+
     // Reset selection when category changes
     if (meterIdInput) meterIdInput.value = '';
     if (errorDiv) errorDiv.classList.add('hidden');
     if (assignButton) assignButton.disabled = true;
-    
+
     if (!categoryId) {
         metersList.innerHTML = '<p class="text-gray-500 text-sm">Select a category to view available meters</p>';
         return;
     }
-    
+
     metersList.innerHTML = `
         <div class="flex items-center justify-center space-x-2 text-gray-500 py-8">
             <i class="fas fa-spinner fa-spin"></i>
             <span>Loading available meters...</span>
         </div>
     `;
-    
+
     fetch(`/admin/customers/get-available-meters?category_id=${categoryId}`)
         .then(response => {
             if (!response.ok) throw new Error('Network response was not ok');
@@ -1252,9 +1209,9 @@ document.getElementById('meterCategorySelect')?.addEventListener('change', funct
                 `;
                 return;
             }
-            
+
             metersList.innerHTML = meters.map(meter => `
-                <div class="border border-gray-200 rounded-lg p-4 hover:border-blue-300 cursor-pointer transition duration-200 meter-option" 
+                <div class="border border-gray-200 rounded-lg p-4 hover:border-blue-300 cursor-pointer transition duration-200 meter-option"
                      data-meter-id="${meter.id}">
                     <div class="flex justify-between items-start">
                         <div class="flex-1">
@@ -1282,7 +1239,7 @@ document.getElementById('meterCategorySelect')?.addEventListener('change', funct
                     </div>
                 </div>
             `).join('');
-            
+
             // Add selection handlers
             document.querySelectorAll('.meter-option').forEach(option => {
                 option.addEventListener('click', function() {
@@ -1290,10 +1247,10 @@ document.getElementById('meterCategorySelect')?.addEventListener('change', funct
                     document.querySelectorAll('.meter-option').forEach(opt => {
                         opt.classList.remove('border-blue-500', 'bg-blue-50', 'ring-2', 'ring-blue-200');
                     });
-                    
+
                     // Add selection to clicked option
                     this.classList.add('border-blue-500', 'bg-blue-50', 'ring-2', 'ring-blue-200');
-                    
+
                     // Set the hidden input value and enable submit button
                     const meterId = this.dataset.meterId;
                     document.getElementById('selectedMeterId').value = meterId;
@@ -1318,7 +1275,7 @@ document.getElementById('meterCategorySelect')?.addEventListener('change', funct
 document.getElementById('meterAssignmentForm')?.addEventListener('submit', function(e) {
     const meterId = document.getElementById('selectedMeterId').value;
     const errorDiv = document.getElementById('meterSelectionError');
-    
+
     if (!meterId) {
         e.preventDefault();
         errorDiv.classList.remove('hidden');
@@ -1337,32 +1294,15 @@ document.getElementById('meterAssignmentModal')?.addEventListener('click', funct
 // Status update form handling
 document.getElementById('statusSelect').addEventListener('change', function() {
     const status = this.value;
-    const reasonsContainer = document.getElementById('statusReasons');
+    const reasonField = document.getElementById('statusReasonField');
     const notesField = document.getElementById('statusNotes');
-    
-    // Hide all reason sections
-    document.getElementById('pendingPaymentReasons').classList.add('hidden');
-    document.getElementById('sealedReasons').classList.add('hidden');
-    document.getElementById('terminatedReasons').classList.add('hidden');
-    
-    // Show relevant reason section and update placeholder
-    if (status === 'pending_payment') {
-        reasonsContainer.classList.remove('hidden');
-        document.getElementById('pendingPaymentReasons').classList.remove('hidden');
-        notesField.placeholder = "Document payment issues and expected resolution...";
-    } else if (status === 'sealed') {
-        reasonsContainer.classList.remove('hidden');
-        document.getElementById('sealedReasons').classList.remove('hidden');
-        notesField.placeholder = "Document the reason for disconnection and required actions...";
-    } else if (status === 'terminated') {
-        reasonsContainer.classList.remove('hidden');
-        document.getElementById('terminatedReasons').classList.remove('hidden');
-        notesField.placeholder = "Document the reason for termination and any final notes...";
-    } else if (status === 'active') {
-        reasonsContainer.classList.add('hidden');
-        notesField.placeholder = "Document the reason for activation...";
+
+    // Show/Hide reason field
+    if (status) {
+        reasonField.classList.remove('hidden');
+        notesField.placeholder = "Document any additional notes for this status change...";
     } else {
-        reasonsContainer.classList.add('hidden');
+        reasonField.classList.add('hidden');
         notesField.placeholder = "Document the reason for this status change...";
     }
 });
@@ -1377,7 +1317,7 @@ document.querySelectorAll('input[type="file"]').forEach(input => {
                 alert('File size must be less than 2MB');
                 this.value = '';
             }
-            
+
             const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
             if (!allowedTypes.includes(file.type)) {
                 alert('Please upload PDF, JPG, or PNG files only');

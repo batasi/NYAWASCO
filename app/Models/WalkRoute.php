@@ -16,5 +16,7 @@ class WalkRoute extends Model
     public function meters() {
         return $this->hasMany(Meter::class);
     }
-
+public function zone() {
+        return $this->belongsTo(Zone::class);
+    }
 }
