@@ -147,13 +147,9 @@
 
                         <!-- Search by Meter Number -->
                         <div class="form-group">
-                            <label class="block text-sm font-medium text-gray-700">Meter Number *</label>
-                            <input type="text" name="meter_no" id="meter_no" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" 
-                                placeholder="Search assigned meters...">
+                            <label class="block text-sm font-medium text-gray-700">Meter Number</label>
+                            <input type="text" name="meter_no" id="meter_no" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Search using Meter Number">
                             <p id="meter_error" class="text-red-600 text-sm mt-1 hidden"></p>
-                            <small class="text-gray-500 text-xs mt-1">
-                                Only assigned meters will be found. Start typing meter number to see suggestions.
-                            </small>
                         </div>
 
                         <!-- Meter Model -->
@@ -197,22 +193,17 @@
                         </div>
 
                         <!-- Amount to Pay -->
-                        
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Amount to Pay *</label>
-                            <input type="number" name="amount" step="0.01" min="0" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
-                            <small class="text-gray-500 text-xs">Enter amount not exceeding total due</small>
+                            <label class="block text-sm font-medium text-gray-700">Amount to Pay</label>
+                            <input type="number" name="amount" step="0.01" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
                         </div>
-
-                        <!-- Update payment method options -->
+                         <!-- Payment Method -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Payment Method *</label>
-                            <select name="payment_method" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
-                                <option value="">- Select Payment Method -</option>
-                                <option value="mpesa">M-Pesa</option>
-                                <option value="bank">Bank Transfer</option>
-                                <option value="cash">Cash</option>
-                                <option value="card">Card</option>
+                            <label class="block text-sm font-medium text-gray-700">Payment Method</label>
+                            <select name="payment_method" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                <option>-*-select-*-</option>
+                                <option value="mpesa">MPESA</option>
+                                <option value="bank">Bank</option>
                             </select>
                         </div>
 
@@ -238,10 +229,6 @@
         </div>
     </div>
     </div>
-
-
-
-
 <!-- jQuery CDN -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script>
@@ -250,30 +237,21 @@ function openPaymentModal() {
     const modal = document.getElementById('paymentModal');
     const modalContent = document.getElementById('paymentModalContent');
 
-    // Reset form when opening modal
-    document.querySelector('form').reset();
-    clearMeterDetails();
-    
     modal.classList.remove('hidden');
     document.body.classList.add('overflow-hidden');
 
-    setTimeout(() => {
-        modalContent.classList.remove('translate-y-full');
-        initializeAutocomplete();
-    }, 10);
+    setTimeout(() => modalContent.classList.remove('translate-y-full'), 10);
 }
 
 function closePaymentModal() {
     const modal = document.getElementById('paymentModal');
     const modalContent = document.getElementById('paymentModalContent');
 
-    modalContent.classList.add('translate-y-full');
-    
+
+
     setTimeout(() => {
         modal.classList.add('hidden');
         document.body.classList.remove('overflow-hidden');
-        // Destroy autocomplete to prevent multiple instances
-        $('#meter_no').autocomplete('destroy');
     }, 300);
 }
 
@@ -282,252 +260,62 @@ window.addEventListener('click', function (event) {
     if (event.target === modal) closePaymentModal();
 });
 
-// Initialize autocomplete
-function initializeAutocomplete() {
-    $('#meter_no').autocomplete({
-        source: function(request, response) {
-            $.ajax({
-                url: '/payments/search-meters',
-                data: { search: request.term },
-                success: function(data) {
-                    console.log('Autocomplete results:', data);
-                    if (data.length > 0) {
-                        response(data.map(function(item) {
-                            return {
-                                label: item.display_text,
-                                value: item.meter_number,
-                                customer: item.customer_name
-                            };
-                        }));
-                    } else {
-                        response([]);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.log('Autocomplete error:', error);
-                    response([]);
-                }
-            });
-        },
-        minLength: 2,
-        select: function(event, ui) {
-            console.log('Meter selected from autocomplete:', ui.item.value);
-            // Set the value
-            $(this).val(ui.item.value);
-            // Search for the exact meter number
-            searchMeterDetails(ui.item.value);
-            return false;
-        },
-        focus: function(event, ui) {
-            // Prevent the input value from changing on focus
-            event.preventDefault();
-        }
-    });
-}
 
-// Meter number search with debounce
-let meterSearchTimeout;
-$(document).on('input', '#meter_no', function () {
+$(document).on('keyup', '#meter_no', function () {
     let meter = $(this).val().trim();
-    
-    // Clear previous timeout
-    clearTimeout(meterSearchTimeout);
-    
-    // Clear previous results immediately
-    clearMeterDetails();
-    
-    // Only search when at least 3 characters are typed (reduced from 2 to 3)
-    if (meter.length < 3) {
-        return;
-    }
+    if (meter.length < 3) return; // only search when at least 3 chars typed
 
-    // Debounce the search
-    meterSearchTimeout = setTimeout(() => {
-        searchMeterDetails(meter);
-    }, 600); // Increased debounce time
-});
-
-function searchMeterDetails(meterNumber) {
-    console.log('Searching for assigned meter:', meterNumber);
-    
-    // Show loading state
-    $('#meter_no').addClass('loading');
-    
-    const url = `/payments/meter-details/${encodeURIComponent(meterNumber)}`;
-    console.log('Making request to:', url);
-    
     $.ajax({
-        url: url,
+        url: `/bills/info/meter/${meter}`,
         method: 'GET',
         success: function (response) {
-            console.log('Meter details response:', response);
-            $('#meter_no').removeClass('loading');
-            
-            if (response.success) {
-                // Clear any error message
-                $("#meter_error").addClass("hidden").text("");
-                
-                // Populate customer info
-                $('#customer_name').val(response.customer.name);
-                
-                // Populate meter info
-                $('#meter_model').val(response.meter.model);
-                $('#meter_type').val(response.meter.type);
-                
-                // Populate total due
-                $('#due_amount').val('KSh ' + response.total_due);
-                
-                // Populate unpaid bills table
-                let table = $('#unpaid-bills-table tbody');
-                table.empty();
-                
-                if (response.unpaid_bills.length > 0) {
-                    response.unpaid_bills.forEach(bill => {
-                        table.append(`
-                            <tr class="hover:bg-gray-50">
-                                <td class="border px-3 py-2 text-sm">${bill.bill_number}</td>
-                                <td class="border px-3 py-2 text-sm text-right">KSh ${bill.total_amount}</td>
-                                <td class="border px-3 py-2 text-sm text-right">KSh ${bill.due}</td>
-                            </tr>
-                        `);
-                    });
-                    
-                    // Auto-fill amount to pay with total due
-                    const numericDue = response.total_due.replace('KSh ', '').replace(/,/g, '');
-                    $('input[name="amount"]').val(numericDue);
-                    
-                } else {
-                    table.append(`
-                        <tr>
-                            <td colspan="3" class="border px-3 py-2 text-sm text-center text-gray-500">
-                                No unpaid bills found
-                            </td>
-                        </tr>
-                    `);
-                    $('input[name="amount"]').val('');
-                }
-                
-                // Show active meter status
-                $('#meter_no').after(`
-                    <div id="meter_status" class="mt-1 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        ✓ Active Meter - ${response.customer.name}
-                    </div>
+            // --- Clear error message ---
+            $("#meter_error").addClass("hidden").text("");
+            // Customer Info
+            $('#customer_name').val(response.customer.name);
+
+            // Meter Info
+            $('#meter_model').val(response.meter.model);
+            $('#meter_type').val(response.meter.type);
+
+            // Total Due
+            $('#due_amount').val(response.total_due);
+
+            // Bills
+            let table = $('#unpaid-bills-table tbody');
+            table.empty();
+
+            response.unpaid_bills.forEach(bill => {
+                table.append(`
+                    <tr>
+                        <td class="border px-2 py-1">${bill.bill_number}</td>
+                        <td class="border px-2 py-1">${bill.total_amount}</td>
+                        <td class="border px-2 py-1">${bill.due}</td>
+                    </tr>
                 `);
-                
-            } else {
-                console.log('Assigned meter not found for:', meterNumber);
-                // Don't show error message - just keep fields clear
-                clearMeterDetails();
-            }
-        },
-        error: function (xhr, status, error) {
-            console.log('AJAX Error:', { 
-                status: xhr.status, 
-                error: error 
             });
-            $('#meter_no').removeClass('loading');
-            
-            // For 404 (not found), just clear fields without error message
+        },
+
+
+        error: function (xhr) {
             if (xhr.status === 404) {
-                clearMeterDetails();
-            } else {
-                // Only show error for server errors
-                showMeterError("Error connecting to server");
+                // Show error
+                $("#meter_error")
+                    .removeClass("hidden")
+                    .text("Meter number not found.");
+
+                // Clear all fields
+                $('#customer_name').val("");
+                $('#meter_model').val("");
+                $('#meter_type').val("");
+                $('#due_amount').val("");
+                $('#unpaid-bills-table tbody').empty();
             }
         }
     });
-}
-
-function clearMeterDetails() {
-    $('#customer_name').val("");
-    $('#meter_model').val("");
-    $('#meter_type').val("");
-    $('#due_amount').val("");
-    $('input[name="amount"]').val("");
-    $('#unpaid-bills-table tbody').empty();
-    $('#meter_status').remove();
-    $("#meter_error").addClass("hidden").text("");
-}
-
-function showMeterError(message) {
-    $("#meter_error")
-        .removeClass("hidden")
-        .text(message);
-}
-
-// Form submission handling
-$(document).on('submit', 'form', function(e) {
-    const amount = parseFloat($('input[name="amount"]').val()) || 0;
-    const dueAmountText = $('#due_amount').val();
-    const customerName = $('#customer_name').val().trim();
-    
-    // Extract numeric value from "KSh X,XXX.XX" format
-    const dueAmount = parseFloat(dueAmountText.replace('KSh ', '').replace(/,/g, '')) || 0;
-    
-    if (amount > dueAmount) {
-        e.preventDefault();
-        alert('Payment amount cannot exceed total due amount.');
-        return false;
-    }
-    
-    if (amount <= 0) {
-        e.preventDefault();
-        alert('Please enter a valid payment amount.');
-        return false;
-    }
-    
-    // Validate that we have a valid customer
-    if (!customerName || customerName === '' || customerName === 'Customer Record Missing') {
-        e.preventDefault();
-        alert('Please select a valid assigned meter with customer information.');
-        return false;
-    }
-    
-    // Show loading state
-    const submitBtn = $(this).find('button[type="submit"]');
-    submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i> Processing...');
 });
 
-// Add CSS for loading state and autocomplete
-const style = document.createElement('style');
-style.textContent = `
-    .loading {
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2'%3E%3Cpath d='M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83'/%3E%3C/svg%3E");
-        background-repeat: no-repeat;
-        background-position: right 8px center;
-        background-size: 16px 16px;
-    }
-    
-    /* jQuery UI Autocomplete Styles */
-    .ui-autocomplete {
-        max-height: 200px;
-        overflow-y: auto;
-        overflow-x: hidden;
-        background: white;
-        border: 1px solid #d1d5db;
-        border-radius: 0.375rem;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        z-index: 10000;
-    }
-    
-    .ui-menu-item {
-        padding: 8px 12px;
-        border-bottom: 1px solid #f3f4f6;
-        cursor: pointer;
-        font-size: 14px;
-    }
-    
-    .ui-menu-item:hover {
-        background-color: #f3f4f6;
-    }
-    
-    .ui-state-focus {
-        background-color: #3b82f6 !important;
-        color: white !important;
-        border: none;
-    }
-`;
-document.head.appendChild(style);
+
 </script>
 
 @endsection
