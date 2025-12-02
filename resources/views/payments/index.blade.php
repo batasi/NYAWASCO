@@ -266,7 +266,7 @@ $(document).on('keyup', '#meter_no', function () {
     if (meter.length < 3) return; // only search when at least 3 chars typed
 
     $.ajax({
-        url: `/bills/info/meter/${meter}`,
+        url: `/bills/info/meter/${meter}?t=${Date.now()}`,
         method: 'GET',
         success: function (response) {
             // --- Clear error message ---

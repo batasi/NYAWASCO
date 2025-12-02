@@ -61,65 +61,72 @@ class PaymentController extends Controller
         ]);
 
         try {
-            // Find the meter record by meter_number
+
+            // Fetch meter
             $meter = Meter::where('meter_number', $request->meter_no)->firstOrFail();
 
-            // Create the payment linked to the meter
+            // Create Payment
             $payment = Payment::create([
                 'meter_id' => $meter->id,
+                'customer_id' => $meter->customer_id,
                 'user_id' => auth()->id(),
                 'payment_no' => 'PAY-' . Str::upper(Str::random(8)),
                 'amount' => $request->amount,
-                'payment_date' => Carbon::now()->toDateString(),
+                'payment_date' => now(),
                 'payment_status' => 'completed',
                 'payment_method' => $request->payment_method,
                 'transaction_reference' => $request->transaction_reference,
             ]);
 
-            /** -----------------------------
-             *  APPLY PAYMENT TO BILLS
-             * ----------------------------- */
+            /** APPLY PAYMENT TO OUTSTANDING BILLS */
+
             $remaining = $request->amount;
 
-            // Fetch unpaid bills for this meter sorted by oldest
             $unpaidBills = Bill::where('meter_id', $meter->id)
                 ->whereColumn('total_amount', '>', 'paid_amount')
                 ->orderBy('billing_period_start', 'asc')
                 ->get();
 
             foreach ($unpaidBills as $bill) {
-                if ($remaining <= 0) {
-                    break;
-                }
+                if ($remaining <= 0) break;
+
+                $bill = Bill::find($bill->id);
 
                 $billDue = $bill->total_amount - $bill->paid_amount;
 
-                if ($remaining >= $billDue) {
-                    // Fully pay this bill
-                    $bill->paid_amount = $bill->total_amount;
-                    $bill->bill_status = 'paid';
-                    $bill->payment_date = Carbon::now()->toDateString();
-                    $bill->save();
+                // Amount actually applied to this bill
+                $paidThisBill = min($remaining, $billDue);
 
-                    $remaining -= $billDue;
-                } else {
-                    // Partially pay this bill
-                    $bill->paid_amount += $remaining;
-                    $bill->bill_status = 'partial';
-                    $bill->save();
+                // Update bill
+                $bill->paid_amount += $paidThisBill;
+                $bill->balance = $bill->total_amount - $bill->paid_amount;
+                $bill->bill_status = ($bill->paid_amount == $bill->total_amount) ? 'paid' : 'partial';
+                if ($bill->bill_status == 'paid') $bill->payment_date = now();
+                $bill->save();
 
-                    $remaining = 0;
-                }
+                // Subtract only the applied amount from remaining
+                $remaining -= $paidThisBill;
+
+                // Update meter balance correctly
+                $meter->current_balance -= $paidThisBill;
             }
 
+            $meter->save();
+
+
+
+
+
             return redirect()->route('payments.index')
-                ->with('success', 'Payment created successfully and applied to outstanding bills.');
+                ->with('success', 'Payment applied successfully.');
 
         } catch (\Exception $e) {
+
             return redirect()->route('payments.index')
                 ->with('error', 'Payment failed: ' . $e->getMessage());
         }
     }
+
 
     /**
      * Display the specified payment.

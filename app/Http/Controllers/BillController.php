@@ -17,8 +17,8 @@ class BillController extends Controller
     $sort = $request->get('sort', 'newest');
 
     $bills = Bill::with([
-        'customer', 
-        'meter.meterCategory', 
+        'customer',
+        'meter.meterCategory',
         'payments',
         'meterReading'
     ])
@@ -60,10 +60,10 @@ class BillController extends Controller
     $collectionRate = $totalBills > 0 ? ($paidBills / $totalBills) * 100 : 0;
 
     return view('bills.index', compact(
-        'bills', 
-        'totalRevenue', 
-        'outstandingBalance', 
-        'totalBills', 
+        'bills',
+        'totalRevenue',
+        'outstandingBalance',
+        'totalBills',
         'collectionRate',
         'totalBillsCount',
         'unpaidBillsCount',
@@ -72,7 +72,7 @@ class BillController extends Controller
         'overdueBillsCount'
     ));
 }
-    
+
 
     /**
      * Store a newly created bill in storage.
@@ -172,7 +172,7 @@ class BillController extends Controller
     public function search(Request $request)
     {
         $search = $request->get('search');
-        
+
         $bills = Bill::with(['customer', 'meter.meterCategory', 'payments'])
             ->where(function($query) use ($search) {
                 $query->where('bill_number', 'like', "%{$search}%")
@@ -191,4 +191,65 @@ class BillController extends Controller
 
         return response()->json($bills);
     }
+    public function infoByCustomer($customerId)
+{
+    // Get the customer
+    $customer = Customer::findOrFail($customerId);
+
+    // Fetch all unpaid bills
+    $unpaidBills = Bill::where('customer_id', $customerId)
+        ->get()
+        ->map(function ($bill) {
+            $bill->due = $bill->total_amount - $bill->payments()->sum('amount');
+            return $bill;
+        })
+        ->filter(function ($bill) {
+            return $bill->due > 0;
+        });
+
+    // Total due across all bills
+    $totalDue = $unpaidBills->sum('due');
+
+    return response()->json([
+        'customer_id'   => $customer->id,
+        'customer_name' => $customer->first_name,
+        'total_due'     => $totalDue,
+        'unpaid_bills'  => $unpaidBills->values(), // optional
+    ]);
+}
+public function infoByMeter($meter)
+{
+    $meterRecord = Meter::where('meter_number', $meter)->first();
+
+    if (!$meterRecord) {
+        return response()->json(['error' => 'Meter not found'], 404);
+    }
+
+    $customer = $meterRecord->customer;
+
+    $unpaidBills = Bill::where('meter_id', $meterRecord->id)
+        ->whereColumn('total_amount', '>', 'paid_amount')
+        ->get();
+
+    $totalDue = $unpaidBills->sum(fn($b) => $b->balance);
+
+    return response()->json([
+        'customer' => [
+            'id' => $customer->id,
+            'name' => $customer->first_name . ' ' . $customer->last_name,
+        ],
+        'meter' => [
+            'model' => $meterRecord->meter_model,
+            'type' => $meterRecord->meter_type,
+        ],
+        'unpaid_bills' => $unpaidBills->map(function ($b) {
+            return [
+                'bill_number' => $b->bill_number,
+                'total_amount' => $b->total_amount,
+                'due' => $b->balance,
+            ];
+        }),
+        'total_due' => $totalDue,
+    ]);
+}
 }
