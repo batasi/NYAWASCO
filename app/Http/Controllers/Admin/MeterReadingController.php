@@ -21,7 +21,7 @@ class MeterReadingController extends Controller
         $readings = MeterReading::with('customer', 'reader', 'meter')
             ->latest()
             ->paginate(20);
-            
+
         return view('admin.meter-readings.index', compact('readings'));
     }
 
@@ -37,7 +37,7 @@ class MeterReadingController extends Controller
         if ($customerId) {
             $customer = Customer::with('meters.meterCategory')->findOrFail($customerId);
             $meters = $customer->meters;
-            
+
             // If specific meter is selected, get that meter
             if ($meterId) {
                 $meter = $meters->firstWhere('id', $meterId);
@@ -45,7 +45,7 @@ class MeterReadingController extends Controller
                 // Default to first meter if none selected
                 $meter = $meters->first();
             }
-            
+
             // Get last reading for the specific meter
             if ($meter) {
                 $lastReading = MeterReading::where('customer_id', $customerId)
@@ -61,7 +61,7 @@ class MeterReadingController extends Controller
     public function store(Request $request)
     {
         $readingPeriod = Carbon::parse($request->reading_date)->format('F Y');
-        
+
         // Check for duplicate reading for the same meter and period
         $existingReading = MeterReading::where('customer_id', $request->customer_id)
             ->where('meter_id', $request->meter_id)
@@ -83,7 +83,7 @@ class MeterReadingController extends Controller
                     ]
                 ], 422);
             }
-            
+
             throw new \Exception("Meter reading for {$readingPeriod} has already been recorded for this meter.");
         }
 
@@ -99,7 +99,7 @@ class MeterReadingController extends Controller
         try {
             // Define meter variable outside the transaction
             $meter = null;
-            
+
             DB::transaction(function () use ($request, $readingPeriod, &$meter) {
                 // Get customer and meter
                 $customer = Customer::findOrFail($request->customer_id);
@@ -320,19 +320,19 @@ class MeterReadingController extends Controller
         try {
             $imagePath = $request->file('image')->store('temp-ocr', 'public');
             $fullImagePath = storage_path('app/public/' . $imagePath);
-            
+
             $ocrService = new OCRService();
             $reading = $ocrService->extractMeterReading($fullImagePath);
-            
+
             // Clean up temporary file
             Storage::disk('public')->delete(str_replace('temp-ocr/', '', $imagePath));
-            
+
             return response()->json([
                 'success' => true,
                 'detected_reading' => $reading,
                 'message' => $reading ? 'Reading detected successfully' : 'No readable meter numbers found'
             ]);
-            
+
         } catch (\Exception $e) {
             Log::error('OCR API Error: ' . $e->getMessage());
             return response()->json([

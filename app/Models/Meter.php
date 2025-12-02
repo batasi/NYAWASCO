@@ -61,6 +61,16 @@ class Meter extends Model
     public function walkroute() {
         return $this->belongsTo(WalkRoute::class);
     }
+ public function scopeActive($query)
+    {
+        return $query->where('status', 'active');
+    }
+
+    // Add this if you want more status scopes
+    public function scopeStatus($query, $status)
+    {
+        return $query->where('status', $status);
+    }
 
     public function customer()
     {
@@ -79,8 +89,11 @@ class Meter extends Model
 
     public function latestReading()
     {
-        return $this->hasOne(MeterReading::class)->latestOfMany();
+        return $this->hasOne(MeterReading::class)
+            ->latestOfMany()
+            ->select('meter_readings.*'); // IMPORTANT FIX
     }
+
 
     public function bills()
     {

@@ -190,6 +190,19 @@ class Customer extends Model
 
 
 
+    public function getFormattedAddressAttribute()
+    {
+        $parts = array_filter([
+            $this->plot_number,
+            $this->house_number,
+            $this->ward,
+            $this->location
+        ]);
+
+        return implode(', ', $parts) ?: 'Address not specified';
+    }
+
+
     public function updateBalance($amount, $type = 'charge')
     {
         if ($type === 'charge') {

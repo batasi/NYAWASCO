@@ -29,6 +29,7 @@ use App\Http\Controllers\MpesaPaymentController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\MeterController;
 use App\Http\Controllers\BillController;
+use App\Http\Controllers\QuickBillController;
 use App\Http\Controllers\Admin\MeterReadingController;
 use App\Http\Controllers\Admin\WaterConnectionController;
 use App\Http\Controllers\Admin\MeterCategoryController;
@@ -225,6 +226,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/bills/{bill}', [BillController::class, 'update'])->name('bills.edit');
     Route::delete('/bills/{bill}', [BillController::class, 'destroy'])->name('bills.destroy');
     Route::get('/bills/search', [BillController::class, 'search'])->name('bills.search');
+
+    Route::get('/bills/quick', [QuickBillController::class, 'selectMeter'])->name('bills.quick');
+    Route::post('/bills/quick/find-meter', [QuickBillController::class, 'findMeter'])->name('bills.quick.find');
+    Route::get('/bills/quick/create/{meter}', [QuickBillController::class, 'createReading'])->name('bills.quick.create');
 });
 
 // Bill Information Routes (Public)

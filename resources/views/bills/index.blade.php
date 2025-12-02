@@ -6,32 +6,25 @@
 @can('view bills')
 <div class="min-h-screen bg-gray-50">
     <!-- Header Section -->
-    <div class="bg-white shadow-sm border-b border-gray-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center py-6 gap-4">
-                <div>
-                    <h1 class="text-2xl md:text-3xl font-bold text-gray-900">Billing Management</h1>
-                    <p class="text-gray-600 mt-2">Manage customer bills and payments</p>
-                </div>
-                
-                <div class="flex flex-wrap gap-3">
-                    @can('add bills')
-                    <a href="{{ route('admin.meter-readings.create') }}" 
-                       class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition duration-200 flex items-center shadow-sm">
-                        <i class="fas fa-bolt mr-2"></i>
-                        Quick Bill Generation
-                    </a>
-                    @endcan
-                    
-                    <a href="{{ route('payments.index') }}" 
-                       class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition duration-200 flex items-center shadow-sm">
-                        <i class="fas fa-credit-card mr-2"></i>
-                        Payment Center
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
+        @php
+                $actionButtons = [];
+
+                if (auth()->user()->can('add bills')) {
+                    $actionButtons[] = [
+                        'text' => 'Generate Bill',
+                        'onclick' => 'openQuickBillModal()',
+                        'icon' => 'fas fa-bolt',
+                        'color' => 'bg-green-600 hover:bg-green-700'
+                    ];}
+                @endphp
+
+                @include('components.dashboard-header', [
+                    'title' => 'Billings Management',
+                    'subtitle' => 'Bills Management Platform',
+                    'actionButtons' => $actionButtons
+                ])
+
+
 
     <!-- Main Content -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -117,27 +110,27 @@
             <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
                 <!-- Status Quick Filters -->
                 <div class="flex flex-wrap gap-2">
-                    <a href="{{ route('bills.index') }}" 
+                    <a href="{{ route('bills.index') }}"
                     class="px-4 py-2 rounded-lg font-medium transition duration-200 {{ !request('status') ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700 hover:bg-blue-200' }}">
                         All Bills
                         <span class="bg-blue-500 text-white px-2 py-1 rounded-full text-xs ml-1">{{ $totalBillsCount }}</span>
                     </a>
-                    <a href="{{ route('bills.index', ['status' => 'unpaid']) }}" 
+                    <a href="{{ route('bills.index', ['status' => 'unpaid']) }}"
                     class="px-4 py-2 rounded-lg font-medium transition duration-200 {{ request('status') == 'unpaid' ? 'bg-red-600 text-white' : 'bg-red-100 text-red-700 hover:bg-red-200' }}">
                         Unpaid
                         <span class="bg-red-500 text-white px-2 py-1 rounded-full text-xs ml-1">{{ $unpaidBillsCount }}</span>
                     </a>
-                    <a href="{{ route('bills.index', ['status' => 'paid']) }}" 
+                    <a href="{{ route('bills.index', ['status' => 'paid']) }}"
                     class="px-4 py-2 rounded-lg font-medium transition duration-200 {{ request('status') == 'paid' ? 'bg-green-600 text-white' : 'bg-green-100 text-green-700 hover:bg-green-200' }}">
                         Paid
                         <span class="bg-green-500 text-white px-2 py-1 rounded-full text-xs ml-1">{{ $paidBillsCount }}</span>
                     </a>
-                    <a href="{{ route('bills.index', ['status' => 'partial']) }}" 
+                    <a href="{{ route('bills.index', ['status' => 'partial']) }}"
                     class="px-4 py-2 rounded-lg font-medium transition duration-200 {{ request('status') == 'partial' ? 'bg-yellow-600 text-white' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' }}">
                         Partial
                         <span class="bg-yellow-500 text-white px-2 py-1 rounded-full text-xs ml-1">{{ $partialBillsCount }}</span>
                     </a>
-                    <a href="{{ route('bills.index', ['status' => 'overdue']) }}" 
+                    <a href="{{ route('bills.index', ['status' => 'overdue']) }}"
                     class="px-4 py-2 rounded-lg font-medium transition duration-200 {{ request('status') == 'overdue' ? 'bg-orange-600 text-white' : 'bg-orange-100 text-orange-700 hover:bg-orange-200' }}">
                         Overdue
                         <span class="bg-orange-500 text-white px-2 py-1 rounded-full text-xs ml-1">{{ $overdueBillsCount }}</span>
@@ -146,8 +139,8 @@
 
                 <!-- Search Box -->
                 <div class="relative">
-                    <input type="text" 
-                           id="billSearch" 
+                    <input type="text"
+                           id="billSearch"
                            placeholder="Search bills..."
                            class="w-80 border border-gray-300 rounded-lg px-4 py-2 pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
                            autocomplete="off">
@@ -262,12 +255,12 @@
                             </td> -->
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <div class="flex justify-end space-x-2">
-                                    <a href="{{ route('bills.show', $bill->id) }}" 
+                                    <a href="{{ route('bills.show', $bill->id) }}"
                                        class="text-blue-600 hover:text-blue-900 px-2 py-1 rounded transition duration-200"
                                        title="View Bill">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                    <a href="{{ route('bills.edit', $bill->id) }}" 
+                                    <a href="{{ route('bills.edit', $bill->id) }}"
                                        class="text-green-600 hover:text-green-900 px-2 py-1 rounded transition duration-200"
                                        title="Edit Bill">
                                         <i class="fas fa-edit"></i>
@@ -275,7 +268,7 @@
                                     <form action="{{ route('bills.destroy', $bill->id) }}" method="POST" class="inline">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" 
+                                        <button type="submit"
                                                 onclick="return confirm('Are you sure you want to delete this bill?')"
                                                 class="text-red-600 hover:text-red-900 px-2 py-1 rounded transition duration-200"
                                                 title="Delete Bill">
@@ -324,7 +317,7 @@
                         </div>
                         <div class="flex-1">
                             <p class="text-sm text-gray-700">
-                                <strong>Bill {{ $activity->bill_number }}</strong> generated for 
+                                <strong>Bill {{ $activity->bill_number }}</strong> generated for
                                 {{ $activity->customer->first_name }} {{ $activity->customer->last_name }}
                             </p>
                             <p class="text-xs text-gray-500">{{ $activity->created_at->diffForHumans() }}</p>
@@ -346,17 +339,17 @@
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 class="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
                 <div class="space-y-3">
-                    <a href="{{ route('admin.customers.index') }}" 
+                    <a href="{{ route('admin.customers.index') }}"
                        class="w-full bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
                         <i class="fas fa-users mr-2"></i>
                         View All Customers
                     </a>
-                    <a href="{{ route('admin.meters.index') }}" 
+                    <a href="{{ route('admin.meters.index') }}"
                        class="w-full bg-green-100 hover:bg-green-200 text-green-700 px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
                         <i class="fas fa-tachometer-alt mr-2"></i>
                         Meter Management
                     </a>
-                    <a href="{{ route('payments.create') }}" 
+                    <a href="{{ route('payments.create') }}"
                        class="w-full bg-purple-100 hover:bg-purple-200 text-purple-700 px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
                         <i class="fas fa-plus-circle mr-2"></i>
                         Record Payment
@@ -365,6 +358,7 @@
             </div>
         </div>
     </div>
+       @include('components.modal-quick-bill')
 </div>
 
 <!-- Simple Search JavaScript -->
@@ -396,10 +390,10 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             if (!response.ok) throw new Error('Search failed');
-            
+
             const bills = await response.json();
             updateTableWithSearchResults(bills);
-            
+
         } catch (error) {
             console.error('Search error:', error);
         }
@@ -407,7 +401,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updateTableWithSearchResults(bills) {
         const tbody = document.getElementById('billsTableBody');
-        
+
         if (bills.length === 0) {
             tbody.innerHTML = `
                 <tr>
@@ -448,8 +442,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="text-xs text-gray-500">${bill.meter.meter_category.name}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${bill.billing_period_start ? new Date(bill.billing_period_start).toLocaleDateString() : '—'} 
-                    to 
+                    ${bill.billing_period_start ? new Date(bill.billing_period_start).toLocaleDateString() : '—'}
+                    to
                     ${bill.billing_period_end ? new Date(bill.billing_period_end).toLocaleDateString() : '—'}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
@@ -472,12 +466,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div class="flex justify-end space-x-2">
-                        <a href="/bills/${bill.id}" 
+                        <a href="/bills/${bill.id}"
                            class="text-blue-600 hover:text-blue-900 px-2 py-1 rounded transition duration-200"
                            title="View Bill">
                             <i class="fas fa-eye"></i>
                         </a>
-                        <a href="/bills/${bill.id}/edit" 
+                        <a href="/bills/${bill.id}/edit"
                            class="text-green-600 hover:text-green-900 px-2 py-1 rounded transition duration-200"
                            title="Edit Bill">
                             <i class="fas fa-edit"></i>
