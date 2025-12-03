@@ -266,14 +266,37 @@
                                        placeholder="0.0000" value="0.0800">
                             </div>
 
-                            <div class="flex items-center">
-                                <div class="flex items-center h-5">
-                                    <input type="checkbox" name="has_tiers" id="has_tiers" value="1"
-                                           class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                           
+                            <div class="mt-3">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center">
+                                        <div class="flex items-center h-5">
+                                            <input type="checkbox" name="has_tiers" id="has_tiers" value="1"
+                                                class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                                onchange="toggleTieredPricing(this.checked)">
+                                        </div>
+                                        <label for="has_tiers" class="ml-2 text-sm font-medium text-gray-700">
+                                            Enable Tiered Pricing
+                                        </label>
+                                    </div>
+                                    <button type="button" id="addTierBtn" 
+                                            class="hidden text-sm bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded"
+                                            onclick="addTier()">
+                                        <i class="fas fa-plus mr-1"></i>Add Tier
+                                    </button>
                                 </div>
-                                <label for="has_tiers" class="ml-2 text-sm text-gray-700">
-                                    Enable Tiered Pricing
-                                </label>
+                                
+                                <!-- Tiered Pricing Container (hidden by default) -->
+                                <div id="tieredPricingContainer" class="hidden mt-4 space-y-4 border-t pt-4">
+                                    <div id="tiersContainer">
+                                        <!-- Tiers will be added here dynamically -->
+                                    </div>
+                                    
+                                    <div class="text-sm text-gray-500">
+                                        <i class="fas fa-info-circle mr-1"></i>
+                                        Tiers are processed in order. Make sure consumption ranges don't overlap.
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -364,5 +387,157 @@ document.addEventListener('keydown', function(e) {
         closeCategoryModal();
     }
 });
+
+let tierCounter = 0;
+
+function toggleTieredPricing(enabled) {
+    const container = document.getElementById('tieredPricingContainer');
+    const addBtn = document.getElementById('addTierBtn');
+    
+    if (enabled) {
+        container.classList.remove('hidden');
+        addBtn.classList.remove('hidden');
+        // Add first tier automatically
+        if (document.querySelectorAll('.tier-item').length === 0) {
+            addTier();
+        }
+    } else {
+        container.classList.add('hidden');
+        addBtn.classList.add('hidden');
+        // Clear all tiers
+        document.getElementById('tiersContainer').innerHTML = '';
+        tierCounter = 0;
+    }
+}
+
+function addTier() {
+    tierCounter++;
+    const tiersContainer = document.getElementById('tiersContainer');
+    
+    const tierHtml = `
+        <div class="tier-item bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <div class="flex justify-between items-start mb-3">
+                <h4 class="font-medium text-gray-700">Tier ${tierCounter}</h4>
+                <button type="button" onclick="removeTier(this)" class="text-red-600 hover:text-red-800">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Tier Name *</label>
+                    <input type="text" name="tiers[${tierCounter}][name]" 
+                           class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                           placeholder="e.g., Tier 1 - Basic" required>
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Sort Order</label>
+                    <input type="number" name="tiers[${tierCounter}][sort_order]" 
+                           value="${tierCounter}"
+                           class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                           min="0">
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-3 mt-2">
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Min Consumption (m³) *</label>
+                    <input type="number" name="tiers[${tierCounter}][min_consumption]" 
+                           step="0.01" min="0" required
+                           class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                           placeholder="0.00" 
+                           value="${tierCounter === 1 ? '0' : ''}">
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Max Consumption (m³)</label>
+                    <input type="number" name="tiers[${tierCounter}][max_consumption]" 
+                           step="0.01" min="0"
+                           class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                           placeholder="Leave empty for unlimited">
+                </div>
+            </div>
+            
+            <div class="mt-2">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Rate per m³ (KSh) *</label>
+                <input type="number" name="tiers[${tierCounter}][rate_per_unit]" 
+                       step="0.0001" min="0" required
+                       class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                       placeholder="0.0000" 
+                       value="0.0800">
+            </div>
+            
+            <div class="mt-2">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Description</label>
+                <textarea name="tiers[${tierCounter}][description]" rows="2"
+                          class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          placeholder="Brief description of this tier..."></textarea>
+            </div>
+            
+            <div class="mt-2 flex items-center">
+                <input type="checkbox" name="tiers[${tierCounter}][is_active]" value="1" 
+                       checked class="w-3 h-3 text-blue-600 border-gray-300 rounded">
+                <label class="ml-2 text-xs text-gray-600">Active Tier</label>
+            </div>
+        </div>
+    `;
+    
+    tiersContainer.insertAdjacentHTML('beforeend', tierHtml);
+}
+
+function removeTier(button) {
+    const tierItem = button.closest('.tier-item');
+    tierItem.remove();
+    
+    // Update tier numbers
+    const tierItems = document.querySelectorAll('.tier-item');
+    tierItems.forEach((item, index) => {
+        const tierNumber = index + 1;
+        const title = item.querySelector('h4');
+        const sortOrderInput = item.querySelector('input[name$="[sort_order]"]');
+        
+        if (title) title.textContent = `Tier ${tierNumber}`;
+        if (sortOrderInput) sortOrderInput.value = tierNumber;
+        
+        // Update all input names with new index
+        item.querySelectorAll('input, textarea').forEach(input => {
+            const name = input.name;
+            if (name.includes('tiers[')) {
+                const newName = name.replace(/tiers\[\d+\]/, `tiers[${tierNumber}]`);
+                input.name = newName;
+            }
+        });
+    });
+    
+    tierCounter = tierItems.length;
+}
+
+// Initialize modal with tiers if editing
+function initializeTiers(tiersData) {
+    if (tiersData && tiersData.length > 0) {
+        document.getElementById('has_tiers').checked = true;
+        toggleTieredPricing(true);
+        
+        // Clear existing tiers
+        document.getElementById('tiersContainer').innerHTML = '';
+        tierCounter = 0;
+        
+        // Add tiers from data
+        tiersData.forEach(tier => {
+            addTier();
+            const tierItem = document.querySelector('.tier-item:last-child');
+            
+            // Fill tier data
+            tierItem.querySelector('input[name$="[name]"]').value = tier.name || '';
+            tierItem.querySelector('input[name$="[sort_order]"]').value = tier.sort_order || '';
+            tierItem.querySelector('input[name$="[min_consumption]"]').value = tier.min_consumption || '';
+            tierItem.querySelector('input[name$="[max_consumption]"]').value = tier.max_consumption || '';
+            tierItem.querySelector('input[name$="[rate_per_unit]"]').value = tier.rate_per_unit || '';
+            tierItem.querySelector('textarea[name$="[description]"]').value = tier.description || '';
+            tierItem.querySelector('input[name$="[is_active]"]').checked = tier.is_active || true;
+        });
+    }
+}
 </script>
 @endsection

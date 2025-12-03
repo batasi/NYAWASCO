@@ -112,12 +112,13 @@
                         </div>
                     </div>
 
+                    
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                         <div>
                             <label for="default_rate" class="block text-sm font-medium text-gray-700 mb-1">Default Rate (KSh/m³) *</label>
                             <input type="number" name="default_rate" id="default_rate" step="0.0001" min="0" required
-                                   value="{{ old('default_rate', $meterCategory->default_rate) }}"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm">
+                                value="{{ old('default_rate', $meterCategory->default_rate) }}"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm">
                             @error('default_rate')
                                 <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                             @enderror
@@ -126,12 +127,132 @@
                         <div class="flex items-center">
                             <div class="flex items-center h-5">
                                 <input type="checkbox" name="has_tiers" id="has_tiers" value="1" 
-                                       {{ old('has_tiers', $meterCategory->has_tiers) ? 'checked' : '' }}
-                                       class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                                    {{ old('has_tiers', $meterCategory->has_tiers) ? 'checked' : '' }}
+                                    class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                                    onchange="toggleTieredPricing(this.checked)">
                             </div>
                             <label for="has_tiers" class="ml-2 text-sm text-gray-700">
                                 Enable Tiered Pricing
                             </label>
+                        </div>
+                    </div>
+
+                    <!-- Tiered Pricing Container -->
+                    <div id="tieredPricingContainer" class="{{ $meterCategory->has_tiers ? '' : 'hidden' }} mt-6 border-t pt-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-md font-semibold text-gray-700">Pricing Tiers</h3>
+                            <button type="button" onclick="addTier()" 
+                                    class="text-sm bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded flex items-center">
+                                <i class="fas fa-plus mr-1"></i>Add Tier
+                            </button>
+                        </div>
+                        
+                        <div id="tiersContainer" class="space-y-4">
+                            @php
+                                $tiers = old('tiers', $meterCategory->pricingTiers->toArray());
+                            @endphp
+                            
+                            @if(count($tiers) > 0)
+                                @foreach($tiers as $index => $tier)
+                                    <div class="tier-item bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                        <div class="flex justify-between items-start mb-3">
+                                            <h4 class="font-medium text-gray-700">Tier {{ $loop->iteration }}</h4>
+                                            <button type="button" onclick="removeTier(this)" class="text-red-600 hover:text-red-800">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                        
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-600 mb-1">Tier Name *</label>
+                                                <input type="text" name="tiers[{{ $index }}][name]" 
+                                                    value="{{ old('tiers.' . $index . '.name', $tier['name'] ?? '') }}"
+                                                    class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                                    placeholder="e.g., Tier 1 - Basic" required>
+                                                @error('tiers.' . $index . '.name')
+                                                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                                @enderror
+                                            </div>
+                                            
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-600 mb-1">Sort Order</label>
+                                                <input type="number" name="tiers[{{ $index }}][sort_order]" 
+                                                    value="{{ old('tiers.' . $index . '.sort_order', $tier['sort_order'] ?? $loop->iteration) }}"
+                                                    class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                                    min="0">
+                                                @error('tiers.' . $index . '.sort_order')
+                                                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                                @enderror
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="grid grid-cols-2 gap-3 mt-2">
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-600 mb-1">Min Consumption (m³) *</label>
+                                                <input type="number" name="tiers[{{ $index }}][min_consumption]" 
+                                                    step="0.01" min="0" required
+                                                    value="{{ old('tiers.' . $index . '.min_consumption', $tier['min_consumption'] ?? '') }}"
+                                                    class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                                    placeholder="0.00">
+                                                @error('tiers.' . $index . '.min_consumption')
+                                                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                                @enderror
+                                            </div>
+                                            
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-600 mb-1">Max Consumption (m³)</label>
+                                                <input type="number" name="tiers[{{ $index }}][max_consumption]" 
+                                                    step="0.01" min="0"
+                                                    value="{{ old('tiers.' . $index . '.max_consumption', $tier['max_consumption'] ?? '') }}"
+                                                    class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                                    placeholder="Leave empty for unlimited">
+                                                @error('tiers.' . $index . '.max_consumption')
+                                                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                                @enderror
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mt-2">
+                                            <label class="block text-xs font-medium text-gray-600 mb-1">Rate per m³ (KSh) *</label>
+                                            <input type="number" name="tiers[{{ $index }}][rate_per_unit]" 
+                                                step="0.0001" min="0" required
+                                                value="{{ old('tiers.' . $index . '.rate_per_unit', $tier['rate_per_unit'] ?? '') }}"
+                                                class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                                placeholder="0.0000">
+                                            @error('tiers.' . $index . '.rate_per_unit')
+                                                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+                                        
+                                        <div class="mt-2">
+                                            <label class="block text-xs font-medium text-gray-600 mb-1">Description</label>
+                                            <textarea name="tiers[{{ $index }}][description]" rows="2"
+                                                    class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                                    placeholder="Brief description of this tier...">{{ old('tiers.' . $index . '.description', $tier['description'] ?? '') }}</textarea>
+                                            @error('tiers.' . $index . '.description')
+                                                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+                                        
+                                        <div class="mt-2 flex items-center">
+                                            <input type="checkbox" name="tiers[{{ $index }}][is_active]" value="1" 
+                                                {{ old('tiers.' . $index . '.is_active', $tier['is_active'] ?? true) ? 'checked' : '' }}
+                                                class="w-3 h-3 text-blue-600 border-gray-300 rounded">
+                                            <label class="ml-2 text-xs text-gray-600">Active Tier</label>
+                                        </div>
+                                        
+                                        <!-- Include tier ID if editing existing tier -->
+                                        @if(isset($tier['id']))
+                                            <input type="hidden" name="tiers[{{ $index }}][id]" value="{{ $tier['id'] }}">
+                                        @endif
+                                    </div>
+                                @endforeach
+                            @endif
+                        </div>
+                        
+                        <div class="text-sm text-gray-500 mt-4">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Tiers are processed in order. Make sure consumption ranges don't overlap.
                         </div>
                     </div>
                 </div>
@@ -210,5 +331,122 @@
         </form>
     </div>
 </div>
+<script>
+let tierCounter = {{ count($meterCategory->pricingTiers) }};
+
+function toggleTieredPricing(enabled) {
+    const container = document.getElementById('tieredPricingContainer');
+    if (enabled) {
+        container.classList.remove('hidden');
+        // Add first tier if none exist
+        if (document.querySelectorAll('.tier-item').length === 0) {
+            addTier();
+        }
+    } else {
+        container.classList.add('hidden');
+    }
+}
+
+function addTier() {
+    tierCounter++;
+    const tiersContainer = document.getElementById('tiersContainer');
+    
+    const tierHtml = `
+        <div class="tier-item bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <div class="flex justify-between items-start mb-3">
+                <h4 class="font-medium text-gray-700">Tier ${tierCounter}</h4>
+                <button type="button" onclick="removeTier(this)" class="text-red-600 hover:text-red-800">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Tier Name *</label>
+                    <input type="text" name="tiers[${tierCounter}][name]" 
+                           class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                           placeholder="e.g., Tier 1 - Basic" required>
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Sort Order</label>
+                    <input type="number" name="tiers[${tierCounter}][sort_order]" 
+                           value="${tierCounter}"
+                           class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                           min="0">
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-3 mt-2">
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Min Consumption (m³) *</label>
+                    <input type="number" name="tiers[${tierCounter}][min_consumption]" 
+                           step="0.01" min="0" required
+                           class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                           placeholder="0.00">
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Max Consumption (m³)</label>
+                    <input type="number" name="tiers[${tierCounter}][max_consumption]" 
+                           step="0.01" min="0"
+                           class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                           placeholder="Leave empty for unlimited">
+                </div>
+            </div>
+            
+            <div class="mt-2">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Rate per m³ (KSh) *</label>
+                <input type="number" name="tiers[${tierCounter}][rate_per_unit]" 
+                       step="0.0001" min="0" required
+                       class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                       placeholder="0.0000">
+            </div>
+            
+            <div class="mt-2">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Description</label>
+                <textarea name="tiers[${tierCounter}][description]" rows="2"
+                          class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          placeholder="Brief description of this tier..."></textarea>
+            </div>
+            
+            <div class="mt-2 flex items-center">
+                <input type="checkbox" name="tiers[${tierCounter}][is_active]" value="1" 
+                       checked class="w-3 h-3 text-blue-600 border-gray-300 rounded">
+                <label class="ml-2 text-xs text-gray-600">Active Tier</label>
+            </div>
+        </div>
+    `;
+    
+    tiersContainer.insertAdjacentHTML('beforeend', tierHtml);
+}
+
+function removeTier(button) {
+    const tierItem = button.closest('.tier-item');
+    tierItem.remove();
+    
+    // Update tier numbers
+    const tierItems = document.querySelectorAll('.tier-item');
+    tierItems.forEach((item, index) => {
+        const tierNumber = index + 1;
+        const title = item.querySelector('h4');
+        const sortOrderInput = item.querySelector('input[name$="[sort_order]"]');
+        
+        if (title) title.textContent = `Tier ${tierNumber}`;
+        if (sortOrderInput) sortOrderInput.value = tierNumber;
+        
+        // Update all input names with new index
+        item.querySelectorAll('input, textarea').forEach(input => {
+            const name = input.name;
+            if (name.includes('tiers[')) {
+                const newName = name.replace(/tiers\[\d+\]/, `tiers[${tierNumber}]`);
+                input.name = newName;
+            }
+        });
+    });
+    
+    tierCounter = tierItems.length;
+}
+</script>
 @endcan
 @endsection

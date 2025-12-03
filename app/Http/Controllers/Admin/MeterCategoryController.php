@@ -41,6 +41,14 @@ class MeterCategoryController extends Controller
             'installation_fee' => 'nullable|numeric|min:0',
             'connection_fee' => 'nullable|numeric|min:0',
             'deposit' => 'nullable|numeric|min:0',
+            'tiers' => 'nullable|array',
+            'tiers.*.name' => 'required_with:tiers|string|max:100',
+            'tiers.*.min_consumption' => 'required_with:tiers|numeric|min:0',
+            'tiers.*.max_consumption' => 'nullable|numeric|min:0|gt:tiers.*.min_consumption',
+            'tiers.*.rate_per_unit' => 'required_with:tiers|numeric|min:0',
+            'tiers.*.description' => 'nullable|string|max:500',
+            'tiers.*.sort_order' => 'nullable|integer',
+            'tiers.*.is_active' => 'boolean',
         ]);
 
         try {
@@ -65,8 +73,45 @@ class MeterCategoryController extends Controller
                     'additional_charges' => $additionalCharges,
                 ]);
 
-                // If category has tiers, create default tier
-                if ($category->has_tiers) {
+                // Create pricing tiers if provided
+                if ($category->has_tiers && isset($validated['tiers'])) {
+                    foreach ($validated['tiers'] as $tierData) {
+                        // Check for overlapping tiers
+                        $overlapping = PricingTier::where('meter_category_id', $category->id)
+                            ->where(function($query) use ($tierData) {
+                                $query->where(function($q) use ($tierData) {
+                                    $q->where('min_consumption', '<=', $tierData['min_consumption'])
+                                    ->where(function($q2) use ($tierData) {
+                                        $q2->where('max_consumption', '>=', $tierData['min_consumption'])
+                                            ->orWhereNull('max_consumption');
+                                    });
+                                })->orWhere(function($q) use ($tierData) {
+                                    if (isset($tierData['max_consumption'])) {
+                                        $q->where('min_consumption', '<=', $tierData['max_consumption'])
+                                        ->where(function($q2) use ($tierData) {
+                                            $q2->where('max_consumption', '>=', $tierData['max_consumption'])
+                                                ->orWhereNull('max_consumption');
+                                        });
+                                    }
+                                });
+                            })
+                            ->exists();
+
+                        if (!$overlapping) {
+                            PricingTier::create([
+                                'meter_category_id' => $category->id,
+                                'name' => $tierData['name'],
+                                'min_consumption' => $tierData['min_consumption'],
+                                'max_consumption' => $tierData['max_consumption'] ?? null,
+                                'rate_per_unit' => $tierData['rate_per_unit'],
+                                'description' => $tierData['description'] ?? null,
+                                'sort_order' => $tierData['sort_order'] ?? 1,
+                                'is_active' => $tierData['is_active'] ?? true,
+                            ]);
+                        }
+                    }
+                } elseif ($category->has_tiers) {
+                    // Create default tier if has_tiers but no tiers provided
                     PricingTier::create([
                         'meter_category_id' => $category->id,
                         'name' => 'Default Tier',
@@ -117,28 +162,94 @@ class MeterCategoryController extends Controller
             'installation_fee' => 'nullable|numeric|min:0',
             'connection_fee' => 'nullable|numeric|min:0',
             'deposit' => 'nullable|numeric|min:0',
+            'tiers' => 'nullable|array',
+            'tiers.*.id' => 'nullable|exists:pricing_tiers,id',
+            'tiers.*.name' => 'required_with:tiers|string|max:100',
+            'tiers.*.min_consumption' => 'required_with:tiers|numeric|min:0',
+            'tiers.*.max_consumption' => 'nullable|numeric|min:0|gt:tiers.*.min_consumption',
+            'tiers.*.rate_per_unit' => 'required_with:tiers|numeric|min:0',
+            'tiers.*.description' => 'nullable|string|max:500',
+            'tiers.*.sort_order' => 'nullable|integer',
+            'tiers.*.is_active' => 'boolean',
         ]);
 
         try {
-            // Prepare additional charges
-            $additionalCharges = [
-                'installation_fee' => $validated['installation_fee'] ?? 0,
-                'connection_fee' => $validated['connection_fee'] ?? 0,
-                'deposit' => $validated['deposit'] ?? 0,
-            ];
+            DB::transaction(function () use ($validated, $meterCategory) {
+                // Prepare additional charges
+                $additionalCharges = [
+                    'installation_fee' => $validated['installation_fee'] ?? 0,
+                    'connection_fee' => $validated['connection_fee'] ?? 0,
+                    'deposit' => $validated['deposit'] ?? 0,
+                ];
 
-            $meterCategory->update([
-                'name' => $validated['name'],
-                'code' => $validated['code'],
-                'description' => $validated['description'],
-                'base_charge' => $validated['base_charge'],
-                'meter_rent' => $validated['meter_rent'],
-                'has_tiers' => $validated['has_tiers'] ?? false,
-                'default_rate' => $validated['default_rate'],
-                'is_active' => $validated['is_active'] ?? true,
-                'sort_order' => $validated['sort_order'] ?? 0,
-                'additional_charges' => $additionalCharges,
-            ]);
+                $meterCategory->update([
+                    'name' => $validated['name'],
+                    'code' => $validated['code'],
+                    'description' => $validated['description'],
+                    'base_charge' => $validated['base_charge'],
+                    'meter_rent' => $validated['meter_rent'],
+                    'has_tiers' => $validated['has_tiers'] ?? false,
+                    'default_rate' => $validated['default_rate'],
+                    'is_active' => $validated['is_active'] ?? true,
+                    'sort_order' => $validated['sort_order'] ?? 0,
+                    'additional_charges' => $additionalCharges,
+                ]);
+
+                // Handle pricing tiers
+                if ($meterCategory->has_tiers && isset($validated['tiers'])) {
+                    $existingTierIds = [];
+                    
+                    foreach ($validated['tiers'] as $tierData) {
+                        $tierData['meter_category_id'] = $meterCategory->id;
+                        
+                        // Check for overlapping tiers (excluding current tier if updating)
+                        $overlapping = PricingTier::where('meter_category_id', $meterCategory->id)
+                            ->where('id', '!=', $tierData['id'] ?? 0)
+                            ->where(function($query) use ($tierData) {
+                                $query->where(function($q) use ($tierData) {
+                                    $q->where('min_consumption', '<=', $tierData['min_consumption'])
+                                    ->where(function($q2) use ($tierData) {
+                                        $q2->where('max_consumption', '>=', $tierData['min_consumption'])
+                                            ->orWhereNull('max_consumption');
+                                    });
+                                })->orWhere(function($q) use ($tierData) {
+                                    if (isset($tierData['max_consumption'])) {
+                                        $q->where('min_consumption', '<=', $tierData['max_consumption'])
+                                        ->where(function($q2) use ($tierData) {
+                                            $q2->where('max_consumption', '>=', $tierData['max_consumption'])
+                                                ->orWhereNull('max_consumption');
+                                        });
+                                    }
+                                });
+                            })
+                            ->exists();
+
+                        if (!$overlapping) {
+                            if (isset($tierData['id'])) {
+                                // Update existing tier
+                                $tier = PricingTier::find($tierData['id']);
+                                if ($tier) {
+                                    $tier->update($tierData);
+                                    $existingTierIds[] = $tier->id;
+                                }
+                            } else {
+                                // Create new tier
+                                $tier = PricingTier::create($tierData);
+                                $existingTierIds[] = $tier->id;
+                            }
+                        }
+                    }
+                    
+                    // Delete tiers that were removed
+                    PricingTier::where('meter_category_id', $meterCategory->id)
+                        ->whereNotIn('id', $existingTierIds)
+                        ->delete();
+                        
+                } elseif (!$meterCategory->has_tiers) {
+                    // Delete all tiers if tiered pricing is disabled
+                    $meterCategory->pricingTiers()->delete();
+                }
+            });
 
             return redirect()->route('admin.meter-categories.index')
                 ->with('success', 'Meter category updated successfully!');
