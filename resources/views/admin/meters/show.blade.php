@@ -12,13 +12,7 @@
             'text' => 'Back to Meters',
             'href' => url('/admin/meters'),
             'icon' => 'fas fa-arrow-left',
-            'color' => 'bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800'
-        ],
-        [
-            'text' => 'Edit Meter',
-            'href' => url('/admin/meters/' . $meter->id . '/edit'),
-            'icon' => 'fas fa-edit',
-            'color' => 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700'
+            'color' => 'bg-gradient-to-r from-red-600 to-blue-700 hover:from-gray-700 hover:to-gray-800'
         ]
     ];
     @endphp

@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             MeterCategorySeeder::class,
             MeterPermissionsSeeder::class,
+            MeterSeeder::class,
         ]);
     }
 }

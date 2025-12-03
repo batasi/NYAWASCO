@@ -9,6 +9,7 @@ use App\Models\MeterCategory;
 use App\Models\MeterReading;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class MeterController extends Controller
 {
@@ -182,7 +183,9 @@ class MeterController extends Controller
             $query->latest()->limit(5);
         }]);
 
-        return view('admin.meters.show', compact('meter'));
+        $categories = MeterCategory::all();
+
+        return view('admin.meters.show', compact('meter', 'categories'));
     }
 
     public function edit(Meter $meter)
@@ -208,35 +211,35 @@ class MeterController extends Controller
         return view('admin.meters.edit', compact('meter', 'meterTypes', 'categories', 'customers', 'statuses'));
     }
 
-    public function update(Request $request, Meter $meter)
-    {
-        $validated = $request->validate([
-            'meter_number' => 'required|string|max:50|unique:meters,meter_number,' . $meter->id,
-            'meter_type' => 'required|string|in:domestic,commercial,industrial,institutional,smart,mechanical',
-            'meter_category_id' => 'required|exists:meter_categories,id',
-            'meter_model' => 'nullable|string|max:100',
-            'customer_id' => 'nullable|exists:customers,id',
-            'installation_address' => 'nullable|string|max:500',
-            'installation_date' => 'nullable|date',
-            'status' => 'required|string|in:available,assigned,faulty,maintenance',
-            'initial_reading' => 'nullable|numeric|min:0',
-            'installation_fee' => 'nullable|numeric|min:0',
-            'connection_fee' => 'nullable|numeric|min:0',
-            'deposit_amount' => 'nullable|numeric|min:0',
-            'balance_bf' => 'nullable|numeric|min:0',
-            'notes' => 'nullable|string|max:1000',
-        ]);
+    // public function update(Request $request, Meter $meter)
+    // {
+    //     $validated = $request->validate([
+    //         'meter_number' => 'required|string|max:50|unique:meters,meter_number,' . $meter->id,
+    //         'meter_type' => 'required|string|in:domestic,commercial,industrial,institutional,smart,mechanical',
+    //         'meter_category_id' => 'required|exists:meter_categories,id',
+    //         'meter_model' => 'nullable|string|max:100',
+    //         'customer_id' => 'nullable|exists:customers,id',
+    //         'installation_address' => 'nullable|string|max:500',
+    //         'installation_date' => 'nullable|date',
+    //         'status' => 'required|string|in:available,assigned,faulty,maintenance',
+    //         'initial_reading' => 'nullable|numeric|min:0',
+    //         'installation_fee' => 'nullable|numeric|min:0',
+    //         'connection_fee' => 'nullable|numeric|min:0',
+    //         'deposit_amount' => 'nullable|numeric|min:0',
+    //         'balance_bf' => 'nullable|numeric|min:0',
+    //         'notes' => 'nullable|string|max:1000',
+    //     ]);
 
-        // Update current balance if balance brought forward changes
-        if ($validated['balance_bf'] != $meter->balance_bf) {
-            $validated['current_balance'] = $validated['balance_bf'];
-        }
+    //     // Update current balance if balance brought forward changes
+    //     if ($validated['balance_bf'] != $meter->balance_bf) {
+    //         $validated['current_balance'] = $validated['balance_bf'];
+    //     }
 
-        $meter->update($validated);
+    //     $meter->update($validated);
 
-        return redirect()->route('admin.meters.show', $meter)
-            ->with('success', 'Meter updated successfully!');
-    }
+    //     return redirect()->route('admin.meters.show', $meter)
+    //         ->with('success', 'Meter updated successfully!');
+    // }
 
     public function getAvailableMeters(Request $request)
     {
@@ -279,5 +282,88 @@ class MeterController extends Controller
         }
 
         return response()->json(['address' => $address]);
+    }
+
+    public function getJson(Meter $meter)
+    {
+        Log::info('Fetching meter JSON data for meter ID: ' . $meter->id);
+        
+        return response()->json([
+            'id' => $meter->id,
+            'meter_number' => $meter->meter_number,
+            'meter_type' => $meter->meter_type,
+            'meter_category_id' => $meter->meter_category_id,
+            'meter_model' => $meter->meter_model,
+            'manufacturer' => $meter->manufacturer,
+            'latitude' => $meter->latitude,
+            'longtitude' => $meter->longtitude,
+            'status' => $meter->status,
+            'customer_id' => $meter->customer_id,
+            'installation_address' => $meter->installation_address,
+            'installation_date' => $meter->installation_date ? $meter->installation_date->format('Y-m-d') : null, // Format as Y-m-d
+            'last_maintenance_date' => $meter->last_maintenance_date ? $meter->last_maintenance_date->format('Y-m-d') : null, // Format as Y-m-d
+            'initial_reading' => (float) $meter->initial_reading,
+            'installation_fee' => (float) $meter->installation_fee,
+            'connection_fee' => (float) $meter->connection_fee,
+            'deposit_amount' => (float) $meter->deposit_amount,
+            'balance_bf' => (float) $meter->balance_bf,
+            'current_balance' => (float) $meter->current_balance,
+            'additional_charges' => $meter->additional_charges,
+            'notes' => $meter->notes,
+            'zone_id' => $meter->zone_id,
+            'walk_route_id' => $meter->walk_route_id,
+        ]);
+    }
+
+    public function update(Request $request, Meter $meter)
+    {
+        Log::info('Updating meter ID: ' . $meter->id, $request->all());
+        
+        $validated = $request->validate([
+            'meter_number' => 'required|string|max:50|unique:meters,meter_number,' . $meter->id,
+            'meter_type' => 'required|string|in:domestic,commercial,industrial,institutional,smart,mechanical',
+            'meter_category_id' => 'required|exists:meter_categories,id',
+            'meter_model' => 'nullable|string|max:100',
+            'manufacturer' => 'nullable|string|max:100',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
+            'status' => 'required|string|in:available,assigned,faulty,maintenance',
+            'customer_id' => 'nullable|exists:customers,id',
+            'installation_address' => 'nullable|string|max:500',
+            'installation_date' => 'nullable|date',
+            'last_maintenance_date' => 'nullable|date',
+            'initial_reading' => 'nullable|numeric|min:0',
+            'balance_bf' => 'nullable|numeric',
+            'current_balance' => 'nullable|numeric',
+            'additional_charges' => 'nullable|string|max:1000',
+            'notes' => 'nullable|string|max:1000',
+            'zone_id' => 'nullable|exists:zones,id',
+            'walk_route_id' => 'nullable|exists:walk_routes,id',
+        ]);
+
+        Log::info('Validation passed for meter ID: ' . $meter->id);
+        
+        // Handle the 'longitude' to 'longtitude' mapping
+        if (isset($validated['longitude'])) {
+            $validated['longtitude'] = $validated['longitude'];
+            unset($validated['longitude']);
+        }
+
+        // Update the meter
+        $meter->update($validated);
+        
+        Log::info('Meter updated successfully: ' . $meter->id);
+
+        // Return JSON response for AJAX requests
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Meter updated successfully!',
+                'meter' => $meter
+            ]);
+        }
+
+        return redirect()->route('admin.meters.show', $meter)
+            ->with('success', 'Meter updated successfully!');
     }
 }

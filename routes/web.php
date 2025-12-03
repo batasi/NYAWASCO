@@ -154,6 +154,10 @@ Route::post('/email/verification-notification', function (Request $request) {
     return back()->with('status', 'verification-link-sent');
 })->middleware(['auth', 'throttle:6,1'])->name('verification.send');
 
+Route::get('/admin/meters/{meter}/json', [App\Http\Controllers\Admin\MeterController::class, 'getJson'])
+    ->name('admin.meters.json')
+    ->middleware('auth');
+
 /*
 |--------------------------------------------------------------------------
 | AUTHENTICATED USER ROUTES
@@ -284,6 +288,7 @@ Route::middleware(['auth', 'verified', 'role:organizer'])->prefix('organizer')->
 | VENDOR ROUTES (ROLE-BASED)
 |--------------------------------------------------------------------------
 */
+
 
 Route::middleware(['auth', 'verified', 'role:vendor'])->prefix('vendor')->name('vendor.')->group(function () {
     Route::get('/dashboard', [VendorController::class, 'index'])->name('dashboard');

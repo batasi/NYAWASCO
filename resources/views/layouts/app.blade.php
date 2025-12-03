@@ -120,6 +120,26 @@ use Illuminate\Support\Facades\Route;
         transform: scale(1.1);
     }
 
+    /* Add this to your CSS file or in a style tag */
+    .modal-scroll {
+        scrollbar-width: thin;
+        scrollbar-color: #cbd5e0 #f7fafc;
+    }
+
+    .modal-scroll::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .modal-scroll::-webkit-scrollbar-track {
+        background: #f7fafc;
+        border-radius: 3px;
+    }
+
+    .modal-scroll::-webkit-scrollbar-thumb {
+        background-color: #cbd5e0;
+        border-radius: 3px;
+    }
+
     /* Mobile Responsive Top Bar */
     @media (max-width: 640px) {
         .nav-top-bar {
