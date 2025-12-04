@@ -254,47 +254,78 @@ public function infoByMeter($meter)
     ]);
 }
 // In your BillController
-public function generateReceipt(Bill $bill)
+// public function generateReceipt(Bill $bill)
+// {
+//     // Check if user has permission to generate receipts
+//     $this->authorize('view', $bill);
+
+//     // Get receipt data from model
+//     $receiptData = $bill->generateReceipt();
+
+//     // For PDQ devices, you might want different formats
+//     $format = request()->get('format', 'print'); // print, pdf, or preview
+
+//     if ($format === 'print') {
+//         // Return a view with auto-print JavaScript
+//         return view('bills.receipts.print', compact('receiptData', 'bill'));
+//     } elseif ($format === 'pdf') {
+//         // Temporarily disable PDF or handle differently
+//         return redirect()->route('bills.receipt', [
+//             'bill' => $bill->id,
+//             'format' => 'print'
+//         ]);
+//     } elseif ($format === 'thermal') {
+//         // Return raw thermal format for direct printing
+//         return response()->view('bills.receipts.thermal', compact('receiptData'))
+//             ->header('Content-Type', 'text/plain');
+//     } elseif ($format === 'preview') {
+//         // HTML preview
+//         return view('bills.receipts.preview', compact('receiptData', 'bill'));
+//     }
+
+//     // Default to print format
+//     return view('bills.receipts.print', compact('receiptData', 'bill'));
+// }
+
+// private function generatePDFReceipt($receiptData)
+// {
+//     // Using DomPDF or similar PDF library
+//     $pdf = \PDF::loadView('bills.receipts.pdf', compact('receiptData'));
+
+//     // Set paper size for receipt (80mm thermal printer width)
+//     $pdf->setPaper([0, 0, 226.77, 800], 'portrait'); // 80mm width in points
+
+//     return $pdf->download('receipt-' . $receiptData['bill_number'] . '.pdf');
+// }
+
+public function printReceipt(Bill $bill)
 {
-    // Check if user has permission to generate receipts
-    $this->authorize('view', $bill);
-
-    // Get receipt data from model
-    $receiptData = $bill->generateReceipt();
-
-    // For PDQ devices, you might want different formats
-    $format = request()->get('format', 'print'); // print, pdf, or preview
-
-    if ($format === 'print') {
-        // Return a view with auto-print JavaScript
-        return view('bills.receipts.print', compact('receiptData', 'bill'));
-    } elseif ($format === 'pdf') {
-        // Temporarily disable PDF or handle differently
-        return redirect()->route('bills.receipt', [
-            'bill' => $bill->id,
-            'format' => 'print'
-        ]);
-    } elseif ($format === 'thermal') {
-        // Return raw thermal format for direct printing
-        return response()->view('bills.receipts.thermal', compact('receiptData'))
-            ->header('Content-Type', 'text/plain');
-    } elseif ($format === 'preview') {
-        // HTML preview
-        return view('bills.receipts.preview', compact('receiptData', 'bill'));
-    }
-
-    // Default to print format
-    return view('bills.receipts.print', compact('receiptData', 'bill'));
-}
-
-private function generatePDFReceipt($receiptData)
-{
-    // Using DomPDF or similar PDF library
-    $pdf = \PDF::loadView('bills.receipts.pdf', compact('receiptData'));
-
-    // Set paper size for receipt (80mm thermal printer width)
-    $pdf->setPaper([0, 0, 226.77, 800], 'portrait'); // 80mm width in points
-
-    return $pdf->download('receipt-' . $receiptData['bill_number'] . '.pdf');
+    // Load necessary relationships
+    $bill->load(['customer', 'meter', 'payments', 'meter.meterCategory']);
+    
+    // Prepare receipt data
+    $receiptData = [
+        'bill_number' => $bill->bill_number,
+        'date' => now()->format('Y-m-d H:i:s'),
+        'receipt_number' => 'RCP-' . str_pad($bill->id, 6, '0', STR_PAD_LEFT),
+        'customer_name' => $bill->customer->first_name . ' ' . $bill->customer->last_name,
+        'customer_number' => $bill->customer->customer_number,
+        'customer_phone' => $bill->customer->phone ?? 'N/A',
+        'meter_number' => $bill->meter->meter_number ?? 'N/A',
+        'billing_period' => $bill->billing_period_start?->format('M d') . ' - ' . $bill->billing_period_end?->format('M d, Y'),
+        'consumption' => number_format($bill->consumption, 2) . ' m³',
+        'rate' => 'KSh ' . number_format($bill->meter?->meterCategory?->default_rate ?? 0, 4),
+        'subtotal' => 'KSh ' . number_format($bill->total_amount, 2),
+        'vat' => 'KSh 0.00', // Adjust based on your VAT calculation
+        'total_amount' => 'KSh ' . number_format($bill->total_amount, 2),
+        'amount_paid' => 'KSh ' . number_format($bill->payments->sum('amount'), 2),
+        'balance' => 'KSh ' . number_format($bill->total_amount - $bill->payments->sum('amount'), 2),
+        'payment_status' => $bill->bill_status,
+        'due_date' => $bill->due_date?->format('M d, Y') ?? 'N/A',
+        'footer_message' => 'Thank you for choosing NYAWASCO!',
+        'printed_date' => now()->format('Y-m-d H:i:s'),
+    ];
+    
+    return view('bills.receipts.print', compact('receiptData'));
 }
 }
