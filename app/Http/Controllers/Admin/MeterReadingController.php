@@ -228,6 +228,21 @@ class MeterReadingController extends Controller
         }
     }
     /**
+ * Check if meter needs initial reading
+ */
+private function needsInitialReading($meter)
+{
+    // Check if meter has initial_reading set
+    if ($meter->initial_reading > 0) {
+        return false;
+    }
+
+    // Check if there are any readings for this meter
+    $hasReadings = MeterReading::where('meter_id', $meter->id)->exists();
+
+    return !$hasReadings;
+}
+    /**
      * Generate bill automatically after meter reading for specific meter
      */
     private function generateBill(MeterReading $reading, Customer $customer, Meter $meter, $consumption)
