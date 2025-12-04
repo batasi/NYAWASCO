@@ -260,6 +260,12 @@
                                        title="View Bill">
                                         <i class="fas fa-eye"></i>
                                     </a>
+                                    <a href="{{ route('bills.receipt', $bill->id) }}"
+                                        class="text-purple-600 hover:text-purple-900 px-2 py-1 rounded transition duration-200"
+                                        title="Generate Receipt"
+                                        target="_blank">
+                                            <i class="fas fa-receipt"></i>
+                                    </a>
                                     <a href="{{ route('bills.edit', $bill->id) }}"
                                        class="text-green-600 hover:text-green-900 px-2 py-1 rounded transition duration-200"
                                        title="Edit Bill">

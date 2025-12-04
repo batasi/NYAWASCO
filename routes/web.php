@@ -234,6 +234,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/bills/quick', [QuickBillController::class, 'selectMeter'])->name('bills.quick');
     Route::post('/bills/quick/find-meter', [QuickBillController::class, 'findMeter'])->name('bills.quick.find');
     Route::get('/bills/quick/create/{meter}', [QuickBillController::class, 'createReading'])->name('bills.quick.create');
+    Route::get('/bills/{bill}/receipt', [BillController::class, 'generateReceipt'])->name('bills.receipt');
 });
 
 // Bill Information Routes (Public)

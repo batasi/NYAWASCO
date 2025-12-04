@@ -7,71 +7,72 @@ use App\Models\Meter;
 use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use PDF;
 
 class BillController extends Controller
 {
     public function index(Request $request)
-{
-    // Get bills with proper relationships and filters
-    $status = $request->get('status');
-    $sort = $request->get('sort', 'newest');
+    {
+        // Get bills with proper relationships and filters
+        $status = $request->get('status');
+        $sort = $request->get('sort', 'newest');
 
-    $bills = Bill::with([
-        'customer',
-        'meter.meterCategory',
-        'payments',
-        'meterReading'
-    ])
-    ->when($status && $status !== 'all', function($query) use ($status) {
-        if ($status === 'overdue') {
-            return $query->where('due_date', '<', now())
-                        ->where('bill_status', 'unpaid');
-        }
-        return $query->where('bill_status', $status);
-    })
-    ->when($sort, function($query) use ($sort) {
-        switch ($sort) {
-            case 'oldest':
-                return $query->oldest();
-            case 'amount_high':
-                return $query->orderBy('total_amount', 'desc');
-            case 'amount_low':
-                return $query->orderBy('total_amount', 'asc');
-            default:
-                return $query->latest();
-        }
-    })
-    ->paginate(10);
+        $bills = Bill::with([
+            'customer',
+            'meter.meterCategory',
+            'payments',
+            'meterReading'
+        ])
+        ->when($status && $status !== 'all', function($query) use ($status) {
+            if ($status === 'overdue') {
+                return $query->where('due_date', '<', now())
+                            ->where('bill_status', 'unpaid');
+            }
+            return $query->where('bill_status', $status);
+        })
+        ->when($sort, function($query) use ($sort) {
+            switch ($sort) {
+                case 'oldest':
+                    return $query->oldest();
+                case 'amount_high':
+                    return $query->orderBy('total_amount', 'desc');
+                case 'amount_low':
+                    return $query->orderBy('total_amount', 'asc');
+                default:
+                    return $query->latest();
+            }
+        })
+        ->paginate(10);
 
-    // Get TOTAL counts from the entire dataset (not filtered)
-    $totalBillsCount = Bill::count();
-    $unpaidBillsCount = Bill::where('bill_status', 'unpaid')->count();
-    $paidBillsCount = Bill::where('bill_status', 'paid')->count();
-    $partialBillsCount = Bill::where('bill_status', 'partial')->count();
-    $overdueBillsCount = Bill::where('due_date', '<', now())
-                            ->where('bill_status', 'unpaid')
-                            ->count();
+        // Get TOTAL counts from the entire dataset (not filtered)
+        $totalBillsCount = Bill::count();
+        $unpaidBillsCount = Bill::where('bill_status', 'unpaid')->count();
+        $paidBillsCount = Bill::where('bill_status', 'paid')->count();
+        $partialBillsCount = Bill::where('bill_status', 'partial')->count();
+        $overdueBillsCount = Bill::where('due_date', '<', now())
+                                ->where('bill_status', 'unpaid')
+                                ->count();
 
-    // Get stats for the cards (from filtered data for display)
-    $totalRevenue = $bills->sum('total_amount');
-    $outstandingBalance = $bills->where('bill_status', '!=', 'paid')->sum('total_amount');
-    $totalBills = $bills->total();
-    $paidBills = $bills->where('bill_status', 'paid')->count();
-    $collectionRate = $totalBills > 0 ? ($paidBills / $totalBills) * 100 : 0;
+        // Get stats for the cards (from filtered data for display)
+        $totalRevenue = $bills->sum('total_amount');
+        $outstandingBalance = $bills->where('bill_status', '!=', 'paid')->sum('total_amount');
+        $totalBills = $bills->total();
+        $paidBills = $bills->where('bill_status', 'paid')->count();
+        $collectionRate = $totalBills > 0 ? ($paidBills / $totalBills) * 100 : 0;
 
-    return view('bills.index', compact(
-        'bills',
-        'totalRevenue',
-        'outstandingBalance',
-        'totalBills',
-        'collectionRate',
-        'totalBillsCount',
-        'unpaidBillsCount',
-        'paidBillsCount',
-        'partialBillsCount',
-        'overdueBillsCount'
-    ));
-}
+        return view('bills.index', compact(
+            'bills',
+            'totalRevenue',
+            'outstandingBalance',
+            'totalBills',
+            'collectionRate',
+            'totalBillsCount',
+            'unpaidBillsCount',
+            'paidBillsCount',
+            'partialBillsCount',
+            'overdueBillsCount'
+        ));
+    }
 
 
     /**
@@ -251,5 +252,40 @@ public function infoByMeter($meter)
         }),
         'total_due' => $totalDue,
     ]);
+}
+// In your BillController
+public function generateReceipt(Bill $bill)
+{
+    // Check if user has permission to generate receipts
+    $this->authorize('view', $bill);
+
+    // Get receipt data from model
+    $receiptData = $bill->generateReceipt();
+
+    // For PDQ devices, you might want different formats
+    $format = request()->get('format', 'thermal'); // thermal, pdf, or html
+
+    if ($format === 'thermal') {
+        // Return thermal printer format for PDQ devices
+        return response()->view('bills.receipts.thermal', compact('receiptData'))
+            ->header('Content-Type', 'text/plain');
+    } elseif ($format === 'pdf') {
+        // Generate PDF receipt
+        return $this->generatePDFReceipt($receiptData);
+    }
+
+    // Default to HTML preview
+    return view('bills.receipts.preview', compact('receiptData'));
+}
+
+private function generatePDFReceipt($receiptData)
+{
+    // Using DomPDF or similar PDF library
+    $pdf = \PDF::loadView('bills.receipts.pdf', compact('receiptData'));
+
+    // Set paper size for receipt (80mm thermal printer width)
+    $pdf->setPaper([0, 0, 226.77, 800], 'portrait'); // 80mm width in points
+
+    return $pdf->download('receipt-' . $receiptData['bill_number'] . '.pdf');
 }
 }

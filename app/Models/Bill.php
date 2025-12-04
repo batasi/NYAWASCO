@@ -124,4 +124,37 @@ class Bill extends Model
     {
         return $this->total_amount > 0 ? ($this->paid_amount / $this->total_amount) * 100 : 0;
     }
+    // Add this method to your Bill model
+    public function generateReceipt()
+    {
+        // Format receipt data for PDQ devices
+        $receiptData = [
+            'company_name' => 'NYAWASCO',
+            'company_address' => 'Your Company Address',
+            'company_phone' => 'Your Company Phone',
+            'receipt_number' => 'REC-' . strtoupper(uniqid()),
+            'bill_number' => $this->bill_number,
+            'date' => now()->format('Y-m-d H:i:s'),
+            'customer_name' => $this->customer->first_name . ' ' . $this->customer->last_name,
+            'customer_number' => $this->customer->customer_number,
+            'customer_phone' => $this->customer->phone,
+            'meter_number' => $this->meter->meter_number ?? 'N/A',
+            'meter_category' => $this->meter->meterCategory->name ?? 'N/A',
+            'billing_period' => $this->billing_period_start?->format('M d, Y') . ' to ' . $this->billing_period_end?->format('M d, Y'),
+            'consumption' => number_format($this->consumption, 2) . ' m³',
+            'rate' => 'KSh ' . number_format($this->rate_per_unit ?? 0, 2),
+            'subtotal' => 'KSh ' . number_format($this->total_amount, 2),
+            'vat' => 'KSh ' . number_format($this->vat_amount ?? 0, 2),
+            'total_amount' => 'KSh ' . number_format($this->total_amount, 2),
+            'amount_paid' => 'KSh ' . number_format($this->payments->sum('amount'), 2),
+            'balance' => 'KSh ' . number_format($this->total_amount - $this->payments->sum('amount'), 2),
+            'payment_status' => ucfirst($this->bill_status),
+            'due_date' => $this->due_date?->format('M d, Y') ?? 'N/A',
+            'printed_date' => now()->format('F d, Y g:i A'),
+            'footer_message' => 'Thank you for choosing NYAWASCO!',
+            'payment_instructions' => 'Payments can be made at our offices or through M-Pesa Paybill: XXXX'
+        ];
+
+        return $receiptData;
+    }
 }
