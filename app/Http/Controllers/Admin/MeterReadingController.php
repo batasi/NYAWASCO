@@ -60,6 +60,33 @@ class MeterReadingController extends Controller
 
     public function store(Request $request)
     {
+        $readingPeriod = Carbon::parse($request->reading_date)->format('F Y');
+
+        // Check for duplicate reading for the same meter and period
+        $existingReading = MeterReading::where('customer_id', $request->customer_id)
+            ->where('meter_id', $request->meter_id)
+            ->where('reading_period', $readingPeriod)
+            ->first();
+
+        if ($existingReading && !$request->has('force_duplicate')) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "A meter reading for meter {$existingReading->meter->meter_number} in {$readingPeriod} already exists. Are you sure you want to create another reading for the same period?",
+                    'requires_confirmation' => true,
+                    'existing_reading' => [
+                        'id' => $existingReading->id,
+                        'reading_date' => $existingReading->reading_date,
+                        'current_reading' => $existingReading->current_reading,
+                        'reading_period' => $existingReading->reading_period,
+                        'meter_number' => $existingReading->meter->meter_number
+                    ]
+                ], 422);
+            }
+
+            throw new \Exception("Meter reading for {$readingPeriod} has already been recorded for this meter.");
+        }
+
         $request->validate([
             'customer_id' => 'required|exists:customers,id',
             'meter_id' => 'required|exists:meters,id',
@@ -67,47 +94,13 @@ class MeterReadingController extends Controller
             'reading_date' => 'required|date',
             'reading_image' => 'nullable|image|max:2048',
             'notes' => 'nullable|string|max:500',
-            'initial_reading' => 'nullable|numeric|min:0', // For initial readings
         ]);
 
-        $readingPeriod = Carbon::parse($request->reading_date)->format('F Y');
-
-        // Check if this is an initial reading
-        $isInitialReading = $request->has('is_initial_reading') && $request->is_initial_reading == '1';
-
-        // Check for duplicate reading for the same meter and period
-        if (!$isInitialReading) {
-            $existingReading = MeterReading::where('customer_id', $request->customer_id)
-                ->where('meter_id', $request->meter_id)
-                ->where('reading_period', $readingPeriod)
-                ->first();
-
-            if ($existingReading && !$request->has('force_duplicate')) {
-                if ($request->ajax()) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => "A meter reading for meter {$existingReading->meter->meter_number} in {$readingPeriod} already exists.",
-                        'requires_confirmation' => true,
-                        'existing_reading' => [
-                            'id' => $existingReading->id,
-                            'reading_date' => $existingReading->reading_date,
-                            'current_reading' => $existingReading->current_reading,
-                            'reading_period' => $existingReading->reading_period,
-                            'meter_number' => $existingReading->meter->meter_number
-                        ]
-                    ], 422);
-                }
-                throw new \Exception("Meter reading for {$readingPeriod} has already been recorded for this meter.");
-            }
-        }
-
         try {
-            // Define variables outside transaction
+            // Define meter variable outside the transaction
             $meter = null;
-            $customer = null;
-            $readingType = 'monthly';
 
-            DB::transaction(function () use ($request, $readingPeriod, $isInitialReading, &$meter, &$customer, &$readingType) {
+            DB::transaction(function () use ($request, $readingPeriod, &$meter) {
                 // Get customer and meter
                 $customer = Customer::findOrFail($request->customer_id);
                 $meter = Meter::findOrFail($request->meter_id);
@@ -117,47 +110,21 @@ class MeterReadingController extends Controller
                     throw new \Exception('Selected meter does not belong to this customer.');
                 }
 
-                // HANDLE INITIAL READING
-                if ($isInitialReading) {
-                    // Set initial reading on meter
-                    $initialReading = $request->input('initial_reading', $request->current_reading);
+                // Get previous reading for this specific meter
+                $previousReading = MeterReading::where('customer_id', $request->customer_id)
+                    ->where('meter_id', $request->meter_id)
+                    ->latest()
+                    ->first();
 
-                    $meter->update([
-                        'initial_reading' => $initialReading,
-                        'current_reading' => $request->current_reading
-                    ]);
+                $previousReadingValue = $previousReading ? $previousReading->current_reading : ($meter->initial_reading ?? 0);
 
-                    $previousReadingValue = $initialReading;
-                    $readingType = 'initial';
-
-                } else {
-                    // Get previous reading for this meter
-                    $previousReading = MeterReading::where('meter_id', $meter->id)
-                        ->latest()
-                        ->first();
-
-                    // If no previous reading exists, check meter's initial_reading
-                    if (!$previousReading) {
-                        $previousReadingValue = $meter->initial_reading ?? 0;
-                        // Update meter's current reading if it's the first reading
-                        $meter->update(['current_reading' => $request->current_reading]);
-                    } else {
-                        $previousReadingValue = $previousReading->current_reading;
-
-                        // Validate current reading is not less than previous
-                        if ($request->current_reading < $previousReadingValue) {
-                            throw new \Exception('Current reading (' . number_format($request->current_reading, 2) .
-                                ' m³) cannot be less than previous reading (' .
-                                number_format($previousReadingValue, 2) . ' m³).');
-                        }
-
-                        // Update meter's current reading
-                        $meter->update(['current_reading' => $request->current_reading]);
-                    }
+                // Validate current reading
+                if ($request->current_reading < $previousReadingValue) {
+                    throw new \Exception('Current reading cannot be less than previous reading (' . number_format($previousReadingValue, 2) . ' m³).');
                 }
 
                 // Calculate consumption
-                $consumption = max(0, $request->current_reading - $previousReadingValue);
+                $consumption = $request->current_reading - $previousReadingValue;
 
                 // Handle image upload
                 $imagePath = null;
@@ -165,15 +132,15 @@ class MeterReadingController extends Controller
                     $imagePath = $request->file('reading_image')->store('meter-readings', 'public');
                 }
 
-                // Create reading record
+                // Create reading
                 $reading = MeterReading::create([
-                    'customer_id' => $customer->id,
-                    'meter_id' => $meter->id,
+                    'customer_id' => $request->customer_id,
+                    'meter_id' => $request->meter_id,
                     'current_reading' => $request->current_reading,
                     'previous_reading' => $previousReadingValue,
                     'consumption' => $consumption,
                     'reading_date' => $request->reading_date,
-                    'reading_type' => $readingType,
+                    'reading_type' => 'monthly',
                     'reading_period' => $readingPeriod,
                     'billed' => false,
                     'reading_image' => $imagePath,
@@ -181,66 +148,35 @@ class MeterReadingController extends Controller
                     'read_by' => auth()->id(),
                 ]);
 
-                // AUTO-GENERATE BILL (only for non-initial readings with consumption)
-                if (!$isInitialReading && $consumption > 0) {
-                    $bill = $this->generateBill($reading, $customer, $meter, $consumption);
+                // UPDATE METER'S CURRENT READING
+                $meter->update([
+                    'current_reading' => $request->current_reading
+                ]);
 
-                    // Update reading to mark as billed
-                    $reading->update([
-                        'billed' => true,
-                        'billed_by' => auth()->id(),
-                        'billed_at' => now(),
-                    ]);
+                // AUTO-GENERATE BILL FOR SPECIFIC METER
+                $bill = $this->generateBill($reading, $customer, $meter, $consumption);
 
-                    // UPDATE METER AND CUSTOMER BALANCES
-                    $this->updateBalances($meter, $customer, $bill->total_amount);
+                // UPDATE METER AND CUSTOMER BALANCES
+                $this->updateBalances($meter, $customer, $bill->total_amount);
 
-                    Log::info("Meter reading recorded and bill generated", [
-                        'customer_id' => $customer->id,
-                        'meter_id' => $meter->id,
-                        'reading_id' => $reading->id,
-                        'bill_id' => $bill->id,
-                        'consumption' => $consumption,
-                        'amount' => $bill->total_amount
-                    ]);
-                } else {
-                    Log::info("Initial meter reading recorded", [
-                        'customer_id' => $customer->id,
-                        'meter_id' => $meter->id,
-                        'reading_id' => $reading->id,
-                        'reading_type' => $readingType,
-                        'consumption' => $consumption,
-                    ]);
-                }
+                Log::info("Meter reading recorded and bill generated", [
+                    'customer_id' => $customer->id,
+                    'meter_id' => $meter->id,
+                    'reading_id' => $reading->id,
+                    'bill_id' => $bill->id,
+                    'consumption' => $consumption,
+                    'amount' => $bill->total_amount
+                ]);
             });
 
-            // Return success message
-            $message = $isInitialReading
-                ? 'Initial meter reading recorded successfully for meter ' . $meter->meter_number . '!'
-                : 'Meter reading recorded' . ($consumption > 0 ? ' and bill generated' : '') . ' successfully for meter ' . $meter->meter_number . '!';
-
-            return redirect()->route('admin.customers.show', $customer->id)
-                ->with('success', $message);
+            // Now $meter is available for the success message
+            return redirect()->route('admin.customers.show', $request->customer_id)
+                ->with('success', 'Meter reading recorded and bill generated successfully for meter ' . $meter->meter_number . '!');
 
         } catch (\Exception $e) {
             Log::error('Meter reading creation error: ' . $e->getMessage());
             return back()->withInput()->with('error', $e->getMessage());
         }
-    }
-    /**
- * Check if meter needs initial reading
- */
-    private function needsInitialReading($meter)
-    {
-        // Check if meter has initial_reading set
-        if ($meter->initial_reading > 0) {
-            return false;
-        }
-
-        // Check if there are any readings for this meter
-        $hasReadings = MeterReading::where('meter_id', $meter->id)->exists();
-
-        return !$hasReadings;
     }
     /**
      * Generate bill automatically after meter reading for specific meter

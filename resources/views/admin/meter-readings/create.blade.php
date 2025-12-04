@@ -122,80 +122,153 @@
         @endif
 
         <!-- Reading Form -->
-        <!-- Reading Form -->
-    <form action="{{ route('admin.meter-readings.store') }}" method="POST" enctype="multipart/form-data" id="readingForm">
-        @csrf
+        <form action="{{ route('admin.meter-readings.store') }}" method="POST" enctype="multipart/form-data" id="readingForm">
+            @csrf
 
-        <input type="hidden" name="customer_id" value="{{ $customer->id }}">
-        <input type="hidden" name="meter_id" id="selected_meter_id" value="{{ $meter->id }}" required>
+            <input type="hidden" name="customer_id" value="{{ $customer->id }}">
+            <input type="hidden" name="meter_id" id="selected_meter_id" value="{{ $meter->id }}" required>
 
-        <!-- Hidden field to identify initial reading -->
-        <input type="hidden" name="is_initial_reading" id="is_initial_reading" value="{{ $isInitialReading ? '1' : '0' }}">
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- Current Reading -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Current Reading (m³) *</label>
+                    <input type="number"
+                            name="current_reading"
+                            id="current_reading"
+                            step="0.01"
+                            min="{{ $lastReading ? $lastReading->current_reading : ($meter->initial_reading ?? 0) }}"
+                            required
+                            value="{{ old('current_reading') }}"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition duration-200"
+                            placeholder="Enter current reading">
+                    <div id="readingValidation" class="mt-1 text-sm"></div>
+                    @error('current_reading')
+                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
 
-        <div class="grid md:grid-cols-2 gap-6">
-            <!-- Initial Reading (only for first reading) -->
-            @if($isInitialReading)
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Initial Meter Reading (m³) *</label>
-                <input type="number"
-                        name="initial_reading"
-                        id="initial_reading"
-                        step="0.01"
-                        min="0"
-                        required
-                        value="{{ old('initial_reading', $meter->initial_reading ?? '') }}"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition duration-200"
-                        placeholder="Enter initial meter reading">
-                <p class="text-sm text-gray-500 mt-1">This will set the meter's starting point</p>
-            </div>
-            @endif
-
-            <!-- Current Reading -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                    @if($isInitialReading)
-                        Current Reading (m³) *
-                    @else
-                        New Reading (m³) *
-                    @endif
-                </label>
-                <input type="number"
-                        name="current_reading"
-                        id="current_reading"
-                        step="0.01"
-                        min="{{ $lastReading ? $lastReading->current_reading : ($meter->initial_reading ?? 0) }}"
-                        required
-                        value="{{ old('current_reading') }}"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition duration-200"
-                        placeholder="Enter current reading">
-                <div class="mt-1 text-sm">
-                    @if($lastReading)
-                        <span class="text-gray-600">Previous reading: {{ number_format($lastReading->current_reading, 2) }} m³</span>
-                    @elseif($meter->initial_reading > 0)
-                        <span class="text-gray-600">Initial reading: {{ number_format($meter->initial_reading, 2) }} m³</span>
-                    @else
-                        <span class="text-yellow-600">No previous reading found. This will be recorded as initial reading.</span>
-                    @endif
+                <!-- Reading Date -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Reading Date *</label>
+                    <input type="date"
+                            name="reading_date"
+                            required
+                            max="{{ date('Y-m-d') }}"
+                            value="{{ old('reading_date', date('Y-m-d')) }}"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition duration-200">
+                    @error('reading_date')
+                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                    @enderror
                 </div>
             </div>
 
-            <!-- Reading Date -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Reading Date *</label>
-                <input type="date"
-                        name="reading_date"
-                        required
-                        max="{{ date('Y-m-d') }}"
-                        value="{{ old('reading_date', date('Y-m-d')) }}"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition duration-200">
-                @error('reading_date')
-                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                @enderror
-            </div>
-        </div>
+            <!-- Camera Capture Section -->
+            <div class="mt-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Meter Reading Photo</label>
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-green-400 transition duration-200">
+                    <!-- Camera Preview -->
+                    <div id="cameraPreview" class="hidden mb-4">
+                        <video id="video" width="100%" height="auto" autoplay class="rounded-lg shadow-md"></video>
+                        <canvas id="canvas" class="hidden"></canvas>
+                    </div>
 
-        <!-- Rest of your form (camera, notes, etc.) remains the same -->
-    </form>
+                    <!-- Captured Image Preview -->
+                    <div id="imagePreview" class="hidden mb-4">
+                        <img id="preview" src="" alt="Captured reading" class="max-w-full h-auto rounded-lg mx-auto max-h-64 shadow-md">
+                        <p class="text-sm text-green-600 mt-2">✓ Photo captured successfully</p>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div id="cameraControls" class="space-y-2">
+                        <button type="button"
+                                id="startCamera"
+                                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200 flex items-center justify-center mx-auto shadow-md">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                            Open Camera
+                        </button>
+
+                        <div id="captureControls" class="hidden space-y-2">
+                            <button type="button"
+                                    id="capture"
+                                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition duration-200 flex items-center justify-center mx-auto shadow-md">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                                Capture Photo
+                            </button>
+
+                            <button type="button"
+                                    id="retake"
+                                    class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg transition duration-200 flex items-center justify-center mx-auto shadow-md">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                </svg>
+                                Retake Photo
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- File Input Fallback -->
+                    <div class="mt-4 pt-4 border-t border-gray-200">
+                        <p class="text-sm text-gray-500 mb-2">Or upload existing photo</p>
+                        <input type="file"
+                                name="reading_image"
+                                id="fileInput"
+                                accept="image/*"
+                                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition duration-200">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notes -->
+            <div class="mt-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+                <textarea name="notes"
+                            rows="3"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition duration-200"
+                            placeholder="Any additional notes about this reading...">{{ old('notes') }}</textarea>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="mt-8 flex justify-between items-center">
+                <div class="flex space-x-3">
+
+
+                    @if($customer)
+                    <a href="{{ route('admin.customers.show', $customer) }}"
+                        class="bg-blue-600 me-2 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition duration-200 flex items-center shadow-md">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        </svg>
+                        {{ $customer->first_name }}'s Profile
+                    </a>
+                    @else
+                    <a href="{{ route('admin.meter-readings.index') }}"
+                        class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition duration-200 flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                        </svg>
+                        Back to Readings
+                    </a>
+                    @endif
+                </div>
+
+                <div class="flex space-x-4">
+
+                    <button type="submit"
+                            class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg transition duration-200 flex items-center shadow-md">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        Record Reading
+                    </button>
+                </div>
+            </div>
+        </form>
     </div>
     @else
     <!-- No Meter Selected State -->
