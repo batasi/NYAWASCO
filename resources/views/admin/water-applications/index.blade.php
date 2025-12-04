@@ -35,6 +35,7 @@ if (auth()->user()->can('add customers')) {
     ])
 
     <!-- Stats -->
+     <br>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div class="bg-white rounded-lg shadow p-4">
             <div class="text-sm text-gray-500">Total Applications</div>

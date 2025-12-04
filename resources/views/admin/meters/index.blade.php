@@ -4,7 +4,7 @@
 
 @section('content')
 @can('view meters')
-<div class="container mx-auto px-4 py-8">
+<div class="min-h-screen bg-gray-50">
     <!-- Header -->
     @php
     $actionButtons = [];
@@ -18,14 +18,7 @@
         ];
     }
 
-    if (auth()->user()->can('manage categories')) {
-        $actionButtons[] = [
-            'text' => 'Manage Categories',
-            'href' => route('admin.meter-categories.index'),
-            'icon' => 'fas fa-tags',
-            'color' => 'bg-purple-600 hover:bg-purple-700'
-        ];
-    }
+
     @endphp
 
     @include('components.dashboard-header',[
@@ -33,8 +26,10 @@
         'subtitle' => 'Meters Management Platform',
         'actionButtons' => $actionButtons
     ])
-
+    <br>
     <!-- Statistics -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6 text-center hover:shadow-xl transition-all duration-300 hover:border-blue-200">
             <div class="text-3xl font-bold text-blue-600 mb-2">{{ $stats['total'] }}</div>
@@ -714,6 +709,7 @@
         </div>
     </div>
 </div>
+</div>
 
     <script>
     function openMeterModal() {
@@ -1017,6 +1013,6 @@
         }
     });
     </script>
-</div>
+
 @endcan
 @endsection

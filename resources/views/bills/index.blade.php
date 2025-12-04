@@ -39,7 +39,7 @@
 
                 if (auth()->user()->can('add bills')) {
                     $actionButtons[] = [
-                        'text' => 'Generate Bill',
+                        'text' => 'Record',
                         'onclick' => 'openQuickBillModal()',
                         'icon' => 'fas fa-bolt',
                         'color' => 'bg-green-600 hover:bg-green-700'
@@ -294,7 +294,7 @@
                                         <i class="fas fa-edit"></i>
                                     </a>
                                     <!-- Simple Print Link -->
-                                    <a href="{{ route('bills.print', $bill->id) }}" 
+                                    <a href="{{ route('bills.print', $bill->id) }}"
                                         target="_blank"
                                         class="text-purple-600 hover:text-purple-900 px-2 py-1 rounded transition duration-200"
                                         title="Print Receipt">
@@ -405,23 +405,23 @@ document.addEventListener('DOMContentLoaded', function() {
         button.addEventListener('click', function(e) {
             e.preventDefault();
             const billId = this.getAttribute('data-bill-id');
-            
+
             // Open a larger window for better visibility
-            const printWindow = window.open(`/bills/${billId}/receipt/print`, 
+            const printWindow = window.open(`/bills/${billId}/receipt/print`,
                 'PrintReceipt',
                 'width=500,height=700,scrollbars=yes,toolbar=no,location=no,menubar=no');
-            
+
             // Focus the window
             if (printWindow) {
                 printWindow.focus();
             }
-            
+
             // Show a loading indicator
             const originalText = this.innerHTML;
             this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             this.disabled = true;
             this.classList.add('opacity-50');
-            
+
             // Reset button after 5 seconds
             setTimeout(() => {
                 this.innerHTML = originalText;
@@ -437,7 +437,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             document.getElementById('billSearch').focus();
         }
-        
+
         // Alt+P for quick print (first bill's print button)
         if (e.altKey && e.key === 'p') {
             e.preventDefault();
