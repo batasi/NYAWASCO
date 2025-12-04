@@ -185,25 +185,20 @@ class MeterReadingController extends Controller
     {
         // Get meter category pricing
         $category = $meter->meterCategory;
-        $baseCharge = $category->base_charge ?? 100; // Default base charge
-        $consumptionRate = $category->rate_per_unit ?? 50; // Rate per cubic meter
-        $taxRate = 0.16; // 16% VAT
+        $baseCharge = $category->base_charge ?? 100;
+        $consumptionRate = $category->default_rate ?? 50;
+        $taxRate = 0.16;
 
         // Calculate charges
         $consumptionCharge = $consumption * $consumptionRate;
         $taxAmount = ($baseCharge + $consumptionCharge) * $taxRate;
-        $totalAmount = $baseCharge + $consumptionCharge + $taxAmount;
+        $totalAmount = $baseCharge + $consumptionCharge;
 
-        // Generate bill number
-        $latestBill = Bill::latest()->first();
-        $billNumber = 'BILL-' . str_pad(($latestBill ? $latestBill->id : 0) + 1, 6, '0', STR_PAD_LEFT);
-
-        // Create bill linked to specific meter and reading
+        // STEP 1: Create bill without bill_number first
         $bill = Bill::create([
             'customer_id' => $customer->id,
             'meter_id' => $meter->id,
             'meter_reading_id' => $reading->id,
-            'bill_number' => $billNumber,
             'billing_period_start' => Carbon::parse($reading->reading_date)->startOfMonth(),
             'billing_period_end' => Carbon::parse($reading->reading_date)->endOfMonth(),
             'consumption' => $consumption,
@@ -217,6 +212,11 @@ class MeterReadingController extends Controller
             'created_by' => auth()->id(),
         ]);
 
+        // STEP 2: Generate safe bill number using the bill ID
+        $bill->update([
+            'bill_number' => 'B-' . str_pad($bill->id, 6, '0', STR_PAD_LEFT)
+        ]);
+
         // Mark reading as billed
         $reading->update([
             'billed' => true,
@@ -226,6 +226,7 @@ class MeterReadingController extends Controller
 
         return $bill;
     }
+
 
     /**
      * Update meter and customer balances after bill generation
@@ -238,13 +239,8 @@ class MeterReadingController extends Controller
             'current_balance' => $newMeterBalance
         ]);
 
-        // Update customer balance (sum of all meter balances)
-        $totalCustomerBalance = $customer->meters->sum('current_balance');
-        $customer->update([
-            'current_balance' => $totalCustomerBalance
-        ]);
 
-        Log::info("Balances updated - Meter: {$meter->meter_number}, New Balance: {$newMeterBalance}, Customer: {$customer->customer_number}, Total Balance: {$totalCustomerBalance}");
+
     }
 
     /**

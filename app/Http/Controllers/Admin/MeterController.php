@@ -17,7 +17,7 @@ class MeterController extends Controller
     {
         $categoryId = $request->get('category');
         $filter = $request->get('filter', 'all'); // all, available, assigned, location
-        
+
         $query = Meter::with(['customer', 'meterCategory', 'meterReadings' => function($query) {
             $query->latest()->limit(1);
         }]);
@@ -97,7 +97,7 @@ class MeterController extends Controller
                 $additionalCharges = $category->additional_charges ?? [];
 
                 // Determine status based on customer assignment
-                $validated['status'] = $validated['customer_id'] ? 'assigned' : 'available';
+                $validated['status'] = $validated['customer_id'] ? 'active' : 'available';
 
                 // Set default fees from category if not provided
                 $validated['installation_fee'] = $validated['installation_fee'] ?? ($additionalCharges['installation_fee'] ?? 0);
@@ -111,7 +111,7 @@ class MeterController extends Controller
                 // If assigned to customer, update customer record and create initial reading
                 if ($validated['customer_id']) {
                     $customer = Customer::find($validated['customer_id']);
-                    
+
                     // Update customer with meter info
                     $customer->update([
                         'meter_number' => $meter->meter_number,
@@ -203,8 +203,10 @@ class MeterController extends Controller
         $customers = Customer::active()->get();
         $statuses = [
             'available' => 'Available',
-            'assigned' => 'Assigned',
-            'faulty' => 'Faulty',
+            'active' => 'Active',
+            'sealed' => 'Sealed',
+            'pending_payment' => 'Pending payment',
+            'terminated' => 'Terminated',
             'maintenance' => 'Maintenance',
         ];
 
@@ -244,7 +246,7 @@ class MeterController extends Controller
     public function getAvailableMeters(Request $request)
     {
         $categoryId = $request->get('category_id');
-        
+
         $meters = Meter::where('status', 'available')
             ->when($categoryId, function($query) use ($categoryId) {
                 return $query->where('meter_category_id', $categoryId);
@@ -261,7 +263,7 @@ class MeterController extends Controller
                     'category_name' => $meter->meterCategory->name ?? 'No Category'
                 ];
             });
-        
+
         return response()->json($meters);
     }
 
@@ -271,7 +273,7 @@ class MeterController extends Controller
     public function getCustomerAddress($customerId)
     {
         $customer = Customer::find($customerId);
-        
+
         if (!$customer) {
             return response()->json(['address' => '']);
         }
@@ -287,7 +289,7 @@ class MeterController extends Controller
     public function getJson(Meter $meter)
     {
         Log::info('Fetching meter JSON data for meter ID: ' . $meter->id);
-        
+
         return response()->json([
             'id' => $meter->id,
             'meter_number' => $meter->meter_number,
@@ -318,7 +320,7 @@ class MeterController extends Controller
     public function update(Request $request, Meter $meter)
     {
         Log::info('Updating meter ID: ' . $meter->id, $request->all());
-        
+
         $validated = $request->validate([
             'meter_number' => 'required|string|max:50|unique:meters,meter_number,' . $meter->id,
             'meter_type' => 'required|string|in:domestic,commercial,industrial,institutional,smart,mechanical',
@@ -327,7 +329,7 @@ class MeterController extends Controller
             'manufacturer' => 'nullable|string|max:100',
             'latitude' => 'nullable|numeric|between:-90,90',
             'longitude' => 'nullable|numeric|between:-180,180',
-            'status' => 'required|string|in:available,assigned,faulty,maintenance',
+            'status' => 'required|string|in:available,active,sealed,terminated,maintenance',
             'customer_id' => 'nullable|exists:customers,id',
             'installation_address' => 'nullable|string|max:500',
             'installation_date' => 'nullable|date',
@@ -342,7 +344,7 @@ class MeterController extends Controller
         ]);
 
         Log::info('Validation passed for meter ID: ' . $meter->id);
-        
+
         // Handle the 'longitude' to 'longtitude' mapping
         if (isset($validated['longitude'])) {
             $validated['longtitude'] = $validated['longitude'];
@@ -351,7 +353,7 @@ class MeterController extends Controller
 
         // Update the meter
         $meter->update($validated);
-        
+
         Log::info('Meter updated successfully: ' . $meter->id);
 
         // Return JSON response for AJAX requests

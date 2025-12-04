@@ -10,20 +10,22 @@
 
 <div class="container mx-auto px-4 py-8 relative z-10">
     <!-- Header -->
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-        <div class="text-center md:text-left">
-            <h1 class="text-2xl md:text-3xl font-bold text-blue-800">{{ $customer->first_name }}'s Profile</h1>
-            <p class="text-gray-600 mt-2">Complete customer information, billing history, and account management</p>
-        </div>
+    @php
+    $actionButtons = [];
 
-        <a href="{{ route('admin.customers.index') }}"
-           class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 rounded-lg transition duration-200 flex items-center justify-center w-20px md:w-auto no-print text-sm">
-            <i class="fas fa-arrow-left mr-2"></i>
-            Back to Customers
-        </a>
-    </div>
+
+
+    @endphp
+
+    @include('components.dashboard-header',[
+        'title' => 'Customer Profile',
+        'subtitle' => 'Complete customer information, billing history, and account management',
+        'actionButtons' => $actionButtons
+    ])
+
 
     <!-- Account Summary Cards -->
+     <br>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
         <!-- Account Balance -->
         <div class="bg-white rounded-xl shadow-md p-4 md:p-6 border border-gray-100 card-hover">

@@ -41,19 +41,19 @@
             <div class="text-gray-700 font-medium">Total Meters</div>
             <div class="text-xs text-gray-500 mt-1">All registered meters</div>
         </div>
-        
+
         <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6 text-center hover:shadow-xl transition-all duration-300 hover:border-green-200">
             <div class="text-3xl font-bold text-green-600 mb-2">{{ $stats['assigned'] }}</div>
             <div class="text-gray-700 font-medium">Active</div>
             <div class="text-xs text-gray-500 mt-1">Active meters</div>
         </div>
-        
+
         <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6 text-center hover:shadow-xl transition-all duration-300 hover:border-orange-200">
             <div class="text-3xl font-bold text-orange-600 mb-2">{{ $stats['unassigned'] }}</div>
             <div class="text-gray-700 font-medium">Available</div>
             <div class="text-xs text-gray-500 mt-1">Available for assignment</div>
         </div>
-        
+
         <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6 text-center hover:shadow-xl transition-all duration-300 hover:border-red-200">
             <div class="text-3xl font-bold text-red-600 mb-2">{{ $stats['faulty'] }}</div>
             <div class="text-gray-700 font-medium">Faulty</div>
@@ -63,7 +63,7 @@
 
     <!-- Quick Actions with Active Filter Indicators -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-1 mb-3">
-        <a href="{{ route('admin.meters.index', ['filter' => 'all']) }}" 
+        <a href="{{ route('admin.meters.index', ['filter' => 'all']) }}"
            class="bg-blue-500 hover:bg-blue-600 text-white p-6 rounded-xl text-center transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 {{ ($filter ?? 'all') == 'all' ? 'ring-2 ring-blue-300 ring-opacity-50' : '' }}">
             <div class="text-xl font-semibold mb-2">All Meters</div>
             <div class="text-sm opacity-90">View all meters</div>
@@ -71,8 +71,8 @@
                 <i class="fas fa-tachometer-alt"></i>
             </div>
         </a>
-        
-        <a href="{{ route('admin.meters.index', ['filter' => 'available']) }}" 
+
+        <a href="{{ route('admin.meters.index', ['filter' => 'available']) }}"
            class="bg-orange-500 hover:bg-orange-600 text-white p-6 rounded-xl text-center transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 {{ ($filter ?? '') == 'available' ? 'ring-2 ring-orange-300 ring-opacity-50' : '' }}">
             <div class="text-xl font-semibold mb-2">Available Meters</div>
             <div class="text-sm opacity-90">View available meters</div>
@@ -80,8 +80,8 @@
                 <i class="fas fa-box-open"></i>
             </div>
         </a>
-        
-        <a href="{{ route('admin.meters.index', ['filter' => 'active']) }}" 
+
+        <a href="{{ route('admin.meters.index', ['filter' => 'active']) }}"
            class="bg-green-500 hover:bg-green-600 text-white p-6 rounded-xl text-center transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 {{ ($filter ?? '') == 'assigned' ? 'ring-2 ring-green-300 ring-opacity-50' : '' }}">
             <div class="text-xl font-semibold mb-2">Active Meters</div>
             <div class="text-sm opacity-90">View customer meters</div>
@@ -89,8 +89,8 @@
                 <i class="fas fa-user-check"></i>
             </div>
         </a>
-        
-        <a href="{{ route('admin.meters.index', ['filter' => 'location']) }}" 
+
+        <a href="{{ route('admin.meters.index', ['filter' => 'location']) }}"
            class="bg-purple-500 hover:bg-purple-600 text-white p-6 rounded-xl text-center transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 {{ ($filter ?? '') == 'location' ? 'ring-2 ring-purple-300 ring-opacity-50' : '' }}">
             <div class="text-xl font-semibold mb-2">Meters by Location</div>
             <div class="text-sm opacity-90">Search by address</div>
@@ -114,7 +114,7 @@
         <form method="GET" action="{{ route('admin.meters.index') }}" class="flex gap-4">
             <input type="hidden" name="filter" value="location">
             <div class="flex-1">
-                <input type="text" name="location" value="{{ request('location') }}" 
+                <input type="text" name="location" value="{{ request('location') }}"
                        placeholder="Search by estate, plot number, or house number..."
                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition">
             </div>
@@ -139,7 +139,7 @@
                     $currentParams = request()->all();
                     $baseParams = array_merge($currentParams, ['category' => null]);
                 @endphp
-                <a href="{{ route('admin.meters.index', $baseParams) }}" 
+                <a href="{{ route('admin.meters.index', $baseParams) }}"
                    class="px-4 py-2 rounded-lg {{ !request('category') ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
                     All Categories
                 </a>
@@ -147,7 +147,7 @@
                 @php
                     $categoryParams = array_merge($currentParams, ['category' => $category->id]);
                 @endphp
-                <a href="{{ route('admin.meters.index', $categoryParams) }}" 
+                <a href="{{ route('admin.meters.index', $categoryParams) }}"
                    class="px-4 py-2 rounded-lg {{ request('category') == $category->id ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
                     {{ $category->name }} ({{ $category->meters_count }})
                 </a>
@@ -545,9 +545,10 @@
                             <select name="status" id="edit_status" required
                                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm">
                                 <option value="available">Available</option>
-                                <option value="assigned">Assigned</option>
-                                <option value="faulty">Faulty</option>
+                                <option value="active">Active</option>
+                                <option value="terminated">Terminated</option>
                                 <option value="maintenance">Maintenance</option>
+                                <option value="pending_payment">Pending payment</option>
                             </select>
                         </div>
                     </div>
@@ -558,7 +559,7 @@
                             <i class="fas fa-map-marker-alt mr-2 text-gray-500"></i>
                             Location Information
                         </h4>
-                        
+
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label for="edit_installation_address" class="block text-sm font-medium text-gray-700 mb-1">Installation Address</label>
@@ -629,7 +630,7 @@
                             <i class="fas fa-money-bill-wave mr-2 text-gray-500"></i>
                             Financial Information
                         </h4>
-                        
+
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
                                 <label for="edit_initial_reading" class="block text-sm font-medium text-gray-700 mb-1">Initial Reading (m³)</label>
@@ -638,11 +639,11 @@
                                        value="0">
                             </div>
 
-                          
+
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
-                         
+
                             <div>
                                 <label for="edit_balance_bf" class="block text-sm font-medium text-gray-700 mb-1">Balance B/F</label>
                                 <input type="number" name="balance_bf" id="edit_balance_bf" step="0.01"
@@ -665,7 +666,7 @@
                             <i class="fas fa-calendar-alt mr-2 text-gray-500"></i>
                             Dates Information
                         </h4>
-                        
+
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
                                 <label for="edit_installation_date" class="block text-sm font-medium text-gray-700 mb-1">Installation Date</label>
@@ -700,11 +701,11 @@
 
                 <!-- Modal Footer -->
                 <div class="flex flex-col sm:flex-row justify-end gap-2 mt-6 pt-4 border-t">
-                    <button type="button" onclick="closeEditMeterModal()" 
+                    <button type="button" onclick="closeEditMeterModal()"
                             class="w-full sm:w-auto bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm transition duration-200 order-2 sm:order-1">
                         Cancel
                     </button>
-                    <button type="submit" 
+                    <button type="submit"
                             class="w-full sm:w-auto bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-2 rounded-lg text-sm font-semibold transition-all duration-200 transform hover:scale-105 order-1 sm:order-2">
                         <i class="fas fa-save mr-2"></i>Update Meter
                     </button>
@@ -825,26 +826,26 @@
 
     let currentMeterId = null;
 
-   
+
     async function openEditMeterModal(meterId) {
         console.log('Opening edit modal for meter ID:', meterId);
         currentMeterId = meterId;
-        
+
         // Show modal
         const modal = document.getElementById('editMeterModal');
         modal.classList.remove('hidden');
         document.body.classList.add('overflow-hidden');
-        
+
         // Show loading state
         const form = document.getElementById('editMeterForm');
         const submitBtn = form.querySelector('button[type="submit"]');
         const originalBtnContent = submitBtn.innerHTML;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Loading...';
         submitBtn.disabled = true;
-        
+
         try {
             console.log('Fetching meter data from endpoint...');
-            
+
             // Make the API call
             const response = await fetch(`/admin/meters/${meterId}/json`, {
                 headers: {
@@ -852,38 +853,38 @@
                     'X-Requested-With': 'XMLHttpRequest'
                 }
             });
-            
+
             console.log('Response status:', response.status);
-            
+
             if (!response.ok) {
                 throw new Error(`Server returned ${response.status}: ${response.statusText}`);
             }
-            
+
             const meter = await response.json();
             console.log('Meter data received:', meter);
-            
+
             // Populate form fields
             populateFormFields(meter);
-            
+
             // Update form action
             form.action = `/admin/meters/${meterId}`;
-            
+
             // Success - restore UI
             submitBtn.innerHTML = originalBtnContent;
             submitBtn.disabled = false;
-            
+
             console.log('Modal populated successfully');
-            
+
         } catch (error) {
             console.error('Error loading meter data:', error);
-            
+
             // Restore UI
             submitBtn.innerHTML = originalBtnContent;
             submitBtn.disabled = false;
-            
+
             // Show detailed error
             alert(`Failed to load meter data.\n\nError: ${error.message}\n\nCheck browser console (F12) for details.`);
-            
+
             // Close modal on error
             closeEditMeterModal();
         }
@@ -892,23 +893,23 @@
     // Helper function to populate form fields
     function populateFormFields(meter) {
         console.log('Populating form with data:', meter);
-        
+
         // Basic fields
         document.getElementById('edit_meter_number').value = meter.meter_number || '';
         document.getElementById('edit_meter_type').value = meter.meter_type || 'domestic';
         document.getElementById('edit_meter_category_id').value = meter.meter_category_id || '';
         document.getElementById('edit_meter_model').value = meter.meter_model || '';
         document.getElementById('edit_manufacturer').value = meter.manufacturer || '';
-        document.getElementById('edit_status').value = meter.status || 'available';
+        document.getElementById('edit_status').value = meter.status || '';
         document.getElementById('edit_installation_address').value = meter.installation_address || '';
         document.getElementById('edit_customer_id').value = meter.customer_id || '';
         document.getElementById('edit_zone_id').value = meter.zone_id || '';
         document.getElementById('edit_walk_route_id').value = meter.walk_route_id || '';
         document.getElementById('edit_latitude').value = meter.latitude || '';
-        
+
         // IMPORTANT: Use 'longtitude' from database (note the spelling)
         document.getElementById('edit_longitude').value = meter.longtitude || '';
-        
+
         // Financial fields
         document.getElementById('edit_initial_reading').value = meter.initial_reading || 0;
         // document.getElementById('edit_installation_fee').value = meter.installation_fee || 0;
@@ -916,11 +917,11 @@
         // document.getElementById('edit_deposit_amount').value = meter.deposit_amount || 0;
         document.getElementById('edit_balance_bf').value = meter.balance_bf || 0;
         document.getElementById('edit_current_balance').value = meter.current_balance || 0;
-        
+
         // Date fields - use the formatted dates directly
         document.getElementById('edit_installation_date').value = meter.installation_date || '';
         document.getElementById('edit_last_maintenance_date').value = meter.last_maintenance_date || '';
-        
+
         // Additional charges (JSON to string)
         if (meter.additional_charges) {
             if (typeof meter.additional_charges === 'object' && meter.additional_charges !== null) {
@@ -938,7 +939,7 @@
         } else {
             document.getElementById('edit_additional_charges').value = '';
         }
-        
+
         // Notes
         document.getElementById('edit_notes').value = meter.notes || '';
     }
@@ -976,7 +977,7 @@
 
         try {
             const formData = new FormData(this);
-            
+
             // Convert additional_charges from string to JSON if needed
             const additionalCharges = formData.get('additional_charges');
             if (additionalCharges) {
