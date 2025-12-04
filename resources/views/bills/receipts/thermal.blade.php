@@ -1,7 +1,7 @@
 {{ str_repeat('=', 42) }}
 {{ str_pad('NYAWASCO WATER COMPANY', 42, ' ', STR_PAD_BOTH) }}
-{{ str_pad('P.O Box XXX - City', 42, ' ', STR_PAD_BOTH) }}
-{{ str_pad('Tel: XXXXXXXXXX', 42, ' ', STR_PAD_BOTH) }}
+{{ str_pad('P.O Box 255-40500 - NYAMIRA', 42, ' ', STR_PAD_BOTH) }}
+{{ str_pad('Tel: 0787080455', 42, ' ', STR_PAD_BOTH) }}
 {{ str_repeat('-', 42) }}
 {{ str_pad('OFFICIAL RECEIPT', 42, ' ', STR_PAD_BOTH) }}
 {{ str_repeat('-', 42) }}
@@ -40,5 +40,6 @@ Due Date: {{ $receiptData['due_date'] }}
 {{ str_repeat('=', 42) }}
 Printed: {{ $receiptData['printed_date'] }}
 {{ str_repeat('*', 42) }}
-{{ $receiptData['payment_instructions'] }}
+M-PESA Paybill: 247 247
+Acc No: 483133#AccountNoo
 {{ str_repeat('*', 42) }}
