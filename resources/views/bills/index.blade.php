@@ -4,6 +4,34 @@
 
 @section('content')
 @can('view bills')
+<style>
+/* Print button hover effects */
+.print-receipt-btn {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.print-receipt-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(128, 0, 128, 0.3);
+}
+
+.print-receipt-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.fa-spinner.fa-spin {
+    animation: spin 1s linear infinite;
+}
+</style>
 <div class="min-h-screen bg-gray-50">
     <!-- Header Section -->
         @php
@@ -265,14 +293,13 @@
                                     title="Edit Bill">
                                         <i class="fas fa-edit"></i>
                                     </a>
-
-                                    <!-- Single Print Button -->
-                                    <button type="button"
-                                            class="text-purple-600 hover:text-purple-900 px-2 py-1 rounded transition duration-200 print-receipt-btn"
-                                            title="Print Receipt"
-                                            data-bill-id="{{ $bill->id }}">
+                                    <!-- Simple Print Link -->
+                                    <a href="{{ route('bills.print', $bill->id) }}" 
+                                        target="_blank"
+                                        class="text-purple-600 hover:text-purple-900 px-2 py-1 rounded transition duration-200"
+                                        title="Print Receipt">
                                         <i class="fas fa-print"></i>
-                                    </button>
+                                    </a>
 
                                     <form action="{{ route('bills.destroy', $bill->id) }}" method="POST" class="inline">
                                         @csrf
@@ -379,26 +406,28 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             const billId = this.getAttribute('data-bill-id');
             
-            // Open print window
+            // Open a larger window for better visibility
             const printWindow = window.open(`/bills/${billId}/receipt/print`, 
                 'PrintReceipt',
-                'width=800,height=600,scrollbars=no,toolbar=no,location=no');
+                'width=500,height=700,scrollbars=yes,toolbar=no,location=no,menubar=no');
             
             // Focus the window
             if (printWindow) {
                 printWindow.focus();
             }
             
-            // Show a loading indicator (optional)
+            // Show a loading indicator
             const originalText = this.innerHTML;
             this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             this.disabled = true;
+            this.classList.add('opacity-50');
             
-            // Reset button after 3 seconds
+            // Reset button after 5 seconds
             setTimeout(() => {
                 this.innerHTML = originalText;
                 this.disabled = false;
-            }, 3000);
+                this.classList.remove('opacity-50');
+            }, 5000);
         });
     });
 
@@ -408,9 +437,19 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             document.getElementById('billSearch').focus();
         }
+        
+        // Alt+P for quick print (first bill's print button)
+        if (e.altKey && e.key === 'p') {
+            e.preventDefault();
+            const firstPrintBtn = document.querySelector('.print-receipt-btn');
+            if (firstPrintBtn) {
+                firstPrintBtn.click();
+            }
+        }
     });
 });
 
+////////////////////////////////////////////////////////////////////////
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('billSearch');
     let searchTimeout;

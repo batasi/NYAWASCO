@@ -300,8 +300,12 @@ public function infoByMeter($meter)
 
 public function printReceipt(Bill $bill)
 {
-    // Load necessary relationships
+    // Load necessary data
     $bill->load(['customer', 'meter', 'payments', 'meter.meterCategory']);
+    
+    // Get total paid amount
+    $totalPaid = $bill->payments->sum('amount');
+    $balance = $bill->total_amount - $totalPaid;
     
     // Prepare receipt data
     $receiptData = [
@@ -312,20 +316,23 @@ public function printReceipt(Bill $bill)
         'customer_number' => $bill->customer->customer_number,
         'customer_phone' => $bill->customer->phone ?? 'N/A',
         'meter_number' => $bill->meter->meter_number ?? 'N/A',
-        'billing_period' => $bill->billing_period_start?->format('M d') . ' - ' . $bill->billing_period_end?->format('M d, Y'),
+        'billing_period' => $bill->billing_period_start 
+            ? $bill->billing_period_start->format('M d') . '-' . $bill->billing_period_end->format('M d')
+            : 'N/A',
         'consumption' => number_format($bill->consumption, 2) . ' m³',
-        'rate' => 'KSh ' . number_format($bill->meter?->meterCategory?->default_rate ?? 0, 4),
+        'rate' => 'KSh ' . number_format($bill->meter->meterCategory->default_rate ?? 0, 4),
         'subtotal' => 'KSh ' . number_format($bill->total_amount, 2),
-        'vat' => 'KSh 0.00', // Adjust based on your VAT calculation
+        'vat' => 'KSh 0.00',
         'total_amount' => 'KSh ' . number_format($bill->total_amount, 2),
-        'amount_paid' => 'KSh ' . number_format($bill->payments->sum('amount'), 2),
-        'balance' => 'KSh ' . number_format($bill->total_amount - $bill->payments->sum('amount'), 2),
+        'amount_paid' => 'KSh ' . number_format($totalPaid, 2),
+        'balance' => 'KSh ' . number_format($balance, 2),
         'payment_status' => $bill->bill_status,
-        'due_date' => $bill->due_date?->format('M d, Y') ?? 'N/A',
-        'footer_message' => 'Thank you for choosing NYAWASCO!',
+        'due_date' => $bill->due_date ? $bill->due_date->format('Y-m-d') : 'N/A',
+        'footer_message' => 'Thank you!',
         'printed_date' => now()->format('Y-m-d H:i:s'),
     ];
     
-    return view('bills.receipts.print', compact('receiptData'));
+    // Return the 58mm optimized receipt view
+    return view('bills.receipts.thermal-58mm', compact('receiptData'));
 }
 }
