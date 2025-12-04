@@ -263,19 +263,28 @@ public function generateReceipt(Bill $bill)
     $receiptData = $bill->generateReceipt();
 
     // For PDQ devices, you might want different formats
-    $format = request()->get('format', 'thermal'); // thermal, pdf, or html
+    $format = request()->get('format', 'print'); // print, pdf, or preview
 
-    if ($format === 'thermal') {
-        // Return thermal printer format for PDQ devices
+    if ($format === 'print') {
+        // Return a view with auto-print JavaScript
+        return view('bills.receipts.print', compact('receiptData', 'bill'));
+    } elseif ($format === 'pdf') {
+        // Temporarily disable PDF or handle differently
+        return redirect()->route('bills.receipt', [
+            'bill' => $bill->id,
+            'format' => 'print'
+        ]);
+    } elseif ($format === 'thermal') {
+        // Return raw thermal format for direct printing
         return response()->view('bills.receipts.thermal', compact('receiptData'))
             ->header('Content-Type', 'text/plain');
-    } elseif ($format === 'pdf') {
-        // Generate PDF receipt
-        return $this->generatePDFReceipt($receiptData);
+    } elseif ($format === 'preview') {
+        // HTML preview
+        return view('bills.receipts.preview', compact('receiptData', 'bill'));
     }
 
-    // Default to HTML preview
-    return view('bills.receipts.preview', compact('receiptData'));
+    // Default to print format
+    return view('bills.receipts.print', compact('receiptData', 'bill'));
 }
 
 private function generatePDFReceipt($receiptData)

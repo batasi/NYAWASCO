@@ -130,8 +130,8 @@ class Bill extends Model
         // Format receipt data for PDQ devices
         $receiptData = [
             'company_name' => 'NYAWASCO',
-            'company_address' => 'Your Company Address',
-            'company_phone' => 'Your Company Phone',
+            'company_address' => 'P.O Box 255-40500 - NYAMIRA',
+            'company_phone' => '0787080455',
             'receipt_number' => 'REC-' . strtoupper(uniqid()),
             'bill_number' => $this->bill_number,
             'date' => now()->format('Y-m-d H:i:s'),
@@ -152,7 +152,7 @@ class Bill extends Model
             'due_date' => $this->due_date?->format('M d, Y') ?? 'N/A',
             'printed_date' => now()->format('F d, Y g:i A'),
             'footer_message' => 'Thank you for choosing NYAWASCO!',
-            'payment_instructions' => 'Payments can be made at our offices or through M-Pesa Paybill: XXXX'
+            'payment_instructions' => 'Payments can be made at our offices or through M-Pesa'
         ];
 
         return $receiptData;
