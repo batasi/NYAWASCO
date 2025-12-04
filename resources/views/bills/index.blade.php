@@ -254,34 +254,65 @@
                                 @endif
                             </td> -->
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <div class="flex justify-end space-x-2">
-                                    <a href="{{ route('bills.show', $bill->id) }}"
-                                       class="text-blue-600 hover:text-blue-900 px-2 py-1 rounded transition duration-200"
-                                       title="View Bill">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                    <a href="{{ route('bills.receipt', $bill->id) }}"
-                                        class="text-purple-600 hover:text-purple-900 px-2 py-1 rounded transition duration-200"
-                                        title="Generate Receipt"
-                                        target="_blank">
-                                            <i class="fas fa-receipt"></i>
-                                    </a>
-                                    <a href="{{ route('bills.edit', $bill->id) }}"
-                                       class="text-green-600 hover:text-green-900 px-2 py-1 rounded transition duration-200"
-                                       title="Edit Bill">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <form action="{{ route('bills.destroy', $bill->id) }}" method="POST" class="inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit"
-                                                onclick="return confirm('Are you sure you want to delete this bill?')"
-                                                class="text-red-600 hover:text-red-900 px-2 py-1 rounded transition duration-200"
-                                                title="Delete Bill">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </form>
-                                </div>
+                               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+    <div class="flex justify-end space-x-2">
+        <a href="{{ route('bills.show', $bill->id) }}"
+           class="text-blue-600 hover:text-blue-900 px-2 py-1 rounded transition duration-200"
+           title="View Bill">
+            <i class="fas fa-eye"></i>
+        </a>
+        <a href="{{ route('bills.edit', $bill->id) }}"
+           class="text-green-600 hover:text-green-900 px-2 py-1 rounded transition duration-200"
+           title="Edit Bill">
+            <i class="fas fa-edit"></i>
+        </a>
+
+        <!-- Receipt Dropdown Menu -->
+        <div class="relative inline-block text-left">
+            <button type="button"
+                    class="text-purple-600 hover:text-purple-900 px-2 py-1 rounded transition duration-200 receipt-dropdown"
+                    title="Generate Receipt"
+                    onclick="toggleReceiptDropdown(this)">
+                <i class="fas fa-receipt"></i>
+                <i class="fas fa-caret-down ml-1 text-xs"></i>
+            </button>
+
+            <div class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200 receipt-dropdown-menu">
+                <div class="py-1">
+                    <a href="{{ route('bills.receipt', ['bill' => $bill->id, 'format' => 'print']) }}"
+                       class="block px-4 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-900"
+                       target="_blank">
+                        <i class="fas fa-print mr-2"></i> Auto Print
+                    </a>
+                    <a href="{{ route('bills.receipt', ['bill' => $bill->id, 'format' => 'preview']) }}"
+                       class="block px-4 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-900"
+                       target="_blank">
+                        <i class="fas fa-eye mr-2"></i> Preview First
+                    </a>
+                    <a href="{{ route('bills.receipt', ['bill' => $bill->id, 'format' => 'pdf']) }}"
+                       class="block px-4 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-900">
+                        <i class="fas fa-file-pdf mr-2"></i> Download PDF
+                    </a>
+                    <a href="{{ route('bills.receipt', ['bill' => $bill->id, 'format' => 'thermal']) }}"
+                       class="block px-4 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-900">
+                        <i class="fas fa-file-alt mr-2"></i> Raw Text
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <form action="{{ route('bills.destroy', $bill->id) }}" method="POST" class="inline">
+            @csrf
+            @method('DELETE')
+            <button type="submit"
+                    onclick="return confirm('Are you sure you want to delete this bill?')"
+                    class="text-red-600 hover:text-red-900 px-2 py-1 rounded transition duration-200"
+                    title="Delete Bill">
+                <i class="fas fa-trash"></i>
+            </button>
+        </form>
+    </div>
+</td>
                             </td>
                         </tr>
                         @empty
@@ -369,6 +400,36 @@
 
 <!-- Simple Search JavaScript -->
 <script>
+    // Dropdown toggle function
+function toggleReceiptDropdown(button) {
+    const dropdown = button.nextElementSibling;
+    dropdown.classList.toggle('hidden');
+
+    // Close other dropdowns
+    document.querySelectorAll('.receipt-dropdown-menu').forEach(menu => {
+        if (menu !== dropdown) {
+            menu.classList.add('hidden');
+        }
+    });
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', function(event) {
+    if (!event.target.closest('.relative.inline-block.text-left')) {
+        document.querySelectorAll('.receipt-dropdown-menu').forEach(menu => {
+            menu.classList.add('hidden');
+        });
+    }
+});
+
+// Close dropdown on escape key
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        document.querySelectorAll('.receipt-dropdown-menu').forEach(menu => {
+            menu.classList.add('hidden');
+        });
+    }
+});
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('billSearch');
     let searchTimeout;

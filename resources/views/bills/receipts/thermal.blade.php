@@ -41,5 +41,5 @@ Due Date: {{ $receiptData['due_date'] }}
 Printed: {{ $receiptData['printed_date'] }}
 {{ str_repeat('*', 42) }}
 M-PESA Paybill: 247 247
-Acc No: 483133#AccountNoo
+Acc No: 483133#{{ $receiptData['customer_number'] }}
 {{ str_repeat('*', 42) }}
