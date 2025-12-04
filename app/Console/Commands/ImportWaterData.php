@@ -95,10 +95,23 @@ class ImportWaterData extends Command
             $last = implode(" ", $nameParts);
 
             $customerNumber = $row['Acc.No.'] ?? null;
-            if (!$customerNumber) {
-                $this->warn("Row $index skipped: missing account number");
-                continue;
+
+            if (!$customerNumber || trim($customerNumber) == "") {
+                // Generate new account number based on sequence
+                $latestCustomer = Customer::orderBy('id', 'desc')->first();
+                $lastNumber = $latestCustomer?->customer_number;
+
+                if (is_numeric($lastNumber)) {
+                    $newNumber = intval($lastNumber) + 1;
+                } else {
+                    // fallback numbering (when DB contains non-numeric values)
+                    $newNumber = Customer::max('id') + 10000;
+                }
+
+                $customerNumber = str_pad($newNumber, 6, '0', STR_PAD_LEFT); // e.g. 000123
+                $this->warn("Row $index: Missing account number → Assigned: $customerNumber");
             }
+
 
             $customer = Customer::firstOrCreate(
                 ['customer_number' => $customerNumber],
