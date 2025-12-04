@@ -153,13 +153,13 @@ return [
         App\Providers\RouteServiceProvider::class,
         Yajra\DataTables\DataTablesServiceProvider::class,
         Laravel\Socialite\SocialiteServiceProvider::class,
-        Barryvdh\DomPDF\ServiceProvider::class,
+
     ],
 
 
     'aliases' => [
         'Socialite' => Laravel\Socialite\Facades\Socialite::class,
-         'PDF' => Barryvdh\DomPDF\Facade::class,
+
     ],
 
 
