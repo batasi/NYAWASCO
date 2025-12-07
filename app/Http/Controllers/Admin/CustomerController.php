@@ -977,4 +977,39 @@ class CustomerController extends Controller
 
         return $pdf->download($filename);
     }
+
+// In CustomerController.php
+public function getCustomerDetails($id)
+{
+    $customer = Customer::findOrFail($id);
+
+    return response()->json([
+        'id' => $customer->id,
+        'text' => "{$customer->customer_number} - {$customer->first_name} {$customer->last_name} ({$customer->phone})"
+    ]);
+}
+public function searchCustomers(Request $request)
+{
+    $search = $request->get('q');
+
+    $customers = Customer::active()
+        ->where(function($query) use ($search) {
+            $query->where('customer_number', 'like', "%{$search}%")
+                ->orWhere('first_name', 'like', "%{$search}%")
+                ->orWhere('last_name', 'like', "%{$search}%")
+                ->orWhere('phone', 'like', "%{$search}%");
+        })
+        ->select(['id', 'customer_number', 'first_name', 'last_name', 'phone'])
+        ->limit(10)
+        ->get()
+        ->map(function($customer) {
+            return [
+                'id' => $customer->id,
+                'text' => "{$customer->customer_number} - {$customer->first_name} {$customer->last_name} ({$customer->phone})"
+            ];
+        });
+
+    return response()->json(['results' => $customers]);
+}
+
 }

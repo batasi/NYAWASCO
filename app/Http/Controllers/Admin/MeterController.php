@@ -13,6 +13,34 @@ use Illuminate\Support\Facades\Log;
 
 class MeterController extends Controller
 {
+    // In App\Http\Controllers\Admin\CustomerController.php or MeterController.php
+
+/**
+ * Search customers for Select2 dropdown
+ */
+public function searchCustomers(Request $request)
+{
+    $search = $request->get('q');
+
+    $customers = Customer::active()
+        ->where(function($query) use ($search) {
+            $query->where('customer_number', 'like', "%{$search}%")
+                ->orWhere('first_name', 'like', "%{$search}%")
+                ->orWhere('last_name', 'like', "%{$search}%")
+                ->orWhere('phone', 'like', "%{$search}%");
+        })
+        ->select(['id', 'customer_number', 'first_name', 'last_name', 'phone'])
+        ->limit(10)
+        ->get()
+        ->map(function($customer) {
+            return [
+                'id' => $customer->id,
+                'text' => "{$customer->customer_number} - {$customer->first_name} {$customer->last_name} ({$customer->phone})"
+            ];
+        });
+
+    return response()->json(['results' => $customers]);
+}
     public function index(Request $request)
     {
         $search = $request->get('q');
@@ -191,7 +219,7 @@ class MeterController extends Controller
     //             // $validated['installation_fee'] = $validated['installation_fee'] ?? ($additionalCharges['installation_fee'] ?? 0);
     //             // $validated['connection_fee'] = $validated['connection_fee'] ?? ($additionalCharges['connection_fee'] ?? 0);
     //             // $validated['deposit_amount'] = $validated['deposit_amount'] ?? ($additionalCharges['deposit'] ?? 0);
-                
+
     //             $validated['current_balance'] = $validated['balance_bf'] ?? 0;
 
     //             // Create meter WITHOUT installation date and fees
@@ -287,7 +315,7 @@ class MeterController extends Controller
                 } else {
                     $validated['status'] = Meter::STATUS_AVAILABLE;
                 }
-                
+
                 $validated['current_balance'] = $validated['balance_bf'] ?? 0;
 
                 // Create meter WITHOUT installation date

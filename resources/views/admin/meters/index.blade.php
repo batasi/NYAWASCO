@@ -31,6 +31,7 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
    <!-- Stats Cards -->
+    @can('view paymentss')
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6 text-center hover:shadow-xl transition-all duration-300 hover:border-blue-200">
             <div class="text-3xl font-bold text-blue-600 mb-2">{{ $stats['total'] }}</div>
@@ -155,7 +156,7 @@
             </div>
         </div>
     </div>
-
+    @endcan
     <!-- Simple Search Form -->
     <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
         <form method="GET" action="{{ route('admin.meters.index') }}" class="flex gap-4">
@@ -444,13 +445,9 @@
                             <div>
                                 <label for="modal_customer_id" class="block text-sm font-medium text-gray-700 mb-1">Assign to Customer (Optional)</label>
                                 <select name="customer_id" id="modal_customer_id"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm">
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm customer-select">
                                     <option value="">Select Customer (Leave empty if not assigned)</option>
-                                    @foreach(App\Models\Customer::active()->get() as $customer)
-                                        <option value="{{ $customer->id }}">
-                                            {{ $customer->customer_number }} - {{ $customer->first_name }} {{ $customer->last_name }}
-                                        </option>
-                                    @endforeach
+                                    <!-- Options will be loaded via AJAX -->
                                 </select>
                             </div>
                         </div>
@@ -486,248 +483,244 @@
     </div>
 
     <!-- Edit Meter Modal -->
-<div id="editMeterModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
-    <div class="flex items-center justify-center min-h-screen p-4">
-        <div class="relative bg-white rounded-lg shadow-xl w-full max-w-4xl mx-auto">
-            <!-- Modal Header -->
-            <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t bg-gradient-to-r from-green-600 to-emerald-600">
-                <h3 class="text-xl font-bold text-white flex items-center">
-                    <i class="fas fa-edit mr-2"></i>
-                    Edit Meter
-                </h3>
-                <button type="button" onclick="closeEditMeterModal()" class="text-white hover:bg-emerald-700 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center transition-colors">
-                    <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
-                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
-                    </svg>
-                    <span class="sr-only">Close modal</span>
-                </button>
+    <div id="editMeterModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="relative bg-white rounded-lg shadow-xl w-full max-w-4xl mx-auto">
+                <!-- Modal Header -->
+                <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t bg-gradient-to-r from-green-600 to-emerald-600">
+                    <h3 class="text-xl font-bold text-white flex items-center">
+                        <i class="fas fa-edit mr-2"></i>
+                        Edit Meter
+                    </h3>
+                    <button type="button" onclick="closeEditMeterModal()" class="text-white hover:bg-emerald-700 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center transition-colors">
+                        <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+                        </svg>
+                        <span class="sr-only">Close modal</span>
+                    </button>
+                </div>
+
+                <!-- Modal Body -->
+                <form id="editMeterForm" action="" method="POST" class="p-4 md:p-5">
+                    @csrf
+                    @method('PUT')
+
+                    <div class="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+                        <!-- Basic Information -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="edit_meter_number" class="block text-sm font-medium text-gray-700 mb-1">Meter Number *</label>
+                                <input type="text" name="meter_number" id="edit_meter_number" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm">
+                            </div>
+
+                            <div>
+                                <label for="edit_meter_type" class="block text-sm font-medium text-gray-700 mb-1">Meter Type *</label>
+                                <select name="meter_type" id="edit_meter_type" required
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm">
+                                    <option value="domestic">Domestic - Single Phase</option>
+                                    <option value="commercial">Commercial - Three Phase</option>
+                                    <option value="industrial">Industrial - High Capacity</option>
+                                    <option value="institutional">Institutional - Bulk Meter</option>
+                                    <option value="smart">Smart Meter - Digital</option>
+                                    <option value="mechanical">Mechanical - Analog</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="edit_meter_category_id" class="block text-sm font-medium text-gray-700 mb-1">Category *</label>
+                                <select name="meter_category_id" id="edit_meter_category_id" required
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm">
+                                    <option value="">Select Category</option>
+                                    @foreach($categories as $category)
+                                        <option value="{{ $category->id }}">{{ $category->name }} - {{ $category->code }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div>
+                                <label for="edit_meter_model" class="block text-sm font-medium text-gray-700 mb-1">Model</label>
+                                <input type="text" name="meter_model" id="edit_meter_model"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm"
+                                    placeholder="e.g., K-1000, S-2000">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="edit_manufacturer" class="block text-sm font-medium text-gray-700 mb-1">Manufacturer</label>
+                                <input type="text" name="manufacturer" id="edit_manufacturer"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm"
+                                    placeholder="Manufacturer name">
+                            </div>
+
+                            <div>
+                                <label for="edit_status" class="block text-sm font-medium text-gray-700 mb-1">Status *</label>
+                                <select name="status" id="edit_status" required
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm">
+                                    <option value="available">Available</option>
+                                    <option value="active">Active</option>
+                                    <option value="terminated">Terminated</option>
+                                    <option value="maintenance">Maintenance</option>
+                                    <option value="pending_payment">Pending payment</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Location Information -->
+                        <div class="bg-gray-50 p-4 rounded-lg border">
+                            <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                                <i class="fas fa-map-marker-alt mr-2 text-gray-500"></i>
+                                Location Information
+                            </h4>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="edit_installation_address" class="block text-sm font-medium text-gray-700 mb-1">Installation Address</label>
+                                    <input type="text" name="installation_address" id="edit_installation_address"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm"
+                                        placeholder="Full installation address">
+                                </div>
+
+                                    <div>
+                                        <label for="edit_customer_id" class="block text-sm font-medium text-gray-700 mb-1">Customer</label>
+                                        <select name="customer_id" id="edit_customer_id"
+                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm customer-select">
+                                            <option value="">Select Customer</option>
+                                            <!-- Options will be loaded via AJAX -->
+                                        </select>
+                                    </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                                <div>
+                                    <label for="edit_zone_id" class="block text-sm font-medium text-gray-700 mb-1">Zone</label>
+                                    <select name="zone_id" id="edit_zone_id"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm">
+                                        <option value="">Select Zone</option>
+                                        @foreach(App\Models\Zone::all() as $zone)
+                                            <option value="{{ $zone->id }}">{{ $zone->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label for="edit_walk_route_id" class="block text-sm font-medium text-gray-700 mb-1">Walk Route</label>
+                                    <select name="walk_route_id" id="edit_walk_route_id"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm">
+                                        <option value="">Select Walk Route</option>
+                                        @foreach(App\Models\WalkRoute::all() as $route)
+                                            <option value="{{ $route->id }}">{{ $route->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                                <div>
+                                    <label for="edit_latitude" class="block text-sm font-medium text-gray-700 mb-1">Latitude</label>
+                                    <input type="number" step="any" name="latitude" id="edit_latitude"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm"
+                                        placeholder="e.g., -1.2921">
+                                </div>
+
+                                <div>
+                                    <label for="edit_longitude" class="block text-sm font-medium text-gray-700 mb-1">Longitude</label>
+                                    <input type="number" step="any" name="longitude" id="edit_longitude"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm"
+                                        placeholder="e.g., 36.8219">
+                                    <small class="text-gray-500">Note: Column name is 'longtitude' in database</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Financial Information -->
+                        <div class="bg-gray-50 p-4 rounded-lg border">
+                            <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                                <i class="fas fa-money-bill-wave mr-2 text-gray-500"></i>
+                                Financial Information
+                            </h4>
+
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label for="edit_initial_reading" class="block text-sm font-medium text-gray-700 mb-1">Initial Reading (m³)</label>
+                                    <input type="number" name="initial_reading" id="edit_initial_reading" step="0.01" min="0"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm"
+                                        value="0">
+                                </div>
+
+
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+
+                                <div>
+                                    <label for="edit_balance_bf" class="block text-sm font-medium text-gray-700 mb-1">Balance B/F</label>
+                                    <input type="number" name="balance_bf" id="edit_balance_bf" step="0.01"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm"
+                                        value="0">
+                                </div>
+
+                                <div>
+                                    <label for="edit_current_balance" class="block text-sm font-medium text-gray-700 mb-1">Current Balance</label>
+                                    <input type="number" name="current_balance" id="edit_current_balance" step="0.01"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm"
+                                        value="0">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dates Information -->
+                        <div class="bg-gray-50 p-4 rounded-lg border">
+                            <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                                <i class="fas fa-calendar-alt mr-2 text-gray-500"></i>
+                                Dates Information
+                            </h4>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="edit_installation_date" class="block text-sm font-medium text-gray-700 mb-1">Installation Date</label>
+                                    <input type="date" name="installation_date" id="edit_installation_date"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm">
+                                </div>
+
+                                <div>
+                                    <label for="edit_last_maintenance_date" class="block text-sm font-medium text-gray-700 mb-1">Last Maintenance Date</label>
+                                    <input type="date" name="last_maintenance_date" id="edit_last_maintenance_date"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Notes -->
+                        <div>
+                            <label for="edit_notes" class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                            <textarea name="notes" id="edit_notes" rows="3"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm"
+                                    placeholder="Any additional notes..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Modal Footer -->
+                    <div class="flex flex-col sm:flex-row justify-end gap-2 mt-6 pt-4 border-t">
+                        <button type="button" onclick="closeEditMeterModal()"
+                                class="w-full sm:w-auto bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm transition duration-200 order-2 sm:order-1">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                                class="w-full sm:w-auto bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-2 rounded-lg text-sm font-semibold transition-all duration-200 transform hover:scale-105 order-1 sm:order-2">
+                            <i class="fas fa-save mr-2"></i>Update Meter
+                        </button>
+                    </div>
+                </form>
             </div>
-
-            <!-- Modal Body -->
-            <form id="editMeterForm" action="" method="POST" class="p-4 md:p-5">
-                @csrf
-                @method('PUT')
-
-                <div class="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-                    <!-- Basic Information -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label for="edit_meter_number" class="block text-sm font-medium text-gray-700 mb-1">Meter Number *</label>
-                            <input type="text" name="meter_number" id="edit_meter_number" required
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm">
-                        </div>
-
-                        <div>
-                            <label for="edit_meter_type" class="block text-sm font-medium text-gray-700 mb-1">Meter Type *</label>
-                            <select name="meter_type" id="edit_meter_type" required
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm">
-                                <option value="domestic">Domestic - Single Phase</option>
-                                <option value="commercial">Commercial - Three Phase</option>
-                                <option value="industrial">Industrial - High Capacity</option>
-                                <option value="institutional">Institutional - Bulk Meter</option>
-                                <option value="smart">Smart Meter - Digital</option>
-                                <option value="mechanical">Mechanical - Analog</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label for="edit_meter_category_id" class="block text-sm font-medium text-gray-700 mb-1">Category *</label>
-                            <select name="meter_category_id" id="edit_meter_category_id" required
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm">
-                                <option value="">Select Category</option>
-                                @foreach($categories as $category)
-                                    <option value="{{ $category->id }}">{{ $category->name }} - {{ $category->code }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <div>
-                            <label for="edit_meter_model" class="block text-sm font-medium text-gray-700 mb-1">Model</label>
-                            <input type="text" name="meter_model" id="edit_meter_model"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm"
-                                   placeholder="e.g., K-1000, S-2000">
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label for="edit_manufacturer" class="block text-sm font-medium text-gray-700 mb-1">Manufacturer</label>
-                            <input type="text" name="manufacturer" id="edit_manufacturer"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm"
-                                   placeholder="Manufacturer name">
-                        </div>
-
-                        <div>
-                            <label for="edit_status" class="block text-sm font-medium text-gray-700 mb-1">Status *</label>
-                            <select name="status" id="edit_status" required
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm">
-                                <option value="available">Available</option>
-                                <option value="active">Active</option>
-                                <option value="terminated">Terminated</option>
-                                <option value="maintenance">Maintenance</option>
-                                <option value="pending_payment">Pending payment</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Location Information -->
-                    <div class="bg-gray-50 p-4 rounded-lg border">
-                        <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
-                            <i class="fas fa-map-marker-alt mr-2 text-gray-500"></i>
-                            Location Information
-                        </h4>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label for="edit_installation_address" class="block text-sm font-medium text-gray-700 mb-1">Installation Address</label>
-                                <input type="text" name="installation_address" id="edit_installation_address"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm"
-                                       placeholder="Full installation address">
-                            </div>
-
-                            <div>
-                                <label for="edit_customer_id" class="block text-sm font-medium text-gray-700 mb-1">Customer</label>
-                                <select name="customer_id" id="edit_customer_id"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm">
-                                    <option value="">Select Customer</option>
-                                    @foreach(App\Models\Customer::active()->get() as $customer)
-                                        <option value="{{ $customer->id }}">
-                                            {{ $customer->customer_number }} - {{ $customer->first_name }} {{ $customer->last_name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
-                            <div>
-                                <label for="edit_zone_id" class="block text-sm font-medium text-gray-700 mb-1">Zone</label>
-                                <select name="zone_id" id="edit_zone_id"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm">
-                                    <option value="">Select Zone</option>
-                                    @foreach(App\Models\Zone::all() as $zone)
-                                        <option value="{{ $zone->id }}">{{ $zone->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <div>
-                                <label for="edit_walk_route_id" class="block text-sm font-medium text-gray-700 mb-1">Walk Route</label>
-                                <select name="walk_route_id" id="edit_walk_route_id"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm">
-                                    <option value="">Select Walk Route</option>
-                                    @foreach(App\Models\WalkRoute::all() as $route)
-                                        <option value="{{ $route->id }}">{{ $route->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
-                            <div>
-                                <label for="edit_latitude" class="block text-sm font-medium text-gray-700 mb-1">Latitude</label>
-                                <input type="number" step="any" name="latitude" id="edit_latitude"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm"
-                                       placeholder="e.g., -1.2921">
-                            </div>
-
-                            <div>
-                                <label for="edit_longitude" class="block text-sm font-medium text-gray-700 mb-1">Longitude</label>
-                                <input type="number" step="any" name="longitude" id="edit_longitude"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm"
-                                       placeholder="e.g., 36.8219">
-                                <small class="text-gray-500">Note: Column name is 'longtitude' in database</small>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Financial Information -->
-                    <div class="bg-gray-50 p-4 rounded-lg border">
-                        <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
-                            <i class="fas fa-money-bill-wave mr-2 text-gray-500"></i>
-                            Financial Information
-                        </h4>
-
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label for="edit_initial_reading" class="block text-sm font-medium text-gray-700 mb-1">Initial Reading (m³)</label>
-                                <input type="number" name="initial_reading" id="edit_initial_reading" step="0.01" min="0"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm"
-                                       value="0">
-                            </div>
-
-
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
-
-                            <div>
-                                <label for="edit_balance_bf" class="block text-sm font-medium text-gray-700 mb-1">Balance B/F</label>
-                                <input type="number" name="balance_bf" id="edit_balance_bf" step="0.01"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm"
-                                       value="0">
-                            </div>
-
-                            <div>
-                                <label for="edit_current_balance" class="block text-sm font-medium text-gray-700 mb-1">Current Balance</label>
-                                <input type="number" name="current_balance" id="edit_current_balance" step="0.01"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm"
-                                       value="0">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Dates Information -->
-                    <div class="bg-gray-50 p-4 rounded-lg border">
-                        <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
-                            <i class="fas fa-calendar-alt mr-2 text-gray-500"></i>
-                            Dates Information
-                        </h4>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label for="edit_installation_date" class="block text-sm font-medium text-gray-700 mb-1">Installation Date</label>
-                                <input type="date" name="installation_date" id="edit_installation_date"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm">
-                            </div>
-
-                            <div>
-                                <label for="edit_last_maintenance_date" class="block text-sm font-medium text-gray-700 mb-1">Last Maintenance Date</label>
-                                <input type="date" name="last_maintenance_date" id="edit_last_maintenance_date"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Notes -->
-                    <div>
-                        <label for="edit_notes" class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                        <textarea name="notes" id="edit_notes" rows="3"
-                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm"
-                                  placeholder="Any additional notes..."></textarea>
-                    </div>
-                </div>
-
-                <!-- Modal Footer -->
-                <div class="flex flex-col sm:flex-row justify-end gap-2 mt-6 pt-4 border-t">
-                    <button type="button" onclick="closeEditMeterModal()"
-                            class="w-full sm:w-auto bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm transition duration-200 order-2 sm:order-1">
-                        Cancel
-                    </button>
-                    <button type="submit"
-                            class="w-full sm:w-auto bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-2 rounded-lg text-sm font-semibold transition-all duration-200 transform hover:scale-105 order-1 sm:order-2">
-                        <i class="fas fa-save mr-2"></i>Update Meter
-                    </button>
-                </div>
-            </form>
         </div>
     </div>
 </div>
-</div>
 
-    <script>
+<script>
     function openMeterModal() {
         document.getElementById('registerMeterModal').classList.remove('hidden');
         document.body.classList.add('overflow-hidden');
@@ -762,31 +755,57 @@
         }
     });
 
-
-
-    // Handle customer selection
-    document.getElementById('modal_customer_id').addEventListener('change', function() {
+    // Handle customer selection change in registration modal
+    document.getElementById('modal_customer_id')?.addEventListener('change', function() {
         const customerFields = document.getElementById('customer_installation_fields');
         const installationAddress = document.getElementById('modal_installation_address');
 
         if (this.value) {
-            customerFields.classList.remove('hidden');
+            if (customerFields) customerFields.classList.remove('hidden');
             // Auto-fill installation address if customer is selected
             fetch(`/admin/customers/${this.value}/address`)
                 .then(response => response.json())
                 .then(data => {
-                    if (data.address) {
+                    if (data.address && installationAddress) {
                         installationAddress.value = data.address;
                     }
                 });
         } else {
-            customerFields.classList.add('hidden');
-            installationAddress.value = '';
+            if (customerFields) customerFields.classList.add('hidden');
+            if (installationAddress) installationAddress.value = '';
         }
     });
 
-    // Handle form submission
-    document.getElementById('meterRegistrationForm').addEventListener('submit', function(e) {
+    // Initialize Select2 for customer dropdowns
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize all customer select elements
+        $('.customer-select').select2({
+            placeholder: 'Search for customer...',
+            allowClear: true,
+            width: '100%',
+            ajax: {
+                url: '/admin/customers/search',
+                dataType: 'json',
+                delay: 250,
+                data: function(params) {
+                    return {
+                        q: params.term, // search term
+                        page: params.page
+                    };
+                },
+                processResults: function(data) {
+                    return {
+                        results: data.results
+                    };
+                },
+                cache: true
+            },
+            minimumInputLength: 1
+        });
+    });
+
+    // Handle form submission for registration
+    document.getElementById('meterRegistrationForm')?.addEventListener('submit', function(e) {
         e.preventDefault();
 
         // Show loading state
@@ -822,13 +841,8 @@
         });
     });
 
-
-
-
-    //edit meter modal functions
-
+    // Edit meter modal functions
     let currentMeterId = null;
-
 
     async function openEditMeterModal(meterId) {
         console.log('Opening edit modal for meter ID:', meterId);
@@ -838,6 +852,31 @@
         const modal = document.getElementById('editMeterModal');
         modal.classList.remove('hidden');
         document.body.classList.add('overflow-hidden');
+
+        // Reinitialize Select2 for the edit modal (important!)
+        $('#edit_customer_id').select2({
+            placeholder: 'Search for customer...',
+            allowClear: true,
+            width: '100%',
+            ajax: {
+                url: '/admin/customers/search',
+                dataType: 'json',
+                delay: 250,
+                data: function(params) {
+                    return {
+                        q: params.term,
+                        page: params.page
+                    };
+                },
+                processResults: function(data) {
+                    return {
+                        results: data.results
+                    };
+                },
+                cache: true
+            },
+            minimumInputLength: 1
+        });
 
         // Show loading state
         const form = document.getElementById('editMeterForm');
@@ -867,7 +906,7 @@
             console.log('Meter data received:', meter);
 
             // Populate form fields
-            populateFormFields(meter);
+            await populateFormFields(meter); // Made async
 
             // Update form action
             form.action = `/admin/meters/${meterId}`;
@@ -893,8 +932,8 @@
         }
     }
 
-    // Helper function to populate form fields
-    function populateFormFields(meter) {
+    // Helper function to populate form fields - UPDATED to handle Select2
+    async function populateFormFields(meter) {
         console.log('Populating form with data:', meter);
 
         // Basic fields
@@ -905,7 +944,6 @@
         document.getElementById('edit_manufacturer').value = meter.manufacturer || '';
         document.getElementById('edit_status').value = meter.status || '';
         document.getElementById('edit_installation_address').value = meter.installation_address || '';
-        document.getElementById('edit_customer_id').value = meter.customer_id || '';
         document.getElementById('edit_zone_id').value = meter.zone_id || '';
         document.getElementById('edit_walk_route_id').value = meter.walk_route_id || '';
         document.getElementById('edit_latitude').value = meter.latitude || '';
@@ -915,28 +953,56 @@
 
         // Financial fields
         document.getElementById('edit_initial_reading').value = meter.initial_reading || 0;
-        // document.getElementById('edit_installation_fee').value = meter.installation_fee || 0;
-        // document.getElementById('edit_connection_fee').value = meter.connection_fee || 0;
-        // document.getElementById('edit_deposit_amount').value = meter.deposit_amount || 0;
         document.getElementById('edit_balance_bf').value = meter.balance_bf || 0;
         document.getElementById('edit_current_balance').value = meter.current_balance || 0;
 
-        // Date fields - use the formatted dates directly
+        // Date fields
         document.getElementById('edit_installation_date').value = meter.installation_date || '';
         document.getElementById('edit_last_maintenance_date').value = meter.last_maintenance_date || '';
 
-
-
         // Notes
         document.getElementById('edit_notes').value = meter.notes || '';
+
+        // Handle customer selection - FIXED for Select2
+        const customerId = meter.customer_id;
+        const $customerSelect = $('#edit_customer_id');
+
+        if (customerId) {
+            try {
+                // Fetch customer details
+                const response = await fetch(`/admin/customers/${customerId}/details`);
+                const customerData = await response.json();
+
+                // Create new option with the fetched data
+                const option = new Option(
+                    customerData.text || `${customerData.customer_number} - ${customerData.first_name} ${customerData.last_name}`,
+                    customerId,
+                    true,
+                    true
+                );
+
+                // Append the option and trigger change
+                $customerSelect.append(option).trigger('change');
+
+                console.log('Customer pre-selected:', customerId);
+            } catch (error) {
+                console.error('Error fetching customer details:', error);
+                // Fallback: just set the value
+                $customerSelect.val(customerId).trigger('change');
+            }
+        } else {
+            // Clear the selection
+            $customerSelect.val(null).trigger('change');
+        }
     }
-
-
 
     function closeEditMeterModal() {
         document.getElementById('editMeterModal').classList.add('hidden');
         document.body.classList.remove('overflow-hidden');
         currentMeterId = null;
+
+        // Destroy Select2 instance when closing modal to prevent conflicts
+        $('#edit_customer_id').select2('destroy');
     }
 
     // Close modal when clicking outside
@@ -953,7 +1019,7 @@
         }
     });
 
-    // Handle form submission
+    // Handle form submission for edit modal
     document.getElementById('editMeterForm').addEventListener('submit', async function(e) {
         e.preventDefault();
 
@@ -964,8 +1030,6 @@
 
         try {
             const formData = new FormData(this);
-
-
 
             const response = await fetch(this.action, {
                 method: 'POST',
@@ -991,42 +1055,41 @@
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
         }
+    });
 
-        // Quick search functionality
-        document.addEventListener('DOMContentLoaded', function() {
-            const searchInput = document.querySelector('input[name="q"]');
-            const searchForm = document.querySelector('form');
+    // Quick search functionality for main page
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.querySelector('input[name="q"]');
+        const searchForm = document.querySelector('form[method="GET"]');
 
-            if (!searchInput || !searchForm) return;
+        if (!searchInput || !searchForm) return;
 
-            // Quick search on Enter key
-            searchInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    searchForm.submit();
-                }
-            });
-
-            // Auto-focus search input
-            searchInput.focus();
-
-            // Quick clear button
-            if (searchInput.value) {
-                const clearBtn = document.createElement('button');
-                clearBtn.type = 'button';
-                clearBtn.className = 'absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600';
-                clearBtn.innerHTML = '<i class="fas fa-times"></i>';
-                clearBtn.addEventListener('click', function() {
-                    searchInput.value = '';
-                    searchInput.focus();
-                });
-
-                const inputContainer = searchInput.parentElement;
-                inputContainer.classList.add('relative');
-                inputContainer.appendChild(clearBtn);
+        // Quick search on Enter key
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchForm.submit();
             }
         });
-    });
-    </script>
 
+        // Auto-focus search input
+        searchInput.focus();
+
+        // Quick clear button
+        if (searchInput.value) {
+            const clearBtn = document.createElement('button');
+            clearBtn.type = 'button';
+            clearBtn.className = 'absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600';
+            clearBtn.innerHTML = '<i class="fas fa-times"></i>';
+            clearBtn.addEventListener('click', function() {
+                searchInput.value = '';
+                searchInput.focus();
+            });
+
+            const inputContainer = searchInput.parentElement;
+            inputContainer.classList.add('relative');
+            inputContainer.appendChild(clearBtn);
+        }
+    });
+</script>
 @endcan
 @endsection

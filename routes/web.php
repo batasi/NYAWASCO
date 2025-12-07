@@ -122,6 +122,11 @@ Route::prefix('api')->group(function () {
     Route::get('/customers/search', [App\Http\Controllers\Api\CustomerSearchController::class, 'search'])->name('api.customers.search');
     Route::get('/bills/search', [BillController::class, 'search'])->name('api.bills.search');
 });
+// routes/web.php
+Route::get('/admin/customers/search', [CustomerController::class, 'searchCustomers'])
+    ->name('admin.customers.search');
+Route::get('/admin/customers/{customer}/details', [CustomerController::class, 'getCustomerDetails'])
+    ->name('admin.customers.details');
 
 // Payment Callbacks (No Auth Required)
 Route::post('/pesapal/stkpush', [PesapalController::class, 'stkPush'])->name('pesapal.stkpush');
