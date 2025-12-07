@@ -13,24 +13,27 @@ class BillController extends Controller
 {
     public function index(Request $request)
     {
-        // Get bills with proper relationships and filters
         $status = $request->get('status');
         $sort = $request->get('sort', 'newest');
+        $user = Auth::user();
 
-        $bills = Bill::with([
+        $billsQuery = Bill::with([
             'customer',
             'meter.meterCategory',
             'payments',
             'meterReading'
         ])
-        ->when($status && $status !== 'all', function($query) use ($status) {
+        ->when($user->hasRole('biller'), function ($query) use ($user) {
+            $query->where('created_by', $user->id);
+        })
+        ->when($status && $status !== 'all', function ($query) use ($status) {
             if ($status === 'overdue') {
                 return $query->where('due_date', '<', now())
                             ->where('bill_status', 'unpaid');
             }
             return $query->where('bill_status', $status);
         })
-        ->when($sort, function($query) use ($sort) {
+        ->when($sort, function ($query) use ($sort) {
             switch ($sort) {
                 case 'oldest':
                     return $query->oldest();
@@ -41,19 +44,27 @@ class BillController extends Controller
                 default:
                     return $query->latest();
             }
-        })
-        ->paginate(10);
+        });
 
-        // Get TOTAL counts from the entire dataset (not filtered)
-        $totalBillsCount = Bill::count();
-        $unpaidBillsCount = Bill::where('bill_status', 'unpaid')->count();
-        $paidBillsCount = Bill::where('bill_status', 'paid')->count();
-        $partialBillsCount = Bill::where('bill_status', 'partial')->count();
-        $overdueBillsCount = Bill::where('due_date', '<', now())
-                                ->where('bill_status', 'unpaid')
-                                ->count();
+        // Paginated results
+        $bills = $billsQuery->paginate(10);
 
-        // Get stats for the cards (from filtered data for display)
+        // COUNTS FOR CARDS MUST RESPECT BILLER FILTER
+        $summaryQuery = Bill::query()
+            ->when($user->hasRole('biller'), function ($query) use ($user) {
+                $query->where('created_by', $user->id);
+            });
+
+        $totalBillsCount = $summaryQuery->count();
+        $unpaidBillsCount = $summaryQuery->clone()->where('bill_status', 'unpaid')->count();
+        $paidBillsCount = $summaryQuery->clone()->where('bill_status', 'paid')->count();
+        $partialBillsCount = $summaryQuery->clone()->where('bill_status', 'partial')->count();
+        $overdueBillsCount = $summaryQuery->clone()
+            ->where('due_date', '<', now())
+            ->where('bill_status', 'unpaid')
+            ->count();
+
+        // Dashboard statistics from visible bills
         $totalRevenue = $bills->sum('total_amount');
         $outstandingBalance = $bills->where('bill_status', '!=', 'paid')->sum('total_amount');
         $totalBills = $bills->total();
@@ -73,6 +84,7 @@ class BillController extends Controller
             'overdueBillsCount'
         ));
     }
+
 
 
     /**
@@ -170,89 +182,116 @@ class BillController extends Controller
     }
 
     // Simple API for AJAX features
-    public function search(Request $request)
+   public function search(Request $request)
     {
-        $search = $request->get('search');
+        $search = trim($request->get('search'));
+        $user = auth()->user();
 
         $bills = Bill::with(['customer', 'meter.meterCategory', 'payments'])
+            ->when($user->hasRole('biller'), function ($query) use ($user) {
+                $query->where('created_by', $user->id);
+            })
             ->where(function($query) use ($search) {
                 $query->where('bill_number', 'like', "%{$search}%")
-                      ->orWhereHas('customer', function($q) use ($search) {
-                          $q->where('first_name', 'like', "%{$search}%")
+                    ->orWhereRaw("CAST(total_amount AS CHAR) LIKE ?", ["%{$search}%"])
+                    ->orWhereRaw("CAST(balance AS CHAR) LIKE ?", ["%{$search}%"])
+                    ->orWhereRaw("CAST(consumption AS CHAR) LIKE ?", ["%{$search}%"])
+                    ->orWhereHas('customer', function($q) use ($search) {
+                        $q->where('first_name', 'like', "%{$search}%")
                             ->orWhere('last_name', 'like', "%{$search}%")
                             ->orWhere('customer_number', 'like', "%{$search}%")
                             ->orWhere('phone', 'like', "%{$search}%");
-                      })
-                      ->orWhereHas('meter', function($q) use ($search) {
-                          $q->where('meter_number', 'like', "%{$search}%");
-                      });
+                    })
+                    ->orWhereHas('meter', function($q) use ($search) {
+                        $q->where('meter_number', 'like', "%{$search}%");
+                    });
             })
-            ->limit(10)
+            ->limit(20)
             ->get();
+
+        // Transform for JS table
+        $bills = $bills->map(function($bill) {
+            return [
+                'id' => $bill->id,
+                'bill_number' => $bill->bill_number,
+                'bill_status' => $bill->bill_status,
+                'total_amount' => $bill->total_amount,
+                'balance' => $bill->balance,
+                'is_overdue' => $bill->is_overdue,
+                'billing_period_start_formatted' => optional($bill->billing_period_start)->format('M d'),
+                'billing_period_end_formatted' => optional($bill->billing_period_end)->format('M d, Y'),
+                'consumption' => $bill->consumption,
+                'payments' => $bill->payments,
+                'customer' => $bill->customer,
+                'meter' => $bill->meter,
+            ];
+        });
 
         return response()->json($bills);
     }
+
+
     public function infoByCustomer($customerId)
-{
-    // Get the customer
-    $customer = Customer::findOrFail($customerId);
+    {
+        // Get the customer
+        $customer = Customer::findOrFail($customerId);
 
-    // Fetch all unpaid bills
-    $unpaidBills = Bill::where('customer_id', $customerId)
-        ->get()
-        ->map(function ($bill) {
-            $bill->due = $bill->total_amount - $bill->payments()->sum('amount');
-            return $bill;
-        })
-        ->filter(function ($bill) {
-            return $bill->due > 0;
-        });
+        // Fetch all unpaid bills
+        $unpaidBills = Bill::where('customer_id', $customerId)
+            ->get()
+            ->map(function ($bill) {
+                $bill->due = $bill->total_amount - $bill->payments()->sum('amount');
+                return $bill;
+            })
+            ->filter(function ($bill) {
+                return $bill->due > 0;
+            });
 
-    // Total due across all bills
-    $totalDue = $unpaidBills->sum('due');
+        // Total due across all bills
+        $totalDue = $unpaidBills->sum('due');
 
-    return response()->json([
-        'customer_id'   => $customer->id,
-        'customer_name' => $customer->first_name,
-        'total_due'     => $totalDue,
-        'unpaid_bills'  => $unpaidBills->values(), // optional
-    ]);
-}
-public function infoByMeter($meter)
-{
-    $meterRecord = Meter::where('meter_number', $meter)->first();
-
-    if (!$meterRecord) {
-        return response()->json(['error' => 'Meter not found'], 404);
+        return response()->json([
+            'customer_id'   => $customer->id,
+            'customer_name' => $customer->first_name,
+            'total_due'     => $totalDue,
+            'unpaid_bills'  => $unpaidBills->values(), // optional
+        ]);
     }
+    public function infoByMeter($meter)
+    {
+        $meterRecord = Meter::where('meter_number', $meter)->first();
 
-    $customer = $meterRecord->customer;
+        if (!$meterRecord) {
+            return response()->json(['error' => 'Meter not found'], 404);
+        }
 
-    $unpaidBills = Bill::where('meter_id', $meterRecord->id)
-        ->whereColumn('total_amount', '>', 'paid_amount')
-        ->get();
+        $customer = $meterRecord->customer;
 
-    $totalDue = $unpaidBills->sum(fn($b) => $b->balance);
+        $unpaidBills = Bill::where('meter_id', $meterRecord->id)
+            ->whereColumn('total_amount', '>', 'paid_amount')
+            ->get();
 
-    return response()->json([
-        'customer' => [
-            'id' => $customer->id,
-            'name' => $customer->first_name . ' ' . $customer->last_name,
-        ],
-        'meter' => [
-            'model' => $meterRecord->meter_model,
-            'type' => $meterRecord->meter_type,
-        ],
-        'unpaid_bills' => $unpaidBills->map(function ($b) {
-            return [
-                'bill_number' => $b->bill_number,
-                'total_amount' => $b->total_amount,
-                'due' => $b->balance,
-            ];
-        }),
-        'total_due' => $totalDue,
-    ]);
-}
+        $totalDue = $unpaidBills->sum(fn($b) => $b->balance);
+
+        return response()->json([
+            'customer' => [
+                'id' => $customer->id,
+                'name' => $customer->first_name . ' ' . $customer->last_name,
+            ],
+            'meter' => [
+                'model' => $meterRecord->meter_model,
+                'type' => $meterRecord->meter_type,
+            ],
+            'unpaid_bills' => $unpaidBills->map(function ($b) {
+                return [
+                    'bill_number' => $b->bill_number,
+                    'total_amount' => $b->total_amount,
+                    'due' => $b->balance,
+                ];
+            }),
+            'total_due' => $totalDue,
+        ]);
+    }
 // In your BillController
 // public function generateReceipt(Bill $bill)
 // {
@@ -302,11 +341,11 @@ public function printReceipt(Bill $bill)
 {
     // Load necessary data
     $bill->load(['customer', 'meter', 'payments', 'meter.meterCategory']);
-    
+
     // Get total paid amount
     $totalPaid = $bill->payments->sum('amount');
     $balance = $bill->total_amount - $totalPaid;
-    
+
     // Prepare receipt data
     $receiptData = [
         'bill_number' => $bill->bill_number,
@@ -316,7 +355,7 @@ public function printReceipt(Bill $bill)
         'customer_number' => $bill->customer->customer_number,
         'customer_phone' => $bill->customer->phone ?? 'N/A',
         'meter_number' => $bill->meter->meter_number ?? 'N/A',
-        'billing_period' => $bill->billing_period_start 
+        'billing_period' => $bill->billing_period_start
             ? $bill->billing_period_start->format('M d') . '-' . $bill->billing_period_end->format('M d')
             : 'N/A',
         'consumption' => number_format($bill->consumption, 2) . ' m³',
@@ -331,7 +370,7 @@ public function printReceipt(Bill $bill)
         'footer_message' => 'Thank you!',
         'printed_date' => now()->format('Y-m-d H:i:s'),
     ];
-    
+
     // Return the 58mm optimized receipt view
     return view('bills.receipts.thermal-58mm', compact('receiptData'));
 }

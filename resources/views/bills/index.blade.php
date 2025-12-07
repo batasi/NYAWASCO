@@ -59,6 +59,7 @@
         <!-- Financial Overview Cards -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <!-- Total Revenue -->
+            @can('view payments')
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <div class="flex items-center justify-between">
                     <div>
@@ -95,6 +96,7 @@
                     </div>
                 </div>
             </div>
+            @endcan
 
             <!-- Total Bills -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -114,6 +116,7 @@
             </div>
 
             <!-- Collection Rate -->
+            @can('view payments')
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <div class="flex items-center justify-between">
                     <div>
@@ -131,6 +134,8 @@
                     </div>
                 </div>
             </div>
+            @endcan
+
         </div>
 
         <!-- Quick Stats & Filters -->
@@ -166,16 +171,30 @@
                 </div>
 
                 <!-- Search Box -->
-                <div class="relative">
-                    <input type="text"
-                           id="billSearch"
-                           placeholder="Search bills..."
-                           class="w-80 border border-gray-300 rounded-lg px-4 py-2 pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
-                           autocomplete="off">
-                    <div class="absolute inset-y-0 left-0 flex items-center pl-3">
-                        <i class="fas fa-search text-gray-400"></i>
+                <div class="flex space-x-2">
+                    <div class="relative">
+                        <input type="text"
+                            id="billSearch"
+                            placeholder="Search (Bill No, Customer, Phone, Meter)..."
+                            class="w-80 border border-gray-300 rounded-lg px-4 py-2 pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                            autocomplete="off">
+
+                        <div class="absolute inset-y-0 left-0 flex items-center pl-3">
+                            <i class="fas fa-search text-gray-400"></i>
+                        </div>
                     </div>
+
+                    <button id="searchBtn"
+                        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition">
+                        Search
+                    </button>
+
+                    <button id="resetBtn"
+                        class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg transition hidden">
+                        Reset
+                    </button>
                 </div>
+
             </div>
         </div>
 
@@ -269,18 +288,7 @@
                                     @endif
                                 </span>
                             </td>
-                            <!-- <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                @if($bill->due_date)
-                                    <span class="{{ $bill->is_overdue ? 'text-red-600 font-semibold' : 'text-gray-500' }}">
-                                        {{ $bill->formatted_due_date }}
-                                        @if($bill->is_overdue)
-                                            <i class="fas fa-exclamation-triangle ml-1"></i>
-                                        @endif
-                                    </span>
-                                @else
-                                    —
-                                @endif
-                            </td> -->
+
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <div class="flex justify-end space-x-2">
                                     <a href="{{ route('bills.show', $bill->id) }}"
@@ -288,11 +296,7 @@
                                     title="View Bill">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                    <a href="{{ route('bills.edit', $bill->id) }}"
-                                    class="text-green-600 hover:text-green-900 px-2 py-1 rounded transition duration-200"
-                                    title="Edit Bill">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
+
                                     <!-- Simple Print Link -->
                                     <a href="{{ route('bills.print', $bill->id) }}"
                                         target="_blank"
@@ -301,7 +305,7 @@
                                         <i class="fas fa-print"></i>
                                     </a>
 
-                                    <form action="{{ route('bills.destroy', $bill->id) }}" method="POST" class="inline">
+                                    <!-- <form action="{{ route('bills.destroy', $bill->id) }}" method="POST" class="inline">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit"
@@ -310,7 +314,7 @@
                                                 title="Delete Bill">
                                             <i class="fas fa-trash"></i>
                                         </button>
-                                    </form>
+                                    </form> -->
                                 </div>
                             </td>
                         </tr>
@@ -375,21 +379,27 @@
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 class="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
                 <div class="space-y-3">
+                    @can('view customers')
                     <a href="{{ route('admin.customers.index') }}"
                        class="w-full bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
                         <i class="fas fa-users mr-2"></i>
                         View All Customers
                     </a>
+                    @endcan
+                    @can('view meters')
                     <a href="{{ route('admin.meters.index') }}"
                        class="w-full bg-green-100 hover:bg-green-200 text-green-700 px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
                         <i class="fas fa-tachometer-alt mr-2"></i>
                         Meter Management
                     </a>
+                    @endcan
+                    @can('view payments')
                     <a href="{{ route('payments.create') }}"
                        class="w-full bg-purple-100 hover:bg-purple-200 text-purple-700 px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
                         <i class="fas fa-plus-circle mr-2"></i>
                         Record Payment
                     </a>
+                    @endcan
                 </div>
             </div>
         </div>
@@ -450,26 +460,30 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 ////////////////////////////////////////////////////////////////////////
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const searchInput = document.getElementById('billSearch');
-    let searchTimeout;
+    const searchBtn = document.getElementById('searchBtn');
+    const resetBtn = document.getElementById('resetBtn');
 
-    searchInput.addEventListener('input', function(e) {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            const searchTerm = e.target.value.trim();
-            if (searchTerm.length > 2) {
+    if (searchBtn) {
+        searchBtn.addEventListener('click', function () {
+            const searchTerm = searchInput?.value.trim();
+            if (searchTerm && searchTerm.length > 0) {
                 performSearch(searchTerm);
-            } else if (searchTerm.length === 0) {
-                // Reset to original view if search is cleared
-                window.location.reload();
+                resetBtn?.classList.remove('hidden');
             }
-        }, 500);
-    });
+        });
+    }
+
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function () {
+            window.location.reload();
+        });
+    }
 
     async function performSearch(searchTerm) {
         try {
-            const response = await fetch(`/bills/search?search=${encodeURIComponent(searchTerm)}`, {
+            const response = await fetch(`api/bills/search?search=${encodeURIComponent(searchTerm)}`, {
                 headers: {
                     'Accept': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
@@ -480,16 +494,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const bills = await response.json();
             updateTableWithSearchResults(bills);
-
         } catch (error) {
-            console.error('Search error:', error);
+            console.error(error);
         }
     }
 
     function updateTableWithSearchResults(bills) {
         const tbody = document.getElementById('billsTableBody');
 
-        if (bills.length === 0) {
+        if (!tbody) return;  // extra safeguard
+
+        if (!bills || bills.length === 0) {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="9" class="px-6 py-12 text-center">
@@ -499,17 +514,52 @@ document.addEventListener('DOMContentLoaded', function() {
                             <p class="text-gray-500">No bills match your search criteria.</p>
                         </div>
                     </td>
-                </tr>
-            `;
+                </tr>`;
             return;
         }
 
-        tbody.innerHTML = bills.map(bill => `
+        tbody.innerHTML = bills.map(bill => {
+            const billingPeriod = bill.billing_period_start && bill.billing_period_end
+                ? `${bill.billing_period_start_formatted} - ${bill.billing_period_end_formatted}`
+                : '—';
+
+            const paidAmount = bill.payments?.length > 0
+                ? bill.payments.reduce((sum, p) => sum + p.amount, 0)
+                : 0;
+
+            let statusBadge = '';
+            let statusColor = '';
+            let statusIcon = '';
+
+            switch (bill.bill_status) {
+                case 'paid':
+                    statusColor = 'bg-green-100 text-green-800';
+                    statusIcon = 'fa-check-circle';
+                    break;
+                case 'partial':
+                    statusColor = 'bg-blue-100 text-blue-800';
+                    statusIcon = 'fa-hourglass-half';
+                    break;
+                case 'unpaid':
+                    statusColor = bill.is_overdue ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800';
+                    statusIcon = bill.is_overdue ? 'fa-exclamation-triangle' : 'fa-clock';
+                    break;
+                default:
+                    statusColor = 'bg-gray-100 text-gray-800';
+                    statusIcon = 'fa-question-circle';
+            }
+
+            const overdueSuffix = bill.is_overdue && bill.bill_status === 'unpaid'
+                ? '(Overdue)'
+                : '';
+
+            return `
             <tr class="hover:bg-gray-50 transition-colors duration-150">
                 <td class="px-6 py-4 whitespace-nowrap">
                     <div class="text-sm font-mono font-semibold text-blue-600">${bill.bill_number}</div>
                     <div class="text-xs text-gray-500">#${bill.id}</div>
                 </td>
+
                 <td class="px-6 py-4">
                     <div class="flex items-center space-x-3">
                         <div class="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
@@ -524,69 +574,68 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     </div>
                 </td>
+
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm font-medium text-gray-900">${bill.meter.meter_number}</div>
-                    <div class="text-xs text-gray-500">${bill.meter.meter_category.name}</div>
+                    <div class="text-sm font-medium text-gray-900">${bill.meter?.meter_number ?? 'N/A'}</div>
+                    <div class="text-xs text-gray-500">${bill.meter?.meter_category?.name ?? 'No Category'}</div>
                 </td>
+
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${bill.billing_period_start ? new Date(bill.billing_period_start).toLocaleDateString() : '—'}
-                    to
-                    ${bill.billing_period_end ? new Date(bill.billing_period_end).toLocaleDateString() : '—'}
+                    ${billingPeriod}
                 </td>
+
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900 font-medium">${parseFloat(bill.consumption).toFixed(2)} m³</div>
+                    <div class="text-sm text-gray-900 font-medium">${Number(bill.consumption).toFixed(2)} m³</div>
                     <div class="text-xs text-gray-500">Consumption</div>
                 </td>
+
                 <td class="px-6 py-4 whitespace-nowrap">
                     <div class="text-sm font-semibold text-gray-900">
-                        KSh ${parseFloat(bill.total_amount).toFixed(2)}
+                        KSh ${Number(bill.total_amount).toLocaleString()}
                     </div>
+                    ${
+                        bill.payments?.length > 0
+                        ? `<div class="text-xs text-green-600">Paid: KSh ${paidAmount.toLocaleString()}</div>`
+                        : ''
+                    }
                 </td>
+
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-${getStatusColor(bill.bill_status, bill.due_date)}-100 text-${getStatusColor(bill.bill_status, bill.due_date)}-800">
-                        <i class="fas ${getStatusIcon(bill.bill_status, bill.due_date)} mr-1"></i>
-                        ${bill.bill_status.charAt(0).toUpperCase() + bill.bill_status.slice(1)}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor}">
+                        <i class="fas ${statusIcon} mr-1"></i>
+                        ${bill.bill_status.charAt(0).toUpperCase() + bill.bill_status.slice(1)} ${overdueSuffix}
                     </span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${bill.due_date ? new Date(bill.due_date).toLocaleDateString() : '—'}
-                </td>
+
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div class="flex justify-end space-x-2">
+
                         <a href="/bills/${bill.id}"
-                           class="text-blue-600 hover:text-blue-900 px-2 py-1 rounded transition duration-200"
-                           title="View Bill">
+                            class="text-blue-600 hover:text-blue-900 px-2 py-1 rounded transition duration-200"
+                            title="View Bill">
                             <i class="fas fa-eye"></i>
                         </a>
-                        <a href="/bills/${bill.id}/edit"
-                           class="text-green-600 hover:text-green-900 px-2 py-1 rounded transition duration-200"
-                           title="Edit Bill">
-                            <i class="fas fa-edit"></i>
+
+
+                        <a href="/bills/${bill.id}/print"
+                            target="_blank"
+                            class="text-purple-600 hover:text-purple-900 px-2 py-1 rounded transition duration-200"
+                            title="Print Receipt">
+                            <i class="fas fa-print"></i>
                         </a>
+
+
+
                     </div>
                 </td>
             </tr>
-        `).join('');
-    }
+            `;
+        }).join('');
 
-    function getStatusColor(status, dueDate) {
-        const isOverdue = dueDate && new Date(dueDate) < new Date();
-        if (status === 'paid') return 'green';
-        if (status === 'unpaid' && isOverdue) return 'red';
-        if (status === 'unpaid') return 'yellow';
-        if (status === 'partial') return 'blue';
-        return 'gray';
-    }
 
-    function getStatusIcon(status, dueDate) {
-        const isOverdue = dueDate && new Date(dueDate) < new Date();
-        if (status === 'paid') return 'fa-check-circle';
-        if (status === 'unpaid' && isOverdue) return 'fa-exclamation-triangle';
-        if (status === 'unpaid') return 'fa-clock';
-        if (status === 'partial') return 'fa-hourglass-half';
-        return 'fa-question-circle';
     }
 });
+
 </script>
 @endsection
 @endcan

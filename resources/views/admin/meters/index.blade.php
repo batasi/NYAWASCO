@@ -30,6 +30,7 @@
     <!-- Statistics -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
+   <!-- Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6 text-center hover:shadow-xl transition-all duration-300 hover:border-blue-200">
             <div class="text-3xl font-bold text-blue-600 mb-2">{{ $stats['total'] }}</div>
@@ -40,67 +41,68 @@
         <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6 text-center hover:shadow-xl transition-all duration-300 hover:border-green-200">
             <div class="text-3xl font-bold text-green-600 mb-2">{{ $stats['assigned'] }}</div>
             <div class="text-gray-700 font-medium">Active</div>
-            <div class="text-xs text-gray-500 mt-1">Active meters</div>
+            <div class="text-xs text-gray-500 mt-1">Currently assigned to customers</div>
         </div>
 
         <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6 text-center hover:shadow-xl transition-all duration-300 hover:border-orange-200">
             <div class="text-3xl font-bold text-orange-600 mb-2">{{ $stats['unassigned'] }}</div>
             <div class="text-gray-700 font-medium">Available</div>
-            <div class="text-xs text-gray-500 mt-1">Available for assignment</div>
+            <div class="text-xs text-gray-500 mt-1">Ready for assignment</div>
         </div>
 
         <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6 text-center hover:shadow-xl transition-all duration-300 hover:border-red-200">
             <div class="text-3xl font-bold text-red-600 mb-2">{{ $stats['faulty'] }}</div>
             <div class="text-gray-700 font-medium">Faulty</div>
-            <div class="text-xs text-gray-500 mt-1">Requires maintenance</div>
+            <div class="text-xs text-gray-500 mt-1">Needs maintenance</div>
         </div>
     </div>
 
-    <!-- Quick Actions with Active Filter Indicators -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-1 mb-3">
-        <a href="{{ route('admin.meters.index', ['filter' => 'all']) }}"
-           class="bg-blue-500 hover:bg-blue-600 text-white p-6 rounded-xl text-center transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 {{ ($filter ?? 'all') == 'all' ? 'ring-2 ring-blue-300 ring-opacity-50' : '' }}">
-            <div class="text-xl font-semibold mb-2">All Meters</div>
-            <div class="text-sm opacity-90">View all meters</div>
-            <div class="mt-3 text-2xl opacity-80">
+    <!-- Quick Actions -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+
+        <!-- Meters Card with Inline Filters -->
+        <div class="bg-blue-500 hover:bg-blue-600 text-white p-6 rounded-xl transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1">
+            <div class="text-xl font-semibold mb-2">Meters</div>
+            <div class="text-sm opacity-90 mb-4">View or filter meters</div>
+            <div class="flex justify-center gap-2 mb-4">
+                <a href="{{ route('admin.meters.index', ['filter' => 'all']) }}"
+                class="px-3 py-1 rounded-full {{ ($filter ?? 'all') == 'all' ? 'bg-white text-blue-600 font-semibold' : 'bg-blue-700 text-white' }}">
+                    All
+                </a>
+                <a href="{{ route('admin.meters.index', ['filter' => 'available']) }}"
+                class="px-3 py-1 rounded-full {{ ($filter ?? '') == 'available' ? 'bg-white text-blue-600 font-semibold' : 'bg-blue-700 text-white' }}">
+                    Available
+                </a>
+                <a href="{{ route('admin.meters.index', ['filter' => 'active']) }}"
+                class="px-3 py-1 rounded-full {{ ($filter ?? '') == 'assigned' ? 'bg-white text-blue-600 font-semibold' : 'bg-blue-700 text-white' }}">
+                    Active
+                </a>
+            </div>
+            <div class="text-3xl opacity-80 text-center">
                 <i class="fas fa-tachometer-alt"></i>
             </div>
-        </a>
+        </div>
 
-        <a href="{{ route('admin.meters.index', ['filter' => 'available']) }}"
-           class="bg-orange-500 hover:bg-orange-600 text-white p-6 rounded-xl text-center transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 {{ ($filter ?? '') == 'available' ? 'ring-2 ring-orange-300 ring-opacity-50' : '' }}">
-            <div class="text-xl font-semibold mb-2">Available Meters</div>
-            <div class="text-sm opacity-90">View available meters</div>
-            <div class="mt-3 text-2xl opacity-80">
-                <i class="fas fa-box-open"></i>
-            </div>
-        </a>
-
-        <a href="{{ route('admin.meters.index', ['filter' => 'active']) }}"
-           class="bg-green-500 hover:bg-green-600 text-white p-6 rounded-xl text-center transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 {{ ($filter ?? '') == 'assigned' ? 'ring-2 ring-green-300 ring-opacity-50' : '' }}">
-            <div class="text-xl font-semibold mb-2">Active Meters</div>
-            <div class="text-sm opacity-90">View customer meters</div>
-            <div class="mt-3 text-2xl opacity-80">
-                <i class="fas fa-user-check"></i>
-            </div>
-        </a>
-
+        <!-- By Location Card -->
         <a href="{{ route('admin.meters.index', ['filter' => 'location']) }}"
-           class="bg-purple-500 hover:bg-purple-600 text-white p-6 rounded-xl text-center transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 {{ ($filter ?? '') == 'location' ? 'ring-2 ring-purple-300 ring-opacity-50' : '' }}">
-            <div class="text-xl font-semibold mb-2">Meters by Location</div>
-            <div class="text-sm opacity-90">Search by address</div>
-            <div class="mt-3 text-2xl opacity-80">
+        class="bg-purple-500 hover:bg-purple-600 text-white p-6 rounded-xl text-center transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1">
+            <div class="text-xl font-semibold mb-2">By Location</div>
+            <div class="text-sm opacity-90 mb-4">Search meters by address</div>
+            <div class="text-3xl opacity-80">
                 <i class="fas fa-map-marker-alt"></i>
             </div>
         </a>
 
-         <a href="{{ route('admin.meter-categories.index') }}" class="bg-blue-500 hover:bg-blue-600 text-white p-6 rounded-xl text-center transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1">
+        <!-- Categories Card -->
+        <a href="{{ route('admin.meter-categories.index') }}"
+        class="bg-green-500 hover:bg-green-600 text-white p-6 rounded-xl text-center transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1">
             <div class="text-xl font-semibold mb-2">Categories</div>
-            <div class="text-sm opacity-90">Manage categories & pricing</div>
-            <div class="mt-3 text-2xl opacity-80">
+            <div class="text-sm opacity-90 mb-4">Manage categories & pricing</div>
+            <div class="text-3xl opacity-80">
                 <i class="fas fa-tags"></i>
             </div>
         </a>
+
     </div>
 
     <!-- Location Search (only show when location filter is active) -->

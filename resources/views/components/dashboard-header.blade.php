@@ -37,31 +37,7 @@
             </div>
 
             <!-- Profile Dropdown (Desktop only) -->
-            @auth
-            <div class="relative hidden md:flex" x-data="{ open: false }">
-                <button @click="open = !open" class="flex items-center px-3 py-2 rounded-lg bg-red-200 hover:bg-gray-200">
-                    <i class="fas fa-user-circle text-xl mr-2"></i>
-                    <span>Acc</span>
-                    <i class="fas fa-chevron-down ml-1" :class="{ 'rotate-180': open }"></i>
-                </button>
 
-                <div x-show="open" x-transition x-cloak
-                    class="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-lg overflow-hidden z-50">
-                    <a href="#"
-                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    @click="open = false">Profile</a>
-
-                    <form method="POST" action="{{ route('logout') }}">
-                        @csrf
-                        <button type="submit"
-                                class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                @click="open = false">
-                            Log Out
-                        </button>
-                    </form>
-                </div>
-            </div>
-            @endauth
 
 
             <!-- ACTION BUTTONS -->
@@ -86,7 +62,31 @@
                     </a>
                 @endif
             @endforeach
+            @auth
+            <div class="relative hidden md:flex" x-data="{ open: false }">
+                <button @click="open = !open" class="flex items-center px-3 py-2 rounded-lg bg-red-200 hover:bg-gray-200">
+                    <i class="fas fa-user-circle text-xl mr-2"></i>
+                    <span></span>
+                    <i class="fas fa-chevron-down ml-1" :class="{ 'rotate-180': open }"></i>
+                </button>
 
+                <div x-show="open" x-transition x-cloak
+                    class="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-lg overflow-hidden z-50">
+                    <a href="#"
+                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    @click="open = false">Profile</a>
+
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit"
+                                class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                @click="open = false">
+                            Log Out
+                        </button>
+                    </form>
+                </div>
+            </div>
+            @endauth
             <!-- Mobile Menu Toggle -->
             <div class="mobile-toggle">
                 <button @click="mobileMenuOpen = true" class="mobile-menu-btn">
