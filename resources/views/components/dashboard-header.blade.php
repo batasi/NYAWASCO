@@ -220,8 +220,8 @@ function dashboardMenu() {
             @can('view customers')
             { name: 'Customers', href: '{{ route("admin.customers.index") }}', type: 'primary', icon: 'fas fa-users' },
             @endcan
-               @can('view reports')
-            { name: 'Customers', href: '{{ route("reports.index") }}', type: 'primary', icon: 'fas fa-file' },
+            @can('view reports')
+            { name: 'Reports', href: '{{ route("reports.index") }}', type: 'primary', icon: 'fas fa-file' },
             @endcan
         ],
     }

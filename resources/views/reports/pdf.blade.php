@@ -288,7 +288,7 @@
             <div class="logo-container">
                 <div class="logo">
                     <!-- Make sure the logo exists in public/images/nyawasco-logo.png -->
-                    <img src="{{ asset('img/Logo.png') }}">
+                    <!-- <img src="{{ asset('img/Logo.png') }}"> -->
                 </div>
             </div>
 
@@ -299,7 +299,7 @@
             <div class="company-details">
                 <p>P.O. Box 255 - 40500, NYAMIRA</p>
                 <p>Tel: 0787080455 | Email: info@nyawasco.co.ke</p>
-                <p>Website: http://www.nyawasco.go.ke</p>
+                <p>Website: http://www.nyawasco.co.ke</p>
             </div>
         </div>
 

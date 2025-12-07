@@ -73,7 +73,7 @@ class ReportController extends Controller
         $query = Bill::with(['customer', 'meter.meterCategory']);
 
         if ($startDate) {
-            $query->whereBetween('created_at', [$startDate, $endDate]);
+            $query->whereBetween('billing_period_end', [$startDate, $endDate]);
         }
 
         $bills = $query->get();
@@ -88,7 +88,7 @@ class ReportController extends Controller
                 DB::raw('COUNT(*) as bill_count')
             )
             ->when($startDate, function ($q) use ($startDate, $endDate) {
-                return $q->whereBetween('billing_period_end', [$startDate, $endDate]);
+                return $q->whereBetween('created_at', [$startDate, $endDate]);
             })
             ->groupBy(DB::raw('YEAR(billing_period_end), MONTH(billing_period_end)'))
             ->orderBy('year', 'desc')
