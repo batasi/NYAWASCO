@@ -10,9 +10,7 @@
             <div class="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-4 rounded-t-2xl">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-bolt text-white text-lg"></i>
-                        </div>
+
                         <div>
                             <h3 class="text-xl font-bold text-white" id="modal-title">Quick Bill Generation</h3>
                             <p class="text-green-100 text-sm">Search meter to record reading and generate bill</p>
@@ -31,20 +29,15 @@
                 <!-- Meter Search Section -->
                 <div class="mb-8">
                     <div class="text-center mb-8">
-                        <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full mb-4">
-                            <i class="fas fa-tachometer-alt text-white text-2xl"></i>
-                        </div>
+
                         <h4 class="text-xl font-semibold text-gray-900 mb-2">Search Meter by Number</h4>
-                        <p class="text-gray-600">Enter the meter number to proceed with bill generation</p>
                     </div>
 
                     <!-- Search Form -->
                     <form id="meterSearchForm" class="max-w-lg mx-auto">
                         @csrf
                         <div class="relative">
-                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                <i class="fas fa-search text-gray-400"></i>
-                            </div>
+
                             <input
                                 type="text"
                                 id="meter_number"
@@ -58,7 +51,7 @@
                                 <button type="submit"
                                         id="searchButton"
                                         class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center shadow-md hover:shadow-lg">
-                                    <i class="fas fa-search mr-2"></i>
+
                                     Search
                                 </button>
                             </div>
@@ -114,9 +107,7 @@
                             <!-- Meter Header -->
                             <div class="flex items-center justify-between mb-6">
                                 <div class="flex items-center space-x-3">
-                                    <div class="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
-                                        <i class="fas fa-tachometer-alt text-white text-xl"></i>
-                                    </div>
+
                                     <div>
                                         <h4 class="text-lg font-bold text-gray-900" id="meterNumberDisplay"></h4>
                                         <div class="flex items-center space-x-2 mt-1">
@@ -131,10 +122,10 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="text-right">
+                                <!-- <div class="text-right">
                                     <div class="text-xs text-gray-500">Current Reading</div>
                                     <div class="text-2xl font-bold text-gray-900" id="currentReading"></div>
-                                </div>
+                                </div> -->
                             </div>
 
                             <!-- Customer & Meter Info -->
@@ -184,10 +175,10 @@
                                                 <div class="text-sm font-semibold text-gray-900" id="lastReadingValue"></div>
                                                 <div class="text-xs text-gray-500" id="lastReadingDateDetail"></div>
                                             </div>
-                                            <div class="text-right">
+                                            <!-- <div class="text-right">
                                                 <div class="text-xs text-gray-500">Suggested</div>
                                                 <div class="text-sm font-semibold text-green-600" id="suggestedReading"></div>
-                                            </div>
+                                            </div> -->
                                         </div>
                                     </div>
                                 </div>
@@ -195,11 +186,7 @@
 
                             <!-- Action Buttons -->
                             <div class="flex items-center justify-between pt-4 border-t border-gray-200">
-                                <button onclick="resetSearch()"
-                                        class="text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg transition-colors flex items-center">
-                                    <i class="fas fa-search mr-2"></i>
-                                    Search Another
-                                </button>
+
                                 <div class="flex space-x-3">
                                     <button onclick="closeQuickBillModal()"
                                             class="text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg transition-colors">
@@ -325,8 +312,7 @@ function displayMeterDetails(meter) {
     document.getElementById('meterStatus').textContent = meter.status;
     document.getElementById('meterCategory').textContent = meter.category?.name || 'No Category';
 
-    document.getElementById('currentReading').textContent =
-        parseFloat(meter.current_reading).toFixed(2) + ' m³';
+
 
     // --- FIXED SAFE HANDLING OF last_reading ---
     if (meter.last_reading && meter.last_reading.reading !== null) {
@@ -339,8 +325,7 @@ function displayMeterDetails(meter) {
         const suggestedReading =
             parseFloat(meter.last_reading.reading) + 10;
 
-        document.getElementById('suggestedReading').textContent =
-            suggestedReading.toFixed(2) + ' m³';
+
     } else {
         document.getElementById('lastReadingValue').textContent =
             parseFloat(meter.current_reading).toFixed(2) + ' m³ (Initial)';
@@ -348,8 +333,7 @@ function displayMeterDetails(meter) {
         document.getElementById('lastReadingDateDetail').textContent =
             'No previous reading';
 
-        document.getElementById('suggestedReading').textContent =
-            parseFloat(meter.current_reading).toFixed(2) + ' m³';
+
     }
 
     // Customer info
