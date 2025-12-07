@@ -179,7 +179,6 @@
                             class="w-40 border border-gray-300 rounded-lg px-4 py-2 pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
                             autocomplete="off">
 
-
                     </div>
 
                     <button id="searchBtn"
