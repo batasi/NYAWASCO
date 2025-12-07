@@ -77,16 +77,7 @@
                                    class="text-blue-600 border-gray-300 focus:ring-blue-500">
                             <span class="ml-2 text-sm text-gray-700">Download PDF</span>
                         </label>
-                        <label class="inline-flex items-center">
-                            <input type="radio" name="format" value="excel"
-                                   class="text-blue-600 border-gray-300 focus:ring-blue-500">
-                            <span class="ml-2 text-sm text-gray-700">Download Excel</span>
-                        </label>
-                        <label class="inline-flex items-center">
-                            <input type="radio" name="format" value="csv"
-                                   class="text-blue-600 border-gray-300 focus:ring-blue-500">
-                            <span class="ml-2 text-sm text-gray-700">Download CSV</span>
-                        </label>
+
                     </div>
                 </div>
 

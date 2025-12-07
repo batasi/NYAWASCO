@@ -7,7 +7,7 @@
 <!-- Alpine.js Menu System -->
 <script src="//unpkg.com/alpinejs" defer></script>
 
-<div x-data="dashboardMenu()" class="bg-white shadow-sm border-b border-gray-200 bg-blue-200">
+<div x-data="dashboardMenu()" class="shadow-sm border-b border-blue-700 bg-green-200">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
 
         <!-- Logo + Page Titles -->
