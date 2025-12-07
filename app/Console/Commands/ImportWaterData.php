@@ -132,7 +132,7 @@ class ImportWaterData extends Command
                     ['meter_number' => $meterNumber],
                     [
                         'meter_category_id' => $category->id,
-                        'longitude' => $row['Longitude'] ?? null,
+                        'longtitude' => $row['Longitude'] ?? null,
                         'latitude' => $row['Latitude'] ?? null,
                         'status' => strtolower($row['Status'] ?? 'unknown'),
                         'customer_id' => $customer->id,
