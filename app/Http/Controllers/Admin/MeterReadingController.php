@@ -142,7 +142,7 @@ class MeterReadingController extends Controller
                 // Calculate consumption based on reading status
                 $consumption = 0;
                 $estimatedConsumption = null;
-                
+
                 if ($request->reading_status === 'recorded') {
                     $consumption = $request->current_reading - $previousReadingValue;
                 } elseif ($request->reading_status === 'estimated') {
@@ -234,6 +234,7 @@ class MeterReadingController extends Controller
         // Get meter category pricing
         $category = $meter->meterCategory;
         $baseCharge = $category->base_charge ?? 100;
+        $meterRent = $category->meter_rent ?? 0; // default 0 if not set
 
         // Tier pricing calculation
         $tieredCharge = $this->calculateTieredCharge($category->id, $consumption);
@@ -249,10 +250,10 @@ class MeterReadingController extends Controller
 
         $taxRate = 0.16;
 
-        // Calculate charges
+        // Compute charges before tax
 
         $taxAmount = ($baseCharge + $consumptionCharge) * $taxRate;
-        $totalAmount = $baseCharge + $consumptionCharge;
+        $totalAmount = $baseCharge + $consumptionCharge + $meterRent;
 
         // Create bill without bill_number first
         $bill = Bill::create([
@@ -322,7 +323,6 @@ class MeterReadingController extends Controller
 
         return $total;
     }
-
 
     /**
      * Update meter and customer balances after bill generation
@@ -427,7 +427,7 @@ class MeterReadingController extends Controller
                 // No history, use default based on category
                 $defaultConsumption = $meter->meterCategory->default_rate * 10;
                 $estimatedConsumption = max(5, min($defaultConsumption, 50)); // Between 5-50 m³
-                
+
                 return response()->json([
                     'success' => true,
                     'estimated_consumption' => $estimatedConsumption,
@@ -486,5 +486,5 @@ class MeterReadingController extends Controller
         return view('admin.meter-readings.exceptions', compact('exceptions', 'stats'));
     }
 
- 
+
 }

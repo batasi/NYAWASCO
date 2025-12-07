@@ -175,13 +175,11 @@
                     <div class="relative">
                         <input type="text"
                             id="billSearch"
-                            placeholder="Search (Bill No, Customer, Phone, Meter)..."
+                            placeholder="Search (Bill No)..."
                             class="w-80 border border-gray-300 rounded-lg px-4 py-2 pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
                             autocomplete="off">
 
-                        <div class="absolute inset-y-0 left-0 flex items-center pl-3">
-                            <i class="fas fa-search text-gray-400"></i>
-                        </div>
+
                     </div>
 
                     <button id="searchBtn"
