@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 
 // Controllers
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\VotingController;
@@ -165,8 +166,12 @@ Route::get('/admin/meters/{meter}/json', [App\Http\Controllers\Admin\MeterContro
 */
 
 Route::middleware(['auth'])->group(function () {
+
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('/reports/generate', [ReportController::class, 'generate'])->name('reports.generate');
 
       Route::prefix('profile')->name('profile.')->group(function () {
         // Main profile page
@@ -428,7 +433,7 @@ Route::prefix('customers')->name('customers.')->group(function () {
     });
 
     // Meter reading estimation
-    Route::get('/customers/{customer}/meters/{meter}/estimate-consumption', 
+    Route::get('/customers/{customer}/meters/{meter}/estimate-consumption',
         [MeterReadingController::class, 'estimateConsption'])
         ->name('admin.meter-readings.estimate');
     Route::get('/meter-readings/exceptions', [MeterReadingController::class, 'exceptions'])->name('meter-readings.exceptions');
