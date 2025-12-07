@@ -164,14 +164,32 @@ Route::get('/admin/meters/{meter}/json', [App\Http\Controllers\Admin\MeterContro
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth'])->group(function () {
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Profile
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+      Route::prefix('profile')->name('profile.')->group(function () {
+        // Main profile page
+        Route::get('/', [ProfileController::class, 'edit'])->name('edit');
+        Route::get('/edit', [ProfileController::class, 'edit'])->name('edit'); // Alternative URL
+
+        // Update profile info
+        Route::patch('/update', [ProfileController::class, 'update'])->name('update');
+
+        // Password management
+        Route::get('/security', [ProfileController::class, 'security'])->name('security');
+        Route::post('/password', [ProfileController::class, 'updatePassword'])->name('password.update');
+        // Preferences
+        Route::get('/preferences', [ProfileController::class, 'preferences'])->name('preferences');
+        Route::patch('/preferences', [ProfileController::class, 'updatePreferences'])->name('preferences.update');
+
+        // Activity
+        Route::get('/activity', [ProfileController::class, 'activity'])->name('activity');
+
+        // Account deletion
+        Route::delete('/delete', [ProfileController::class, 'destroy'])->name('destroy');
+    });
+
 
     // Tickets & Bookings
     Route::get('/my-tickets', [TicketController::class, 'myTickets'])->name('tickets.my-tickets');

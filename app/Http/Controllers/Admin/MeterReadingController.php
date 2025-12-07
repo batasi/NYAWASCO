@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\MeterReading;
+use App\Models\PricingTier;
 use App\Models\Customer;
 use App\Models\Meter;
 use App\Models\Bill;
@@ -186,11 +187,23 @@ class MeterReadingController extends Controller
         // Get meter category pricing
         $category = $meter->meterCategory;
         $baseCharge = $category->base_charge ?? 100;
-        $consumptionRate = $category->default_rate ?? 50;
+
+        // Tier pricing calculation
+        $tieredCharge = $this->calculateTieredCharge($category->id, $consumption);
+
+        if ($tieredCharge !== null) {
+            $consumptionCharge = $tieredCharge;
+        } else {
+            // No tiers → use flat rate
+            $consumptionRate = $category->default_rate ?? 50;
+            $consumptionCharge = $consumption * $consumptionRate;
+        }
+
+
         $taxRate = 0.16;
 
         // Calculate charges
-        $consumptionCharge = $consumption * $consumptionRate;
+
         $taxAmount = ($baseCharge + $consumptionCharge) * $taxRate;
         $totalAmount = $baseCharge + $consumptionCharge;
 
@@ -225,6 +238,42 @@ class MeterReadingController extends Controller
         ]);
 
         return $bill;
+    }
+
+    private function calculateTieredCharge($meterCategoryId, $consumption)
+    {
+        // Fetch tiers sorted properly
+        $tiers = PricingTier::where('meter_category_id', $meterCategoryId)
+            ->orderBy('min_consumption')
+            ->get();
+
+        if ($tiers->isEmpty()) {
+            return null; // category has no tiers
+        }
+
+        $remaining = $consumption;
+        $total = 0;
+
+        foreach ($tiers as $tier) {
+            $min = $tier->min_consumption;
+            $max = $tier->max_consumption;
+
+            if ($remaining <= 0) break;
+
+            if ($max === null) {
+                // Last open tier
+                $total += $remaining * $tier->rate_per_unit;
+                break;
+            }
+
+            // Units consumed inside this tier range
+            $allowed = min($remaining, $max - $min + 1); // +1 to close ranges logically
+            $total += $allowed * $tier->rate_per_unit;
+
+            $remaining -= $allowed;
+        }
+
+        return $total;
     }
 
 

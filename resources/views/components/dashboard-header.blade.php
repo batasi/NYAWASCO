@@ -72,7 +72,7 @@
 
                 <div x-show="open" x-transition x-cloak
                     class="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-lg overflow-hidden z-50">
-                    <a href="#"
+                    <a href="{{ route('profile.edit') }}"
                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     @click="open = false">Profile</a>
 
@@ -128,7 +128,7 @@
             @auth
             <!-- Profile / Logout at bottom -->
             <div class="mt-auto border-t pt-2">
-                <a href="#"
+                <a href="{{ route('profile.edit') }}"
                    class="mobile-slide-link"
                    @click="mobileMenuOpen = false">
                     <i class="fas fa-user-circle"></i> Profile
