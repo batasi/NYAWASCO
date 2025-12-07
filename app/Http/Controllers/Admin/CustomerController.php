@@ -165,7 +165,7 @@ class CustomerController extends Controller
                     $meter = Meter::findOrFail($validated['meter_id']);
                     $meter->update([
                         'customer_id' => $customer->id,
-                        'status' => 'assigned',
+                        'status' => Meter::STATUS_ACTIVE,
                         'installation_address' => $customer->physical_address,
                         'installation_date' => now(),
                         'zone_id' => $validated['zone_id'] ?? null,
@@ -182,7 +182,7 @@ class CustomerController extends Controller
                         'meter_category_id' => $validated['meter_category_id'],
                         'meter_model' => $validated['meter_model'] ?? null,
                         'manufacturer' => $validated['manufacturer'] ?? null,
-                        'status' => 'assigned',
+                        'status' => Meter::STATUS_ACTIVE,
                         'customer_id' => $customer->id,
                         'installation_address' => $customer->physical_address,
                         'installation_date' => now(),
@@ -618,12 +618,12 @@ class CustomerController extends Controller
                 // Find the meter
                 $meter = Meter::findOrFail($request->meter_id);
 
-                // Check if meter is already assigned to another customer
-                if ($meter->customer_id && $meter->customer_id !== $customer->id) {
-                    throw new \Exception('This meter is already assigned to another customer.');
+                // Check if meter is available
+                if ($meter->status !== Meter::STATUS_AVAILABLE) {
+                    throw new \Exception('Meter is not available for assignment. Current status: ' . $meter->status);
                 }
 
-                // Update the meter
+                // Update meter to active status
                 $meter->update([
                     'customer_id' => $customer->id,
                     'installation_address' => $customer->physical_address,
@@ -631,8 +631,25 @@ class CustomerController extends Controller
                     'initial_reading' => $request->initial_reading,
                     'balance_bf' => $request->balance_bf ?? 0,
                     'current_balance' => $request->balance_bf ?? 0,
-                    'status' => 'assigned',
+                    'status' => Meter::STATUS_ACTIVE, // Changed to 'active'
                     'notes' => $request->notes
+                ]);
+
+                // Update customer status to active if it's pending
+                if ($customer->status === Customer::STATUS_PENDING) {
+                    $customer->update([
+                        'status' => Customer::STATUS_ACTIVE,
+                        'status_updated_at' => now(),
+                        'status_reason' => 'Meter assigned',
+                    ]);
+                }
+
+                // Update customer meter info
+                $customer->update([
+                    'meter_number' => $meter->meter_number,
+                    'meter_type' => $meter->meter_type,
+                    'initial_meter_reading' => $request->initial_reading,
+                    'initial_reading_date' => $request->installation_date,
                 ]);
 
                 // Create initial meter reading
@@ -651,7 +668,7 @@ class CustomerController extends Controller
                 ]);
             });
 
-            return back()->with('success', 'Meter assigned successfully!');
+            return back()->with('success', 'Meter assigned successfully and customer status updated!');
 
         } catch (\Exception $e) {
             Log::error('Meter assignment error: ' . $e->getMessage());
@@ -667,18 +684,15 @@ class CustomerController extends Controller
                     throw new \Exception('Meter is not assigned to this customer.');
                 }
 
-                // Update meter
+                // Update meter status to available
                 $meter->update([
                     'customer_id' => null,
-                    'status' => 'available',
+                    'status' => Meter::STATUS_AVAILABLE, // Changed to 'available'
                     'installation_address' => null,
                     'installation_date' => null,
                 ]);
 
-                // Update customer notes
-                $customer->update([
-                    'notes' => $customer->notes . "\nMeter unassigned: " . $meter->meter_number . " on " . now()->format('Y-m-d H:i:s'),
-                ]);
+                // Customer status will be auto-synced via the model observer
             });
 
             return redirect()->back()

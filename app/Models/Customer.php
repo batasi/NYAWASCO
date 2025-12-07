@@ -11,6 +11,12 @@ class Customer extends Model
 {
     use HasFactory, SoftDeletes;
 
+        // Status constants
+    const STATUS_PENDING = 'pending';
+    const STATUS_ACTIVE = 'active';
+    const STATUS_INACTIVE = 'inactive';
+    const STATUS_SUSPENDED = 'suspended';
+
     protected $fillable = [
         'customer_number',
         'first_name',
@@ -372,5 +378,41 @@ class Customer extends Model
             'industrial' => 'Industrial - High Capacity',
             'institutional' => 'Institutional - Bulk Meter',
         ];
+    }
+
+        /**
+     * Sync customer status based on meter statuses
+     */
+    public function syncStatusFromMeters()
+    {
+        $activeMeters = $this->meters()->active()->count();
+        $totalMeters = $this->meters()->count();
+        
+        $oldStatus = $this->status;
+        $newStatus = $this->status;
+        
+        // If customer has active meters, set to active
+        if ($activeMeters > 0 && $this->status !== self::STATUS_SUSPENDED) {
+            $newStatus = self::STATUS_ACTIVE;
+        }
+        // If customer has no meters or all meters are not active
+        elseif ($totalMeters === 0 || $activeMeters === 0) {
+            if ($this->status === self::STATUS_ACTIVE) {
+                $newStatus = self::STATUS_INACTIVE;
+            }
+        }
+        
+        // Only update if status changed
+        if ($oldStatus !== $newStatus) {
+            $this->update([
+                'status' => $newStatus,
+                'status_updated_at' => now(),
+                'status_reason' => 'Auto-updated from meter status',
+            ]);
+            
+            return true;
+        }
+        
+        return false;
     }
 }

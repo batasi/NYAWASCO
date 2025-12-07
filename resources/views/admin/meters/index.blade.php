@@ -45,7 +45,7 @@
         </div>
 
         <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6 text-center hover:shadow-xl transition-all duration-300 hover:border-orange-200">
-            <div class="text-3xl font-bold text-orange-600 mb-2">{{ $stats['unassigned'] }}</div>
+            <div class="text-3xl font-bold text-orange-600 mb-2">{{ $stats['available'] }}</div>
             <div class="text-gray-700 font-medium">Available</div>
             <div class="text-xs text-gray-500 mt-1">Ready for assignment</div>
         </div>
@@ -57,31 +57,34 @@
         </div>
     </div>
 
-    <!-- Quick Actions -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-
-        <!-- Meters Card with Inline Filters -->
-        <div class="bg-blue-500 hover:bg-blue-600 text-white p-6 rounded-xl transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1">
-            <div class="text-xl font-semibold mb-2">Meters</div>
-            <div class="text-sm opacity-90 mb-4">View or filter meters</div>
-            <div class="flex justify-center gap-2 mb-4">
-                <a href="{{ route('admin.meters.index', ['filter' => 'all']) }}"
-                class="px-3 py-1 rounded-full {{ ($filter ?? 'all') == 'all' ? 'bg-white text-blue-600 font-semibold' : 'bg-blue-700 text-white' }}">
-                    All
-                </a>
-                <a href="{{ route('admin.meters.index', ['filter' => 'available']) }}"
-                class="px-3 py-1 rounded-full {{ ($filter ?? '') == 'available' ? 'bg-white text-blue-600 font-semibold' : 'bg-blue-700 text-white' }}">
-                    Available
-                </a>
-                <a href="{{ route('admin.meters.index', ['filter' => 'active']) }}"
-                class="px-3 py-1 rounded-full {{ ($filter ?? '') == 'assigned' ? 'bg-white text-blue-600 font-semibold' : 'bg-blue-700 text-white' }}">
-                    Active
-                </a>
-            </div>
-            <div class="text-3xl opacity-80 text-center">
+    <!-- Quick Actions with Active Filter Indicators -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-1 mb-3">
+        <a href="{{ route('admin.meters.index', ['filter' => 'all']) }}"
+           class="bg-blue-500 hover:bg-blue-600 text-white p-6 rounded-xl text-center transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 {{ ($filter ?? 'all') == 'all' ? 'ring-2 ring-blue-300 ring-opacity-50' : '' }}">
+            <div class="text-xl font-semibold mb-2">All Meters</div>
+            <div class="text-sm opacity-90">View all meters</div>
+            <div class="mt-3 text-2xl opacity-80">
                 <i class="fas fa-tachometer-alt"></i>
             </div>
-        </div>
+        </a>
+
+        <a href="{{ route('admin.meters.index', ['filter' => 'available']) }}"
+           class="bg-orange-500 hover:bg-orange-600 text-white p-6 rounded-xl text-center transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 {{ ($filter ?? '') == 'available' ? 'ring-2 ring-orange-300 ring-opacity-50' : '' }}">
+            <div class="text-xl font-semibold mb-2">Available Meters</div>
+            <div class="text-sm opacity-90">View available meters</div>
+            <div class="mt-3 text-2xl opacity-80">
+                <i class="fas fa-box-open"></i>
+            </div>
+        </a>
+
+        <a href="{{ route('admin.meters.index', ['filter' => 'active']) }}"
+            class="bg-green-500 hover:bg-green-600 text-white p-6 rounded-xl text-center transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 {{ ($filter ?? '') == 'active' ? 'ring-2 ring-green-300 ring-opacity-50' : '' }}">
+                <div class="text-xl font-semibold mb-2">Active Meters</div>
+                <div class="text-sm opacity-90">View customer meters</div>
+                <div class="mt-3 text-2xl opacity-80">
+                    <i class="fas fa-user-check"></i>
+                </div>
+        </a>
 
         <!-- By Location Card -->
         <a href="{{ route('admin.meters.index', ['filter' => 'location']) }}"
@@ -153,6 +156,59 @@
         </div>
     </div>
 
+    <!-- Simple Search Form -->
+    <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+        <form method="GET" action="{{ route('admin.meters.index') }}" class="flex gap-4">
+            <input type="hidden" name="filter" value="{{ $filter }}">
+            <input type="hidden" name="category" value="{{ request('category') }}">
+            
+            @if($filter === 'location' && request('location'))
+                <input type="hidden" name="location" value="{{ request('location') }}">
+            @endif
+            
+            <div class="flex-1">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fas fa-search text-gray-400"></i>
+                    </div>
+                    <input type="text" 
+                        name="q" 
+                        value="{{ request('q') }}"
+                        placeholder="Search by meter number, customer name, location, etc..." 
+                        class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                </div>
+            </div>
+            
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition duration-200">
+                <i class="fas fa-search mr-2"></i>Search
+            </button>
+            
+            @if(request('q'))
+                <a href="{{ route('admin.meters.index', array_filter([
+                    'filter' => $filter,
+                    'category' => request('category'),
+                    'location' => $filter === 'location' ? request('location') : null
+                ])) }}" 
+                class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold transition duration-200 flex items-center">
+                    <i class="fas fa-times mr-2"></i>Clear
+                </a>
+            @endif
+        </form>
+        
+        @if(request('q'))
+            <div class="mt-3">
+                <p class="text-sm text-gray-600">
+                    Showing results for: <span class="font-semibold text-blue-600">"{{ request('q') }}"</span>
+                    @if($meters->total() > 0)
+                        <span class="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">
+                            {{ $meters->total() }} result(s) found
+                        </span>
+                    @endif
+                </p>
+            </div>
+        @endif
+    </div>
+
     <!-- Meters Table -->
     <div class="bg-white rounded-lg shadow overflow-hidden">
         <div class="overflow-x-auto">
@@ -196,7 +252,7 @@
                                 </a>
                                 <div class="text-xs text-gray-500">{{ $meter->customer->customer_number }}</div>
                             @else
-                                <span class="text-gray-500">Not assigned</span>
+                                <span class="text-gray-500">Not active</span>
                             @endif
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
@@ -279,8 +335,8 @@
                         <td colspan="9" class="px-6 py-4 text-center text-sm text-gray-500">
                             @if(($filter ?? '') == 'available')
                                 No unassigned meters found.
-                            @elseif(($filter ?? '') == 'assigned')
-                                No assigned meters found.
+                            @elseif(($filter ?? '') == 'active')
+                                No active meters found.
                             @elseif(($filter ?? '') == 'location' && request('location'))
                                 No meters found for location "{{ request('location') }}".
                             @elseif(($filter ?? '') == 'location')
@@ -334,7 +390,7 @@
                                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm">
                                     <option value="">Select Category</option>
                                     @foreach($categories as $category)
-                                        <option value="{{ $category->id }}" data-fees="{{ json_encode($category->additional_charges) }}">
+                                        <option value="{{ $category->id }}">
                                             {{ $category->name }} - {{ $category->code }}
                                         </option>
                                     @endforeach
@@ -365,49 +421,15 @@
                             </div>
                         </div>
 
-                        <!-- Charges Section -->
-                        <div class="bg-gray-50 p-4 rounded-lg">
-                            <h4 class="text-sm font-semibold text-gray-700 mb-3">Installation Charges</h4>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                <div>
-                                    <label for="modal_installation_fee" class="block text-sm font-medium text-gray-700 mb-1">Installation Fee</label>
-                                    <input type="number" name="installation_fee" id="modal_installation_fee" step="0.01" min="0"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm"
-                                        placeholder="0.00">
-                                </div>
+                        
 
-                                <div>
-                                    <label for="modal_connection_fee" class="block text-sm font-medium text-gray-700 mb-1">Connection Fee</label>
-                                    <input type="number" name="connection_fee" id="modal_connection_fee" step="0.01" min="0"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm"
-                                        placeholder="0.00">
-                                </div>
-
-                                <div>
-                                    <label for="modal_deposit_amount" class="block text-sm font-medium text-gray-700 mb-1">Deposit Amount</label>
-                                    <input type="number" name="deposit_amount" id="modal_deposit_amount" step="0.01" min="0"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm"
-                                        placeholder="0.00">
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Initial Reading and Installation Date -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label for="modal_initial_reading" class="block text-sm font-medium text-gray-700 mb-1">Initial Reading (m³) *</label>
-                                <input type="number" name="initial_reading" id="modal_initial_reading" step="0.01" min="0" required
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm"
-                                    placeholder="0.00"
-                                    value="0">
-                            </div>
-
-                            <div>
-                                <label for="modal_installation_date" class="block text-sm font-medium text-gray-700 mb-1">Installation Date</label>
-                                <input type="date" name="installation_date" id="modal_installation_date"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm"
-                                    value="{{ date('Y-m-d') }}">
-                            </div>
+                        <!-- Initial Reading Only -->
+                        <div>
+                            <label for="modal_initial_reading" class="block text-sm font-medium text-gray-700 mb-1">Initial Reading (m³) *</label>
+                            <input type="number" name="initial_reading" id="modal_initial_reading" step="0.01" min="0" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm"
+                                placeholder="0.00"
+                                value="0">
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -664,25 +686,17 @@
                             Dates Information
                         </h4>
 
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label for="edit_installation_date" class="block text-sm font-medium text-gray-700 mb-1">Installation Date</label>
                                 <input type="date" name="installation_date" id="edit_installation_date"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm">
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm">
                             </div>
 
                             <div>
                                 <label for="edit_last_maintenance_date" class="block text-sm font-medium text-gray-700 mb-1">Last Maintenance Date</label>
                                 <input type="date" name="last_maintenance_date" id="edit_last_maintenance_date"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm">
-                            </div>
-
-                            <div>
-                                <label for="edit_additional_charges" class="block text-sm font-medium text-gray-700 mb-1">Additional Charges</label>
-                                <input type="text" name="additional_charges" id="edit_additional_charges"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm"
-                                       placeholder='JSON format: {"charge1": 100, "charge2": 200}'>
-                                <small class="text-gray-500">Enter as JSON object</small>
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm">
                             </div>
                         </div>
                     </div>
@@ -748,15 +762,7 @@
         }
     });
 
-    // Handle category change to auto-fill fees
-    document.getElementById('modal_meter_category_id').addEventListener('change', function() {
-        const selectedOption = this.options[this.selectedIndex];
-        const fees = selectedOption ? JSON.parse(selectedOption.getAttribute('data-fees') || '{}') : {};
-
-        document.getElementById('modal_installation_fee').value = fees.installation_fee || '';
-        document.getElementById('modal_connection_fee').value = fees.connection_fee || '';
-        document.getElementById('modal_deposit_amount').value = fees.deposit || '';
-    });
+ 
 
     // Handle customer selection
     document.getElementById('modal_customer_id').addEventListener('change', function() {
@@ -816,8 +822,7 @@
         });
     });
 
-    // Set today's date as default for installation date
-    document.getElementById('modal_installation_date').value = new Date().toISOString().split('T')[0];
+
 
 
     //edit meter modal functions
@@ -920,23 +925,7 @@
         document.getElementById('edit_installation_date').value = meter.installation_date || '';
         document.getElementById('edit_last_maintenance_date').value = meter.last_maintenance_date || '';
 
-        // Additional charges (JSON to string)
-        if (meter.additional_charges) {
-            if (typeof meter.additional_charges === 'object' && meter.additional_charges !== null) {
-                document.getElementById('edit_additional_charges').value = JSON.stringify(meter.additional_charges, null, 2);
-            } else if (typeof meter.additional_charges === 'string' && meter.additional_charges.trim() !== '') {
-                try {
-                    const parsed = JSON.parse(meter.additional_charges);
-                    document.getElementById('edit_additional_charges').value = JSON.stringify(parsed, null, 2);
-                } catch (e) {
-                    document.getElementById('edit_additional_charges').value = meter.additional_charges;
-                }
-            } else {
-                document.getElementById('edit_additional_charges').value = '';
-            }
-        } else {
-            document.getElementById('edit_additional_charges').value = '';
-        }
+
 
         // Notes
         document.getElementById('edit_notes').value = meter.notes || '';
@@ -976,18 +965,7 @@
         try {
             const formData = new FormData(this);
 
-            // Convert additional_charges from string to JSON if needed
-            const additionalCharges = formData.get('additional_charges');
-            if (additionalCharges) {
-                try {
-                    // Try to parse as JSON to validate
-                    JSON.parse(additionalCharges);
-                    // If valid, keep as string (Laravel will handle JSON casting)
-                } catch (e) {
-                    // If not valid JSON, set to empty
-                    formData.set('additional_charges', '{}');
-                }
-            }
+        
 
             const response = await fetch(this.action, {
                 method: 'POST',
@@ -1013,6 +991,40 @@
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
         }
+
+        // Quick search functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.querySelector('input[name="q"]');
+            const searchForm = document.querySelector('form');
+            
+            if (!searchInput || !searchForm) return;
+            
+            // Quick search on Enter key
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchForm.submit();
+                }
+            });
+            
+            // Auto-focus search input
+            searchInput.focus();
+            
+            // Quick clear button
+            if (searchInput.value) {
+                const clearBtn = document.createElement('button');
+                clearBtn.type = 'button';
+                clearBtn.className = 'absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600';
+                clearBtn.innerHTML = '<i class="fas fa-times"></i>';
+                clearBtn.addEventListener('click', function() {
+                    searchInput.value = '';
+                    searchInput.focus();
+                });
+                
+                const inputContainer = searchInput.parentElement;
+                inputContainer.classList.add('relative');
+                inputContainer.appendChild(clearBtn);
+            }
+        });
     });
     </script>
 

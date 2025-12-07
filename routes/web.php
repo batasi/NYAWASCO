@@ -413,7 +413,7 @@ Route::prefix('customers')->name('customers.')->group(function () {
         Route::put('/{meter}', [MeterController::class, 'update'])->name('update');
         Route::post('/{meter}/assign', [MeterController::class, 'assignToCustomer'])->name('assign');
         Route::post('/{meter}/unassign', [MeterController::class, 'unassign'])->name('unassign');
-
+        Route::get('/search', [MeterController::class, 'search'])->name('search');
     });
 
 
@@ -427,6 +427,11 @@ Route::prefix('customers')->name('customers.')->group(function () {
 
     });
 
+    // Meter reading estimation
+    Route::get('/customers/{customer}/meters/{meter}/estimate-consumption', 
+        [MeterReadingController::class, 'estimateConsption'])
+        ->name('admin.meter-readings.estimate');
+    Route::get('/meter-readings/exceptions', [MeterReadingController::class, 'exceptions'])->name('meter-readings.exceptions');
     // Meter Categories Management
     Route::prefix('meter-categories')->name('meter-categories.')->group(function () {
         Route::get('/', [MeterCategoryController::class, 'index'])->name('index');

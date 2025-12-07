@@ -88,39 +88,7 @@
                 </form>
             </div>
 
-            <!-- Meter Number Search -->
-            <div>
-                <form method="GET" action="{{ route('admin.customers.index') }}" class="flex gap-2">
-                    <div class="flex-1 relative">
-                        <input type="text"
-                               name="meter_number"
-                               value="{{ request('meter_number') }}"
-                               placeholder="Search by meter..."
-                               class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                        <i class="fas fa-tachometer-alt absolute left-3 top-3 text-gray-400"></i>
-                    </div>
-                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition duration-200">
-                        Find
-                    </button>
-                </form>
-            </div>
 
-            <!-- Account Number Search -->
-            <div>
-                <form method="GET" action="{{ route('admin.customers.index') }}" class="flex gap-2">
-                    <div class="flex-1 relative">
-                        <input type="text"
-                               name="account_number"
-                               value="{{ request('account_number') }}"
-                               placeholder="Search by account..."
-                               class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                        <i class="fas fa-id-card absolute left-3 top-3 text-gray-400"></i>
-                    </div>
-                    <button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition duration-200">
-                        Find
-                    </button>
-                </form>
-            </div>
         </div>
 
         <!-- Active Filters -->
@@ -269,13 +237,15 @@
 
                         <!-- Status -->
                         <td class="px-3 py-4">
-                           @php
+                            @php
+                    
                                 $statusColors = [
                                     'active' => 'bg-green-100 text-green-800',
                                     'inactive' => 'bg-gray-100 text-gray-800',
                                     'pending' => 'bg-yellow-100 text-yellow-800',
                                     'suspended' => 'bg-red-100 text-red-800',
                                 ];
+                            
                             @endphp
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusColors[$customer->status] }}">
                                 <i class="fas fa-circle mr-1 text-xs"></i>

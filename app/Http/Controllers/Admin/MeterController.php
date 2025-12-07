@@ -15,20 +15,38 @@ class MeterController extends Controller
 {
     public function index(Request $request)
     {
+        $search = $request->get('q');
         $categoryId = $request->get('category');
-        $filter = $request->get('filter', 'all'); // all, available, assigned, location
+        $filter = $request->get('filter', 'all');
 
         $query = Meter::with(['customer', 'meterCategory', 'meterReadings' => function($query) {
             $query->latest()->limit(1);
         }]);
+
+        // Apply search if exists
+        if (!empty($search)) {
+            $query->where(function($q) use ($search) {
+                $q->where('meter_number', 'LIKE', "%{$search}%")
+                ->orWhere('meter_model', 'LIKE', "%{$search}%")
+                ->orWhere('installation_address', 'LIKE', "%{$search}%")
+                ->orWhereHas('customer', function($q) use ($search) {
+                    $q->where('first_name', 'LIKE', "%{$search}%")
+                        ->orWhere('last_name', 'LIKE', "%{$search}%")
+                        ->orWhere('customer_number', 'LIKE', "%{$search}%")
+                        ->orWhere('estate', 'LIKE', "%{$search}%")
+                        ->orWhere('plot_number', 'LIKE', "%{$search}%")
+                        ->orWhere('house_number', 'LIKE', "%{$search}%");
+                });
+            });
+        }
 
         // Apply filters based on the filter parameter
         switch ($filter) {
             case 'available':
                 $query->where('status', 'available')->whereNull('customer_id');
                 break;
-            case 'assigned':
-                $query->where('status', 'assigned')->whereNotNull('customer_id');
+            case 'active':
+                $query->where('status', Meter::STATUS_ACTIVE)->whereNotNull('customer_id');
                 break;
             case 'location':
                 // For location filter, we'll handle it separately in the view
@@ -48,11 +66,11 @@ class MeterController extends Controller
             $location = $request->get('location');
             $query->where(function($q) use ($location) {
                 $q->where('installation_address', 'like', "%{$location}%")
-                  ->orWhereHas('customer', function($q) use ($location) {
-                      $q->where('estate', 'like', "%{$location}%")
+                ->orWhereHas('customer', function($q) use ($location) {
+                    $q->where('estate', 'like', "%{$location}%")
                         ->orWhere('plot_number', 'like', "%{$location}%")
                         ->orWhere('house_number', 'like', "%{$location}%");
-                  });
+                });
             });
         }
 
@@ -60,8 +78,8 @@ class MeterController extends Controller
 
         $stats = [
             'total' => Meter::count(),
-            'assigned' => Meter::where('status', 'assigned')->whereNotNull('customer_id')->count(),
-            'unassigned' => Meter::where('status', 'available')->whereNull('customer_id')->count(),
+            'assigned' => Meter::where('status', Meter::STATUS_ACTIVE)->whereNotNull('customer_id')->count(),
+            'available' => Meter::where('status', Meter::STATUS_AVAILABLE)->whereNull('customer_id')->count(),
             'faulty' => Meter::where('status', 'faulty')->count(),
         ];
 
@@ -70,7 +88,182 @@ class MeterController extends Controller
         return view('admin.meters.index', compact('meters', 'stats', 'categories', 'filter'));
     }
 
-    // Remove the separate available(), assigned(), byLocation() methods since we're handling everything in index()
+    /**
+ * Simple search for meters
+ */
+    public function search(Request $request)
+    {
+        $search = $request->get('q');
+        $filter = $request->get('filter', 'all');
+        $categoryId = $request->get('category');
+
+        $query = Meter::with(['customer', 'meterCategory']);
+
+        // Apply search if exists
+        if (!empty($search)) {
+            $query->where(function($q) use ($search) {
+                $q->where('meter_number', 'LIKE', "%{$search}%")
+                ->orWhere('meter_model', 'LIKE', "%{$search}%")
+                ->orWhere('installation_address', 'LIKE', "%{$search}%")
+                ->orWhereHas('customer', function($q) use ($search) {
+                    $q->where('first_name', 'LIKE', "%{$search}%")
+                        ->orWhere('last_name', 'LIKE', "%{$search}%")
+                        ->orWhere('customer_number', 'LIKE', "%{$search}%")
+                        ->orWhere('estate', 'LIKE', "%{$search}%")
+                        ->orWhere('plot_number', 'LIKE', "%{$search}%")
+                        ->orWhere('house_number', 'LIKE', "%{$search}%");
+                });
+            });
+        }
+
+        // Apply filters
+        switch ($filter) {
+            case 'available':
+                $query->where('status', 'available')->whereNull('customer_id');
+                break;
+            case 'active':
+                $query->where('status', Meter::STATUS_ACTIVE)->whereNotNull('customer_id');
+                break;
+            case 'location':
+                if ($request->filled('location')) {
+                    $location = $request->get('location');
+                    $query->where(function($q) use ($location) {
+                        $q->where('installation_address', 'like', "%{$location}%")
+                        ->orWhereHas('customer', function($q) use ($location) {
+                            $q->where('estate', 'like', "%{$location}%")
+                                ->orWhere('plot_number', 'like', "%{$location}%")
+                                ->orWhere('house_number', 'like', "%{$location}%");
+                        });
+                    });
+                }
+                break;
+            default:
+                // 'all' - no additional filters
+                break;
+        }
+
+        // Category filter
+        if ($categoryId) {
+            $query->where('meter_category_id', $categoryId);
+        }
+
+        $meters = $query->latest()->paginate(20);
+
+        $stats = [
+            'total' => Meter::count(),
+            'assigned' => Meter::active()->whereNotNull('customer_id')->count(),
+            'unassigned' => Meter::available()->whereNull('customer_id')->count(),
+            'faulty' => Meter::faulty()->count(),
+        ];
+
+        $categories = MeterCategory::active()->ordered()->withCount('meters')->get();
+
+        return view('admin.meters.index', compact('meters', 'stats', 'categories', 'filter'));
+    }
+
+    // public function store(Request $request)
+    // {
+    //     $validated = $request->validate([
+    //         'meter_number' => 'required|string|max:50|unique:meters,meter_number',
+    //         'meter_type' => 'required|string|in:domestic,commercial,industrial,institutional,smart,mechanical',
+    //         'meter_category_id' => 'required|exists:meter_categories,id',
+    //         'meter_model' => 'nullable|string|max:100',
+    //         'customer_id' => 'nullable|exists:customers,id',
+    //         'installation_address' => 'nullable|string|max:500',
+    //         'initial_reading' => 'required|numeric|min:0',
+    //         // REMOVED: 'installation_fee' => 'nullable|numeric|min:0',
+    //         // REMOVED: 'connection_fee' => 'nullable|numeric|min:0',
+    //         // REMOVED: 'deposit_amount' => 'nullable|numeric|min:0',
+    //         'balance_bf' => 'nullable|numeric|min:0',
+    //         'notes' => 'nullable|string|max:1000',
+    //     ]);
+
+    //     try {
+    //         DB::transaction(function () use ($validated) {
+    //             // Get category to set default fees
+    //             $category = MeterCategory::find($validated['meter_category_id']);
+    //             $additionalCharges = $category->additional_charges ?? [];
+
+    //             // Determine status based on customer assignment
+    //             $validated['status'] = $validated['customer_id'] ? 'active' : 'available';
+
+    //             // REMOVED: Set default fees from category if not provided
+    //             // $validated['installation_fee'] = $validated['installation_fee'] ?? ($additionalCharges['installation_fee'] ?? 0);
+    //             // $validated['connection_fee'] = $validated['connection_fee'] ?? ($additionalCharges['connection_fee'] ?? 0);
+    //             // $validated['deposit_amount'] = $validated['deposit_amount'] ?? ($additionalCharges['deposit'] ?? 0);
+                
+    //             $validated['current_balance'] = $validated['balance_bf'] ?? 0;
+
+    //             // Create meter WITHOUT installation date and fees
+    //             $meter = Meter::create($validated);
+
+    //             // If assigned to customer, update customer record and create initial reading
+    //             if ($validated['customer_id']) {
+    //                 $customer = Customer::find($validated['customer_id']);
+
+    //                 // Update customer with meter info
+    //                 $customer->update([
+    //                     'meter_number' => $meter->meter_number,
+    //                     'meter_type' => $meter->meter_type,
+    //                     'initial_meter_reading' => $validated['initial_reading'],
+    //                     'initial_reading_date' => now(), // Use current date instead
+    //                 ]);
+
+    //                 // Create initial meter reading with customer_id
+    //                 MeterReading::create([
+    //                     'customer_id' => $customer->id,
+    //                     'meter_id' => $meter->id,
+    //                     'current_reading' => $validated['initial_reading'],
+    //                     'previous_reading' => 0,
+    //                     'consumption' => $validated['initial_reading'],
+    //                     'reading_date' => now(), // Use current date
+    //                     'reading_type' => 'initial',
+    //                     'reading_period' => 'Initial Installation',
+    //                     'billed' => false,
+    //                     'read_by' => auth()->id(),
+    //                     'notes' => 'Initial meter reading upon installation',
+    //                 ]);
+    //             } else {
+    //                 // Create initial reading for unassigned meter WITHOUT customer_id
+    //                 MeterReading::create([
+    //                     'meter_id' => $meter->id,
+    //                     'current_reading' => $validated['initial_reading'],
+    //                     'previous_reading' => 0,
+    //                     'consumption' => $validated['initial_reading'],
+    //                     'reading_date' => now(), // Use current date
+    //                     'reading_type' => 'initial',
+    //                     'reading_period' => 'Initial Installation',
+    //                     'billed' => false,
+    //                     'read_by' => auth()->id(),
+    //                     'notes' => 'Initial meter reading for unassigned meter',
+    //                 ]);
+    //             }
+    //         });
+
+    //         if ($request->ajax()) {
+    //             return response()->json([
+    //                 'success' => true,
+    //                 'message' => $validated['customer_id'] ? 'Meter registered and assigned to customer successfully!' : 'Meter registered successfully!',
+    //             ]);
+    //         }
+
+    //         return redirect()->route('admin.meters.index')
+    //             ->with('success', $validated['customer_id'] ? 'Meter registered and assigned to customer successfully!' : 'Meter registered successfully!');
+
+    //     } catch (\Exception $e) {
+    //         if ($request->ajax()) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'Error: ' . $e->getMessage(),
+    //             ], 500);
+    //         }
+
+    //         return redirect()->back()
+    //             ->withInput()
+    //             ->with('error', 'Error registering meter: ' . $e->getMessage());
+    //     }
+    // }
+
 
     public function store(Request $request)
     {
@@ -81,43 +274,43 @@ class MeterController extends Controller
             'meter_model' => 'nullable|string|max:100',
             'customer_id' => 'nullable|exists:customers,id',
             'installation_address' => 'nullable|string|max:500',
-            'installation_date' => 'nullable|date',
             'initial_reading' => 'required|numeric|min:0',
-            'installation_fee' => 'nullable|numeric|min:0',
-            'connection_fee' => 'nullable|numeric|min:0',
-            'deposit_amount' => 'nullable|numeric|min:0',
             'balance_bf' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string|max:1000',
         ]);
 
         try {
             DB::transaction(function () use ($validated) {
-                // Get category to set default fees
-                $category = MeterCategory::find($validated['meter_category_id']);
-                $additionalCharges = $category->additional_charges ?? [];
-
                 // Determine status based on customer assignment
-                $validated['status'] = $validated['customer_id'] ? 'active' : 'available';
-
-                // Set default fees from category if not provided
-                $validated['installation_fee'] = $validated['installation_fee'] ?? ($additionalCharges['installation_fee'] ?? 0);
-                $validated['connection_fee'] = $validated['connection_fee'] ?? ($additionalCharges['connection_fee'] ?? 0);
-                $validated['deposit_amount'] = $validated['deposit_amount'] ?? ($additionalCharges['deposit'] ?? 0);
+                if ($validated['customer_id']) {
+                    $validated['status'] = Meter::STATUS_ACTIVE; // Changed from 'assigned' to 'active'
+                } else {
+                    $validated['status'] = Meter::STATUS_AVAILABLE;
+                }
+                
                 $validated['current_balance'] = $validated['balance_bf'] ?? 0;
 
-                // Create meter
+                // Create meter WITHOUT installation date
                 $meter = Meter::create($validated);
 
                 // If assigned to customer, update customer record and create initial reading
                 if ($validated['customer_id']) {
                     $customer = Customer::find($validated['customer_id']);
 
+                     // Update customer status to active if it's pending
+                    if ($customer->status === Customer::STATUS_PENDING) {
+                        $customer->update([
+                            'status' => Customer::STATUS_ACTIVE,
+                            'status_updated_at' => now(),
+                        ]);
+                    }
+
                     // Update customer with meter info
                     $customer->update([
                         'meter_number' => $meter->meter_number,
                         'meter_type' => $meter->meter_type,
                         'initial_meter_reading' => $validated['initial_reading'],
-                        'initial_reading_date' => $validated['installation_date'] ?? now(),
+                        'initial_reading_date' => now(),
                     ]);
 
                     // Create initial meter reading with customer_id
@@ -127,7 +320,7 @@ class MeterController extends Controller
                         'current_reading' => $validated['initial_reading'],
                         'previous_reading' => 0,
                         'consumption' => $validated['initial_reading'],
-                        'reading_date' => $validated['installation_date'] ?? now(),
+                        'reading_date' => now(),
                         'reading_type' => 'initial',
                         'reading_period' => 'Initial Installation',
                         'billed' => false,
@@ -141,7 +334,7 @@ class MeterController extends Controller
                         'current_reading' => $validated['initial_reading'],
                         'previous_reading' => 0,
                         'consumption' => $validated['initial_reading'],
-                        'reading_date' => $validated['installation_date'] ?? now(),
+                        'reading_date' => now(),
                         'reading_type' => 'initial',
                         'reading_period' => 'Initial Installation',
                         'billed' => false,
@@ -174,7 +367,6 @@ class MeterController extends Controller
                 ->with('error', 'Error registering meter: ' . $e->getMessage());
         }
     }
-
     public function show(Meter $meter)
     {
         $meter->load(['customer', 'meterCategory', 'meterReadings' => function($query) {
@@ -212,36 +404,6 @@ class MeterController extends Controller
 
         return view('admin.meters.edit', compact('meter', 'meterTypes', 'categories', 'customers', 'statuses'));
     }
-
-    // public function update(Request $request, Meter $meter)
-    // {
-    //     $validated = $request->validate([
-    //         'meter_number' => 'required|string|max:50|unique:meters,meter_number,' . $meter->id,
-    //         'meter_type' => 'required|string|in:domestic,commercial,industrial,institutional,smart,mechanical',
-    //         'meter_category_id' => 'required|exists:meter_categories,id',
-    //         'meter_model' => 'nullable|string|max:100',
-    //         'customer_id' => 'nullable|exists:customers,id',
-    //         'installation_address' => 'nullable|string|max:500',
-    //         'installation_date' => 'nullable|date',
-    //         'status' => 'required|string|in:available,assigned,faulty,maintenance',
-    //         'initial_reading' => 'nullable|numeric|min:0',
-    //         'installation_fee' => 'nullable|numeric|min:0',
-    //         'connection_fee' => 'nullable|numeric|min:0',
-    //         'deposit_amount' => 'nullable|numeric|min:0',
-    //         'balance_bf' => 'nullable|numeric|min:0',
-    //         'notes' => 'nullable|string|max:1000',
-    //     ]);
-
-    //     // Update current balance if balance brought forward changes
-    //     if ($validated['balance_bf'] != $meter->balance_bf) {
-    //         $validated['current_balance'] = $validated['balance_bf'];
-    //     }
-
-    //     $meter->update($validated);
-
-    //     return redirect()->route('admin.meters.show', $meter)
-    //         ->with('success', 'Meter updated successfully!');
-    // }
 
     public function getAvailableMeters(Request $request)
     {
@@ -337,7 +499,7 @@ class MeterController extends Controller
             'initial_reading' => 'nullable|numeric|min:0',
             'balance_bf' => 'nullable|numeric',
             'current_balance' => 'nullable|numeric',
-            'additional_charges' => 'nullable|string|max:1000',
+            // REMOVED: 'additional_charges' => 'nullable|string|max:1000',
             'notes' => 'nullable|string|max:1000',
             'zone_id' => 'nullable|exists:zones,id',
             'walk_route_id' => 'nullable|exists:walk_routes,id',

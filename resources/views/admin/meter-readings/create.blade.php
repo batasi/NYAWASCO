@@ -160,12 +160,135 @@
                         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                     @enderror
                 </div>
+
+                <!-- Reading Status Selection -->
+                <div class="mt-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Reading Status *</label>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <input type="radio" id="status_recorded" name="reading_status" value="recorded" 
+                                class="hidden peer" checked onchange="toggleReadingFields()">
+                            <label for="status_recorded" 
+                                class="block p-4 border-2 border-gray-300 rounded-lg cursor-pointer text-center hover:border-blue-400 peer-checked:border-blue-500 peer-checked:bg-blue-50 transition duration-200">
+                                <i class="fas fa-check-circle text-xl mb-2 text-blue-600"></i>
+                                <div class="font-semibold">Normal Reading</div>
+                                <div class="text-sm text-gray-600">Meter accessible and working</div>
+                            </label>
+                        </div>
+
+                        <div>
+                            <input type="radio" id="status_exception" name="reading_status" value="exception" 
+                                class="hidden peer" onchange="toggleReadingFields()">
+                            <label for="status_exception" 
+                                class="block p-4 border-2 border-gray-300 rounded-lg cursor-pointer text-center hover:border-red-400 peer-checked:border-red-500 peer-checked:bg-red-50 transition duration-200">
+                                <i class="fas fa-exclamation-triangle text-xl mb-2 text-red-600"></i>
+                                <div class="font-semibold">Exception</div>
+                                <div class="text-sm text-gray-600">Meter inaccessible or faulty</div>
+                            </label>
+                        </div>
+
+                        <div>
+                            <input type="radio" id="status_estimated" name="reading_status" value="estimated" 
+                                class="hidden peer" onchange="toggleReadingFields()">
+                            <label for="status_estimated" 
+                                class="block p-4 border-2 border-gray-300 rounded-lg cursor-pointer text-center hover:border-yellow-400 peer-checked:border-yellow-500 peer-checked:bg-yellow-50 transition duration-200">
+                                <i class="fas fa-calculator text-xl mb-2 text-yellow-600"></i>
+                                <div class="font-semibold">Estimated</div>
+                                <div class="text-sm text-gray-600">Meter stuck but water used</div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Exception Details (Hidden by default) -->
+                <div id="exceptionFields" class="mt-6 hidden">
+                    <div class="bg-red-50 border-l-4 border-red-400 p-4 mb-4">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-exclamation-triangle text-red-400"></i>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm text-red-700">
+                                    <strong>Exception Recording:</strong> Meter reading could not be taken normally. Please provide details.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Exception Type *</label>
+                            <select name="exception_type" id="exception_type" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                                <option value="">Select Exception Type</option>
+                                <option value="inaccessible">Meter Inaccessible (Gate closed, locked)</option>
+                                <option value="faulty">Meter Faulty (Not working)</option>
+                                <option value="stuck">Meter Stuck (Not moving but water used)</option>
+                                <option value="damaged">Meter Damaged</option>
+                                <option value="vandalized">Meter Vandalized</option>
+                                <option value="other">Other Reason</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Exception Evidence Photo</label>
+                            <input type="file" name="exception_evidence" id="exception_evidence" 
+                                accept="image/*"
+                                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100">
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Exception Reason *</label>
+                        <textarea name="exception_reason" id="exception_reason" rows="3"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2"
+                                placeholder="Detailed explanation of why the meter couldn't be read..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Estimated Consumption (Hidden by default) -->
+                <div id="estimatedFields" class="mt-6 hidden">
+                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-calculator text-yellow-400"></i>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm text-yellow-700">
+                                    <strong>Estimated Reading:</strong> Meter is stuck but water consumption needs to be estimated.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Estimated Consumption (m³) *</label>
+                            <input type="number" name="estimated_consumption" id="estimated_consumption" 
+                                step="0.01" min="0"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2"
+                                placeholder="Estimated water consumption">
+                            <div class="mt-2 text-sm text-gray-600">
+                                <button type="button" onclick="calculateEstimation()" class="text-blue-600 hover:text-blue-800">
+                                    <i class="fas fa-calculator mr-1"></i> Calculate based on history
+                                </button>
+                                <span id="estimationResult" class="ml-2 text-green-600 hidden"></span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Estimation Notes</label>
+                            <textarea name="estimation_notes" id="estimation_notes" rows="3"
+                                    class="w-full border border-gray-300 rounded-lg px-3 py-2"
+                                    placeholder="How the estimation was calculated..."></textarea>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <!-- Camera Capture Section -->
+           <!-- Simple Photo Capture Section -->
             <div class="mt-6">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Meter Reading Photo</label>
-                <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-green-400 transition duration-200">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Meter Reading Photo (Optional)</label>
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-green-400 transition duration-200">
                     <!-- Camera Preview -->
                     <div id="cameraPreview" class="hidden mb-4">
                         <video id="video" width="100%" height="auto" autoplay class="rounded-lg shadow-md"></video>
@@ -176,6 +299,14 @@
                     <div id="imagePreview" class="hidden mb-4">
                         <img id="preview" src="" alt="Captured reading" class="max-w-full h-auto rounded-lg mx-auto max-h-64 shadow-md">
                         <p class="text-sm text-green-600 mt-2">✓ Photo captured successfully</p>
+                        <button type="button"
+                                id="retake"
+                                class="mt-2 bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg transition duration-200 flex items-center justify-center mx-auto shadow-md">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                            Retake Photo
+                        </button>
                     </div>
 
                     <!-- Action Buttons -->
@@ -187,7 +318,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
                             </svg>
-                            Open Camera
+                            Take Photo
                         </button>
 
                         <div id="captureControls" class="hidden space-y-2">
@@ -199,15 +330,6 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                 </svg>
                                 Capture Photo
-                            </button>
-
-                            <button type="button"
-                                    id="retake"
-                                    class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg transition duration-200 flex items-center justify-center mx-auto shadow-md">
-                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                                </svg>
-                                Retake Photo
                             </button>
                         </div>
                     </div>
@@ -282,10 +404,7 @@
     @endif
 </div>
 
-<!-- Include Tesseract.js for OCR -->
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 
-<!-- Camera and OCR JavaScript -->
 <script>
 let selectedMeterId = {{ $meter ? $meter->id : 'null' }};
 
@@ -345,11 +464,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const cameraControls = document.getElementById('cameraControls');
     const captureControls = document.getElementById('captureControls');
     const fileInput = document.getElementById('fileInput');
-    const currentReadingInput = document.getElementById('current_reading');
     let stream = null;
-
-    // Initialize Tesseract worker
-    let tesseractWorker = null;
 
     // Start Camera
     startCamera?.addEventListener('click', async function() {
@@ -371,8 +486,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Capture Photo and Perform OCR
-    capture?.addEventListener('click', async function() {
+    // Capture Photo
+    capture?.addEventListener('click', function() {
         const context = canvas.getContext('2d');
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
@@ -398,165 +513,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
             }
-
-            // Perform OCR on the captured image
-            performOCR(canvas);
         }, 'image/jpeg', 0.8);
     });
-
-    // Real OCR Function with Tesseract.js
-    async function performOCR(imageElement) {
-        try {
-            // Show loading state
-            Swal.fire({
-                title: 'Reading Meter...',
-                html: `
-                    <div class="text-center">
-                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                        <p>Analyzing photo for meter numbers...</p>
-                        <p class="text-sm text-gray-500 mt-2">This may take a few seconds</p>
-                    </div>
-                `,
-                allowOutsideClick: false,
-                showConfirmButton: false
-            });
-
-            // Initialize Tesseract worker if not already done
-            if (!tesseractWorker) {
-                tesseractWorker = await Tesseract.createWorker();
-                await tesseractWorker.loadLanguage('eng');
-                await tesseractWorker.initialize('eng');
-
-                // Configure for numbers only - better accuracy for meters
-                await tesseractWorker.setParameters({
-                    tessedit_char_whitelist: '0123456789.',
-                    tessedit_pageseg_mode: Tesseract.PSM.SINGLE_BLOCK,
-                    tessedit_ocr_engine_mode: Tesseract.OEM.LSTM_ONLY,
-                });
-            }
-
-            // Perform OCR
-            const { data: { text } } = await tesseractWorker.recognize(imageElement);
-
-            Swal.close();
-
-            console.log('OCR Raw Text:', text); // For debugging
-
-            // Process the extracted text to find meter reading
-            const reading = extractMeterReading(text);
-
-            if (reading) {
-                showOCRToast(reading, text);
-            } else {
-                showError('Could not detect valid meter reading. Please enter manually.<br><br>Detected text: "' + (text || 'No text found') + '"');
-            }
-
-        } catch (error) {
-            console.error('OCR Error:', error);
-            Swal.close();
-            showError('Error processing image. Please enter reading manually.');
-        }
-    }
-
-    // Extract meter reading from OCR text
-    function extractMeterReading(text) {
-        if (!text || text.trim() === '') {
-            return null;
-        }
-
-        console.log('Processing text:', text); // Debug log
-
-        // Clean the text - remove spaces and non-numeric characters except decimal points
-        const cleanText = text.replace(/\s+/g, '').replace(/[^\d.]/g, '');
-
-        if (!cleanText) {
-            return null;
-        }
-
-        console.log('Cleaned text:', cleanText); // Debug log
-
-        // Find all number sequences (including decimals)
-        const numberMatches = cleanText.match(/\d+\.?\d*/g);
-
-        if (!numberMatches || numberMatches.length === 0) {
-            return null;
-        }
-
-        console.log('Number matches:', numberMatches); // Debug log
-
-        // Filter reasonable meter readings (typically 1-8 digits, positive numbers)
-        const validReadings = numberMatches.filter(num => {
-            const value = parseFloat(num);
-            // Meter readings are usually positive numbers with reasonable values
-            // Adjust these ranges based on your typical meter readings
-            return !isNaN(value) && value > 0 && value <= 99999999 && num.length >= 1;
-        });
-
-        console.log('Valid readings:', validReadings); // Debug log
-
-        if (validReadings.length === 0) {
-            return null;
-        }
-
-        // For meter readings, we typically want the largest number
-        // (since meters usually show cumulative consumption)
-        const largestReading = validReadings.reduce((max, num) => {
-            return parseFloat(num) > parseFloat(max) ? num : max;
-        });
-
-        const finalReading = parseFloat(largestReading).toFixed(2);
-        console.log('Final reading:', finalReading); // Debug log
-
-        return finalReading;
-    }
-
-    // OCR Toast Notification
-    function showOCRToast(detectedReading, rawText = '') {
-        Swal.fire({
-            icon: 'info',
-            title: 'Reading Detected',
-            html: `
-                <div class="text-left">
-                    <div class="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
-                        <p class="text-sm font-semibold text-green-800">Detected Reading:</p>
-                        <p class="text-2xl font-bold text-green-600">${detectedReading} m³</p>
-                    </div>
-                    ${rawText ? `
-                    <details class="text-xs text-gray-500 mt-2">
-                        <summary class="cursor-pointer hover:text-gray-700">Show OCR details</summary>
-                        <div class="mt-2 p-2 bg-gray-50 rounded">
-                            <strong>Raw text detected:</strong><br>
-                            <code class="text-xs">${rawText.substring(0, 100)}${rawText.length > 100 ? '...' : ''}</code>
-                        </div>
-                    </details>
-                    ` : ''}
-                    <p class="text-sm text-gray-600 mt-3">Please verify this matches your meter before submitting.</p>
-                </div>
-            `,
-            showCancelButton: true,
-            confirmButtonText: 'Use This Reading',
-            cancelButtonText: 'Enter Manually',
-            confirmButtonColor: '#10B981',
-            cancelButtonColor: '#6B7280',
-            showCloseButton: true,
-            width: '500px'
-        }).then((result) => {
-            if (result.dismiss === 'cancel') {
-                // User wants to edit manually - still fill the value but let them edit
-                currentReadingInput.value = detectedReading;
-                currentReadingInput.focus();
-                currentReadingInput.select();
-                showInfo('Reading filled. Please verify and edit if needed.');
-            } else if (result.isConfirmed) {
-                // User confirmed the reading is correct
-                currentReadingInput.value = detectedReading;
-                showSuccess('✓ Reading confirmed! You can now submit the form.');
-            } else {
-                // User closed the dialog - still fill the value
-                currentReadingInput.value = detectedReading;
-            }
-        });
-    }
 
     // Retake Photo
     retake?.addEventListener('click', function() {
@@ -584,61 +542,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 cameraPreview.classList.add('hidden');
                 captureControls.classList.add('hidden');
                 startCamera.classList.remove('hidden');
-
-                // Perform OCR on uploaded file
-                const img = new Image();
-                img.onload = function() {
-                    const tempCanvas = document.createElement('canvas');
-                    const tempCtx = tempCanvas.getContext('2d');
-                    tempCanvas.width = img.width;
-                    tempCanvas.height = img.height;
-                    tempCtx.drawImage(img, 0, 0);
-                    performOCR(tempCanvas);
-                };
-                img.src = e.target.result;
             }
             reader.readAsDataURL(this.files[0]);
         }
     });
 
-    // Helper function for success messages
-    function showSuccess(message) {
-        Swal.fire({
-            icon: 'success',
-            title: 'Success',
-            text: message,
-            timer: 3000,
-            showConfirmButton: false
-        });
-    }
-
-    // Helper function for error messages
-    function showError(message) {
-        Swal.fire({
-            icon: 'error',
-            title: 'OCR Failed',
-            html: message,
-            confirmButtonColor: '#dc2626',
-            width: '500px'
-        });
-    }
-
-    // Helper function for info messages
-    function showInfo(message) {
-        Swal.fire({
-            icon: 'info',
-            title: 'Information',
-            text: message,
-            confirmButtonColor: '#3B82F6',
-            timer: 2000,
-            showConfirmButton: false
-        });
-    }
-
     // Form validation
     document.getElementById('readingForm')?.addEventListener('submit', function(e) {
-        const currentReading = parseFloat(currentReadingInput.value);
-        const minReading = parseFloat(currentReadingInput.getAttribute('min'));
+        const currentReading = parseFloat(document.getElementById('current_reading').value);
+        const minReading = parseFloat(document.getElementById('current_reading').getAttribute('min'));
 
         if (currentReading < minReading) {
             e.preventDefault();
@@ -653,9 +565,9 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Cleanup when leaving page
-    window.addEventListener('beforeunload', async () => {
-        if (tesseractWorker) {
-            await tesseractWorker.terminate();
+    window.addEventListener('beforeunload', function() {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
         }
     });
 });
@@ -665,45 +577,6 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Enhanced warning message with custom styling
-
-    @if(session('warning'))
-        Swal.fire({
-            icon: 'warning',
-            title: '<span style="color: #d97706">Duplicate Reading Detected</span>',
-            html: `<div class="text-left">
-                <p class="mb-3">{{ session('warning') }}</p>
-                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mt-3">
-                    <div class="flex">
-                        <div class="flex-shrink-0">
-                            <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                            </svg>
-                        </div>
-                        <div class="ml-3">
-                            <p class="text-sm text-yellow-700">
-                                You can record a new reading in the next billing period.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>`,
-            confirmButtonColor: '#d97706',
-            confirmButtonText: 'Understand',
-            showCloseButton: true,
-            customClass: {
-                popup: 'rounded-lg shadow-xl',
-                title: 'text-lg font-semibold'
-            }
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // Focus on current reading field after modal closes
-                document.querySelector('input[name="current_reading"]')?.focus();
-            }
-        });
-    @endif
-
-    // Error message
     @if(session('error'))
         Swal.fire({
             icon: 'error',
@@ -719,7 +592,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     @endif
 
-    // Success message
     @if(session('success'))
         Swal.fire({
             icon: 'success',
@@ -732,6 +604,170 @@ document.addEventListener('DOMContentLoaded', function() {
             showCloseButton: true
         });
     @endif
+
+    // Toggle reading fields based on status
+    function toggleReadingFields() {
+        const statusRecorded = document.getElementById('status_recorded');
+        const statusException = document.getElementById('status_exception');
+        const statusEstimated = document.getElementById('status_estimated');
+        
+        const currentReadingField = document.getElementById('current_reading');
+        const exceptionFields = document.getElementById('exceptionFields');
+        const estimatedFields = document.getElementById('estimatedFields');
+        
+        // Reset all fields
+        currentReadingField.required = true;
+        currentReadingField.disabled = false;
+        exceptionFields.classList.add('hidden');
+        estimatedFields.classList.add('hidden');
+        
+        // Clear validation messages
+        document.getElementById('readingValidation').innerHTML = '';
+        
+        if (statusRecorded.checked) {
+            // Normal reading
+            currentReadingField.required = true;
+            currentReadingField.disabled = false;
+        } else if (statusException.checked) {
+            // Exception - no current reading needed
+            currentReadingField.required = false;
+            currentReadingField.disabled = true;
+            currentReadingField.value = '';
+            exceptionFields.classList.remove('hidden');
+        } else if (statusEstimated.checked) {
+            // Estimated reading
+            currentReadingField.required = false;
+            currentReadingField.disabled = true;
+            currentReadingField.value = '';
+            estimatedFields.classList.remove('hidden');
+            
+            // Auto-calculate estimation
+            calculateEstimation();
+        }
+    }
+
+    // Calculate estimation based on history
+    async function calculateEstimation() {
+        const customerId = document.querySelector('input[name="customer_id"]').value;
+        const meterId = document.querySelector('input[name="meter_id"]').value;
+        const resultSpan = document.getElementById('estimationResult');
+        
+        if (!customerId || !meterId) {
+            resultSpan.textContent = 'Please select a customer and meter first';
+            resultSpan.classList.remove('hidden');
+            resultSpan.classList.remove('text-green-600');
+            resultSpan.classList.add('text-red-600');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/admin/customers/${customerId}/meters/${meterId}/estimate-consumption`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.estimated_consumption) {
+                document.getElementById('estimated_consumption').value = data.estimated_consumption;
+                resultSpan.textContent = `Estimated: ${data.estimated_consumption} m³ (based on average consumption)`;
+                resultSpan.classList.remove('hidden');
+                resultSpan.classList.remove('text-red-600');
+                resultSpan.classList.add('text-green-600');
+                
+                // Add to notes
+                const notesField = document.querySelector('textarea[name="notes"]');
+                if (notesField && !notesField.value.includes('Estimated based on')) {
+                    notesField.value = (notesField.value ? notesField.value + '\n' : '') + 
+                        `Estimated consumption based on historical average of ${data.estimated_consumption} m³.`;
+                }
+            } else {
+                resultSpan.textContent = 'Could not calculate estimation. Please enter manually.';
+                resultSpan.classList.remove('hidden');
+                resultSpan.classList.remove('text-green-600');
+                resultSpan.classList.add('text-red-600');
+            }
+        } catch (error) {
+            console.error('Estimation error:', error);
+            resultSpan.textContent = 'Error calculating estimation';
+            resultSpan.classList.remove('hidden');
+            resultSpan.classList.remove('text-green-600');
+            resultSpan.classList.add('text-red-600');
+        }
+    }
+
+    // Update form validation
+    document.getElementById('readingForm')?.addEventListener('submit', function(e) {
+        const readingStatus = document.querySelector('input[name="reading_status"]:checked')?.value;
+        const currentReading = document.getElementById('current_reading').value;
+        const minReading = parseFloat(document.getElementById('current_reading').getAttribute('min'));
+        
+        // Normal reading validation
+        if (readingStatus === 'recorded') {
+            if (!currentReading) {
+                e.preventDefault();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Current Reading Required',
+                    text: 'Please enter the current meter reading',
+                    confirmButtonColor: '#dc2626',
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
+            
+            if (parseFloat(currentReading) < minReading) {
+                e.preventDefault();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Invalid Reading',
+                    text: `Current reading cannot be less than ${minReading.toFixed(2)} m³`,
+                    confirmButtonColor: '#dc2626',
+                    confirmButtonText: 'OK'
+                });
+            }
+        }
+        
+        // Exception validation
+        if (readingStatus === 'exception') {
+            const exceptionType = document.getElementById('exception_type').value;
+            const exceptionReason = document.getElementById('exception_reason').value;
+            
+            if (!exceptionType || !exceptionReason) {
+                e.preventDefault();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Exception Details Required',
+                    text: 'Please provide exception type and reason',
+                    confirmButtonColor: '#dc2626',
+                    confirmButtonText: 'OK'
+                });
+            }
+        }
+        
+        // Estimated reading validation
+        if (readingStatus === 'estimated') {
+            const estimatedConsumption = document.getElementById('estimated_consumption').value;
+            
+            if (!estimatedConsumption || parseFloat(estimatedConsumption) <= 0) {
+                e.preventDefault();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Estimated Consumption Required',
+                    text: 'Please enter estimated water consumption',
+                    confirmButtonColor: '#dc2626',
+                    confirmButtonText: 'OK'
+                });
+            }
+        }
+    });
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        toggleReadingFields();
+    });
 });
 </script>
 @endsection

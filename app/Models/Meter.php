@@ -9,6 +9,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Meter extends Model
 {
     use HasFactory, SoftDeletes;
+       // Status constants
+    const STATUS_AVAILABLE = 'available';
+    const STATUS_ACTIVE = 'active';
+    const STATUS_FAULTY = 'faulty';
+    const STATUS_TERMINATED = 'terminated';
+    const STATUS_MAINTENANCE = 'maintenance';
 
     protected $fillable = [
         'meter_number',
@@ -25,9 +31,6 @@ class Meter extends Model
         'installation_date',
         'last_maintenance_date',
         'initial_reading',
-        'installation_fee',
-        'connection_fee',
-        'deposit_amount',
         'balance_bf',
         'current_balance',
         'additional_charges',
@@ -53,6 +56,29 @@ class Meter extends Model
         static::creating(function ($meter) {
             if (empty($meter->meter_number)) {
                 $meter->meter_number = 'MTR' . date('Ymd') . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT);
+            }
+        });
+
+        // Sync customer status when meter status changes
+        static::updated(function ($meter) {
+            if ($meter->isDirty('status') && $meter->customer) {
+                $meter->customer->syncStatusFromMeters();
+            }
+        });
+
+        // Sync customer status when meter is assigned/unassigned
+        static::saved(function ($meter) {
+            if ($meter->isDirty('customer_id') && ($meter->customer || $meter->getOriginal('customer_id'))) {
+                if ($meter->customer) {
+                    $meter->customer->syncStatusFromMeters();
+                }
+                // Also sync the previous customer if unassigned
+                if ($meter->getOriginal('customer_id') && !$meter->customer_id) {
+                    $previousCustomer = Customer::find($meter->getOriginal('customer_id'));
+                    if ($previousCustomer) {
+                        $previousCustomer->syncStatusFromMeters();
+                    }
+                }
             }
         });
     }
@@ -112,7 +138,7 @@ class Meter extends Model
 
     public function scopeAssigned($query)
     {
-        return $query->where('status', 'assigned');
+        return $query->where('status', 'activeS');
     }
 
     public function scopeFaulty($query)
@@ -148,7 +174,7 @@ class Meter extends Model
 
     public function getIsAssignedAttribute()
     {
-        return $this->status === 'assigned' && $this->customer_id !== null;
+        return $this->status === 'active' && $this->customer_id !== null;
     }
 
     public function getCategoryNameAttribute()
@@ -158,7 +184,7 @@ class Meter extends Model
 
     public function getTotalChargesAttribute()
     {
-        return $this->installation_fee + $this->connection_fee + $this->deposit_amount;
+        return 0;
     }
 
     public function getOutstandingBalanceAttribute()
@@ -205,5 +231,87 @@ class Meter extends Model
             'reading' => $this->initial_reading,
             'date' => $this->installation_date
         ];
+    }
+
+    /**
+     * Search scope for meters
+     */
+    public function scopeSearch($query, $searchTerm)
+    {
+        if (empty($searchTerm)) {
+            return $query;
+        }
+
+        return $query->where(function($q) use ($searchTerm) {
+            $q->where('meter_number', 'LIKE', "%{$searchTerm}%")
+            ->orWhere('meter_model', 'LIKE', "%{$searchTerm}%")
+            ->orWhere('installation_address', 'LIKE', "%{$searchTerm}%")
+            ->orWhereHas('customer', function($q) use ($searchTerm) {
+                $q->where('first_name', 'LIKE', "%{$searchTerm}%")
+                    ->orWhere('last_name', 'LIKE', "%{$searchTerm}%")
+                    ->orWhere('customer_number', 'LIKE', "%{$searchTerm}%")
+                    ->orWhere('estate', 'LIKE', "%{$searchTerm}%")
+                    ->orWhere('plot_number', 'LIKE', "%{$searchTerm}%")
+                    ->orWhere('house_number', 'LIKE', "%{$searchTerm}%");
+            });
+        });
+    }
+
+    /**
+     * Scope for status filter
+     */
+    public function scopeOfStatus($query, $status)
+    {
+        if (empty($status)) {
+            return $query;
+        }
+
+        return $query->where('status', $status);
+    }
+
+    /**
+     * Scope for meter type filter
+     */
+    public function scopeOfType($query, $type)
+    {
+        if (empty($type)) {
+            return $query;
+        }
+
+        return $query->where('meter_type', $type);
+    }
+
+    /**
+     * Scope for balance filter
+     */
+    public function scopeOfBalance($query, $balanceFilter)
+    {
+        switch ($balanceFilter) {
+            case 'positive':
+                return $query->where('current_balance', '>', 0);
+            case 'negative':
+                return $query->where('current_balance', '<', 0);
+            case 'zero':
+                return $query->where('current_balance', '=', 0);
+            case 'overdue':
+                return $query->where('current_balance', '>', 1000);
+            default:
+                return $query;
+        }
+    }
+
+    /**
+     * Optimized scope for minimal data loading
+     */
+    public function scopeWithOptimizedRelations($query)
+    {
+        return $query->with([
+            'customer' => function($q) {
+                $q->select('id', 'first_name', 'last_name', 'customer_number', 'estate', 'plot_number', 'house_number');
+            },
+            'meterCategory' => function($q) {
+                $q->select('id', 'name', 'code');
+            }
+        ]);
     }
 }

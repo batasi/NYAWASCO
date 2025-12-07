@@ -26,6 +26,7 @@ class MeterReadingController extends Controller
         return view('admin.meter-readings.index', compact('readings'));
     }
 
+
     public function create(Request $request)
     {
         $customerId = $request->get('customer');
@@ -63,36 +64,43 @@ class MeterReadingController extends Controller
     {
         $readingPeriod = Carbon::parse($request->reading_date)->format('F Y');
 
-        // Check for duplicate reading for the same meter and period
-        $existingReading = MeterReading::where('customer_id', $request->customer_id)
-            ->where('meter_id', $request->meter_id)
-            ->where('reading_period', $readingPeriod)
-            ->first();
+        // Check for duplicate reading only if it's a normal reading
+        if ($request->reading_status !== 'exception' && $request->reading_status !== 'estimated') {
+            $existingReading = MeterReading::where('customer_id', $request->customer_id)
+                ->where('meter_id', $request->meter_id)
+                ->where('reading_period', $readingPeriod)
+                ->where('reading_status', 'recorded')
+                ->first();
 
-        if ($existingReading && !$request->has('force_duplicate')) {
-            if ($request->ajax()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "A meter reading for meter {$existingReading->meter->meter_number} in {$readingPeriod} already exists. Are you sure you want to create another reading for the same period?",
-                    'requires_confirmation' => true,
-                    'existing_reading' => [
-                        'id' => $existingReading->id,
-                        'reading_date' => $existingReading->reading_date,
-                        'current_reading' => $existingReading->current_reading,
-                        'reading_period' => $existingReading->reading_period,
-                        'meter_number' => $existingReading->meter->meter_number
-                    ]
-                ], 422);
+            if ($existingReading && !$request->has('force_duplicate')) {
+                if ($request->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "A normal meter reading for meter {$existingReading->meter->meter_number} in {$readingPeriod} already exists. Are you sure you want to create another reading for the same period?",
+                        'requires_confirmation' => true,
+                        'existing_reading' => [
+                            'id' => $existingReading->id,
+                            'reading_date' => $existingReading->reading_date,
+                            'current_reading' => $existingReading->current_reading,
+                            'reading_period' => $existingReading->reading_period,
+                            'meter_number' => $existingReading->meter->meter_number
+                        ]
+                    ], 422);
+                }
+
+                throw new \Exception("Meter reading for {$readingPeriod} has already been recorded for this meter.");
             }
-
-            throw new \Exception("Meter reading for {$readingPeriod} has already been recorded for this meter.");
         }
 
         $request->validate([
             'customer_id' => 'required|exists:customers,id',
             'meter_id' => 'required|exists:meters,id',
-            'current_reading' => 'required|numeric|min:0',
+            'current_reading' => 'nullable|numeric|min:0',
             'reading_date' => 'required|date',
+            'reading_status' => 'required|in:recorded,exception,estimated',
+            'exception_type' => 'required_if:reading_status,exception|nullable|in:inaccessible,faulty,stuck,damaged,vandalized,other',
+            'exception_reason' => 'required_if:reading_status,exception|nullable|string|max:500',
+            'estimated_consumption' => 'required_if:reading_status,estimated|nullable|numeric|min:0',
             'reading_image' => 'nullable|image|max:2048',
             'notes' => 'nullable|string|max:500',
         ]);
@@ -114,23 +122,45 @@ class MeterReadingController extends Controller
                 // Get previous reading for this specific meter
                 $previousReading = MeterReading::where('customer_id', $request->customer_id)
                     ->where('meter_id', $request->meter_id)
+                    ->where('reading_status', 'recorded')
                     ->latest()
                     ->first();
 
                 $previousReadingValue = $previousReading ? $previousReading->current_reading : ($meter->initial_reading ?? 0);
 
-                // Validate current reading
-                if ($request->current_reading < $previousReadingValue) {
-                    throw new \Exception('Current reading cannot be less than previous reading (' . number_format($previousReadingValue, 2) . ' m³).');
+                // Validate current reading for normal readings
+                if ($request->reading_status === 'recorded') {
+                    if (!$request->current_reading) {
+                        throw new \Exception('Current reading is required for normal readings.');
+                    }
+
+                    if ($request->current_reading < $previousReadingValue) {
+                        throw new \Exception('Current reading cannot be less than previous reading (' . number_format($previousReadingValue, 2) . ' m³).');
+                    }
                 }
 
-                // Calculate consumption
-                $consumption = $request->current_reading - $previousReadingValue;
+                // Calculate consumption based on reading status
+                $consumption = 0;
+                $estimatedConsumption = null;
+                
+                if ($request->reading_status === 'recorded') {
+                    $consumption = $request->current_reading - $previousReadingValue;
+                } elseif ($request->reading_status === 'estimated') {
+                    $estimatedConsumption = $request->estimated_consumption;
+                    $consumption = $estimatedConsumption;
+                }
+                // For exceptions, consumption remains 0
 
                 // Handle image upload
                 $imagePath = null;
                 if ($request->hasFile('reading_image')) {
                     $imagePath = $request->file('reading_image')->store('meter-readings', 'public');
+                }
+
+                // Handle exception evidence
+                $exceptionEvidence = null;
+                if ($request->hasFile('exception_evidence')) {
+                    $exceptionEvidence = $request->file('exception_evidence')->store('exception-evidence', 'public');
                 }
 
                 // Create reading
@@ -142,6 +172,12 @@ class MeterReadingController extends Controller
                     'consumption' => $consumption,
                     'reading_date' => $request->reading_date,
                     'reading_type' => 'monthly',
+                    'reading_status' => $request->reading_status,
+                    'exception_type' => $request->exception_type,
+                    'exception_reason' => $request->exception_reason,
+                    'estimated' => $request->reading_status === 'estimated',
+                    'estimated_consumption' => $estimatedConsumption,
+                    'exception_evidence' => $exceptionEvidence,
                     'reading_period' => $readingPeriod,
                     'billed' => false,
                     'reading_image' => $imagePath,
@@ -149,40 +185,51 @@ class MeterReadingController extends Controller
                     'read_by' => auth()->id(),
                 ]);
 
-                // UPDATE METER'S CURRENT READING
-                $meter->update([
-                    'current_reading' => $request->current_reading
-                ]);
+                // UPDATE METER'S CURRENT READING only for normal readings
+                if ($request->reading_status === 'recorded') {
+                    $meter->update([
+                        'current_reading' => $request->current_reading
+                    ]);
+                }
 
-                // AUTO-GENERATE BILL FOR SPECIFIC METER
-                $bill = $this->generateBill($reading, $customer, $meter, $consumption);
+                // AUTO-GENERATE BILL FOR NORMAL AND ESTIMATED READINGS
+                if ($request->reading_status !== 'exception' && $consumption > 0) {
+                    $bill = $this->generateBill($reading, $customer, $meter, $consumption, $request->reading_status);
 
-                // UPDATE METER AND CUSTOMER BALANCES
-                $this->updateBalances($meter, $customer, $bill->total_amount);
+                    // UPDATE METER AND CUSTOMER BALANCES
+                    $this->updateBalances($meter, $customer, $bill->total_amount);
 
-                Log::info("Meter reading recorded and bill generated", [
-                    'customer_id' => $customer->id,
-                    'meter_id' => $meter->id,
-                    'reading_id' => $reading->id,
-                    'bill_id' => $bill->id,
-                    'consumption' => $consumption,
-                    'amount' => $bill->total_amount
-                ]);
+                    Log::info("Meter reading recorded and bill generated", [
+                        'customer_id' => $customer->id,
+                        'meter_id' => $meter->id,
+                        'reading_id' => $reading->id,
+                        'bill_id' => $bill->id,
+                        'consumption' => $consumption,
+                        'amount' => $bill->total_amount
+                    ]);
+                } else {
+                    Log::info("Meter reading exception recorded", [
+                        'customer_id' => $customer->id,
+                        'meter_id' => $meter->id,
+                        'reading_id' => $reading->id,
+                        'reading_status' => $request->reading_status,
+                        'exception_type' => $request->exception_type
+                    ]);
+                }
             });
 
             // Now $meter is available for the success message
             return redirect()->route('admin.customers.show', $request->customer_id)
-                ->with('success', 'Meter reading recorded and bill generated successfully for meter ' . $meter->meter_number . '!');
+                ->with('success', 'Meter reading ' . $request->reading_status . ' recorded successfully for meter ' . $meter->meter_number . '!');
 
         } catch (\Exception $e) {
             Log::error('Meter reading creation error: ' . $e->getMessage());
             return back()->withInput()->with('error', $e->getMessage());
         }
     }
-    /**
-     * Generate bill automatically after meter reading for specific meter
-     */
-    private function generateBill(MeterReading $reading, Customer $customer, Meter $meter, $consumption)
+
+    // Update the generateBill method to handle estimated readings
+    private function generateBill(MeterReading $reading, Customer $customer, Meter $meter, $consumption, $readingStatus = 'recorded')
     {
         // Get meter category pricing
         $category = $meter->meterCategory;
@@ -207,7 +254,7 @@ class MeterReadingController extends Controller
         $taxAmount = ($baseCharge + $consumptionCharge) * $taxRate;
         $totalAmount = $baseCharge + $consumptionCharge;
 
-        // STEP 1: Create bill without bill_number first
+        // Create bill without bill_number first
         $bill = Bill::create([
             'customer_id' => $customer->id,
             'meter_id' => $meter->id,
@@ -221,11 +268,11 @@ class MeterReadingController extends Controller
             'total_amount' => $totalAmount,
             'due_date' => Carbon::parse($reading->reading_date)->addDays(30),
             'bill_status' => 'unpaid',
-            'notes' => 'Auto-generated from meter reading #' . $reading->id . ' for meter ' . $meter->meter_number,
+            'notes' => 'Auto-generated from ' . ($readingStatus === 'estimated' ? 'estimated' : '') . ' meter reading #' . $reading->id . ' for meter ' . $meter->meter_number,
             'created_by' => auth()->id(),
         ]);
 
-        // STEP 2: Generate safe bill number using the bill ID
+        // Generate safe bill number using the bill ID
         $bill->update([
             'bill_number' => 'B-' . str_pad($bill->id, 6, '0', STR_PAD_LEFT)
         ]);
@@ -353,37 +400,91 @@ class MeterReadingController extends Controller
         ]);
     }
 
-    /**
-     * API endpoint for OCR processing
+        /**
+     * Calculate estimated consumption based on history
      */
-    public function processOCR(Request $request)
+    public function estimateConsumption(Customer $customer, Meter $meter)
     {
-        $request->validate([
-            'image' => 'required|image|max:2048',
-        ]);
-
         try {
-            $imagePath = $request->file('image')->store('temp-ocr', 'public');
-            $fullImagePath = storage_path('app/public/' . $imagePath);
+            // Verify the meter belongs to the customer
+            if ($meter->customer_id != $customer->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Meter does not belong to this customer'
+                ], 400);
+            }
 
-            $ocrService = new OCRService();
-            $reading = $ocrService->extractMeterReading($fullImagePath);
+            // Get last 3 normal readings
+            $previousReadings = MeterReading::where('customer_id', $customer->id)
+                ->where('meter_id', $meter->id)
+                ->where('reading_status', MeterReading::STATUS_RECORDED)
+                ->where('billed', true)
+                ->orderBy('reading_date', 'desc')
+                ->limit(3)
+                ->get();
 
-            // Clean up temporary file
-            Storage::disk('public')->delete(str_replace('temp-ocr/', '', $imagePath));
+            if ($previousReadings->isEmpty()) {
+                // No history, use default based on category
+                $defaultConsumption = $meter->meterCategory->default_rate * 10;
+                $estimatedConsumption = max(5, min($defaultConsumption, 50)); // Between 5-50 m³
+                
+                return response()->json([
+                    'success' => true,
+                    'estimated_consumption' => $estimatedConsumption,
+                    'message' => 'Estimated based on category default (no history available)'
+                ]);
+            }
+
+            // Calculate average consumption from history
+            $averageConsumption = $previousReadings->avg('consumption');
+            $estimatedConsumption = round($averageConsumption, 2);
 
             return response()->json([
                 'success' => true,
-                'detected_reading' => $reading,
-                'message' => $reading ? 'Reading detected successfully' : 'No readable meter numbers found'
+                'estimated_consumption' => $estimatedConsumption,
+                'history_count' => $previousReadings->count(),
+                'message' => 'Estimated based on ' . $previousReadings->count() . ' previous readings'
             ]);
 
         } catch (\Exception $e) {
-            Log::error('OCR API Error: ' . $e->getMessage());
+            Log::error('Estimation error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Error processing image: ' . $e->getMessage()
+                'message' => 'Error calculating estimation'
             ], 500);
         }
     }
+
+        /**
+     * Show meter reading exceptions report
+     */
+    public function exceptions(Request $request)
+    {
+        $query = MeterReading::with(['customer', 'meter', 'reader'])
+            ->where('reading_status', MeterReading::STATUS_EXCEPTION)
+            ->latest();
+
+        // Apply filters
+        if ($request->filled('exception_type')) {
+            $query->where('exception_type', $request->exception_type);
+        }
+
+        if ($request->filled('start_date')) {
+            $query->where('reading_date', '>=', $request->start_date);
+        }
+
+        $exceptions = $query->paginate(20);
+
+        // Statistics
+        $stats = [
+            'total' => MeterReading::where('reading_status', MeterReading::STATUS_EXCEPTION)->count(),
+            'inaccessible' => MeterReading::where('exception_type', 'inaccessible')->count(),
+            'faulty' => MeterReading::where('exception_type', 'faulty')->count(),
+            'stuck' => MeterReading::where('exception_type', 'stuck')->count(),
+        ];
+
+        return view('admin.meter-readings.exceptions', compact('exceptions', 'stats'));
+    }
+
+ 
 }
