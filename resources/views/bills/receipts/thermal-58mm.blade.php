@@ -3,134 +3,414 @@
 <head>
     <title>Print Receipt</title>
     <style>
-        @media print {
-            @page { size: 58mm auto; margin: 0; }
-            body { 
-                width: 58mm; 
-                margin: 0; 
-                padding: 2mm; 
-                font-family: 'Courier New', monospace; 
-                font-size: 12px !important; /* INCREASED FONT */
-                font-weight: bold; 
-                text-align: center; /* CENTER EVERYTHING */
-            }
-            .no-print { display: none; }
+        /* RESET ALL MARGINS AND PADDING */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Courier New', Courier, monospace;
         }
         
+        /* SCREEN STYLING */
         @media screen {
-            body { 
-                width: 58mm; 
-                margin: 20px auto; 
-                padding: 10px; 
-                font-family: 'Courier New', monospace; 
-                font-size: 12px !important; /* INCREASED FONT */
-                font-weight: bold; 
-                text-align: center; /* CENTER EVERYTHING */
-                border: 1px solid #000;
+            body {
+                width: 58mm;
+                margin: 20px auto;
+                padding: 5px;
+                background: white;
+                border: 1px solid #ccc;
+                font-size: 9pt;
             }
         }
         
-        /* CENTER LOGO */
-        .logo { 
-            text-align: center; 
-            margin: 0 auto 5px; 
+        /* PRINT STYLING - SIMPLIFIED */
+        @media print {
+            body {
+                width: 58mm !important;
+                margin: 0 !important;
+                padding: 2mm !important;
+                font-size: 9pt !important;
+                line-height: 1.1;
+            }
+            
+            .no-print {
+                display: none !important;
+            }
+            
+            /* HIDE EVERYTHING EXCEPT RECEIPT */
+            body > *:not(.receipt-container) {
+                display: none !important;
+            }
         }
-        .logo img { 
-            max-width: 35mm !important; /* SMALLER LOGO */
-            height: auto;
-            display: block;
+        
+        /* RECEIPT CONTAINER */
+        .receipt-container {
+            width: 54mm;
             margin: 0 auto;
+            text-align: left;
         }
         
-        /* CENTER RECEIPT CONTENT */
-        .receipt-content {
+        /* LOGO */
+        .logo {
             text-align: center;
-            width: 100%;
+            margin-bottom: 3px;
         }
         
-        /* CENTER PRINT BUTTON */
+        .logo img {
+            max-width: 40mm;
+            max-height: 15mm;
+        }
+        
+        /* COMPANY INFO */
+        .company-info {
+            text-align: center;
+            margin-bottom: 3px;
+            font-weight: bold;
+        }
+        
+        .company-name {
+            font-size: 10pt;
+            font-weight: bold;
+        }
+        
+        .company-details {
+            font-size: 7pt;
+        }
+        
+        /* DIVIDERS */
+        .divider {
+            border-top: 1px dashed #000;
+            margin: 4px 0;
+        }
+        
+        .double-divider {
+            border-top: 2px solid #000;
+            margin: 6px 0;
+        }
+        
+        /* SECTION TITLES */
+        .section-title {
+            text-align: center;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin: 4px 0;
+            font-size: 8pt;
+        }
+        
+        /* ROWS */
+        .row {
+            display: flex;
+            justify-content: space-between;
+            margin: 2px 0;
+            font-size: 8pt;
+        }
+        
+        .label {
+            flex: 1;
+            text-align: left;
+            font-weight: bold;
+        }
+        
+        .value {
+            flex: 1;
+            text-align: right;
+            font-weight: bold;
+        }
+        
+        /* TOTALS */
+        .total-row {
+            font-weight: bold;
+            margin: 3px 0;
+        }
+        
+        /* PAYMENT INFO */
+        .payment-info {
+            text-align: center;
+            background: #f0f0f0;
+            padding: 4px;
+            margin: 5px 0;
+            font-weight: bold;
+            font-size: 9pt;
+            border: 1px solid #ccc;
+        }
+        
+        /* FOOTER */
+        .footer {
+            text-align: center;
+            margin-top: 8px;
+            font-size: 8pt;
+            padding-top: 4px;
+            font-weight: bold;
+            border-top: 1px dashed #000;
+        }
+        
+        /* PRINT BUTTON */
         .print-btn {
             display: block;
             width: 100%;
-            padding: 15px;
-            background: #4CAF50;
+            padding: 12px;
+            background: #007bff;
             color: white;
             border: none;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: bold;
+            margin-top: 15px;
             cursor: pointer;
-            margin-top: 20px;
+            border-radius: 4px;
+        }
+        
+        /* UTILITY CLASSES */
+        .text-center {
             text-align: center;
+        }
+        
+        .text-bold {
+            font-weight: bold;
+        }
+        
+        .receipt-title {
+            text-align: center;
+            font-weight: bold;
+            font-size: 10pt;
+            margin: 5px 0;
+            text-transform: uppercase;
         }
     </style>
 </head>
 <body>
-    <!-- CENTERED LOGO -->
-    <div class="logo">
-        @if(file_exists(public_path('img/logo.png')))
-            <img src="{{ asset('img/logo.png') }}" alt="Logo">
+    <div class="receipt-container">
+        <!-- Logo -->
+        <div class="logo">
+            @if(file_exists(public_path('img/logo.png')))
+                <img src="{{ asset('img/logo.png') }}" alt="Logo">
+            @else
+                <div class="company-name">NYAWASCO WATER</div>
+            @endif
+        </div>
+        
+        <!-- Company Info -->
+        <div class="company-info">
+            <div class="company-name">NYAWASCO WATER COMPANY</div>
+            <div class="company-details">P.O Box 255-40500 - NYAMIRA</div>
+            <div class="company-details">Tel: 0787080455</div>
+        </div>
+        
+        <div class="divider"></div>
+        
+        <!-- Receipt Title -->
+        <div class="receipt-title">OFFICIAL RECEIPT</div>
+        
+        <div class="divider"></div>
+        
+        <!-- Receipt Info -->
+        <div class="row">
+            <span class="label">Date:</span>
+            <span class="value">{{ $receiptData['date'] }}</span>
+        </div>
+        <div class="row">
+            <span class="label">Receipt No:</span>
+            <span class="value">{{ $receiptData['receipt_number'] }}</span>
+        </div>
+        <div class="row">
+            <span class="label">Bill No:</span>
+            <span class="value">{{ $receiptData['bill_number'] }}</span>
+        </div>
+        
+        <div class="divider"></div>
+        
+        <!-- Customer Info -->
+        <div class="section-title">CUSTOMER INFORMATION</div>
+        
+        <div class="row">
+            <span class="label">Name:</span>
+            <span class="value">{{ $receiptData['customer_name'] }}</span>
+        </div>
+        <div class="row">
+            <span class="label">Account No:</span>
+            <span class="value">{{ $receiptData['customer_number'] }}</span>
+        </div>
+        <div class="row">
+            <span class="label">Phone:</span>
+            <span class="value">{{ $receiptData['customer_phone'] }}</span>
+        </div>
+        <div class="row">
+            <span class="label">Meter No:</span>
+            <span class="value">{{ $receiptData['meter_number'] }}</span>
+        </div>
+        
+        <div class="divider"></div>
+        
+        <!-- Billing Details -->
+        <div class="section-title">BILLING DETAILS</div>
+        
+        <div class="row">
+            <span class="label">Period:</span>
+            <span class="value">{{ $receiptData['billing_period'] }}</span>
+        </div>
+        <div class="row">
+            <span class="label">Consumption:</span>
+            <span class="value">{{ $receiptData['consumption'] }}</span>
+        </div>
+        <div class="row">
+            <span class="label">Rate:</span>
+            <span class="value">{{ $receiptData['rate'] }}</span>
+        </div>
+        
+        <div class="divider"></div>
+        
+        <!-- Amount Breakdown -->
+        <div class="section-title">AMOUNT BREAKDOWN</div>
+        
+        <div class="row">
+            <span class="label">Subtotal:</span>
+            <span class="value">{{ $receiptData['subtotal'] }}</span>
+        </div>
+        @if(floatval(str_replace(['KSh', ',', ' '], '', $receiptData['vat'])) > 0)
+        <div class="row">
+            <span class="label">VAT:</span>
+            <span class="value">{{ $receiptData['vat'] }}</span>
+        </div>
         @endif
+        
+        <div class="double-divider"></div>
+        
+        <!-- Totals -->
+        <div class="row total-row">
+            <span class="label">TOTAL DUE:</span>
+            <span class="value">{{ $receiptData['total_amount'] }}</span>
+        </div>
+        <div class="row total-row">
+            <span class="label">Amount Paid:</span>
+            <span class="value">{{ $receiptData['amount_paid'] }}</span>
+        </div>
+        <div class="row total-row">
+            <span class="label">BALANCE:</span>
+            <span class="value">{{ $receiptData['balance'] }}</span>
+        </div>
+        
+        <div class="divider"></div>
+        
+        <!-- Status -->
+        <div class="row">
+            <span class="label">Status:</span>
+            <span class="value">{{ $receiptData['payment_status'] }}</span>
+        </div>
+        <div class="row">
+            <span class="label">Due Date:</span>
+            <span class="value">{{ $receiptData['due_date'] }}</span>
+        </div>
+        
+        <div class="divider"></div>
+        
+        <!-- Footer Message -->
+        <div class="text-center text-bold">
+            {{ $receiptData['footer_message'] }}
+        </div>
+        
+        <!-- Payment Instructions -->
+        <div class="payment-info">
+            <div>M-PESA PAYBILL: 247 247</div>
+            <div>ACC NO: 483133#{{ $receiptData['customer_number'] }}</div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <div>Printed: {{ $receiptData['printed_date'] }}</div>
+            <div>** OFFICIAL RECEIPT **</div>
+            <div>Thank you for your business!</div>
+        </div>
     </div>
     
-    <!-- CENTERED RECEIPT CONTENT -->
-    <div class="receipt-content">
-        {{ str_repeat('=', 42) }}
-{{ str_pad('NYAWASCO WATER COMPANY', 42, ' ', STR_PAD_BOTH) }}
-{{ str_pad('P.O Box 255-40500 - NYAMIRA', 42, ' ', STR_PAD_BOTH) }}
-{{ str_pad('Tel: 0787080455', 42, ' ', STR_PAD_BOTH) }}
-{{ str_repeat('-', 42) }}
-{{ str_pad('OFFICIAL RECEIPT', 42, ' ', STR_PAD_BOTH) }}
-{{ str_repeat('-', 42) }}
-Date: {{ $receiptData['date'] }}
-Receipt: {{ $receiptData['receipt_number'] }}
-Bill: {{ $receiptData['bill_number'] }}
-{{ str_repeat('-', 42) }}
-CUSTOMER INFORMATION:
-{{ str_repeat('-', 42) }}
-Name: {{ $receiptData['customer_name'] }}
-Acct: {{ $receiptData['customer_number'] }}
-Phone: {{ $receiptData['customer_phone'] }}
-Meter: {{ $receiptData['meter_number'] }}
-{{ str_repeat('-', 42) }}
-BILLING DETAILS:
-{{ str_repeat('-', 42) }}
-Period: {{ $receiptData['billing_period'] }}
-Consumption: {{ $receiptData['consumption'] }}
-Rate: {{ $receiptData['rate'] }}
-{{ str_repeat('-', 42) }}
-AMOUNT BREAKDOWN:
-{{ str_repeat('-', 42) }}
-Subtotal: {{ $receiptData['subtotal'] }}
-@if(floatval(str_replace(['KSh ', ','], '', $receiptData['vat'])) > 0)
-VAT: {{ $receiptData['vat'] }}
-@endif
-{{ str_repeat('-', 42) }}
-TOTAL DUE: {{ $receiptData['total_amount'] }}
-Amount Paid: {{ $receiptData['amount_paid'] }}
-BALANCE: {{ $receiptData['balance'] }}
-{{ str_repeat('-', 42) }}
-STATUS: {{ $receiptData['payment_status'] }}
-Due Date: {{ $receiptData['due_date'] }}
-{{ str_repeat('-', 42) }}
-{{ $receiptData['footer_message'] }}
-{{ str_repeat('=', 42) }}
-Printed: {{ $receiptData['printed_date'] }}
-{{ str_repeat('*', 42) }}
-M-PESA Paybill: 247 247
-Acc No: 483133#{{ $receiptData['customer_number'] }}
-{{ str_repeat('*', 42) }}
-    </div>
-    
-    <!-- CENTERED PRINT BUTTON -->
-    <button class="print-btn no-print" onclick="window.print()">
-        PRINT RECEIPT
+    <!-- Print Button -->
+    <button class="print-btn no-print" onclick="printReceipt()">
+        🖨️ PRINT RECEIPT
     </button>
     
     <script>
-        // Optional: Auto-print after 1 second
-        setTimeout(function() {
+        // Function to handle printing
+        function printReceipt() {
+            // Store original body content
+            const originalBody = document.body.innerHTML;
+            
+            // Get receipt content only
+            const receiptContent = document.querySelector('.receipt-container').outerHTML;
+            
+            // Replace body with receipt only for printing
+            document.body.innerHTML = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Print Receipt</title>
+                    <style>
+                        @page { 
+                            size: 58mm auto; 
+                            margin: 0; 
+                            padding: 0;
+                        }
+                        body {
+                            width: 58mm;
+                            margin: 0;
+                            padding: 2mm;
+                            font-family: 'Courier New', monospace;
+                            font-size: 9pt;
+                            line-height: 1.1;
+                        }
+                        * {
+                            margin: 0;
+                            padding: 0;
+                            box-sizing: border-box;
+                        }
+                        .receipt-container {
+                            width: 54mm;
+                            margin: 0 auto;
+                        }
+                        .row {
+                            display: flex;
+                            justify-content: space-between;
+                            margin: 2px 0;
+                        }
+                        .divider {
+                            border-top: 1px dashed #000;
+                            margin: 4px 0;
+                        }
+                        .payment-info {
+                            background: #f0f0f0;
+                            padding: 4px;
+                            margin: 5px 0;
+                            text-align: center;
+                            font-weight: bold;
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${receiptContent}
+                </body>
+                </html>
+            `;
+            
+            // Trigger print
             window.print();
-        }, 1000);
+            
+            // Restore original content after printing
+            setTimeout(() => {
+                document.body.innerHTML = originalBody;
+            }, 100);
+        }
+        
+        // Auto-print after 1 second (optional)
+        window.onload = function() {
+            setTimeout(() => {
+                printReceipt();
+            }, 1000);
+        };
+        
+        // Alternative auto-print with simple approach
+        document.addEventListener('DOMContentLoaded', function() {
+            // Simple print after delay
+            setTimeout(function() {
+                window.print();
+            }, 500);
+        });
     </script>
 </body>
 </html>

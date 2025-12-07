@@ -292,86 +292,63 @@ class BillController extends Controller
             'total_due' => $totalDue,
         ]);
     }
-// In your BillController
-// public function generateReceipt(Bill $bill)
-// {
-//     // Check if user has permission to generate receipts
-//     $this->authorize('view', $bill);
 
-//     // Get receipt data from model
-//     $receiptData = $bill->generateReceipt();
+    public function printReceipt(Bill $bill)
+    {
+        // Load necessary data
+        $bill->load(['customer', 'meter', 'payments', 'meter.meterCategory']);
 
-//     // For PDQ devices, you might want different formats
-//     $format = request()->get('format', 'print'); // print, pdf, or preview
-
-//     if ($format === 'print') {
-//         // Return a view with auto-print JavaScript
-//         return view('bills.receipts.print', compact('receiptData', 'bill'));
-//     } elseif ($format === 'pdf') {
-//         // Temporarily disable PDF or handle differently
-//         return redirect()->route('bills.receipt', [
-//             'bill' => $bill->id,
-//             'format' => 'print'
-//         ]);
-//     } elseif ($format === 'thermal') {
-//         // Return raw thermal format for direct printing
-//         return response()->view('bills.receipts.thermal', compact('receiptData'))
-//             ->header('Content-Type', 'text/plain');
-//     } elseif ($format === 'preview') {
-//         // HTML preview
-//         return view('bills.receipts.preview', compact('receiptData', 'bill'));
-//     }
-
-//     // Default to print format
-//     return view('bills.receipts.print', compact('receiptData', 'bill'));
-// }
-
-// private function generatePDFReceipt($receiptData)
-// {
-//     // Using DomPDF or similar PDF library
-//     $pdf = \PDF::loadView('bills.receipts.pdf', compact('receiptData'));
-
-//     // Set paper size for receipt (80mm thermal printer width)
-//     $pdf->setPaper([0, 0, 226.77, 800], 'portrait'); // 80mm width in points
-
-//     return $pdf->download('receipt-' . $receiptData['bill_number'] . '.pdf');
-// }
-
-public function printReceipt(Bill $bill)
-{
-    // Load necessary data
-    $bill->load(['customer', 'meter', 'payments', 'meter.meterCategory']);
-
-    // Get total paid amount
-    $totalPaid = $bill->payments->sum('amount');
-    $balance = $bill->total_amount - $totalPaid;
-
-    // Prepare receipt data
-    $receiptData = [
-        'bill_number' => $bill->bill_number,
-        'date' => now()->format('Y-m-d H:i:s'),
-        'receipt_number' => 'RCP-' . str_pad($bill->id, 6, '0', STR_PAD_LEFT),
-        'customer_name' => $bill->customer->first_name . ' ' . $bill->customer->last_name,
-        'customer_number' => $bill->customer->customer_number,
-        'customer_phone' => $bill->customer->phone ?? 'N/A',
-        'meter_number' => $bill->meter->meter_number ?? 'N/A',
-        'billing_period' => $bill->billing_period_start
+        // Get total paid amount
+        $totalPaid = $bill->payments->sum('amount');
+        $balance = $bill->total_amount - $totalPaid;
+        
+        // Format customer name to fit thermal printer (max 20 chars)
+        $customerName = $bill->customer->first_name . ' ' . $bill->customer->last_name;
+        if (strlen($customerName) > 20) {
+            $customerName = substr($customerName, 0, 17) . '...';
+        }
+        
+        // Format billing period
+        $billingPeriod = $bill->billing_period_start && $bill->billing_period_end
             ? $bill->billing_period_start->format('M d') . '-' . $bill->billing_period_end->format('M d')
-            : 'N/A',
-        'consumption' => number_format($bill->consumption, 2) . ' m³',
-        'rate' => 'KSh ' . number_format($bill->meter->meterCategory->default_rate ?? 0, 4),
-        'subtotal' => 'KSh ' . number_format($bill->total_amount, 2),
-        'vat' => 'KSh 0.00',
-        'total_amount' => 'KSh ' . number_format($bill->total_amount, 2),
-        'amount_paid' => 'KSh ' . number_format($totalPaid, 2),
-        'balance' => 'KSh ' . number_format($balance, 2),
-        'payment_status' => $bill->bill_status,
-        'due_date' => $bill->due_date ? $bill->due_date->format('Y-m-d') : 'N/A',
-        'footer_message' => 'Thank you!',
-        'printed_date' => now()->format('Y-m-d H:i:s'),
-    ];
+            : 'N/A';
+        
+        // Truncate meter number if too long
+        $meterNumber = $bill->meter->meter_number ?? 'N/A';
+        if (strlen($meterNumber) > 15) {
+            $meterNumber = substr($meterNumber, 0, 12) . '...';
+        }
+        
+        // Truncate customer phone
+        $customerPhone = $bill->customer->phone ?? 'N/A';
+        if (strlen($customerPhone) > 15) {
+            $customerPhone = substr($customerPhone, 0, 12) . '...';
+        }
 
-    // Return the 58mm optimized receipt view
-    return view('bills.receipts.thermal-58mm', compact('receiptData'));
-}
+        // Prepare receipt data with thermal printer-friendly formatting
+        $receiptData = [
+            'bill_number' => substr($bill->bill_number, 0, 15), // Max 15 chars
+            'date' => now()->format('d/m/Y H:i'),
+            'receipt_number' => 'RCP-' . str_pad($bill->id, 6, '0', STR_PAD_LEFT),
+            'customer_name' => $customerName,
+            'customer_number' => $bill->customer->customer_number,
+            'customer_phone' => $customerPhone,
+            'meter_number' => $meterNumber,
+            'billing_period' => $billingPeriod,
+            'consumption' => number_format($bill->consumption, 1) . ' m³',
+            'rate' => number_format($bill->meter->meterCategory->default_rate ?? 0, 3),
+            'subtotal' => 'KSh ' . number_format($bill->total_amount, 2),
+            'vat' => 'KSh 0.00',
+            'total_amount' => 'KSh ' . number_format($bill->total_amount, 2),
+            'amount_paid' => 'KSh ' . number_format($totalPaid, 2),
+            'balance' => 'KSh ' . number_format($balance, 2),
+            'payment_status' => strtoupper($bill->bill_status),
+            'due_date' => $bill->due_date ? $bill->due_date->format('d/m/Y') : 'N/A',
+            'footer_message' => 'Thank you for your payment!',
+            'printed_date' => now()->format('d/m/Y H:i'),
+        ];
+
+        // Return the 58mm optimized receipt view
+        return view('bills.receipts.thermal-58mm', compact('receiptData'));
+    }
 }
