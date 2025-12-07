@@ -65,9 +65,9 @@ class BillController extends Controller
             ->count();
 
         // Dashboard statistics from visible bills
-        $totalRevenue = $bills->sum('total_amount');
-        $outstandingBalance = $bills->where('bill_status', '!=', 'paid')->sum('total_amount');
-        $totalBills = $bills->total();
+        $totalRevenue = Bill::query()->sum('total_amount');
+        $outstandingBalance = Bill::query()->where('bill_status', '!=', 'paid')->sum('total_amount');
+        $totalBills = Bill::query()->count();
         $paidBills = $bills->where('bill_status', 'paid')->count();
         $collectionRate = $totalBills > 0 ? ($paidBills / $totalBills) * 100 : 0;
 

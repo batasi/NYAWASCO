@@ -161,40 +161,40 @@
         <form method="GET" action="{{ route('admin.meters.index') }}" class="flex gap-4">
             <input type="hidden" name="filter" value="{{ $filter }}">
             <input type="hidden" name="category" value="{{ request('category') }}">
-            
+
             @if($filter === 'location' && request('location'))
                 <input type="hidden" name="location" value="{{ request('location') }}">
             @endif
-            
+
             <div class="flex-1">
                 <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <i class="fas fa-search text-gray-400"></i>
                     </div>
-                    <input type="text" 
-                        name="q" 
+                    <input type="text"
+                        name="q"
                         value="{{ request('q') }}"
-                        placeholder="Search by meter number, customer name, location, etc..." 
+                        placeholder="Search by meter number, customer name, location, etc..."
                         class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
                 </div>
             </div>
-            
+
             <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition duration-200">
                 <i class="fas fa-search mr-2"></i>Search
             </button>
-            
+
             @if(request('q'))
                 <a href="{{ route('admin.meters.index', array_filter([
                     'filter' => $filter,
                     'category' => request('category'),
                     'location' => $filter === 'location' ? request('location') : null
-                ])) }}" 
+                ])) }}"
                 class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold transition duration-200 flex items-center">
                     <i class="fas fa-times mr-2"></i>Clear
                 </a>
             @endif
         </form>
-        
+
         @if(request('q'))
             <div class="mt-3">
                 <p class="text-sm text-gray-600">
@@ -421,7 +421,7 @@
                             </div>
                         </div>
 
-                        
+
 
                         <!-- Initial Reading Only -->
                         <div>
@@ -762,7 +762,7 @@
         }
     });
 
- 
+
 
     // Handle customer selection
     document.getElementById('modal_customer_id').addEventListener('change', function() {
@@ -965,7 +965,7 @@
         try {
             const formData = new FormData(this);
 
-        
+
 
             const response = await fetch(this.action, {
                 method: 'POST',
@@ -996,19 +996,19 @@
         document.addEventListener('DOMContentLoaded', function() {
             const searchInput = document.querySelector('input[name="q"]');
             const searchForm = document.querySelector('form');
-            
+
             if (!searchInput || !searchForm) return;
-            
+
             // Quick search on Enter key
             searchInput.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
                     searchForm.submit();
                 }
             });
-            
+
             // Auto-focus search input
             searchInput.focus();
-            
+
             // Quick clear button
             if (searchInput.value) {
                 const clearBtn = document.createElement('button');
@@ -1019,7 +1019,7 @@
                     searchInput.value = '';
                     searchInput.focus();
                 });
-                
+
                 const inputContainer = searchInput.parentElement;
                 inputContainer.classList.add('relative');
                 inputContainer.appendChild(clearBtn);

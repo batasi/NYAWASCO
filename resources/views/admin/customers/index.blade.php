@@ -8,15 +8,23 @@
 <div class="fixed inset-0 -z-10">
     <div class="absolute inset-0 bg-gradient-to-br from-blue-50/80 to-white/90"></div>
 </div>
+<div class="min-h-screen bg-gray-50">
+    @php
+    $actionButtons = [];
 
+
+    @endphp
+
+    @include('components.dashboard-header',[
+        'title' => 'Customers Management',
+        'subtitle' => 'customer Management Platform',
+        'actionButtons' => $actionButtons
+    ])
 <div class="container mx-auto px-4 py-8 relative z-10">
 
     <!-- Header Section -->
     <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
-        <div>
-            <h1 class="text-2xl md:text-3xl font-bold text-blue-800">Customer Management</h1>
-            <p class="text-gray-600 mt-2">Total: {{ $customers->total() }} customers</p>
-        </div>
+
 
         <div class="flex flex-wrap gap-3">
             @can('add customers')
@@ -238,14 +246,14 @@
                         <!-- Status -->
                         <td class="px-3 py-4">
                             @php
-                    
+
                                 $statusColors = [
                                     'active' => 'bg-green-100 text-green-800',
                                     'inactive' => 'bg-gray-100 text-gray-800',
                                     'pending' => 'bg-yellow-100 text-yellow-800',
                                     'suspended' => 'bg-red-100 text-red-800',
                                 ];
-                            
+
                             @endphp
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusColors[$customer->status] }}">
                                 <i class="fas fa-circle mr-1 text-xs"></i>
@@ -322,6 +330,7 @@
         </div>
         @endif
     </div>
+</div>
 </div>
 
 <!-- Meter Assignment Modal -->
