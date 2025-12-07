@@ -59,6 +59,7 @@ class ImportWaterData extends Command
         $insertedMeters = 0;
 
         foreach ($rows as $index => $data) {
+            // Skip empty rows
             if (count(array_filter($data)) === 0) continue;
 
             $row = @array_combine($header, $data);
@@ -104,14 +105,12 @@ class ImportWaterData extends Command
                 if (is_numeric($lastNumber)) {
                     $newNumber = intval($lastNumber) + 1;
                 } else {
-                    // fallback numbering (when DB contains non-numeric values)
                     $newNumber = Customer::max('id') + 10000;
                 }
 
                 $customerNumber = str_pad($newNumber, 6, '0', STR_PAD_LEFT); // e.g. 000123
                 $this->warn("Row $index: Missing account number → Assigned: $customerNumber");
             }
-
 
             $customer = Customer::firstOrCreate(
                 ['customer_number' => $customerNumber],
@@ -128,13 +127,28 @@ class ImportWaterData extends Command
             // Meter
             $meterNumber = $row['Mtr No.'] ?? null;
             if ($meterNumber && strtoupper($meterNumber) !== 'N/A') {
+
+                // Handle latitude & longitude
+                $latitude = isset($row['Latitude']) && strtolower(trim($row['Latitude'])) !== 'null' && trim($row['Latitude']) !== ''
+                    ? floatval($row['Latitude'])
+                    : null;
+
+                $longitude = isset($row['Longitude']) && strtolower(trim($row['Longitude'])) !== 'null' && trim($row['Longitude']) !== ''
+                    ? floatval($row['Longitude'])
+                    : null;
+
+                // Normalize status
+                $status = isset($row['Status']) && trim($row['Status']) !== ''
+                    ? strtoupper(trim($row['Status']))
+                    : 'UNKNOWN';
+
                 $meter = Meter::firstOrCreate(
                     ['meter_number' => $meterNumber],
                     [
                         'meter_category_id' => $category->id,
-                        'longtitude' => $row['Longitude'] ?? null,
-                        'latitude' => $row['Latitude'] ?? null,
-                        'status' => strtolower($row['Status'] ?? 'unknown'),
+                        'longtitude' => $longitude,
+                        'latitude' => $latitude,
+                        'status' => $status,
                         'customer_id' => $customer->id,
                         'zone_id' => $zone->id,
                         'walk_route_id' => $walkroute->id,
