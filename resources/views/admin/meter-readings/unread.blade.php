@@ -1,4 +1,3 @@
-{{-- Create: views/admin/meter-readings/unread.blade.php --}}
 @extends('layouts.app')
 
 @section('title', 'Unread Meters - NYAWASCO')

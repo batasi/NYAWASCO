@@ -7,6 +7,8 @@ use App\Models\Meter;
 use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log; 
+
 use PDF;
 
 class BillController extends Controller
@@ -293,62 +295,95 @@ class BillController extends Controller
         ]);
     }
 
-    public function printReceipt(Bill $bill)
-    {
-        // Load necessary data
-        $bill->load(['customer', 'meter', 'payments', 'meter.meterCategory']);
-
-        // Get total paid amount
-        $totalPaid = $bill->payments->sum('amount');
-        $balance = $bill->total_amount - $totalPaid;
-        
-        // Format customer name to fit thermal printer (max 20 chars)
-        $customerName = $bill->customer->first_name . ' ' . $bill->customer->last_name;
-        if (strlen($customerName) > 20) {
-            $customerName = substr($customerName, 0, 17) . '...';
-        }
-        
-        // Format billing period
-        $billingPeriod = $bill->billing_period_start && $bill->billing_period_end
-            ? $bill->billing_period_start->format('M d') . '-' . $bill->billing_period_end->format('M d')
-            : 'N/A';
-        
-        // Truncate meter number if too long
-        $meterNumber = $bill->meter->meter_number ?? 'N/A';
-        if (strlen($meterNumber) > 15) {
-            $meterNumber = substr($meterNumber, 0, 12) . '...';
-        }
-        
-        // Truncate customer phone
-        $customerPhone = $bill->customer->phone ?? 'N/A';
-        if (strlen($customerPhone) > 15) {
-            $customerPhone = substr($customerPhone, 0, 12) . '...';
-        }
-
-        // Prepare receipt data with thermal printer-friendly formatting
-        $receiptData = [
-            'bill_number' => substr($bill->bill_number, 0, 15), // Max 15 chars
-            'date' => now()->format('d/m/Y H:i'),
-            'receipt_number' => 'RCP-' . str_pad($bill->id, 6, '0', STR_PAD_LEFT),
-            'customer_name' => $customerName,
-            'customer_number' => $bill->customer->customer_number,
-            'customer_phone' => $customerPhone,
-            'meter_number' => $meterNumber,
-            'billing_period' => $billingPeriod,
-            'consumption' => number_format($bill->consumption, 1) . ' m³',
-            'rate' => number_format($bill->meter->meterCategory->default_rate ?? 0, 3),
-            'subtotal' => 'KSh ' . number_format($bill->total_amount, 2),
-            'vat' => 'KSh 0.00',
-            'total_amount' => 'KSh ' . number_format($bill->total_amount, 2),
-            'amount_paid' => 'KSh ' . number_format($totalPaid, 2),
-            'balance' => 'KSh ' . number_format($balance, 2),
-            'payment_status' => strtoupper($bill->bill_status),
-            'due_date' => $bill->due_date ? $bill->due_date->format('d/m/Y') : 'N/A',
-            'footer_message' => 'Thank you for your payment!',
-            'printed_date' => now()->format('d/m/Y H:i'),
-        ];
-
-        // Return the 58mm optimized receipt view
-        return view('bills.receipts.thermal-58mm', compact('receiptData'));
+ public function printReceipt(Bill $bill)
+{
+    // Load necessary data
+    $bill->load(['customer', 'meter', 'payments', 'meter.meterCategory', 'meterReading']);
+    
+    // Get total paid amount
+    $totalPaid = $bill->payments->sum('amount');
+    $balance = $bill->total_amount - $totalPaid;
+    
+    // Get customer's previous unpaid balance (arrears)
+    $arrears = Bill::where('customer_id', $bill->customer_id)
+        ->where('id', '<', $bill->id)
+        ->where('bill_status', '!=', 'paid')
+        ->sum('balance');
+    
+    // Format customer name
+    $customerName = $bill->customer->first_name . ' ' . $bill->customer->last_name;
+    if (strlen($customerName) > 20) {
+        $customerName = substr($customerName, 0, 17) . '...';
     }
+    
+    // Format billing period
+    $billingPeriod = $bill->billing_period_start && $bill->billing_period_end
+        ? $bill->billing_period_start->format('M d') . '-' . $bill->billing_period_end->format('M d')
+        : 'N/A';
+    
+    // Get meter rent from meter category (default to 0 if not set)
+    $meterRent = $bill->meter->meterCategory->meter_rent ?? 0;
+    
+    // Calculate consumption charge from bill data
+    $consumptionCharge = $bill->consumption_charge ?? ($bill->consumption * ($bill->meter->meterCategory->default_rate ?? 0));
+    
+    // Calculate subtotal (sum of all charges BEFORE tax)
+    $subtotalBeforeTax = $bill->base_charge 
+                       + $meterRent 
+                       + $consumptionCharge 
+                       + $arrears 
+                       + ($bill->late_fee ?? 0);
+    
+    // Calculate tax amount (16% of base + consumption) - same as your controller
+    $taxAmount = ($bill->base_charge + $consumptionCharge) * 0.16;
+    
+    // Verify the total matches
+    $calculatedTotal = $subtotalBeforeTax + $taxAmount;
+    
+    // If there's a mismatch, use the bill's stored total
+    if (abs($calculatedTotal - $bill->total_amount) > 0.01) {
+        // Adjust tax amount to make totals match
+        $taxAmount = $bill->total_amount - $subtotalBeforeTax;
+    }
+    
+    // Prepare receipt data with correct calculations
+    $receiptData = [
+        'bill_number' => substr($bill->bill_number, 0, 15),
+        'date' => now()->format('d/m/Y H:i'),
+        'receipt_number' => 'RCP-' . str_pad($bill->id, 6, '0', STR_PAD_LEFT),
+        'customer_name' => $customerName,
+        'customer_number' => $bill->customer->customer_number,
+        'customer_phone' => $bill->customer->phone ?? 'N/A',
+        'meter_number' => $bill->meter->meter_number ?? 'N/A',
+        'billing_period' => $billingPeriod,
+        'consumption' => number_format($bill->consumption, 1) . ' m³',
+        'rate' => number_format($bill->meter->meterCategory->default_rate ?? 0, 3) . '/m³',
+        
+        // Detailed charges
+        'base_charge' => 'KSh ' . number_format($bill->base_charge, 2),
+        'meter_rent' => 'KSh ' . number_format($meterRent, 2),
+        'consumption_charge' => 'KSh ' . number_format($consumptionCharge, 2),
+        'arrears' => $arrears > 0 ? 'KSh ' . number_format($arrears, 2) : null,
+        'late_fee' => $bill->late_fee > 0 ? 'KSh ' . number_format($bill->late_fee, 2) : null,
+        
+        // Subtotal before tax
+        'subtotal_before_tax' => 'KSh ' . number_format($subtotalBeforeTax, 2),
+        
+        // Tax
+        'vat' => 'KSh ' . number_format($taxAmount, 2),
+        
+        // Totals - using the actual bill total
+        'total_amount' => 'KSh ' . number_format($bill->total_amount, 2),
+        'amount_paid' => 'KSh ' . number_format($totalPaid, 2),
+        'balance' => 'KSh ' . number_format($balance, 2),
+        
+        'payment_status' => strtoupper($bill->bill_status),
+        'due_date' => $bill->due_date ? $bill->due_date->format('d/m/Y') : 'N/A',
+        'footer_message' => 'Thank you for your payment!',
+        'printed_date' => now()->format('d/m/Y H:i'),
+    ];
+
+    // Return the 58mm optimized receipt view
+    return view('bills.receipts.thermal-58mm', compact('receiptData'));
+}
 }

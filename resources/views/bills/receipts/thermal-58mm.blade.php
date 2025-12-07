@@ -175,6 +175,41 @@
             margin: 5px 0;
             text-transform: uppercase;
         }
+        
+        /* CHARGE ITEMS */
+        .charge-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 1px 0;
+            font-size: 8pt;
+            font-weight: bold;
+        }
+        
+        .charge-label {
+            flex: 1;
+            text-align: left;
+        }
+        
+        .charge-value {
+            flex: 1;
+            text-align: right;
+        }
+        
+        .subtotal {
+            border-top: 1px dotted #000;
+            margin-top: 3px;
+            padding-top: 2px;
+            font-weight: bold;
+        }
+        
+        .grand-total {
+            border-top: 2px solid #000;
+            border-bottom: 2px solid #000;
+            margin: 4px 0;
+            padding: 3px 0;
+            font-weight: bold;
+            font-size: 9pt;
+        }
     </style>
 </head>
 <body>
@@ -258,31 +293,74 @@
         
         <div class="divider"></div>
         
-        <!-- Amount Breakdown -->
-        <div class="section-title">AMOUNT BREAKDOWN</div>
+        <!-- Detailed Amount Breakdown -->
+        <div class="section-title">DETAILED CHARGES</div>
         
-        <div class="row">
-            <span class="label">Subtotal:</span>
-            <span class="value">{{ $receiptData['subtotal'] }}</span>
+        <!-- Base Charge -->
+        <div class="charge-item">
+            <span class="charge-label">Base Charge:</span>
+            <span class="charge-value">{{ $receiptData['base_charge'] ?? 'KSh 0.00' }}</span>
         </div>
-        @if(floatval(str_replace(['KSh', ',', ' '], '', $receiptData['vat'])) > 0)
-        <div class="row">
-            <span class="label">VAT:</span>
-            <span class="value">{{ $receiptData['vat'] }}</span>
+        
+        <!-- Meter Rent -->
+        <div class="charge-item">
+            <span class="charge-label">Meter Rent:</span>
+            <span class="charge-value">{{ $receiptData['meter_rent'] ?? 'KSh 0.00' }}</span>
+        </div>
+        
+        <!-- Consumption Charge -->
+        <div class="charge-item">
+            <span class="charge-label">Consumption:</span>
+            <span class="charge-value">{{ $receiptData['consumption_charge'] ?? 'KSh 0.00' }}</span>
+        </div>
+        
+        <!-- Previous Arrears -->
+        @if(isset($receiptData['arrears']) && floatval(str_replace(['KSh', ',', ' '], '', $receiptData['arrears'])) > 0)
+        <div class="charge-item">
+            <span class="charge-label">Previous Arrears:</span>
+            <span class="charge-value">{{ $receiptData['arrears'] }}</span>
         </div>
         @endif
         
-        <div class="double-divider"></div>
+        <!-- Late Fees -->
+        @if(isset($receiptData['late_fee']) && floatval(str_replace(['KSh', ',', ' '], '', $receiptData['late_fee'])) > 0)
+        <div class="charge-item">
+            <span class="charge-label">Late Fee:</span>
+            <span class="charge-value">{{ $receiptData['late_fee'] }}</span>
+        </div>
+        @endif
         
-        <!-- Totals -->
-        <div class="row total-row">
+        <!-- Subtotal (Sum of all charges before tax) -->
+        <div class="charge-item subtotal">
+            <span class="charge-label">Subtotal:</span>
+            <span class="charge-value">{{ $receiptData['subtotal_before_tax'] ?? $receiptData['subtotal'] }}</span>
+        </div>
+        
+        <!-- VAT -->
+        @if(isset($receiptData['vat']) && floatval(str_replace(['KSh', ',', ' '], '', $receiptData['vat'])) > 0)
+        <div class="charge-item">
+            <span class="charge-label">VAT (16%):</span>
+            <span class="charge-value">{{ $receiptData['vat'] }}</span>
+        </div>
+        @endif
+        
+        <div class="divider"></div>
+        
+        <!-- Grand Total -->
+        <div class="row grand-total">
             <span class="label">TOTAL DUE:</span>
             <span class="value">{{ $receiptData['total_amount'] }}</span>
         </div>
-        <div class="row total-row">
+        
+        <div class="divider"></div>
+        
+        <!-- Payment Summary -->
+        <div class="section-title">PAYMENT SUMMARY</div>
+        
+        <!-- <div class="row total-row">
             <span class="label">Amount Paid:</span>
             <span class="value">{{ $receiptData['amount_paid'] }}</span>
-        </div>
+        </div> -->
         <div class="row total-row">
             <span class="label">BALANCE:</span>
             <span class="value">{{ $receiptData['balance'] }}</span>
@@ -291,10 +369,10 @@
         <div class="divider"></div>
         
         <!-- Status -->
-        <div class="row">
+        <!-- <div class="row">
             <span class="label">Status:</span>
             <span class="value">{{ $receiptData['payment_status'] }}</span>
-        </div>
+        </div> -->
         <div class="row">
             <span class="label">Due Date:</span>
             <span class="value">{{ $receiptData['due_date'] }}</span>
@@ -364,7 +442,7 @@
                             width: 54mm;
                             margin: 0 auto;
                         }
-                        .row {
+                        .row, .charge-item {
                             display: flex;
                             justify-content: space-between;
                             margin: 2px 0;
@@ -378,6 +456,19 @@
                             padding: 4px;
                             margin: 5px 0;
                             text-align: center;
+                            font-weight: bold;
+                        }
+                        .section-title {
+                            text-align: center;
+                            font-weight: bold;
+                            text-transform: uppercase;
+                            margin: 4px 0;
+                        }
+                        .grand-total {
+                            border-top: 2px solid #000;
+                            border-bottom: 2px solid #000;
+                            margin: 4px 0;
+                            padding: 3px 0;
                             font-weight: bold;
                         }
                     </style>

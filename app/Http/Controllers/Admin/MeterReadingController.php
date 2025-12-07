@@ -88,7 +88,9 @@ class MeterReadingController extends Controller
                     ], 422);
                 }
 
-                throw new \Exception("Meter reading for {$readingPeriod} has already been recorded for this meter.");
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', "Meter reading for {$readingPeriod} has already been recorded for meter {$existingReading->meter->meter_number}.");
             }
         }
 
@@ -109,7 +111,7 @@ class MeterReadingController extends Controller
             // Define meter variable outside the transaction
             $meter = null;
 
-            DB::transaction(function () use ($request, $readingPeriod, &$meter) {
+            DB::transaction(function () use ($request, $readingPeriod, &$meter, &$bill) {
                 // Get customer and meter
                 $customer = Customer::findOrFail($request->customer_id);
                 $meter = Meter::findOrFail($request->meter_id);
