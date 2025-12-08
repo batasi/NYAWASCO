@@ -143,9 +143,7 @@ class Bill extends Model
             'billing_period' => $this->billing_period_start?->format('M d, Y') . ' to ' . $this->billing_period_end?->format('M d, Y'),
             'consumption' => number_format($this->consumption, 2) . ' m³',
             'rate' => 'KSh ' . number_format($this->rate_per_unit ?? 0, 2),
-            'subtotal' => 'KSh ' . number_format($this->total_amount, 2),
-            'vat' => 'KSh ' . number_format($this->vat_amount ?? 0, 2),
-            'total_amount' => 'KSh ' . number_format($this->total_amount, 2),
+            'total_amount' => 'KSh ' . number_format($this->total_amount, 2), // No VAT shown
             'amount_paid' => 'KSh ' . number_format($this->payments->sum('amount'), 2),
             'balance' => 'KSh ' . number_format($this->total_amount - $this->payments->sum('amount'), 2),
             'payment_status' => ucfirst($this->bill_status),

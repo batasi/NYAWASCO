@@ -36,6 +36,15 @@
             .no-print {
                 display: none !important;
             }
+
+             /* Force logo to print */
+            .logo img {
+                max-width: 40mm !important;
+                max-height: 15mm !important;
+                display: block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+            }
             
             /* HIDE EVERYTHING EXCEPT RECEIPT */
             body > *:not(.receipt-container) {
@@ -45,21 +54,39 @@
         
         /* RECEIPT CONTAINER */
         .receipt-container {
-            width: 54mm;
+            width: 56mm;
             margin: 0 auto;
             text-align: left;
         }
         
-        /* LOGO */
+         /* LOGO FALLBACK STYLING */
         .logo {
             text-align: center;
             margin-bottom: 3px;
+            min-height: 15mm;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .logo img {
             max-width: 40mm;
             max-height: 15mm;
+            width: auto;
+            height: auto;
         }
+
+
+        .text-logo {
+            font-size: 10pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            border: 1px solid #000;
+            padding: 2mm;
+            width: 100%;
+            text-align: center;
+        }
+        
         
         /* COMPANY INFO */
         .company-info {
@@ -215,11 +242,40 @@
 <body>
     <div class="receipt-container">
         <!-- Logo -->
-        <div class="logo">
+        <!-- <div class="logo">
             @if(file_exists(public_path('img/logo.png')))
                 <img src="{{ asset('img/logo.png') }}" alt="Logo">
             @else
                 <div class="company-name">NYAWASCO WATER</div>
+            @endif
+        </div> -->
+
+        <div class="logo">
+            @php
+                // Check if logo exists
+                $logoPath = public_path('img/logo.png');
+                $hasLogo = file_exists($logoPath);
+                
+                // If logo exists, convert to base64
+                if ($hasLogo) {
+                    $imageInfo = getimagesize($logoPath);
+                    $imageData = file_get_contents($logoPath);
+                    $logoBase64 = 'data:' . $imageInfo['mime'] . ';base64,' . base64_encode($imageData);
+                }
+            @endphp
+            
+            @if($hasLogo && isset($logoBase64))
+                <!-- Single base64 logo -->
+                <img src="{{ $logoBase64 }}" 
+                    alt="NYAWASCO" 
+                    style="max-width: 40mm; max-height: 15mm; width: auto; height: auto;">
+            @else
+                <!-- Text fallback -->
+                <div style="text-align: center; padding: 2mm 0;">
+                    <div style="font-size: 10pt; font-weight: bold;">NYAWASCO WATER</div>
+                    <div style="font-size: 8pt; border-top: 1px solid #000; border-bottom: 1px solid #000; 
+                                padding: 1mm 0; margin: 1mm 0;">WATER SERVICES COMPANY</div>
+                </div>
             @endif
         </div>
         
@@ -261,7 +317,7 @@
             <span class="value">{{ $receiptData['customer_name'] }}</span>
         </div>
         <div class="row">
-            <span class="label">Account No:</span>
+            <span class="label">Meter Serial:</span>
             <span class="value">{{ $receiptData['customer_number'] }}</span>
         </div>
         <div class="row">
@@ -269,7 +325,7 @@
             <span class="value">{{ $receiptData['customer_phone'] }}</span>
         </div>
         <div class="row">
-            <span class="label">Meter No:</span>
+            <span class="label">Account No:</span>
             <span class="value">{{ $receiptData['meter_number'] }}</span>
         </div>
         
@@ -320,6 +376,7 @@
             <span class="charge-label">Previous Arrears:</span>
             <span class="charge-value">{{ $receiptData['arrears'] }}</span>
         </div>
+    
         @endif
         
         <!-- Late Fees -->
@@ -330,19 +387,7 @@
         </div>
         @endif
         
-        <!-- Subtotal (Sum of all charges before tax) -->
-        <div class="charge-item subtotal">
-            <span class="charge-label">Subtotal:</span>
-            <span class="charge-value">{{ $receiptData['subtotal_before_tax'] ?? $receiptData['subtotal'] }}</span>
-        </div>
-        
-        <!-- VAT -->
-        @if(isset($receiptData['vat']) && floatval(str_replace(['KSh', ',', ' '], '', $receiptData['vat'])) > 0)
-        <div class="charge-item">
-            <span class="charge-label">VAT (16%):</span>
-            <span class="charge-value">{{ $receiptData['vat'] }}</span>
-        </div>
-        @endif
+
         
         <div class="divider"></div>
         
@@ -352,19 +397,19 @@
             <span class="value">{{ $receiptData['total_amount'] }}</span>
         </div>
         
-        <div class="divider"></div>
+        <!-- <div class="divider"></div> -->
         
         <!-- Payment Summary -->
-        <div class="section-title">PAYMENT SUMMARY</div>
+        <!-- <div class="section-title">PAYMENT SUMMARY</div> -->
         
         <!-- <div class="row total-row">
             <span class="label">Amount Paid:</span>
             <span class="value">{{ $receiptData['amount_paid'] }}</span>
         </div> -->
-        <div class="row total-row">
+        <!-- <div class="row total-row">
             <span class="label">BALANCE:</span>
-            <span class="value">{{ $receiptData['balance'] }}</span>
-        </div>
+            <span class="value">{{ $receiptData['total_amount'] }}</span>
+        </div> -->
         
         <div class="divider"></div>
         
@@ -380,21 +425,22 @@
         
         <div class="divider"></div>
         
-        <!-- Footer Message -->
+        <!-- Footer Message
         <div class="text-center text-bold">
             {{ $receiptData['footer_message'] }}
-        </div>
+        </div> -->
         
         <!-- Payment Instructions -->
         <div class="payment-info">
             <div>M-PESA PAYBILL: 247 247</div>
-            <div>ACC NO: 483133#{{ $receiptData['customer_number'] }}</div>
+            <div>ACC NO: 483133#{{ $receiptData['meter_number'] }}</div>
         </div>
         
         <!-- Footer -->
         <div class="footer">
-            <div>Printed: {{ $receiptData['printed_date'] }}</div>
-            <div>** OFFICIAL RECEIPT **</div>
+            <div>Printed By: {{ $receiptData['printed_by'] }}</div>
+            <div>Printed On: {{ $receiptData['printed_date'] }}</div>
+           
             <div>Thank you for your business!</div>
         </div>
     </div>
@@ -502,6 +548,32 @@
                 window.print();
             }, 500);
         });
+    </script>
+
+    <script>
+        function showTextLogo() {
+            document.getElementById('text-logo').style.display = 'block';
+            var base64Logo = document.getElementById('base64-logo');
+            if (base64Logo) {
+                base64Logo.style.display = 'none';
+            }
+        }
+        
+        // Try base64 logo if regular fails
+        window.onload = function() {
+            var regularLogo = document.querySelector('.logo img[src*="img/logo.png"]');
+            if (regularLogo) {
+                regularLogo.onerror = function() {
+                    var base64Logo = document.getElementById('base64-logo');
+                    if (base64Logo) {
+                        base64Logo.style.display = 'block';
+                        this.style.display = 'none';
+                    } else {
+                        showTextLogo();
+                    }
+                };
+            }
+        };
     </script>
 </body>
 </html>

@@ -295,20 +295,17 @@ class BillController extends Controller
         ]);
     }
 
- public function printReceipt(Bill $bill)
+public function printReceipt(Bill $bill)
 {
     // Load necessary data
-    $bill->load(['customer', 'meter', 'payments', 'meter.meterCategory', 'meterReading']);
+    $bill->load(['customer', 'meter', 'payments', 'meter.meterCategory', 'meterReading', 'creator']);
     
     // Get total paid amount
     $totalPaid = $bill->payments->sum('amount');
     $balance = $bill->total_amount - $totalPaid;
     
-    // Get customer's previous unpaid balance (arrears)
-    $arrears = Bill::where('customer_id', $bill->customer_id)
-        ->where('id', '<', $bill->id)
-        ->where('bill_status', '!=', 'paid')
-        ->sum('balance');
+    // Get arrears from meter's balance_bf
+    $arrears = $bill->meter->balance_bf ?? 0;
     
     // Format customer name
     $customerName = $bill->customer->first_name . ' ' . $bill->customer->last_name;
@@ -327,26 +324,20 @@ class BillController extends Controller
     // Calculate consumption charge from bill data
     $consumptionCharge = $bill->consumption_charge ?? ($bill->consumption * ($bill->meter->meterCategory->default_rate ?? 0));
     
-    // Calculate subtotal (sum of all charges BEFORE tax)
-    $subtotalBeforeTax = $bill->base_charge 
-                       + $meterRent 
-                       + $consumptionCharge 
-                       + $arrears 
-                       + ($bill->late_fee ?? 0);
+    // Calculate total (sum of all charges - NO VAT)
+    $totalAmount = $bill->base_charge 
+                   + $meterRent 
+                   + $consumptionCharge 
+                   + $arrears 
+                   + ($bill->late_fee ?? 0);
     
-    // Calculate tax amount (16% of base + consumption) - same as your controller
-    $taxAmount = ($bill->base_charge + $consumptionCharge) * 0.16;
-    
-    // Verify the total matches
-    $calculatedTotal = $subtotalBeforeTax + $taxAmount;
-    
-    // If there's a mismatch, use the bill's stored total
-    if (abs($calculatedTotal - $bill->total_amount) > 0.01) {
-        // Adjust tax amount to make totals match
-        $taxAmount = $bill->total_amount - $subtotalBeforeTax;
+    // Get printed by user info
+    $printedByName = auth()->user()->name ?? 'System';
+    if (strlen($printedByName) > 15) {
+        $printedByName = substr($printedByName, 0, 12) . '...';
     }
     
-    // Prepare receipt data with correct calculations
+    // Prepare receipt data without VAT
     $receiptData = [
         'bill_number' => substr($bill->bill_number, 0, 15),
         'date' => now()->format('d/m/Y H:i'),
@@ -366,21 +357,18 @@ class BillController extends Controller
         'arrears' => $arrears > 0 ? 'KSh ' . number_format($arrears, 2) : null,
         'late_fee' => $bill->late_fee > 0 ? 'KSh ' . number_format($bill->late_fee, 2) : null,
         
-        // Subtotal before tax
-        'subtotal_before_tax' => 'KSh ' . number_format($subtotalBeforeTax, 2),
-        
-        // Tax
-        'vat' => 'KSh ' . number_format($taxAmount, 2),
-        
-        // Totals - using the actual bill total
-        'total_amount' => 'KSh ' . number_format($bill->total_amount, 2),
+        // Total amount (no VAT)
+        'total_amount' => 'KSh ' . number_format($totalAmount, 2),
         'amount_paid' => 'KSh ' . number_format($totalPaid, 2),
         'balance' => 'KSh ' . number_format($balance, 2),
+        
+        // User info
+        'printed_by' => $printedByName,
+        'printed_date' => now()->format('d/m/Y H:i'),
         
         'payment_status' => strtoupper($bill->bill_status),
         'due_date' => $bill->due_date ? $bill->due_date->format('d/m/Y') : 'N/A',
         'footer_message' => 'Thank you for your payment!',
-        'printed_date' => now()->format('d/m/Y H:i'),
     ];
 
     // Return the 58mm optimized receipt view

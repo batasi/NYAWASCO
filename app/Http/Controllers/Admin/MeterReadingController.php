@@ -249,13 +249,11 @@ class MeterReadingController extends Controller
             $consumptionCharge = $consumption * $consumptionRate;
         }
 
+        // Get arrears from meter's balance_bf
+        $arrears = $meter->balance_bf ?? 0;
 
-        $taxRate = 0.16;
-
-        // Compute charges before tax
-
-        $taxAmount = ($baseCharge + $consumptionCharge) * $taxRate;
-        $totalAmount = $baseCharge + $consumptionCharge + $meterRent;
+        // Calculate total WITHOUT VAT
+        $totalAmount = $baseCharge + $meterRent + $consumptionCharge + $arrears;
 
         // Create bill without bill_number first
         $bill = Bill::create([
@@ -267,7 +265,7 @@ class MeterReadingController extends Controller
             'consumption' => $consumption,
             'base_charge' => $baseCharge,
             'consumption_charge' => $consumptionCharge,
-            'tax_amount' => $taxAmount,
+            'tax_amount' => 0, // Set to 0 since no VAT
             'total_amount' => $totalAmount,
             'due_date' => Carbon::parse($reading->reading_date)->addDays(30),
             'bill_status' => 'unpaid',
@@ -278,6 +276,11 @@ class MeterReadingController extends Controller
         // Generate safe bill number using the bill ID
         $bill->update([
             'bill_number' => 'B-' . str_pad($bill->id, 6, '0', STR_PAD_LEFT)
+        ]);
+
+        // Update meter balance to reflect new charges
+        $meter->update([
+            'current_balance' => $meter->current_balance + $totalAmount
         ]);
 
         // Mark reading as billed
