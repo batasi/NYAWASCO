@@ -252,30 +252,23 @@
 
         <div class="logo">
             @php
-                // Check if logo exists
                 $logoPath = public_path('img/logo.png');
                 $hasLogo = file_exists($logoPath);
-                
-                // If logo exists, convert to base64
-                if ($hasLogo) {
-                    $imageInfo = getimagesize($logoPath);
-                    $imageData = file_get_contents($logoPath);
-                    $logoBase64 = 'data:' . $imageInfo['mime'] . ';base64,' . base64_encode($imageData);
-                }
             @endphp
-            
-            @if($hasLogo && isset($logoBase64))
-                <!-- Single base64 logo -->
+
+            @if($hasLogo)
+            <div class="logo" style="text-align: center; margin-bottom: 3px;">
+                @php
+                    // Convert to base64
+                    $imageData = file_get_contents($logoPath);
+                    $logoBase64 = 'data:image/png;base64,' . base64_encode($imageData);
+                @endphp
+                
+                <!-- Show only base64 logo -->
                 <img src="{{ $logoBase64 }}" 
-                    alt="NYAWASCO" 
+                    alt="Logo" 
                     style="max-width: 40mm; max-height: 15mm; width: auto; height: auto;">
-            @else
-                <!-- Text fallback -->
-                <div style="text-align: center; padding: 2mm 0;">
-                    <div style="font-size: 10pt; font-weight: bold;">NYAWASCO WATER</div>
-                    <div style="font-size: 8pt; border-top: 1px solid #000; border-bottom: 1px solid #000; 
-                                padding: 1mm 0; margin: 1mm 0;">WATER SERVICES COMPANY</div>
-                </div>
+            </div>
             @endif
         </div>
         
