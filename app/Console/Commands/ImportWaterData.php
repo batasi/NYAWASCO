@@ -13,7 +13,7 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 class ImportWaterData extends Command
 {
     protected $signature = 'app:import-water-data';
-    protected $description = 'Import water data from XLSX';
+    protected $description = 'Import water data from XLSX safely';
 
     public function handle()
     {
@@ -33,7 +33,7 @@ class ImportWaterData extends Command
             return;
         }
 
-        // 🔹 Find the real header row (contains 'Acc.No.' and 'Name')
+        // Find header row
         $headerRowIndex = null;
         foreach ($rows as $i => $r) {
             if (in_array('Acc.No.', $r) && in_array('Name', $r)) {
@@ -47,19 +47,16 @@ class ImportWaterData extends Command
             return;
         }
 
-        // Remove rows before header
         $rows = array_slice($rows, $headerRowIndex);
-        $rawHeader = array_shift($rows); // remove header row
-
-        // Clean headers
+        $rawHeader = array_shift($rows);
         $header = array_map(fn($h) => trim($h), $rawHeader);
+
         $this->info('Detected headers: ' . implode(' | ', $header));
 
         $insertedCustomers = 0;
         $insertedMeters = 0;
 
         foreach ($rows as $index => $data) {
-            // Skip empty rows
             if (count(array_filter($data)) === 0) continue;
 
             $row = @array_combine($header, $data);
@@ -68,8 +65,10 @@ class ImportWaterData extends Command
                 continue;
             }
 
-            // Debug row
             $this->line("Processing row $index: " . json_encode($row));
+
+            // Helper to safely parse nullable decimal
+            $parseDecimal = fn($value) => $this->parseNullableDecimal($value);
 
             // Zone
             $zoneName = $row['Zone'] ?? 'Unknown';
@@ -98,7 +97,6 @@ class ImportWaterData extends Command
             $customerNumber = $row['Acc.No.'] ?? null;
 
             if (!$customerNumber || trim($customerNumber) == "") {
-                // Generate new account number based on sequence
                 $latestCustomer = Customer::orderBy('id', 'desc')->first();
                 $lastNumber = $latestCustomer?->customer_number;
 
@@ -108,7 +106,7 @@ class ImportWaterData extends Command
                     $newNumber = Customer::max('id') + 10000;
                 }
 
-                $customerNumber = str_pad($newNumber, 6, '0', STR_PAD_LEFT); // e.g. 000123
+                $customerNumber = str_pad($newNumber, 6, '0', STR_PAD_LEFT);
                 $this->warn("Row $index: Missing account number → Assigned: $customerNumber");
             }
 
@@ -128,19 +126,10 @@ class ImportWaterData extends Command
             $meterNumber = $row['Mtr No.'] ?? null;
             if ($meterNumber && strtoupper($meterNumber) !== 'N/A') {
 
-                // Handle latitude & longitude
-                $latitude = isset($row['Latitude']) && strtolower(trim($row['Latitude'])) !== 'null' && trim($row['Latitude']) !== ''
-                    ? floatval($row['Latitude'])
-                    : null;
-
-                $longitude = isset($row['Longitude']) && strtolower(trim($row['Longitude'])) !== 'null' && trim($row['Longitude']) !== ''
-                    ? floatval($row['Longitude'])
-                    : null;
-
-                // Normalize status
-                $status = isset($row['Status']) && trim($row['Status']) !== ''
-                    ? strtoupper(trim($row['Status']))
-                    : 'UNKNOWN';
+                $latitude = $parseDecimal($row['Latitude'] ?? null);
+                $longitude = $parseDecimal($row['Longitude'] ?? null);
+                $balance_bf = $parseDecimal($row['Bal b/f'] ?? 0);
+                $current_balance = $parseDecimal($row['Acc. Bal'] ?? 0);
 
                 $meter = Meter::firstOrCreate(
                     ['meter_number' => $meterNumber],
@@ -148,13 +137,13 @@ class ImportWaterData extends Command
                         'meter_category_id' => $category->id,
                         'longtitude' => $longitude,
                         'latitude' => $latitude,
-                        'status' => $status,
+                        'status' => strtolower($row['Status'] ?? 'unknown'),
                         'customer_id' => $customer->id,
                         'zone_id' => $zone->id,
                         'walk_route_id' => $walkroute->id,
                         'initial_reading' => 0,
-                        'balance_bf' => floatval(str_replace(',', '', $row['Bal b/f'] ?? 0)),
-                        'current_balance' => floatval(str_replace(',', '', $row['Acc. Bal'] ?? 0)),
+                        'balance_bf' => $balance_bf,
+                        'current_balance' => $current_balance,
                     ]
                 );
 
@@ -170,5 +159,21 @@ class ImportWaterData extends Command
         $this->info("✅ XLSX import completed!");
         $this->info("Inserted Customers: $insertedCustomers");
         $this->info("Inserted Meters: $insertedMeters");
+    }
+
+    /**
+     * Parse decimal safely, converting 'null' or empty string to actual null
+     */
+    private function parseNullableDecimal($value)
+    {
+        $value = trim((string)$value);
+        if ($value === '' || strtolower($value) === 'null') {
+            return null;
+        }
+        $value = str_replace(',', '', $value);
+        if (is_numeric($value)) {
+            return floatval($value);
+        }
+        return null;
     }
 }

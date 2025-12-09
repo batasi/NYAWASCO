@@ -23,6 +23,8 @@ class Bill extends Model
         'late_fee',
         'total_amount',
         'due_date',
+        'balance',
+        'paid_amount',
         'bill_status',
         'payment_date',
         'notes',
@@ -155,4 +157,17 @@ class Bill extends Model
 
         return $receiptData;
     }
+    public static function calculateTierRate($categoryId, $consumption)
+{
+    $tier = PricingTier::where('meter_category_id', $categoryId)
+        ->where('min_consumption', '<=', $consumption)
+        ->where(function($query) use ($consumption) {
+            $query->whereNull('max_consumption')
+                  ->orWhere('max_consumption', '>=', $consumption);
+        })
+        ->orderBy('sort_order')
+        ->first();
+
+    return $tier ? $tier->rate_per_unit : 0;
+}
 }
