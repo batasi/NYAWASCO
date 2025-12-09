@@ -318,7 +318,7 @@ class BillController extends Controller
     }
 
     // Format billing period
-    $billingPeriod = $bill->meterReading->reading_period;
+    $billingPeriod = optional(optional($bill)->meterReading)->reading_period;
 
     // Get meter rent from meter category (default to 0 if not set)
     $meterRent = $bill->meter->meterCategory->meter_rent ?? 0;
