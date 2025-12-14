@@ -13,7 +13,8 @@ return new class extends Migration
     {
         Schema::table('meters', function (Blueprint $table) {
             $table->decimal('paid_amount', 10, 2)->default(0)->after('current_balance');
-            $table->dropColumn(['current_month_subtotal', 'arrears', 'meter_rent']);
+
+
         });
     }
 
