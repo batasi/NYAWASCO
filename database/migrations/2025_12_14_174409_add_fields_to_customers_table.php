@@ -12,8 +12,6 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('customers', function (Blueprint $table) {
-            $table->date('last_payment_date')->nullable();
-            $table->decimal('last_payment_amount', 12, 2)->default(0);
             $table->decimal('credit_balance', 12, 2)->default(0); // optional but recommended
 
         });
