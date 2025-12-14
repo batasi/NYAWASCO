@@ -77,7 +77,7 @@
                     <tr class="hover:bg-blue-50 transition-colors duration-150">
                         <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{{ $payment->payment_no }}</td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm font-medium text-gray-900">{{ $payment->customer?->first_name ?? '-' }}{{ $payment->customer?->last_name ?? '-' }}</div>
+                            <div class="text-sm font-medium text-gray-900">{{ ($payment->customer?->first_name ?? '') . ' ' . ($payment->customer?->last_name ?? '') }}</div>
                             <div class="text-sm text-gray-500">{{ $payment->customer?->email ?? '-' }}</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">KSh {{ number_format($payment->amount, 2) }}</td>

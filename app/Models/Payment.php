@@ -66,4 +66,9 @@ class Payment extends Model
     {
         return $this->hasOneThrough(Customer::class, Meter::class, 'id', 'id', 'meter_id', 'customer_id');
     }
+    public function allocations()
+    {
+        return $this->hasMany(PaymentAllocation::class);
+    }
+
 }

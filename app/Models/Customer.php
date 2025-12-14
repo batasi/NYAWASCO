@@ -35,8 +35,11 @@ class Customer extends Model
         'kra_pin',
         'property_owner',
         'expected_users',
-        'balance_bf', // Balance brought forward
-        'current_balance', // Current account balance
+
+        'last_payment_date',
+        'last_payment_amount',
+        'credit_balance',
+
         'notes',
     ];
 
@@ -44,8 +47,10 @@ class Customer extends Model
         'connection_date' => 'date',
         'initial_meter_reading' => 'decimal:2',
         'expected_users' => 'integer',
-        'balance_bf' => 'decimal:2',
-        'current_balance' => 'decimal:2',
+
+        'last_payment_date' => 'date',
+        'last_payment_amount' => 'decimal:2',
+        'credit_balance' => 'decimal:2',
     ];
 
     protected static function boot()
@@ -387,10 +392,10 @@ class Customer extends Model
     {
         $activeMeters = $this->meters()->active()->count();
         $totalMeters = $this->meters()->count();
-        
+
         $oldStatus = $this->status;
         $newStatus = $this->status;
-        
+
         // If customer has active meters, set to active
         if ($activeMeters > 0 && $this->status !== self::STATUS_SUSPENDED) {
             $newStatus = self::STATUS_ACTIVE;
@@ -401,7 +406,7 @@ class Customer extends Model
                 $newStatus = self::STATUS_INACTIVE;
             }
         }
-        
+
         // Only update if status changed
         if ($oldStatus !== $newStatus) {
             $this->update([
@@ -409,10 +414,10 @@ class Customer extends Model
                 'status_updated_at' => now(),
                 'status_reason' => 'Auto-updated from meter status',
             ]);
-            
+
             return true;
         }
-        
+
         return false;
     }
 }

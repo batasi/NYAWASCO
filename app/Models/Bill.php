@@ -74,6 +74,10 @@ class Bill extends Model
     {
         return $this->hasMany(Payment::class);
     }
+    public function paymentAllocations()
+    {
+        return $this->hasMany(PaymentAllocation::class);
+    }
 
     // Scopes
     public function scopeUnpaid($query)

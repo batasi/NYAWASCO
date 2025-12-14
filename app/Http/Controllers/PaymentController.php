@@ -2,14 +2,19 @@
 
 namespace App\Http\Controllers;
 
+
 use App\Models\Payment;
 use App\Models\Bill;
 use App\Models\User;
 use App\Models\Meter;
 use App\Models\Customer;
+use App\Services\PaymentProcessingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
+
 use Carbon\Carbon;
 
 
@@ -48,288 +53,6 @@ class PaymentController extends Controller
         return view('payments.index', compact('payments'));
     }
 
-    /**
-     * Store a newly created payment in storage.
-     */
-    public function store(Request $request)
-    {
-        $request->validate([
-            'meter_no' => 'required|exists:meters,meter_number',
-            'amount' => 'required|numeric|min:0',
-            'payment_method' => 'required|string',
-            'transaction_reference' => 'nullable|string|max:255',
-        ]);
-
-        try {
-
-            // Fetch meter
-            $meter = Meter::where('meter_number', $request->meter_no)->firstOrFail();
-
-            // Create Payment
-            $payment = Payment::create([
-                'meter_id' => $meter->id,
-                'customer_id' => $meter->customer_id,
-                'user_id' => auth()->id(),
-                'payment_no' => 'PAY-' . Str::upper(Str::random(8)),
-                'amount' => $request->amount,
-                'payment_date' => now(),
-                'payment_status' => 'completed',
-                'payment_method' => $request->payment_method,
-                'transaction_reference' => $request->transaction_reference,
-            ]);
-
-            /** APPLY PAYMENT TO OUTSTANDING BILLS */
-
-            $remaining = $request->amount;
-
-            $unpaidBills = Bill::where('meter_id', $meter->id)
-                ->whereColumn('total_amount', '>', 'paid_amount')
-                ->orderBy('billing_period_start', 'asc')
-                ->get();
-
-            foreach ($unpaidBills as $bill) {
-                if ($remaining <= 0) break;
-
-                $bill = Bill::find($bill->id);
-
-                $billDue = $bill->total_amount - $bill->paid_amount;
-
-                // Amount actually applied to this bill
-                $paidThisBill = min($remaining, $billDue);
-
-                // Update bill
-                $bill->paid_amount += $paidThisBill;
-                $bill->balance = $bill->total_amount - $bill->paid_amount;
-                $bill->bill_status = ($bill->paid_amount == $bill->total_amount) ? 'paid' : 'partial';
-                if ($bill->bill_status == 'paid') $bill->payment_date = now();
-                $bill->save();
-
-                // Subtract only the applied amount from remaining
-                $remaining -= $paidThisBill;
-
-                // Update meter balance correctly
-                $meter->current_balance -= $paidThisBill;
-            }
-
-            $meter->save();
-
-
-
-
-
-            return redirect()->route('payments.index')
-                ->with('success', 'Payment applied successfully.');
-
-        } catch (\Exception $e) {
-
-            return redirect()->route('payments.index')
-                ->with('error', 'Payment failed: ' . $e->getMessage());
-        }
-    }
-
-
-    /**
-     * Display the specified payment.
-     */
-    public function show(Payment $payment)
-    {
-        $payment->load(['user', 'meter.customer']);
-        return view('payments.show', compact('payment'));
-    }
-
-    /**
-     * Show the form for editing the specified payment.
-     */
-    public function edit(Payment $payment)
-    {
-        $meters = Meter::all();
-        $users = User::all();
-        return view('payments.edit', compact('payment', 'meters', 'users'));
-    }
-
-    /**
-     * Update the specified payment in storage.
-     */
-    public function update(Request $request, Payment $payment)
-    {
-        $request->validate([
-            'meter_id' => 'required|exists:meters,id',
-            'user_id' => 'required|exists:users,id',
-            'payment_no' => 'required|unique:payments,payment_no,' . $payment->id,
-            'payment_date' => 'required|date',
-            'amount' => 'required|numeric|min:0',
-            'payment_method' => 'required|string',
-            'transaction_reference' => 'nullable|string|max:255',
-            'payment_status' => 'required|in:pending,completed,failed',
-            'notes' => 'nullable|string',
-        ]);
-
-        $payment->update([
-            'meter_id' => $request->meter_id,
-            'user_id' => $request->user_id,
-            'payment_no' => $request->payment_no,
-            'payment_date' => $request->payment_date,
-            'amount' => $request->amount,
-            'payment_method' => $request->payment_method,
-            'transaction_reference' => $request->transaction_reference,
-            'payment_status' => $request->payment_status,
-            'notes' => $request->notes,
-        ]);
-
-        return redirect()->route('payments.index')->with('success', 'Payment updated successfully.');
-    }
-
-    /**
-     * Remove the specified payment from storage.
-     */
-    public function destroy(Payment $payment)
-    {
-        $payment->delete();
-        return redirect()->route('payments.index')->with('success', 'Payment deleted successfully.');
-    }
-
-
-
-/**
- * Get meter details for AJAX request - FIXED CUSTOMER ACCESS
- */
-public function getMeterDetails($meterNumber)
-{
-    try {
-        // Trim the meter number
-        $meterNumber = trim($meterNumber);
-
-        Log::info('Searching for assigned meter:', ['meter_number' => $meterNumber]);
-
-        // First try exact match
-        $meter = Meter::with([
-            'customer',
-            'meterCategory',
-            'bills' => function($query) {
-                $query->whereColumn('total_amount', '>', 'paid_amount')
-                      ->orderBy('billing_period_start', 'asc');
-            }
-        ])
-        ->where('status', 'assigned')
-        ->whereNotNull('customer_id')
-        ->where('meter_number', $meterNumber) // EXACT MATCH FIRST
-        ->first();
-
-        // If exact match not found, try partial match from autocomplete
-        if (!$meter) {
-            $meter = Meter::with([
-                'customer',
-                'meterCategory',
-                'bills' => function($query) {
-                    $query->whereColumn('total_amount', '>', 'paid_amount')
-                          ->orderBy('billing_period_start', 'asc');
-                }
-            ])
-            ->where('status', 'assigned')
-            ->whereNotNull('customer_id')
-            ->where('meter_number', 'LIKE', $meterNumber . '%') // PARTIAL MATCH
-            ->first();
-        }
-
-        if (!$meter) {
-            Log::warning('Assigned meter not found for search:', ['meter_number' => $meterNumber]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Assigned meter not found'
-            ], 404);
-        }
-
-        Log::info('Assigned meter found:', [
-            'meter_id' => $meter->id,
-            'meter_number' => $meter->meter_number,
-            'customer_id' => $meter->customer_id,
-            'has_customer_relation' => !is_null($meter->customer),
-            'customer_object' => $meter->customer ? get_class($meter->customer) : 'null'
-        ]);
-
-        // DEBUG: Check customer data directly
-        if ($meter->customer) {
-            Log::info('Customer data:', [
-                'customer_id' => $meter->customer->id,
-                'customer_name' => $meter->customer->name,
-                'customer_attributes' => $meter->customer->getAttributes()
-            ]);
-        }
-
-        // Get unpaid bills
-        $unpaidBills = $meter->bills->map(function($bill) {
-            return [
-                'bill_number' => $bill->bill_number ?? 'BILL-' . $bill->id,
-                'total_amount' => number_format($bill->total_amount, 2),
-                'paid_amount' => number_format($bill->paid_amount, 2),
-                'due' => number_format($bill->total_amount - $bill->paid_amount, 2),
-                'billing_period' => $bill->billing_period_start ?
-                    \Carbon\Carbon::parse($bill->billing_period_start)->format('M Y') : 'N/A'
-            ];
-        });
-
-        // Calculate total due
-        $totalDue = $meter->bills->sum(function($bill) {
-            return $bill->total_amount - $bill->paid_amount;
-        });
-
-        // Get customer info - FIXED: Check if customer exists and has name
-        $customerInfo = [
-            'name' => 'Customer Not Found',
-            'email' => 'N/A',
-            'phone' => 'N/A'
-        ];
-
-        if ($meter->customer) {
-            // Try different possible name fields
-            $name = $meter->customer->name
-                  ?? $meter->customer->full_name
-                  ?? $meter->customer->customer_name
-                  ?? 'Unknown Customer';
-
-            $customerInfo = [
-                'name' => $name,
-                'email' => $meter->customer->email ?? 'N/A',
-                'phone' => $meter->customer->phone ?? $meter->customer->phone_number ?? 'N/A'
-            ];
-        }
-
-        $response = [
-            'success' => true,
-            'meter' => [
-                'id' => $meter->id,
-                'meter_number' => $meter->meter_number,
-                'model' => $meter->meter_model ?? 'Standard Model',
-                'type' => $meter->meter_type ?? 'Domestic',
-                'location' => $meter->installation_address ?? ($meter->customer->estate ?? 'Unknown Location'),
-                'status' => $meter->status,
-                'category' => $meter->meterCategory->name ?? 'General'
-            ],
-            'customer' => $customerInfo,
-            'unpaid_bills' => $unpaidBills,
-            'total_due' => number_format($totalDue, 2),
-            'is_assigned' => true,
-            'debug' => [
-                'customer_id' => $meter->customer_id,
-                'customer_loaded' => !is_null($meter->customer),
-                'customer_name_field' => $meter->customer ? ($meter->customer->name ?? 'no name field') : 'no customer'
-            ]
-        ];
-
-        Log::info('Meter details response:', $response);
-
-        return response()->json($response);
-
-    } catch (\Exception $e) {
-        Log::error('Error fetching assigned meter details: ' . $e->getMessage());
-        Log::error('Stack trace: ' . $e->getTraceAsString());
-
-        return response()->json([
-            'success' => false,
-            'message' => 'Error fetching meter details'
-        ], 500);
-    }
-}
 
 /**
  * Search assigned meters for autocomplete
@@ -361,6 +84,316 @@ public function searchMeters(Request $request)
 
     return response()->json($meters);
 }
+
+
+
+
+    protected $paymentService;
+
+    public function __construct(PaymentProcessingService $paymentService)
+    {
+        $this->paymentService = $paymentService;
+    }
+
+    /**
+     * Store a newly created payment with proper transaction handling
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'meter_no' => 'required|exists:meters,meter_number',
+            'amount' => [
+                'required',
+                'numeric',
+                'min:0.01',
+                function ($attribute, $value, $fail) {
+                    if (!preg_match('/^\d+(\.\d{1,2})?$/', $value)) {
+                        $fail('Amount must have at most 2 decimal places.');
+                    }
+                }
+            ],
+            'payment_method' => 'required|in:mpesa,bank,cash,card,mobile_money',
+            'transaction_reference' => [
+                'required_if:payment_method,mpesa,bank,card,mobile_money',
+                'nullable',
+                'string',
+                'max:255',
+                function ($attribute, $value, $fail) use ($request) {
+                    if ($value && Payment::where('transaction_reference', $value)
+                        ->where('payment_method', $request->payment_method)
+                        ->where('payment_status', 'completed')
+                        ->exists()) {
+                        $fail('This transaction reference has already been used.');
+                    }
+                }
+            ],
+            'payment_date' => 'nullable|date|before_or_equal:today',
+        ]);
+
+        try {
+            // Fetch meter with lock to prevent race conditions
+            $meter = Meter::where('meter_number', $validated['meter_no'])
+                ->lockForUpdate()
+                ->with(['customer' => function ($query) {
+                    $query->lockForUpdate();
+                }])
+                ->firstOrFail();
+
+            // Validate customer is active
+            if ($meter->customer->status !== 'active') {
+                throw ValidationException::withMessages([
+                    'meter_no' => 'Customer account is ' . $meter->customer->status . '. Payments cannot be accepted.'
+                ]);
+            }
+
+            // Process payment within transaction
+            $result = DB::transaction(function () use ($validated, $meter) {
+                return $this->paymentService->processPayment(
+                    $meter,
+                    $validated['amount'],
+                    $validated['payment_method'],
+                    $validated['transaction_reference'] ?? null,
+                    $validated['payment_date'] ?? now(),
+                    auth()->id()
+                );
+            });
+
+            // Log successful payment
+            Log::info('Payment processed successfully', [
+                'payment_id' => $result['payment']->id,
+                'meter_id' => $meter->id,
+                'customer_id' => $meter->customer_id,
+                'amount' => $validated['amount'],
+                'applied_to_bills' => $result['applied_bills'],
+                'remaining_credit' => $result['remaining_credit'],
+                'processed_by' => auth()->id()
+            ]);
+
+            return redirect()->route('payments.index')
+                ->with('success', 'Payment of KSh ' . number_format($validated['amount'], 2) . ' processed successfully.')
+                ->with('payment_receipt', [
+                    'payment_no' => $result['payment']->payment_no,
+                    'amount' => $validated['amount'],
+                    'balance' => $meter->fresh()->current_balance,
+                    'date' => now()->format('Y-m-d H:i:s')
+                ]);
+
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            Log::error('Payment processing failed: ' . $e->getMessage(), [
+                'meter_no' => $validated['meter_no'],
+                'amount' => $validated['amount'],
+                'user_id' => auth()->id(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Payment failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Display payment details with comprehensive information
+     */
+    public function show(Payment $payment)
+    {
+        $payment->load([
+            'meter.customer',
+            'bills' => function ($query) {
+                $query->withTrashed(); // Include deleted bills if any
+            },
+            'user'
+        ]);
+
+        // Get payment allocation details
+        $allocationDetails = $payment->bills->map(function ($bill) use ($payment) {
+            $allocation = $payment->billAllocations()
+                ->where('bill_id', $bill->id)
+                ->first();
+
+            return [
+                'bill' => $bill,
+                'allocated_amount' => $allocation->amount ?? 0,
+                'allocation_date' => $allocation->created_at ?? null
+            ];
+        });
+
+        return view('payments.show', compact('payment', 'allocationDetails'));
+    }
+
+    /**
+     * Void/Reverse a payment (requires authorization)
+     */
+    public function voidPayment(Request $request, Payment $payment)
+    {
+        $request->validate([
+            'reason' => 'required|string|max:500',
+            'refund_method' => 'nullable|in:credit_note,cash_refund,bank_refund'
+        ]);
+
+        if ($payment->payment_status === 'voided') {
+            return back()->with('error', 'Payment is already voided.');
+        }
+
+        try {
+            $result = DB::transaction(function () use ($payment, $request) {
+                return $this->paymentService->voidPayment(
+                    $payment,
+                    $request->reason,
+                    $request->refund_method,
+                    auth()->id()
+                );
+            });
+
+            Log::warning('Payment voided', [
+                'payment_id' => $payment->id,
+                'voided_by' => auth()->id(),
+                'reason' => $request->reason,
+                'refund_method' => $request->refund_method,
+                'reversal_details' => $result
+            ]);
+
+            return redirect()->route('payments.show', $payment)
+                ->with('warning', 'Payment has been voided and reversed.')
+                ->with('reversal_details', $result);
+
+        } catch (\Exception $e) {
+            Log::error('Payment void failed: ' . $e->getMessage());
+            return back()->with('error', 'Failed to void payment: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Get meter details with comprehensive financial info
+     */
+    public function getMeterDetails($meterNumber)
+    {
+        try {
+            $meterNumber = trim($meterNumber);
+
+            // Use a read-only transaction for consistency
+            $meter = DB::transaction(function () use ($meterNumber) {
+                return Meter::with([
+                    'customer' => function ($query) {
+                        $query->select(['id', 'customer_number', 'first_name', 'last_name',
+                                      'email', 'phone', 'status']);
+                    },
+                    'meterCategory',
+                    'bills' => function ($query) {
+                        $query->where(function ($q) {
+                            $q->where('bill_status', '!=', 'paid')
+                              ->orWhereColumn('total_amount', '>', 'paid_amount');
+                        })
+                        ->where('due_date', '>=', now()->subMonths(6)) // Last 6 months only
+                        ->orderBy('due_date', 'asc')
+                        ->select(['id', 'bill_number', 'total_amount', 'paid_amount',
+                                 'due_date', 'billing_period_start', 'bill_status']);
+                    }
+                ])
+                ->where('meter_number', $meterNumber)
+                ->where('status', 'assigned')
+                ->first();
+            }, 5); // 5 attempts for optimistic locking
+
+            if (!$meter) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Assigned meter not found'
+                ], 404);
+            }
+
+            // Calculate financial summary
+            $unpaidBills = $meter->bills->map(function ($bill) {
+                $dueAmount = $bill->total_amount - $bill->paid_amount;
+                $isOverdue = $bill->due_date < now();
+
+                return [
+                    'id' => $bill->id,
+                    'bill_number' => $bill->bill_number,
+                    'total_amount' => number_format($bill->total_amount, 2),
+                    'paid_amount' => number_format($bill->paid_amount, 2),
+                    'due_amount' => number_format($dueAmount, 2),
+                    'raw_due' => $dueAmount,
+                    'due_date' => $bill->due_date ? $bill->due_date->format('Y-m-d') : null,
+                    'is_overdue' => $isOverdue,
+                    'billing_period' => $bill->billing_period_start
+                        ? $bill->billing_period_start->format('M Y')
+                        : 'N/A',
+                    'bill_status' => $bill->bill_status
+                ];
+            });
+
+            $totalDue = $unpaidBills->sum('raw_due');
+            $overdueAmount = $unpaidBills
+                ->where('is_overdue', true)
+                ->sum('raw_due');
+
+            // Calculate credit balance (negative means credit)
+            $creditBalance = max(0, -$meter->current_balance);
+
+            $response = [
+                'success' => true,
+                'meter' => [
+                    'id' => $meter->id,
+                    'meter_number' => $meter->meter_number,
+                    'model' => $meter->meter_model ?? 'Standard',
+                    'type' => $meter->meter_type ?? 'Domestic',
+                    'location' => $meter->installation_address ?? 'Not specified',
+                    'status' => $meter->status,
+                    'category' => $meter->meterCategory->name ?? 'General',
+                    'current_balance' => number_format($meter->current_balance, 2),
+                    'raw_balance' => $meter->current_balance
+                ],
+                'customer' => [
+                    'id' => $meter->customer->id,
+                    'name' => $meter->customer->first_name . ' ' . ($meter->customer->last_name ?? ''),
+                    'customer_number' => $meter->customer->customer_number,
+                    'email' => $meter->customer->email ?? 'N/A',
+                    'phone' => $meter->customer->phone ?? 'N/A',
+                    'status' => $meter->customer->status
+                ],
+                'financial_summary' => [
+                    'total_due' => number_format($totalDue, 2),
+                    'raw_total_due' => $totalDue,
+                    'overdue_amount' => number_format($overdueAmount, 2),
+                    'credit_balance' => number_format($creditBalance, 2),
+                    'unpaid_bill_count' => $unpaidBills->count(),
+                    'overdue_bill_count' => $unpaidBills->where('is_overdue', true)->count()
+                ],
+                'unpaid_bills' => $unpaidBills->values(),
+                'can_accept_payment' => $meter->customer->status === 'active'
+            ];
+
+            return response()->json($response);
+
+        } catch (\Exception $e) {
+            Log::error('Error fetching meter details: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching meter details. Please try again.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Generate payment receipt
+     */
+    public function generateReceipt(Payment $payment)
+    {
+        $payment->load(['meter.customer', 'user', 'bills']);
+
+        $receiptData = [
+            'receipt_number' => 'RCPT-' . str_pad($payment->id, 6, '0', STR_PAD_LEFT),
+            'payment' => $payment,
+            'generated_at' => now(),
+            'generated_by' => auth()->user()->name
+        ];
+
+        // Return PDF receipt (implement PDF generation as needed)
+        return view('payments.receipt', $receiptData);
+    }
 
     /**
  * Test endpoint to list all meters

@@ -33,6 +33,7 @@ class Meter extends Model
         'initial_reading',
         'balance_bf',
         'current_balance',
+        'paid_amount',
         'additional_charges',
         'notes',
     ];
