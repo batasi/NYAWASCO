@@ -201,6 +201,8 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Payments
+    Route::get('/payments/search', [PaymentController::class, 'search'])->name('payments.search');
+
     Route::prefix('payments')->group(function () {
         Route::get('/', [PaymentController::class, 'index'])->name('payments.index');
         Route::get('/create', [PaymentController::class, 'create'])->name('payments.create');
@@ -209,7 +211,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{payment}/edit', [PaymentController::class, 'edit'])->name('payments.edit');
         Route::put('/{payment}', [PaymentController::class, 'update'])->name('payments.update');
         Route::delete('/{payment}', [PaymentController::class, 'destroy'])->name('payments.destroy');
-        Route::get('/search', [PaymentController::class, 'search'])->name('payments.search');
 
     });
         // Meter details route for AJAX
