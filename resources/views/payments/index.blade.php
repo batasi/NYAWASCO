@@ -27,103 +27,347 @@
         'actionButtons' => $actionButtons
     ])
 
-    <!-- Filters and Search Section -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <!-- Search -->
-                <div class="md:col-span-2">
-                    <label for="search" class="block text-sm font-medium text-gray-700 mb-2">Search Payments</label>
-                    <div class="relative rounded-md shadow-sm">
-                        <input type="text" name="search" id="search" placeholder="Search by payment number, customer..."
-                               class="focus:ring-blue-500 focus:border-blue-500 block w-full pl-4 pr-12 py-3 text-sm border-gray-300 rounded-md">
-                        <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Financial Overview Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Total Payments -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Total Payments</p>
+                        <p class="text-2xl font-bold text-gray-900 mt-1">
+                            KSh {{ number_format($totalPayments, 2) }}
+                        </p>
+                        <p class="text-xs text-green-600 mt-1">
+                            <i class="fas fa-arrow-up mr-1"></i>
+                            All time collection
+                        </p>
+                    </div>
+                    <div class="p-3 rounded-lg bg-green-100">
+                        <i class="fas fa-money-bill-wave text-green-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Today's Collection -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Today's Collection</p>
+                        <p class="text-2xl font-bold text-blue-600 mt-1">
+                            KSh {{ number_format($todayCollection, 2) }}
+                        </p>
+                        <p class="text-xs text-blue-600 mt-1">
+                            <i class="fas fa-calendar-day mr-1"></i>
+                            {{ \Carbon\Carbon::today()->format('M d, Y') }}
+                        </p>
+                    </div>
+                    <div class="p-3 rounded-lg bg-blue-100">
+                        <i class="fas fa-calendar-check text-blue-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Completed Payments -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Completed</p>
+                        <p class="text-2xl font-bold text-purple-600 mt-1">{{ $completedPaymentsCount }}</p>
+                        <p class="text-xs text-purple-600 mt-1">
+                            <i class="fas fa-check-circle mr-1"></i>
+                            Successful payments
+                        </p>
+                    </div>
+                    <div class="p-3 rounded-lg bg-purple-100">
+                        <i class="fas fa-check-circle text-purple-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pending Payments -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Pending</p>
+                        <p class="text-2xl font-bold text-yellow-600 mt-1">{{ $pendingPaymentsCount }}</p>
+                        <p class="text-xs text-yellow-600 mt-1">
+                            <i class="fas fa-clock mr-1"></i>
+                            Awaiting confirmation
+                        </p>
+                    </div>
+                    <div class="p-3 rounded-lg bg-yellow-100">
+                        <i class="fas fa-clock text-yellow-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Stats & Filters -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+                <!-- Status Quick Filters -->
+                <div class="flex flex-wrap gap-2">
+                    <a href="{{ route('payments.index') }}"
+                    class="px-4 py-2 rounded-lg font-medium transition duration-200 {{ !request('status') ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700 hover:bg-blue-200' }}">
+                        All Payments
+                        <span class="bg-blue-500 text-white px-2 py-1 rounded-full text-xs ml-1">{{ $totalPaymentsCount }}</span>
+                    </a>
+                    <a href="{{ route('payments.index', ['status' => 'completed']) }}"
+                    class="px-4 py-2 rounded-lg font-medium transition duration-200 {{ request('status') == 'completed' ? 'bg-green-600 text-white' : 'bg-green-100 text-green-700 hover:bg-green-200' }}">
+                        Completed
+                        <span class="bg-green-500 text-white px-2 py-1 rounded-full text-xs ml-1">{{ $completedPaymentsCount }}</span>
+                    </a>
+                    <a href="{{ route('payments.index', ['status' => 'pending']) }}"
+                    class="px-4 py-2 rounded-lg font-medium transition duration-200 {{ request('status') == 'pending' ? 'bg-yellow-600 text-white' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' }}">
+                        Pending
+                        <span class="bg-yellow-500 text-white px-2 py-1 rounded-full text-xs ml-1">{{ $pendingPaymentsCount }}</span>
+                    </a>
+                    <a href="{{ route('payments.index', ['status' => 'failed']) }}"
+                    class="px-4 py-2 rounded-lg font-medium transition duration-200 {{ request('status') == 'failed' ? 'bg-red-600 text-white' : 'bg-red-100 text-red-700 hover:bg-red-200' }}">
+                        Failed
+                        <span class="bg-red-500 text-white px-2 py-1 rounded-full text-xs ml-1">{{ $failedPaymentsCount }}</span>
+                    </a>
+                </div>
+
+                <!-- Search Box -->
+                <div class="flex space-x-2">
+                    <div class="relative">
+                        <input type="text"
+                            id="paymentSearch"
+                            placeholder="Search payments..."
+                            class="w-64 border border-gray-300 rounded-lg px-4 py-2 pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                            autocomplete="off">
+                        <div class="absolute inset-y-0 left-0 flex items-center pl-3">
                             <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                             </svg>
                         </div>
                     </div>
-                </div>
 
-                <!-- Status Filter -->
-                <div>
-                    <label for="status" class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                    <select id="status" name="status" class="focus:ring-blue-500 focus:border-blue-500 block w-full pl-3 pr-10 py-3 text-sm border-gray-300 rounded-md">
-                        <option value="all">All</option>
-                        <option value="pending">Pending</option>
-                        <option value="completed">Completed</option>
-                        <option value="failed">Failed</option>
-                    </select>
+                    <button id="searchPaymentBtn"
+                        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition">
+                        Search
+                    </button>
+
+                    <button id="resetPaymentBtn"
+                        class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg transition hidden">
+                        Reset
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- Payments Table -->
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead>
-                    <tr class="bg-blue-50 border-b border-blue-200">
-                        <th class="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Payment #</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Customer</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Amount</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Payment Method</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Payment Date</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-blue-700 uppercase tracking-wider">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-blue-100">
-                    @forelse ($payments as $payment)
-                    <tr class="hover:bg-blue-50 transition-colors duration-150">
-                        <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{{ $payment->payment_no }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm font-medium text-gray-900">{{ ($payment->customer?->first_name ?? '') . ' ' . ($payment->customer?->last_name ?? '') }}</div>
-                            <div class="text-sm text-gray-500">{{ $payment->customer?->email ?? '-' }}</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">KSh {{ number_format($payment->amount, 2) }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ ucfirst($payment->payment_method) ?? '—' }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            @php
-                                $statusColors = [
-                                    'completed' => 'bg-green-100 text-green-800',
-                                    'pending' => 'bg-blue-100 text-blue-800',
-                                    'failed' => 'bg-red-100 text-red-800'
-                                ];
-                            @endphp
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusColors[$payment->payment_status] ?? 'bg-gray-100 text-gray-800' }}">
-                                {{ ucfirst($payment->payment_status) }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $payment->payment_date ? \Carbon\Carbon::parse($payment->payment_date)->format('M d, Y') : '—' }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <div class="flex justify-end space-x-2">
-                                <a href="{{ route('payments.show', $payment->id) }}" class="inline-flex items-center px-3 py-1.5 border border-blue-300 rounded-lg text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors duration-200">
-                                    <i class="fas fa-eye mr-1"></i> View
-                                </a>
-                                <a href="{{ route('payments.edit', $payment->id) }}" class="inline-flex items-center px-3 py-1.5 border border-blue-300 rounded-lg text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors duration-200">
-                                    <i class="fas fa-edit mr-1"></i> Edit
-                                </a>
-                                <form action="{{ route('payments.destroy', $payment->id) }}" method="POST" onsubmit="return confirm('Delete this payment?')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="inline-flex items-center px-3 py-1.5 border border-transparent rounded-lg text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 transition-colors duration-200">
-                                        <i class="fas fa-trash-alt mr-1"></i> Delete
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="8" class="px-6 py-12 text-center text-sm text-gray-500">No payments found.</td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
+        <!-- Payments DataTable -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <!-- Table Header -->
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-xl font-semibold text-gray-800">Payments Management</h2>
+            </div>
+
+            <!-- Payments Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment #</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Method</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Date</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="paymentsTableBody">
+                        @forelse ($payments as $payment)
+                        <tr class="hover:bg-gray-50 transition-colors duration-150">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-mono font-semibold text-blue-600">{{ $payment->payment_no }}</div>
+                                <div class="text-xs text-gray-500">#{{ $payment->id }}</div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex items-center space-x-3">
+                                    <div class="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                        <i class="fas fa-user text-blue-600 text-sm"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-900">
+                                            {{ ($payment->customer?->first_name ?? '') . ' ' . ($payment->customer?->last_name ?? '') }}
+                                        </div>
+                                        <div class="text-sm text-gray-500">{{ $payment->customer?->customer_number ?? 'N/A' }}</div>
+                                        <div class="text-xs text-gray-400">{{ $payment->customer?->phone ?? 'N/A' }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-semibold text-gray-900">
+                                    KSh {{ number_format($payment->amount, 2) }}
+                                </div>
+                                <div class="text-xs text-gray-500">
+                                    {{ ucfirst($payment->payment_method) ?? '—' }}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                <div class="flex items-center">
+                                    @if($payment->payment_method == 'mpesa')
+                                        <i class="fas fa-mobile-alt text-green-500 mr-2"></i>
+                                        MPESA
+                                    @elseif($payment->payment_method == 'bank')
+                                        <i class="fas fa-university text-blue-500 mr-2"></i>
+                                        Bank
+                                    @elseif($payment->payment_method == 'cash')
+                                        <i class="fas fa-money-bill text-green-500 mr-2"></i>
+                                        Cash
+                                    @else
+                                        {{ ucfirst($payment->payment_method) }}
+                                    @endif
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                @php
+                                    $statusColors = [
+                                        'completed' => 'bg-green-100 text-green-800',
+                                        'pending' => 'bg-yellow-100 text-yellow-800',
+                                        'failed' => 'bg-red-100 text-red-800'
+                                    ];
+                                    $statusIcons = [
+                                        'completed' => 'fa-check-circle',
+                                        'pending' => 'fa-clock',
+                                        'failed' => 'fa-exclamation-triangle'
+                                    ];
+                                @endphp
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusColors[$payment->payment_status] ?? 'bg-gray-100 text-gray-800' }}">
+                                    <i class="fas {{ $statusIcons[$payment->payment_status] ?? 'fa-question-circle' }} mr-1"></i>
+                                    {{ ucfirst($payment->payment_status) }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ $payment->payment_date ? \Carbon\Carbon::parse($payment->payment_date)->format('M d, Y') : '—' }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <div class="flex justify-end space-x-2">
+                                    <a href="{{ route('payments.show', $payment->id) }}"
+                                       class="text-blue-600 hover:text-blue-900 px-2 py-1 rounded transition duration-200"
+                                       title="View Payment">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    @can('edit payments')
+                                    <a href="{{ route('payments.edit', $payment->id) }}"
+                                       class="text-yellow-600 hover:text-yellow-900 px-2 py-1 rounded transition duration-200"
+                                       title="Edit Payment">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    @endcan
+                                    @can('delete payments')
+                                    <form action="{{ route('payments.destroy', $payment->id) }}" method="POST"
+                                          onsubmit="return confirm('Are you sure you want to delete this payment?')"
+                                          class="inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit"
+                                                class="text-red-600 hover:text-red-900 px-2 py-1 rounded transition duration-200"
+                                                title="Delete Payment">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                    @endcan
+                                </div>
+                            </td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="7" class="px-6 py-12 text-center">
+                                <div class="text-gray-400">
+                                    <i class="fas fa-money-bill-wave text-4xl mb-3"></i>
+                                    <p class="text-lg font-medium text-gray-900">No payments found</p>
+                                    <p class="text-gray-500">Start by recording a payment.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            @if($payments->hasPages())
+            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                {{ $payments->links() }}
+            </div>
+            @endif
         </div>
 
-        <div class="px-6 py-4 border-t border-blue-100 bg-blue-50">
-            {{ $payments->links() }}
+        <!-- Quick Actions Panel -->
+        <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Recent Activity -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Recent Activity</h3>
+                <div class="space-y-3">
+                    @php
+                        $recentPayments = $payments->take(3);
+                    @endphp
+                    @forelse($recentPayments as $activity)
+                    <div class="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+                        <div class="flex-shrink-0 w-8 h-8
+                            @if($activity->payment_status == 'completed') bg-green-100
+                            @elseif($activity->payment_status == 'pending') bg-yellow-100
+                            @else bg-red-100 @endif
+                            rounded-full flex items-center justify-center">
+                            <i class="fas
+                                @if($activity->payment_status == 'completed') fa-check-circle text-green-600
+                                @elseif($activity->payment_status == 'pending') fa-clock text-yellow-600
+                                @else fa-exclamation-triangle text-red-600 @endif
+                                text-sm"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm text-gray-700">
+                                <strong>Payment {{ $activity->payment_no }}</strong>
+                                of KSh {{ number_format($activity->amount, 2) }}
+                            </p>
+                            <p class="text-xs text-gray-500">{{ $activity->created_at->diffForHumans() }}</p>
+                            <p class="text-xs text-blue-600 mt-1">
+                                By: {{ $activity->customer->first_name ?? 'Unknown' }}
+                            </p>
+                        </div>
+                    </div>
+                    @empty
+                    <div class="text-center py-4 text-gray-500">
+                        <i class="fas fa-info-circle mb-2"></i>
+                        <p class="text-sm">No recent activity</p>
+                    </div>
+                    @endforelse
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
+                <div class="space-y-3">
+                    @can('view customers')
+                    <a href="{{ route('admin.customers.index') }}"
+                       class="w-full bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
+                        <i class="fas fa-users mr-2"></i>
+                        View All Customers
+                    </a>
+                    @endcan
+                    @can('view bills')
+                    <a href="{{ route('bills.index') }}"
+                       class="w-full bg-green-100 hover:bg-green-200 text-green-700 px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
+                        <i class="fas fa-file-invoice-dollar mr-2"></i>
+                        Bill Management
+                    </a>
+                    @endcan
+                    @can('add payments')
+                    <button onclick="openPaymentModal()"
+                       class="w-full bg-purple-100 hover:bg-purple-200 text-purple-700 px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
+                        <i class="fas fa-plus-circle mr-2"></i>
+                        Record New Payment
+                    </button>
+                    @endcan
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -555,6 +799,201 @@ $('form').on('submit', function(e) {
     // Show loading on submit button
     $('#submitPaymentBtn').html('<i class="fas fa-spinner fa-spin mr-2"></i> Processing...');
     $('#submitPaymentBtn').prop('disabled', true);
+});
+// Search functionality
+document.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.getElementById('paymentSearch');
+    const searchBtn = document.getElementById('searchPaymentBtn');
+    const resetBtn = document.getElementById('resetPaymentBtn');
+
+    if (searchBtn) {
+        searchBtn.addEventListener('click', function () {
+            const searchTerm = searchInput?.value.trim();
+            if (searchTerm && searchTerm.length > 0) {
+                performSearch(searchTerm);
+                resetBtn?.classList.remove('hidden');
+            }
+        });
+    }
+
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function () {
+            window.location.href = "{{ route('payments.index') }}";
+        });
+    }
+
+    // Enter key support
+    if (searchInput) {
+        searchInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                searchBtn?.click();
+            }
+        });
+    }
+
+    async function performSearch(searchTerm) {
+        try {
+            // Show loading state
+            const originalText = searchBtn.innerHTML;
+            searchBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Searching...';
+            searchBtn.disabled = true;
+
+            const response = await fetch(`/payments/search?search=${encodeURIComponent(searchTerm)}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (!response.ok) throw new Error('Search failed');
+
+            const payments = await response.json();
+            updateTableWithSearchResults(payments);
+
+        } catch (error) {
+            console.error(error);
+            alert('Error performing search. Please try again.');
+        } finally {
+            // Reset button
+            if (searchBtn) {
+                searchBtn.innerHTML = originalText;
+                searchBtn.disabled = false;
+            }
+        }
+    }
+
+    function updateTableWithSearchResults(payments) {
+        const tbody = document.getElementById('paymentsTableBody');
+
+        if (!tbody) return;
+
+        if (!payments || payments.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="px-6 py-12 text-center">
+                        <div class="text-gray-400">
+                            <i class="fas fa-search text-4xl mb-3"></i>
+                            <p class="text-lg font-medium text-gray-900">No payments found</p>
+                            <p class="text-gray-500">No payments match your search criteria.</p>
+                        </div>
+                    </td>
+                </tr>`;
+            return;
+        }
+
+        tbody.innerHTML = payments.map(payment => {
+            const paymentDate = payment.payment_date
+                ? new Date(payment.payment_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                : '—';
+
+            const statusColors = {
+                'completed': 'bg-green-100 text-green-800',
+                'pending': 'bg-yellow-100 text-yellow-800',
+                'failed': 'bg-red-100 text-red-800'
+            };
+
+            const statusIcons = {
+                'completed': 'fa-check-circle',
+                'pending': 'fa-clock',
+                'failed': 'fa-exclamation-triangle'
+            };
+
+            const methodIcons = {
+                'mpesa': 'fa-mobile-alt text-green-500',
+                'bank': 'fa-university text-blue-500',
+                'cash': 'fa-money-bill text-green-500'
+            };
+
+            const paymentMethodIcon = methodIcons[payment.payment_method] || 'fa-money-bill-wave';
+
+            return `
+            <tr class="hover:bg-gray-50 transition-colors duration-150">
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-mono font-semibold text-blue-600">${payment.payment_no}</div>
+                    <div class="text-xs text-gray-500">#${payment.id}</div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                            <i class="fas fa-user text-blue-600 text-sm"></i>
+                        </div>
+                        <div>
+                            <div class="text-sm font-medium text-gray-900">
+                                ${payment.customer?.first_name || ''} ${payment.customer?.last_name || ''}
+                            </div>
+                            <div class="text-sm text-gray-500">${payment.customer?.customer_number || 'N/A'}</div>
+                            <div class="text-xs text-gray-400">${payment.customer?.phone || 'N/A'}</div>
+                        </div>
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-semibold text-gray-900">
+                        KSh ${Number(payment.amount).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                    </div>
+                    <div class="text-xs text-gray-500">
+                        ${payment.payment_method ? payment.payment_method.charAt(0).toUpperCase() + payment.payment_method.slice(1) : '—'}
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <div class="flex items-center">
+                        <i class="fas ${paymentMethodIcon} mr-2"></i>
+                        ${payment.payment_method ? payment.payment_method.charAt(0).toUpperCase() + payment.payment_method.slice(1) : '—'}
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[payment.payment_status] || 'bg-gray-100 text-gray-800'}">
+                        <i class="fas ${statusIcons[payment.payment_status] || 'fa-question-circle'} mr-1"></i>
+                        ${payment.payment_status ? payment.payment_status.charAt(0).toUpperCase() + payment.payment_status.slice(1) : 'Unknown'}
+                    </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${paymentDate}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div class="flex justify-end space-x-2">
+                        <a href="/payments/${payment.id}"
+                           class="text-blue-600 hover:text-blue-900 px-2 py-1 rounded transition duration-200"
+                           title="View Payment">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        <a href="/payments/${payment.id}/edit"
+                           class="text-yellow-600 hover:text-yellow-900 px-2 py-1 rounded transition duration-200"
+                           title="Edit Payment">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <form action="/payments/${payment.id}" method="POST"
+                              onsubmit="return confirm('Are you sure you want to delete this payment?')"
+                              class="inline">
+                            <input type="hidden" name="_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="_method" value="DELETE">
+                            <button type="submit"
+                                    class="text-red-600 hover:text-red-900 px-2 py-1 rounded transition duration-200"
+                                    title="Delete Payment">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            `;
+        }).join('');
+    }
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.key === 'f') {
+        e.preventDefault();
+        const searchInput = document.getElementById('paymentSearch');
+        if (searchInput) searchInput.focus();
+    }
+
+    // Alt+N for new payment
+    if (e.altKey && e.key === 'n') {
+        e.preventDefault();
+        openPaymentModal();
+    }
 });
 </script>
 @endsection

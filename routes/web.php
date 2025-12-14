@@ -209,8 +209,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{payment}/edit', [PaymentController::class, 'edit'])->name('payments.edit');
         Route::put('/{payment}', [PaymentController::class, 'update'])->name('payments.update');
         Route::delete('/{payment}', [PaymentController::class, 'destroy'])->name('payments.destroy');
-    });
+        Route::get('/search', [PaymentController::class, 'search'])->name('payments.search');
 
+    });
         // Meter details route for AJAX
     Route::get('/payments/meter-details/{meterNumber}', [PaymentController::class, 'getMeterDetails'])
         ->name('payments.meter-details')

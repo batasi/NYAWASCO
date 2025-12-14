@@ -23,17 +23,21 @@ class PaymentController extends Controller
     /**
      * Display a listing of payments.
      */
-    public function index(Request $request)
+      public function index(Request $request)
     {
-        $query = Payment::with(['user', 'meter.customer']);
+        $query = Payment::with(['customer', 'user', 'meter']);
 
         // Search filter
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where('payment_no', 'like', "%{$search}%")
-                  ->orWhereHas('user', function($q) use ($search) {
-                      $q->where('name', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%");
+                  ->orWhere('transaction_reference', 'like', "%{$search}%")
+                  ->orWhereHas('customer', function($q) use ($search) {
+                      $q->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('customer_number', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%");
                   })
                   ->orWhereHas('meter', function($q) use ($search) {
                       $q->where('meter_number', 'like', "%{$search}%");
@@ -46,11 +50,76 @@ class PaymentController extends Controller
         }
 
         // Sorting
-        $query->orderBy('payment_date', 'desc');
+        $query->orderBy('payment_date', 'desc')->orderBy('created_at', 'desc');
 
         $payments = $query->paginate(10)->withQueryString();
 
-        return view('payments.index', compact('payments'));
+        // Calculate statistics for cards
+        $totalPayments = Payment::sum('amount');
+        $todayCollection = Payment::whereDate('payment_date', Carbon::today())
+            ->where('payment_status', 'completed')
+            ->sum('amount');
+        $totalPaymentsCount = Payment::count();
+        $completedPaymentsCount = Payment::where('payment_status', 'completed')->count();
+        $pendingPaymentsCount = Payment::where('payment_status', 'pending')->count();
+        $failedPaymentsCount = Payment::where('payment_status', 'failed')->count();
+
+        return view('payments.index', compact(
+            'payments',
+            'totalPayments',
+            'todayCollection',
+            'totalPaymentsCount',
+            'completedPaymentsCount',
+            'pendingPaymentsCount',
+            'failedPaymentsCount'
+        ));
+    }
+
+    /**
+     * Search payments for AJAX requests
+     */
+    public function search(Request $request)
+    {
+        $search = trim($request->get('search'));
+
+        $payments = Payment::with(['customer', 'meter'])
+            ->where(function($query) use ($search) {
+                $query->where('payment_no', 'like', "%{$search}%")
+                    ->orWhere('transaction_reference', 'like', "%{$search}%")
+                    ->orWhere('amount', 'like', "%{$search}%")
+                    ->orWhere('payment_method', 'like', "%{$search}%")
+                    ->orWhereHas('customer', function($q) use ($search) {
+                        $q->where('first_name', 'like', "%{$search}%")
+                            ->orWhere('last_name', 'like', "%{$search}%")
+                            ->orWhere('customer_number', 'like', "%{$search}%")
+                            ->orWhere('phone', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('meter', function($q) use ($search) {
+                        $q->where('meter_number', 'like', "%{$search}%");
+                    });
+            })
+            ->orderBy('payment_date', 'desc')
+            ->limit(50)
+            ->get();
+
+        // Transform for JSON response
+        $payments = $payments->map(function($payment) {
+            return [
+                'id' => $payment->id,
+                'payment_no' => $payment->payment_no,
+                'amount' => $payment->amount,
+                'payment_method' => $payment->payment_method,
+                'payment_status' => $payment->payment_status,
+                'transaction_reference' => $payment->transaction_reference,
+                'payment_date' => $payment->payment_date,
+                'customer' => $payment->customer,
+                'meter' => $payment->meter,
+                'created_at' => $payment->created_at->format('Y-m-d H:i:s'),
+            ];
+        });
+
+        return response()->json($payments);
     }
 
 
