@@ -1181,6 +1181,7 @@ use Illuminate\Support\Facades\Route;
                     <i class="fas fa-times"></i>
                 </button>
             </div>
+
             <div class="modal-body">
                 <div class="mb-6 justify-center flex">
                     <a href="{{ route('home') }}" class="flex items-center">
@@ -1188,33 +1189,61 @@ use Illuminate\Support\Facades\Route;
                     </a>
                 </div>
 
-                <form method="POST" action="{{ route('login') }}">
+                <form method="POST" action="{{ route('login') }}" autocomplete="off">
                     @csrf
+
+                    <!-- Email OR Username -->
                     <div class="mb-4">
-                        <x-label for="login_email" value="Email Address" />
-                        <x-input id="login_email" class="form-input block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus autocomplete="email" placeholder="Enter your email address" />
+                        <x-label for="login" value="Email or Username" />
+                        <x-input
+                            id="login"
+                            class="form-input block mt-1 w-full"
+                            type="text"
+                            name="login"
+                            value="{{ old('login') }}"
+                            required
+                            autofocus
+                            autocomplete="off"
+                            placeholder="Enter email or username"
+                        />
                     </div>
 
+                    <!-- Password -->
                     <div class="mb-4">
-                        <x-label for="login_password" value="Password" />
-                        <x-input id="login_password" class="form-input block mt-1 w-full" type="password" name="password" required autocomplete="current-password" placeholder="Enter your password" />
+                        <x-label for="password" value="Password" />
+                        <x-input
+                            id="password"
+                            class="form-input block mt-1 w-full"
+                            type="password"
+                            name="password"
+                            required
+                            autocomplete="current-password"
+                            placeholder="Enter your password"
+                        />
                     </div>
 
                     <div class="flex items-center justify-between mb-6">
                         <label class="flex items-center">
-                            <input type="checkbox" name="remember" class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                            <input
+                                type="checkbox"
+                                name="remember"
+                                class="rounded border-gray-300 text-blue-600 shadow-sm
+                                    focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                            >
                             <span class="ml-2 text-sm text-gray-600">Remember me</span>
                         </label>
 
                         @if (Route::has('password.request'))
-                        <a href="{{ route('password.request') }}" class="text-sm text-blue-600 hover:text-blue-800 transition-colors">
-                            Forgot password?
-                        </a>
+                            <a href="{{ route('password.request') }}"
+                            class="text-sm text-blue-600 hover:text-blue-800 transition-colors">
+                                Forgot password?
+                            </a>
                         @endif
                     </div>
 
                     <div class="mb-6">
-                        <button type="submit" class="w-full btn-primary font-medium py-3 px-4 rounded-lg transition duration-200">
+                        <button type="submit"
+                                class="w-full btn-primary font-medium py-3 px-4 rounded-lg transition duration-200">
                             Log In
                         </button>
                     </div>
@@ -1230,7 +1259,10 @@ use Illuminate\Support\Facades\Route;
                 </div>
 
                 <div class="grid grid-cols-1 gap-3">
-                    <a href="{{ route('google.login') }}" class="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition duration-200">
+                    <a href="{{ route('google.login') }}"
+                    class="w-full inline-flex justify-center items-center px-4 py-2 border
+                            border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium
+                            text-gray-700 hover:bg-gray-50 transition duration-200">
                         <i class="fab fa-google text-red-500 mr-2"></i>
                         Sign in with Google
                     </a>
@@ -1239,7 +1271,9 @@ use Illuminate\Support\Facades\Route;
                 <div class="mt-6 text-center">
                     <span class="text-sm text-gray-600">
                         Don't have an account?
-                        <button type="button" @click="loginOpen = false; signupOpen = true" class="text-blue-600 hover:text-blue-800 font-medium transition-colors ml-1">
+                        <button type="button"
+                                @click="loginOpen = false; signupOpen = true"
+                                class="text-blue-600 hover:text-blue-800 font-medium transition-colors ml-1">
                             Sign up
                         </button>
                     </span>
@@ -1247,6 +1281,7 @@ use Illuminate\Support\Facades\Route;
             </div>
         </div>
     </div>
+
 
     <!-- Page Content -->
     <main>

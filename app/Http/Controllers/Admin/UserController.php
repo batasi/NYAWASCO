@@ -22,91 +22,95 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
-            'password' => 'required|string|min:4',
-            'role' => 'required|string|max:50',
-            'is_active' => 'required|boolean'
+            'name'      => 'required|string|max:255',
+            'username'  => 'required|string|max:255|alpha_dash|unique:users,username',
+            'email'     => 'required|email|unique:users,email',
+            'password'  => 'required|string|min:4',
+            'role'      => 'required|string|max:50',
+            'is_active' => 'required|boolean',
         ]);
-
+    
         try {
             DB::transaction(function () use ($request) {
-
-                // Create or get the role
-                $role = Role::firstOrCreate(['name' => $request->role]);
-
-                // Create user
-                $user = User::create([
-                    'name' => $request->name,
-                    'email' => $request->email,
-                    'email_verified_at' => now(), // mark email as verified
-                    'password' => Hash::make($request->password),
-                    'role' => $role->name,
-                    'is_active' => $request->boolean('is_active'),
+    
+                $role = Role::firstOrCreate([
+                    'name' => $request->role
                 ]);
-
-                // Assign role using Spatie
+    
+                $user = User::create([
+                    'name'              => $request->name,
+                    'username'          => strtolower($request->username),
+                    'email'             => $request->email,
+                    'email_verified_at' => now(),
+                    'password'          => Hash::make($request->password),
+                    'role'              => $role->name,
+                    'is_active'         => $request->boolean('is_active'),
+                ]);
+    
                 $user->assignRole($role);
             });
-
+    
             return response()->json([
                 'success' => true,
-                'message' => 'User created successfully'
+                'message' => 'User created successfully',
             ]);
-        } catch (\Exception $e) {
+    
+        } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create user: ' . $e->getMessage()
+                'message' => 'Failed to create user',
             ], 500);
         }
     }
-
+     
     public function update(Request $request, User $user)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $user->id,
-            'role' => 'required|string|max:50',
-            'is_active' => 'required|boolean'
+            'name'      => 'required|string|max:255',
+            'username'  => 'required|string|max:255|alpha_dash|unique:users,username,' . $user->id,
+            'email'     => 'required|email|unique:users,email,' . $user->id,
+            'role'      => 'required|string|max:50',
+            'is_active' => 'required|boolean',
         ]);
-
+    
         try {
             DB::transaction(function () use ($request, $user) {
-
-                // Create or get the role
-                $role = Role::firstOrCreate(['name' => $request->role]);
-
-                // Update user data
+    
+                $role = Role::firstOrCreate([
+                    'name' => $request->role
+                ]);
+    
                 $userData = [
-                    'name' => $request->name,
-                    'email' => $request->email,
-                    'role' => $role->name,
+                    'name'      => $request->name,
+                    'username'  => strtolower($request->username),
+                    'email'     => $request->email,
+                    'role'      => $role->name,
                     'is_active' => $request->boolean('is_active'),
-                    'email_verified_at' => $user->email_verified_at ?? now(), // verify if not verified
+                    'email_verified_at' => $user->email_verified_at ?? now(),
                 ];
-
+    
                 if ($request->filled('password')) {
                     $userData['password'] = Hash::make($request->password);
                 }
-
+    
                 $user->update($userData);
-
-                // Sync role using Spatie
+    
                 $user->syncRoles([$role]);
             });
-
+    
             return response()->json([
                 'success' => true,
-                'message' => 'User updated successfully'
+                'message' => 'User updated successfully',
             ]);
-        } catch (\Exception $e) {
+    
+        } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update user: ' . $e->getMessage()
+                'message' => 'Failed to update user',
             ], 500);
         }
     }
-
+    
     /**
      * Get User Permissions
      */

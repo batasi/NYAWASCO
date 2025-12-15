@@ -558,6 +558,22 @@
                             <label for="add_name" class="block text-sm font-semibold text-gray-900 mb-2">Full Name</label>
                             <input type="text" name="name" id="add_name" required class="block w-full px-3 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-colors duration-200" placeholder="Enter full name">
                         </div>
+                        <div>
+                            <label for="add_username" class="block text-sm font-semibold text-gray-900 mb-2">
+                                Username
+                            </label>
+                            <input
+                                type="text"
+                                name="username"
+                                id="add_username"
+                                required
+                                autocomplete="off"
+                                class="block w-full px-3 py-3 border border-gray-300 rounded-xl
+                                    focus:outline-none focus:ring-2 focus:ring-blue-500
+                                    focus:border-blue-500 sm:text-sm transition-colors duration-200"
+                                placeholder="Enter unique username"
+                            >
+                        </div>
 
                         <div>
                             <label for="add_email" class="block text-sm font-semibold text-gray-900 mb-2">Email Address</label>
@@ -656,6 +672,20 @@
                         <div>
                             <label for="edit_name" class="block text-sm font-semibold text-gray-900 mb-2">Full Name</label>
                             <input type="text" name="name" id="edit_name" required class="block w-full px-3 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-colors duration-200">
+                        </div>
+                        <div>
+                            <label for="edit_username" class="block text-sm font-semibold text-gray-900 mb-2">
+                                Username
+                            </label>
+                            <input
+                                type="text"
+                                name="username"
+                                id="edit_username"
+                                required
+                                class="block w-full px-3 py-3 border border-gray-300 rounded-xl
+                                    focus:outline-none focus:ring-2 focus:ring-blue-500
+                                    focus:border-blue-500 sm:text-sm transition-colors duration-200"
+                            >
                         </div>
 
                         <div>
