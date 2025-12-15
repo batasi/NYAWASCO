@@ -946,9 +946,11 @@ use Illuminate\Support\Facades\Route;
     mobileMenuOpen: false,
     mobileDropdowns: {}
 }" class="font-sans antialiased body-bg">
-
+    @php
+        $showFooter = !auth()->check() || request()->routeIs('home', 'login');
+    @endphp
     <!-- Top Navigation Bar -->
-    @guest
+    @if($showFooter)
     <div class="nav-top-bar" style="background-color:green;">
         <div class="top-nav-compact">
             <!-- Contact Information -->
@@ -1084,7 +1086,7 @@ use Illuminate\Support\Facades\Route;
         </div>
         @endguest
     </div>
-    @endguest
+    @endif
     <!-- Sign Up Modal -->
     <div x-show="signupOpen" x-cloak class="modal-overlay">
         <div class="modal-container">
@@ -1288,8 +1290,9 @@ use Illuminate\Support\Facades\Route;
         @yield('content')
     </main>
 
-    <!-- Footer -->
-    @guest
+ 
+
+    @if($showFooter)
     <footer class="footer-bg" style="background-color:#2567ac;">
         <div class="footer-container">
             <div class="footer-grid">
@@ -1365,7 +1368,7 @@ use Illuminate\Support\Facades\Route;
             </div>
         </div>
     </footer>
-    @endguest
+    @endif
 
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
