@@ -216,7 +216,7 @@
     <div class="receipt-container">
         <!-- Logo -->
         <div class="logo">
-            @if(file_exists(public_path('img/logo.png')))
+            @if(file_exists(public_path('img/Logo.png')))
                 <img src="{{ asset('img/Logo.png') }}">
             @else
                 <div class="company-name">NYAWASCO WATER</div>
@@ -358,14 +358,107 @@
 
     <!-- Print Button -->
     <button class="print-btn no-print" onclick="printReceipt()">
-         PRINT RECEIPT
+        ЁЯЦия╕П PRINT RECEIPT
     </button>
 
-   <script>
-    function printReceipt() {
-        window.print();
-    }
-    </script>
+    <script>
+        // Function to handle printing
+        function printReceipt() {
+            // Store original body content
+            const originalBody = document.body.innerHTML;
 
+            // Get receipt content only
+            const receiptContent = document.querySelector('.receipt-container').outerHTML;
+
+            // Replace body with receipt only for printing
+            document.body.innerHTML = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Print Receipt</title>
+                    <style>
+                        @page {
+                            size: 58mm auto;
+                            margin: 0;
+                            padding: 0;
+                        }
+                        body {
+                            width: 58mm;
+                            margin: 0;
+                            padding: 2mm;
+                            font-family: 'Courier New', monospace;
+                            font-size: 9pt;
+                            line-height: 1.1;
+                        }
+                        * {
+                            margin: 0;
+                            padding: 0;
+                            box-sizing: border-box;
+                        }
+                        .receipt-container {
+                            width: 54mm;
+                            margin: 0 auto;
+                        }
+                        .row, .charge-item {
+                            display: flex;
+                            justify-content: space-between;
+                            margin: 2px 0;
+                        }
+                        .divider {
+                            border-top: 1px dashed #000;
+                            margin: 4px 0;
+                        }
+                        .payment-info {
+                            background: #f0f0f0;
+                            padding: 4px;
+                            margin: 5px 0;
+                            text-align: center;
+                            font-weight: bold;
+                        }
+                        .section-title {
+                            text-align: center;
+                            font-weight: bold;
+                            text-transform: uppercase;
+                            margin: 4px 0;
+                        }
+                        .grand-total {
+                            border-top: 2px solid #000;
+                            border-bottom: 2px solid #000;
+                            margin: 4px 0;
+                            padding: 3px 0;
+                            font-weight: bold;
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${receiptContent}
+                </body>
+                </html>
+            `;
+
+            // Trigger print
+            window.print();
+
+            // Restore original content after printing
+            setTimeout(() => {
+                document.body.innerHTML = originalBody;
+            }, 100);
+        }
+
+        // Auto-print after 1 second (optional)
+        window.onload = function() {
+            setTimeout(() => {
+                printReceipt();
+            }, 1000);
+        };
+
+        // Alternative auto-print with simple approach
+        document.addEventListener('DOMContentLoaded', function() {
+            // Simple print after delay
+            setTimeout(function() {
+                window.print();
+            }, 500);
+        });
+    </script>
 </body>
 </html>
