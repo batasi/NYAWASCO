@@ -217,7 +217,7 @@
         <!-- Logo -->
         <div class="logo">
             @if(file_exists(public_path('img/logo.png')))
-                <img src="{{ asset('img/logo.png') }}" alt="Logo">
+                <img src="{{ asset('img/Logo.png') }}">
             @else
                 <div class="company-name">NYAWASCO WATER</div>
             @endif
