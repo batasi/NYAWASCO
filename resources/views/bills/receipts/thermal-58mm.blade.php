@@ -233,7 +233,7 @@
         <div class="divider"></div>
 
         <!-- Receipt Title -->
-        <div class="receipt-title">OFFICIAL RECEIPT</div>
+        <div class="receipt-title">OFFICIAL INVOICE</div>
 
         <div class="divider"></div>
 
@@ -242,12 +242,12 @@
             <span class="label">Date:</span>
             <span class="value">{{ $receiptData['date'] }}</span>
         </div>
-        <div class="row">
+        <!-- <div class="row">
             <span class="label">Receipt No:</span>
             <span class="value">{{ $receiptData['receipt_number'] }}</span>
-        </div>
+        </div> -->
         <div class="row">
-            <span class="label">Bill No:</span>
+            <span class="label">Invoice No:</span>
             <span class="value">{{ $receiptData['bill_number'] }}</span>
         </div>
 
