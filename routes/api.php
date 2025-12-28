@@ -4,9 +4,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\CustomerSearchController;
 use App\Models\Bill;
-use App\Http\Controllers\v1\AuthController;
-use App\Http\Controllers\CustomerController;
-use App\Http\Controllers\MeterReadingController;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Admin\CustomerController;
+use App\Http\Controllers\Admin\MeterReadingController;
 // Use web middleware for authentication
 Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/customers/search', [CustomerSearchController::class, 'search'])
