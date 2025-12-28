@@ -4,7 +4,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\CustomerSearchController;
 use App\Models\Bill;
-
+use App\Http\Controllers\v1\AuthController;
+use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\MeterReadingController;
 // Use web middleware for authentication
 Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/customers/search', [CustomerSearchController::class, 'search'])
@@ -13,7 +15,7 @@ Route::middleware(['web', 'auth'])->group(function () {
 
 Route::get('/bills/search', function(Request $request) {
     $search = $request->get('search', '');
-    
+
     $bills = Bill::with(['customer', 'meter'])
         ->where(function($query) use ($search) {
             $query->where('bill_number', 'like', "%{$search}%")
@@ -41,4 +43,23 @@ Route::get('/bills/search', function(Request $request) {
         });
 
     return response()->json($bills);
+});
+
+Route::prefix('v1')->group(function () {
+
+    // Login check
+    Route::post('auth/login', [AuthController::class, 'login']);
+
+    // Customer search
+    Route::get('customers', [CustomerController::class, 'search']);
+
+    // Customer details + previous reading + balance
+    Route::get('customers/{id}', [CustomerController::class, 'details']);
+
+    // Balance inquiry
+    Route::get('customers/{id}/balance', [CustomerController::class, 'balance']);
+
+    // Meter reading submission
+    Route::post('meter-readings', [MeterReadingController::class, 'store']);
+
 });

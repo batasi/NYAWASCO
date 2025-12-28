@@ -1012,4 +1012,70 @@ public function searchCustomers(Request $request)
     return response()->json(['results' => $customers]);
 }
 
+    // Customer details + previous reading
+    public function details(Request $request, $id)
+    {
+        $error = $this->validateAuth($request);
+        if ($error) return $error;
+
+        $customer = Customer::with(['meters.readings' => function($q) {
+            $q->latest()->first();
+        }])->find($id);
+
+        if (!$customer) {
+            return response()->json(['error' => 'Customer not found'], 404);
+        }
+
+        $balance = $customer->bills()->sum('amount_due') - $customer->payments()->sum('amount');
+
+        return response()->json([
+            'id' => $customer->id,
+            'name' => $customer->name,
+            'account_number' => $customer->account_number,
+            'zone' => $customer->zone,
+            'meters' => $customer->meters->map(function($meter) {
+                $lastReading = $meter->readings->first();
+                return [
+                    'id' => $meter->id,
+                    'meter_number' => $meter->meter_number,
+                    'category' => $meter->category,
+                    'previous_reading' => $lastReading?->current_reading ?? 0,
+                    'last_reading_date' => $lastReading?->reading_date,
+                ];
+            }),
+            'balance' => $balance,
+        ]);
+    }
+
+    // Balance inquiry
+    public function balance(Request $request, $id)
+    {
+        $error = $this->validateAuth($request);
+        if ($error) return $error;
+
+        $customer = Customer::find($id);
+        if (!$customer) {
+            return response()->json(['error' => 'Customer not found'], 404);
+        }
+
+        $balance = $customer->bills()->sum('amount_due') - $customer->payments()->sum('amount');
+
+        $lastPayment = $customer->payments()->latest()->first();
+
+        return response()->json([
+            'account_number' => $customer->account_number,
+            'customer_name' => $customer->name,
+            'outstanding_balance' => $balance,
+            'last_payment' => $lastPayment?->amount,
+            'last_payment_date' => $lastPayment?->payment_date,
+        ]);
+    }
+
+private function validateAuth(Request $request)
+{
+    if (!Auth::once($request->only('username', 'password'))) {
+        return response()->json(['error' => 'Invalid credentials'], 401);
+    }
+    return null;
+}
 }
