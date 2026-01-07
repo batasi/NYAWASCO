@@ -994,10 +994,10 @@ use Illuminate\Support\Facades\Route;
                             <i class="fas fa-chevron-down ml-1" style="font-size: 0.75rem;"></i>
                         </button>
                         <div class="dropdown-content">
-                            <a href="#">Company Profile</a>
-                            <a href="#">Board of Directors</a>
-                            <a href="#">Management Team</a>
-                            <a href="#">Mission & Vision</a>
+                            <!-- <a href="#">Company Profile</a> -->
+                            <a href="{{ route('board-of-directors') }}">Board of Directors</a>
+                            <!-- <a href="#">Management Team</a> -->
+                            <!-- <a href="#">Mission & Vision</a> -->
                         </div>
                     </div>
 
@@ -1290,7 +1290,7 @@ use Illuminate\Support\Facades\Route;
         @yield('content')
     </main>
 
- 
+
 
     @if($showFooter)
     <footer class="footer-bg" style="background-color:#2567ac;">

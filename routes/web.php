@@ -52,7 +52,9 @@ Route::view('/contact', 'static.contact', ['title' => 'Contact Us - NYAWASCO'])-
 Route::view('/privacy', 'static.privacy', ['title' => 'Privacy Policy - NYAWASCO'])->name('privacy');
 Route::view('/terms', 'static.terms', ['title' => 'Terms of Service - NYAWASCO'])->name('terms');
 Route::view('/help', 'static.help', ['title' => 'Help Center - NYAWASCO'])->name('help');
-
+Route::get('/board-of-directors', function () {
+    return view('board');
+})->name('board-of-directors');
 // Service Routes
 Route::view('/services', 'services.index')->name('services');
 Route::view('/services/water-supply', 'services.water-supply')->name('water-supply');

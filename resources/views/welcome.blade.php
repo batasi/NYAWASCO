@@ -79,113 +79,113 @@
 
     <!-- Quick Links Section -->
     <section class="quick-links-section py-12">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div class="text-center mb-8">
-            <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">Quick Access</h2>
-            <p class="text-xl text-blue-100 max-w-2xl mx-auto">
-                Easy access to our most popular services and resources
-            </p>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">Quick Access</h2>
+                <p class="text-xl text-blue-100 max-w-2xl mx-auto">
+                    Easy access to our most popular services and resources
+                </p>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 md:gap-6">
+                <!-- Water Connection -->
+                <a href="{{ route('water-connection') }}" class="quick-link-card group">
+                    <div class="quick-link-icon icon-water">
+                        <i class="fas fa-faucet"></i>
+                    </div>
+                    <div class="quick-link-text">New Water Connection</div>
+                </a>
+
+                <!-- Sewer Connection -->
+                <a href="{{ route('sewerage') }}" class="quick-link-card group">
+                    <div class="quick-link-icon icon-sewer">
+                        <i class="fas fa-recycle"></i>
+                    </div>
+                    <div class="quick-link-text">New Sewer Connection</div>
+                </a>
+
+                <!-- Bill Payment -->
+                <a href="#" class="quick-link-card group">
+                    <div class="quick-link-icon icon-payment">
+                        <i class="fas fa-credit-card"></i>
+                    </div>
+                    <div class="quick-link-text">Pay For Services</div>
+                </a>
+
+                <!-- Complaints -->
+                <a href="#" class="quick-link-card group">
+                    <div class="quick-link-icon icon-complaint">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="quick-link-text">Lodge A Complaint</div>
+                </a>
+
+                <!-- Corruption Report -->
+                <a href="#" class="quick-link-card group">
+                    <div class="quick-link-icon icon-corruption">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <div class="quick-link-text">Report Corruption</div>
+                </a>
+
+                <!-- Tenders -->
+                <a href="#" class="quick-link-card group">
+                    <div class="quick-link-icon icon-tenders">
+                        <i class="fas fa-file-contract"></i>
+                    </div>
+                    <div class="quick-link-text">Tenders</div>
+                </a>
+
+                <!-- Careers -->
+                <a href="#" class="quick-link-card group">
+                    <div class="quick-link-icon icon-careers">
+                        <i class="fas fa-briefcase"></i>
+                    </div>
+                    <div class="quick-link-text">Careers</div>
+                </a>
+
+                <!-- Reports -->
+                <a href="#" class="quick-link-card group">
+                    <div class="quick-link-icon icon-reports">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <div class="quick-link-text">Reports</div>
+                </a>
+
+                <!-- Downloads -->
+                <a href="#" class="quick-link-card group">
+                    <div class="quick-link-icon icon-downloads">
+                        <i class="fas fa-download"></i>
+                    </div>
+                    <div class="quick-link-text">Publications & Downloads</div>
+                </a>
+
+                <!-- News -->
+                <a href="#" class="quick-link-card group">
+                    <div class="quick-link-icon icon-news">
+                        <i class="fas fa-newspaper"></i>
+                    </div>
+                    <div class="quick-link-text">News & Events</div>
+                </a>
+
+                <!-- Contacts -->
+                <a href="#contact" class="quick-link-card group">
+                    <div class="quick-link-icon icon-contacts">
+                        <i class="fas fa-phone-alt"></i>
+                    </div>
+                    <div class="quick-link-text">Contacts</div>
+                </a>
+
+                <!-- Documentary -->
+                <a href="#" class="quick-link-card group">
+                    <div class="quick-link-icon icon-documentary">
+                        <i class="fas fa-video"></i>
+                    </div>
+                    <div class="quick-link-text">Nyawasco Documentary</div>
+                </a>
+            </div>
         </div>
-
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 md:gap-6">
-            <!-- Water Connection -->
-            <a href="{{ route('water-connection') }}" class="quick-link-card group">
-                <div class="quick-link-icon icon-water">
-                    <i class="fas fa-faucet"></i>
-                </div>
-                <div class="quick-link-text">New Water Connection</div>
-            </a>
-
-            <!-- Sewer Connection -->
-            <a href="{{ route('sewerage') }}" class="quick-link-card group">
-                <div class="quick-link-icon icon-sewer">
-                    <i class="fas fa-recycle"></i>
-                </div>
-                <div class="quick-link-text">New Sewer Connection</div>
-            </a>
-
-            <!-- Bill Payment -->
-            <a href="#" class="quick-link-card group">
-                <div class="quick-link-icon icon-payment">
-                    <i class="fas fa-credit-card"></i>
-                </div>
-                <div class="quick-link-text">Pay For Services</div>
-            </a>
-
-            <!-- Complaints -->
-            <a href="#" class="quick-link-card group">
-                <div class="quick-link-icon icon-complaint">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
-                <div class="quick-link-text">Lodge A Complaint</div>
-            </a>
-
-            <!-- Corruption Report -->
-            <a href="#" class="quick-link-card group">
-                <div class="quick-link-icon icon-corruption">
-                    <i class="fas fa-shield-alt"></i>
-                </div>
-                <div class="quick-link-text">Report Corruption</div>
-            </a>
-
-            <!-- Tenders -->
-            <a href="#" class="quick-link-card group">
-                <div class="quick-link-icon icon-tenders">
-                    <i class="fas fa-file-contract"></i>
-                </div>
-                <div class="quick-link-text">Tenders</div>
-            </a>
-
-            <!-- Careers -->
-            <a href="#" class="quick-link-card group">
-                <div class="quick-link-icon icon-careers">
-                    <i class="fas fa-briefcase"></i>
-                </div>
-                <div class="quick-link-text">Careers</div>
-            </a>
-
-            <!-- Reports -->
-            <a href="#" class="quick-link-card group">
-                <div class="quick-link-icon icon-reports">
-                    <i class="fas fa-chart-bar"></i>
-                </div>
-                <div class="quick-link-text">Reports</div>
-            </a>
-
-            <!-- Downloads -->
-            <a href="#" class="quick-link-card group">
-                <div class="quick-link-icon icon-downloads">
-                    <i class="fas fa-download"></i>
-                </div>
-                <div class="quick-link-text">Publications & Downloads</div>
-            </a>
-
-            <!-- News -->
-            <a href="#" class="quick-link-card group">
-                <div class="quick-link-icon icon-news">
-                    <i class="fas fa-newspaper"></i>
-                </div>
-                <div class="quick-link-text">News & Events</div>
-            </a>
-
-            <!-- Contacts -->
-            <a href="#contact" class="quick-link-card group">
-                <div class="quick-link-icon icon-contacts">
-                    <i class="fas fa-phone-alt"></i>
-                </div>
-                <div class="quick-link-text">Contacts</div>
-            </a>
-
-            <!-- Documentary -->
-            <a href="#" class="quick-link-card group">
-                <div class="quick-link-icon icon-documentary">
-                    <i class="fas fa-video"></i>
-                </div>
-                <div class="quick-link-text">Nyawasco Documentary</div>
-            </a>
-        </div>
-    </div>
-</section>
+    </section>
 
     <!-- Quick Stats Section -->
     <section class="py-8 bg-blue-50">
