@@ -123,7 +123,7 @@
                 <div class="p-6">
                     <div class="flex flex-col items-center mb-6">
                         <div class="w-40 h-40 mb-4 rounded-full overflow-hidden border-4 border-blue-100">
-                            <img src="/img/board-members/james-bundi.jpeg" alt="James Bundi Morwabe" class="w-full h-top object-cover">
+                            <img src="/img/board-members/james-bundi.jpeg" alt="James Bundi Morwabe" class="w-full h-full object-cover">
                         </div>
                         <h3 class="text-2xl font-bold text-blue-700 mb-2">James Bundi Morwabe</h3>
                         <p class="text-blue-600 font-semibold mb-4">Board Member</p>
@@ -420,47 +420,55 @@
                 <div class="p-6">
                     <div class="flex flex-col items-center mb-6">
                         <div class="w-40 h-40 mb-4 rounded-full overflow-hidden border-4 border-blue-100">
-                            <img src="/img/board-members/richard-onyinkwa.jpg" alt="CO. Hon. Richard Onyinkwa" class="w-full h-full object-cover">
+                            <img src="/img/board-members/richard-onyinkwa.jpeg" alt="CO. Hon. Richard Onyinkwa" class="w-full h-full object-cover">
                         </div>
-                        <h3 class="text-2xl font-bold text-blue-700 mb-2 text-center">CO. Hon. Richard Onyinkwa</h3>
+                        <h3 class="text-2xl font-bold text-blue-700 mb-2 text-center">CO. Hon. Richard Nixon Onyinkwa</h3>
                         <p class="text-blue-600 font-semibold mb-4">Board Member</p>
                     </div>
 
                     <div class="space-y-4">
                         <div>
+                            <h4 class="font-semibold text-gray-900 mb-2">Professional Profile</h4>
+                            <p class="text-gray-600 text-sm">
+                                A highly motivated, dynamic, and self-driven person with ability to deliver results,
+                                strong analytical communication skills and leadership capabilities.
+                            </p>
+                        </div>
+
+                        <div>
                             <h4 class="font-semibold text-gray-900 mb-2">Current Position</h4>
                             <p class="text-gray-600 text-sm">
-                                County Chief Officer - Environment, Water, Irrigation & Sanitation County Government of Nyamira
-
+                                County Chief Officer - Environment, Water, Irrigation & Sanitation<br>
+                                County Government of Nyamira
                             </p>
                         </div>
 
                         <div>
                             <h4 class="font-semibold text-gray-900 mb-2">Education</h4>
                             <ul class="list-disc list-inside text-gray-600 text-sm space-y-1">
-                                <li>Masters Degree in Project Planning & Management - University of Nairobi</li>
-                                <li>Bachelor of Law - Kisii University</li>
-                                <li>Currently pursuing PhD - University of Nairobi</li>
+                                <li>Ph.D in Project Planning and Management (Ongoing) - University of Nairobi</li>
+                                <li>Master's Degree in Project Planning & Management - University of Nairobi</li>
+                                <li>Bachelor of Law (LLB) - Kisii University</li>
                             </ul>
                         </div>
 
                         <div>
                             <h4 class="font-semibold text-gray-900 mb-2">Previous Roles</h4>
                             <ul class="list-disc list-inside text-gray-600 text-sm space-y-1">
-                                <li> County Chief Officer
-                                Economic Planning, Resource Mobilization and ICT
-                                County Government of Nyamira
+                                <li>County Chief Officer - Economic Planning, Resource Mobilization and ICT, County Government of Nyamira</li>
                                 <li>Elected Member of County Assembly - Magombo Ward (2017-2022)</li>
                             </ul>
                         </div>
 
                         <div>
-                            <h4 class="font-semibold text-gray-900 mb-2">Key Expertise</h4>
-                            <p class="text-gray-600 text-sm">
-                                Vast experience in management, supervision, and budgeting across various sectors.
-                                Special focus on economic planning, resource mobilization, and ICT integration in
-                                public service delivery.
-                            </p>
+                            <h4 class="font-semibold text-gray-900 mb-2">Professional Experience</h4>
+                            <ul class="list-disc list-inside text-gray-600 text-sm space-y-1">
+                                <li>Planning, Policy and Budget Making</li>
+                                <li>Project Planning and Management</li>
+                                <li>Monitoring and Evaluation</li>
+                                <li>Lecturer - Kisii University</li>
+                                <li>Various Leadership Roles</li>
+                            </ul>
                         </div>
 
                         <div class="pt-4 border-t border-gray-200">
@@ -469,9 +477,175 @@
                                 <span class="px-3 py-1 bg-indigo-100 text-indigo-700 text-xs rounded-full">Economic Planning</span>
                                 <span class="px-3 py-1 bg-indigo-100 text-indigo-700 text-xs rounded-full">Resource Mobilization</span>
                                 <span class="px-3 py-1 bg-indigo-100 text-indigo-700 text-xs rounded-full">Project Management</span>
+                                <span class="px-3 py-1 bg-indigo-100 text-indigo-700 text-xs rounded-full">Monitoring & Evaluation</span>
                                 <span class="px-3 py-1 bg-indigo-100 text-indigo-700 text-xs rounded-full">Public Sector Budgeting</span>
                                 <span class="px-3 py-1 bg-indigo-100 text-indigo-700 text-xs rounded-full">ICT Strategy</span>
                                 <span class="px-3 py-1 bg-indigo-100 text-indigo-700 text-xs rounded-full">Legislative Governance</span>
+                                <span class="px-3 py-1 bg-indigo-100 text-indigo-700 text-xs rounded-full">Academic Leadership</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Member 7: Naom Nyaechero Ondieki -->
+            <div class="bg-white rounded-lg shadow-lg overflow-hidden transform transition duration-300 hover:scale-105 hover:shadow-xl">
+                <div class="p-6">
+                    <div class="flex flex-col items-center mb-6">
+                        <div class="w-40 h-40 mb-4 rounded-full overflow-hidden border-4 border-blue-100">
+                            <img src="/img/board-members/naom-ondieki.jpeg" alt="Naom Nyaechero Ondieki" class="w-full h-full object-cover">
+                        </div>
+                        <h3 class="text-2xl font-bold text-blue-700 mb-2 text-center">Naom Nyaechero Ondieki</h3>
+                        <p class="text-blue-600 font-semibold mb-4">Board Member</p>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-2">Education Background</h4>
+                            <ul class="list-disc list-inside text-gray-600 text-sm space-y-1">
+                                <li>MBA in Strategic Management</li>
+                                <li>Degree in Education Sciences (Chemistry & Biology)</li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-2">Professional Experience</h4>
+                            <ul class="list-disc list-inside text-gray-600 text-sm space-y-1">
+                                <li>10 years experience teaching Chemistry and Biology</li>
+                                <li>Successfully served a 5-year term as MCA - County Assembly of Nyamira</li>
+                                <li>Business Entrepreneur in supplies and large-scale farming</li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-2">Community Involvement</h4>
+                            <p class="text-gray-600 text-sm">
+                                A mentor, role model, and social activist supporting the community.
+                                Inspired daily by her husband and their three daughters.
+                            </p>
+                        </div>
+
+                        <div class="pt-4 border-t border-gray-200">
+                            <h4 class="font-semibold text-gray-900 mb-2">Areas of Expertise</h4>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="px-3 py-1 bg-pink-100 text-pink-700 text-xs rounded-full">Strategic Management</span>
+                                <span class="px-3 py-1 bg-pink-100 text-pink-700 text-xs rounded-full">Education</span>
+                                <span class="px-3 py-1 bg-pink-100 text-pink-700 text-xs rounded-full">Entrepreneurship</span>
+                                <span class="px-3 py-1 bg-pink-100 text-pink-700 text-xs rounded-full">Public Service</span>
+                                <span class="px-3 py-1 bg-pink-100 text-pink-700 text-xs rounded-full">Mentorship</span>
+                                <span class="px-3 py-1 bg-pink-100 text-pink-700 text-xs rounded-full">Community Development</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Member 8: Stephen Ouko Bundi -->
+            <div class="bg-white rounded-lg shadow-lg overflow-hidden transform transition duration-300 hover:scale-105 hover:shadow-xl">
+                <div class="p-6">
+                    <div class="flex flex-col items-center mb-6">
+                        <div class="w-40 h-40 mb-4 rounded-full overflow-hidden border-4 border-blue-100">
+                            <img src="/img/board-members/stephen-ouko.jpeg" alt="Stephen Ouko Bundi" class="w-full h-full object-cover">
+                        </div>
+                        <h3 class="text-2xl font-bold text-blue-700 mb-2 text-center">Stephen Ouko Bundi</h3>
+                        <p class="text-blue-600 font-semibold mb-4">Board Member</p>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-2">Education Background</h4>
+                            <ul class="list-disc list-inside text-gray-600 text-sm space-y-1">
+                                <li>Bachelor's Degree in Education (Second Class)</li>
+                                <li>Diploma from Kenya Educational Management Institute on Capacity Building of Secondary Schools Board of Management</li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-2">Current Positions</h4>
+                            <ul class="list-disc list-inside text-gray-600 text-sm space-y-1">
+                                <li>Member of Nyamira County Education Board</li>
+                                <li>Parents Teachers Association Chairman - Nyamira County</li>
+                                <li>Board of Management Member - Nyansiongo Boys High School</li>
+                                <li>Professional Mediator from Mediation Training Institute East Africa</li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-2">Key Responsibilities</h4>
+                            <p class="text-gray-600 text-sm">
+                                Provides strategic direction and oversight in education management,
+                                parent-teacher relations, and conflict resolution within educational institutions.
+                            </p>
+                        </div>
+
+                        <div class="pt-4 border-t border-gray-200">
+                            <h4 class="font-semibold text-gray-900 mb-2">Expertise</h4>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="px-3 py-1 bg-amber-100 text-amber-700 text-xs rounded-full">Financial Management</span>
+                                <span class="px-3 py-1 bg-amber-100 text-amber-700 text-xs rounded-full">Human Resource Management</span>
+                                <span class="px-3 py-1 bg-amber-100 text-amber-700 text-xs rounded-full">Resource Mobilization</span>
+                                <span class="px-3 py-1 bg-amber-100 text-amber-700 text-xs rounded-full">Education Management</span>
+                                <span class="px-3 py-1 bg-amber-100 text-amber-700 text-xs rounded-full">Conflict Resolution</span>
+                                <span class="px-3 py-1 bg-amber-100 text-amber-700 text-xs rounded-full">Board Governance</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Member 9: Joseph Mbere Arama -->
+            <div class="bg-white rounded-lg shadow-lg overflow-hidden transform transition duration-300 hover:scale-105 hover:shadow-xl">
+                <div class="p-6">
+                    <div class="flex flex-col items-center mb-6">
+                        <div class="w-40 h-40 mb-4 rounded-full overflow-hidden border-4 border-blue-100">
+                            <img src="/img/board-members/joseph-mbere.jpeg" alt="Joseph Mbere Arama" class="w-full h-full object-cover">
+                        </div>
+                        <h3 class="text-2xl font-bold text-blue-700 mb-2 text-center">Joseph Mbere Arama</h3>
+                        <p class="text-blue-600 font-semibold mb-4">Board Member</p>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-2">Education Background</h4>
+                            <ul class="list-disc list-inside text-gray-600 text-sm space-y-1">
+                                <li>BED Arts – Kenyatta University</li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-2">Career Progression</h4>
+                            <ul class="list-disc list-inside text-gray-600 text-sm space-y-1">
+                                <li>1989-1993 – Classroom Teacher at Gekano Boys</li>
+                                <li>1993-1999 – Deputy Principal at Cardinal Otunga High School</li>
+                                <li>1999-2003 – Principal at Ntana Secondary School</li>
+                                <li>2003-2012 – Principal at Nyansiongo Boys High School</li>
+                                <li>2012-2020 – Senior Principal at Nyakemicha Secondary School</li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-2">Current Leadership Roles</h4>
+                            <ul class="list-disc list-inside text-gray-600 text-sm space-y-1">
+                                <li>Chairman of Magwagwa Catholic Parish</li>
+                                <li>Board of Management Member - Educational Institutions</li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-2">Experience Summary</h4>
+                            <p class="text-gray-600 text-sm">
+                                Over 30 years of progressive experience in educational leadership,
+                                moving from classroom teaching to senior principal positions.
+                                Demonstrated expertise in institutional management and community leadership.
+                            </p>
+                        </div>
+
+                        <div class="pt-4 border-t border-gray-200">
+                            <h4 class="font-semibold text-gray-900 mb-2">Areas of Specialization</h4>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="px-3 py-1 bg-cyan-100 text-cyan-700 text-xs rounded-full">Educational Leadership</span>
+                                <span class="px-3 py-1 bg-cyan-100 text-cyan-700 text-xs rounded-full">Institutional Management</span>
+                                <span class="px-3 py-1 bg-cyan-100 text-cyan-700 text-xs rounded-full">Board Governance</span>
+                                <span class="px-3 py-1 bg-cyan-100 text-cyan-700 text-xs rounded-full">Community Leadership</span>
+                                <span class="px-3 py-1 bg-cyan-100 text-cyan-700 text-xs rounded-full">School Administration</span>
+                                <span class="px-3 py-1 bg-cyan-100 text-cyan-700 text-xs rounded-full">Strategic Planning</span>
                             </div>
                         </div>
                     </div>
