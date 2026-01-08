@@ -265,7 +265,6 @@
                             <ul class="list-disc list-inside text-gray-600 text-sm space-y-1">
                                 <li>Best Post Doc Fellow of UNESCO - East China Normal University (2020)</li>
                                 <li>Member - Institute of Certified Public Accountants of Kenya</li>
-                                <li>Over 15 years interdisciplinary experience</li>
                             </ul>
                         </div>
 
