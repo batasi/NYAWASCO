@@ -1309,35 +1309,39 @@ use Illuminate\Support\Facades\Route;
                         </svg>
                         <span class="font-medium">Dashboard</span>
                     </a>
-
+                    @can('view customers')
                     <a href="{{ route('customers.index') }}" class="group flex items-center py-3 px-4 rounded-xl transition-all duration-200 hover:bg-white/10 hover:shadow-lg {{ request()->routeIs('customers.*') ? 'bg-white/20 shadow-lg border-l-4 border-green-400' : '' }}">
                         <svg class="w-5 h-5 mr-3 {{ request()->routeIs('customers.*') ? 'text-green-400' : 'text-blue-200' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                         </svg>
                         <span class="font-medium">Customers</span>
                     </a>
-
+                    @endcan
+                    @can('view meters')
                     <a href="{{ route('meters.index') }}" class="group flex items-center py-3 px-4 rounded-xl transition-all duration-200 hover:bg-white/10 hover:shadow-lg {{ request()->routeIs('meters.*') ? 'bg-white/20 shadow-lg border-l-4 border-green-400' : '' }}">
                         <svg class="w-5 h-5 mr-3 {{ request()->routeIs('meters.*') ? 'text-green-400' : 'text-blue-200' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
                         </svg>
                         <span class="font-medium">Meters</span>
                     </a>
-
+                    @endcan
+                    @can('view bills')
                     <a href="{{ route('bills.index') }}" class="group flex items-center py-3 px-4 rounded-xl transition-all duration-200 hover:bg-white/10 hover:shadow-lg {{ request()->routeIs('bills.*') ? 'bg-white/20 shadow-lg border-l-4 border-green-400' : '' }}">
                         <svg class="w-5 h-5 mr-3 {{ request()->routeIs('bills.*') ? 'text-green-400' : 'text-blue-200' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
                         </svg>
                         <span class="font-medium">Bills</span>
                     </a>
-
+                    @endcan
+                    @can('view payments')
                     <a href="{{ route('payments.index') }}" class="group flex items-center py-3 px-4 rounded-xl transition-all duration-200 hover:bg-white/10 hover:shadow-lg {{ request()->routeIs('payments.*') ? 'bg-white/20 shadow-lg border-l-4 border-green-400' : '' }}">
                         <svg class="w-5 h-5 mr-3 {{ request()->routeIs('payments.*') ? 'text-green-400' : 'text-blue-200' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
                         </svg>
                         <span class="font-medium">Payments</span>
                     </a>
-
+                    @endcan
+                    @can('view reports')
                     <!-- Reports -->
                     <li>
                         <button id="reports-toggle" class="text-blue-100 hover:text-white hover:bg-blue-800 group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold w-full text-left">
@@ -1444,6 +1448,7 @@ use Illuminate\Support\Facades\Route;
                             </li>
                         </ul>
                     </li>
+                    @endcan
                 </nav>
             </div>
 
@@ -1468,12 +1473,9 @@ use Illuminate\Support\Facades\Route;
                         </div>
                         <div class="flex items-center space-x-6">
                             <div class="flex items-center space-x-3">
-                                <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-green-500 rounded-full flex items-center justify-center">
-                                    <span class="text-white font-bold text-sm">{{ strtoupper(substr(auth()->user()->full_name ?? 'U', 0, 1)) }}</span>
-                                </div>
+
                                 <div>
-                                    <p class="text-sm font-semibold text-gray-800">{{ auth()->user()->full_name ?? 'User' }}</p>
-                                    <p class="text-xs text-gray-500">{{ auth()->user()->role->name ?? 'User' }}</p>
+                                    <p class="text-sm font-semibold text-gray-800">{{ auth()->user()->name ?? 'User' }}</p>
                                 </div>
                             </div>
                             <form method="POST" action="{{ route('logout') }}" class="inline">
