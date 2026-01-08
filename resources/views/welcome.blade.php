@@ -9,73 +9,346 @@
     use Illuminate\Support\Facades\Auth;
 @endphp
 
-    <!-- Hero Section with Slideshow -->
-    <section class="relative">
-        <div class="swiper hero-swiper">
-            <div class="swiper-wrapper">
-                <!-- Slide 1 -->
-                <div class="swiper-slide relative">
-                    <div class="absolute inset-0 bg-blue-900 bg-opacity-50 z-10"></div>
-                    <img src="/img/water-hero-1.jpeg" alt="NYAWASCO Water Services" class="w-full h-full object-cover">
-                    <div class="absolute inset-0 z-20 flex items-center justify-center text-center px-4">
-                        <div class="text-white max-w-4xl">
-                            <h2 class="text-3xl md:text-5xl lg:text-6xl font-bold mb-4">Welcome to NYAWASCO</h2>
-                            <p class="text-lg md:text-xl lg:text-2xl mb-6 md:mb-8 opacity-90">
-                                Providing reliable water and sanitation services to Nyamira County
+    <!-- Hero Section -->
+<section class="relative">
+    <div class="swiper hero-swiper h-full">
+        <div class="swiper-wrapper">
+            <!-- Slide 1 - Welcome -->
+            <div class="swiper-slide relative">
+                <img src="/img/water-hero-11.jpeg" alt="NYAWASCO Water Services"
+                     class="w-full h-full object-cover object-center">
+                <div class="absolute inset-0 z-20 flex items-center justify-center px-4 sm:px-6 lg:px-8">
+                    <div class="text-white max-w-4xl mx-auto text-center">
+                        <!-- Text container with blue water theme -->
+                        <div class="relative px-6 py-8 md:px-10 md:py-12 bg-gradient-to-r from-blue-900/80 to-blue-700/80 rounded-xl shadow-2xl border border-blue-300/20">
+                            <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 leading-tight text-shadow-lg">
+                                <span class="block">Providing Reliable</span>
+                                <span class="block text-blue-100">Water & Sanitation Services</span>
+                            </h1>
+                            <p class="text-xl md:text-2xl mb-8 md:mb-10 max-w-3xl mx-auto font-medium">
+                                Trusted partner in sustainable water management for Nyamira County
                             </p>
-                            <div class="flex flex-col sm:flex-row gap-4 justify-center">
 
-                                <a href="#services"
-                                   class="border-2 border-white text-white hover:bg-white hover:text-blue-700 px-6 py-3 md:px-8 md:py-4 rounded-lg font-semibold text-base md:text-lg transition duration-300 transform hover:scale-105 inline-block text-center">
-                                    Our Services
-                                </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 2 - Quality -->
+            <div class="swiper-slide relative">
+                <img src="/img/water-hero-21.jpeg" alt="Water Quality"
+                     class="w-full h-full object-cover object-center">
+                <div class="absolute inset-0 z-20 flex items-center justify-center px-4 sm:px-6 lg:px-8">
+                    <div class="text-white max-w-4xl mx-auto text-center">
+                        <div class="relative px-6 py-8 md:px-10 md:py-12 bg-gradient-to-r from-blue-800/80 to-cyan-700/80 rounded-xl shadow-2xl border border-blue-300/20">
+                            <div class="mb-6 md:mb-8">
+                                <span class="inline-block bg-white/30 text-sm font-bold px-4 py-2 rounded-full mb-4 shadow-lg">
+                                    99.7% Water Quality Compliance
+                                </span>
                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Slide 2 -->
-                <div class="swiper-slide relative">
-                    <div class="absolute inset-0 bg-black bg-opacity-50 z-10"></div>
-                    <img src="/img/water-hero-2.jpeg" alt="Water Conservation" class="w-full h-full object-cover">
-                    <div class="absolute inset-0 z-20 flex items-center justify-center text-center px-4">
-                        <div class="text-white max-w-4xl">
-                            <h2 class="text-3xl md:text-5xl lg:text-6xl font-bold mb-4">Clean Water for All</h2>
-                            <p class="text-lg md:text-xl lg:text-2xl mb-6 md:mb-8 opacity-90">
-                                Committed to sustainable water management and environmental conservation
+                            <h2 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 leading-tight text-shadow-lg">
+                                <span class="block">Clean, Safe Water</span>
+                                <span class="block text-cyan-100">For Every Community</span>
+                            </h2>
+                            <p class="text-xl md:text-2xl mb-8 md:mb-10 max-w-3xl mx-auto font-medium">
+                                Committed to excellence in water treatment and distribution
                             </p>
-                            <a href="#about"
-                               class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 md:px-8 md:py-4 rounded-lg font-semibold text-base md:text-lg transition duration-300 transform hover:scale-105 inline-block text-center">
-                                Learn More
-                            </a>
+
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- Slide 3 -->
-                <div class="swiper-slide relative">
-                    <div class="absolute inset-0 bg-black bg-opacity-50 z-10"></div>
-                    <img src="/img/water-hero-3.jpeg" alt="Community Service" class="w-full h-full object-cover">
-                    <div class="absolute inset-0 z-20 flex items-center justify-center text-center px-4">
-                        <div class="text-white max-w-4xl">
-                            <h2 class="text-3xl md:text-5xl lg:text-6xl font-bold mb-4">24/7 Customer Support</h2>
-                            <p class="text-lg md:text-xl lg:text-2xl mb-6 md:mb-8 opacity-90">
+            <!-- Slide 3 - Innovation -->
+            <div class="swiper-slide relative">
+                <img src="/img/water-hero-31.jpeg" alt="Water Infrastructure"
+                     class="w-full h-full object-cover object-center">
+                <div class="absolute inset-0 z-20 flex items-center justify-center px-4 sm:px-6 lg:px-8">
+                    <div class="text-white max-w-4xl mx-auto text-center">
+                        <div class="relative px-6 py-8 md:px-10 md:py-12 bg-gradient-to-r from-blue-900/80 to-teal-700/80 rounded-xl shadow-2xl border border-blue-300/20">
+                            <h2 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 leading-tight text-shadow-lg">
+                                <span class="block">Innovating Water</span>
+                                <span class="block text-teal-100">Infrastructure</span>
+                            </h2>
+                            <p class="text-xl md:text-2xl mb-8 md:mb-10 max-w-3xl mx-auto font-medium">
+                                Modern solutions for sustainable water management and distribution
+                            </p>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 4 - Additional Image -->
+            <div class="swiper-slide relative">
+                <img src="/img/water-hero-4.jpeg" alt="Water Services"
+                     class="w-full h-full object-cover object-center">
+                <div class="absolute inset-0 z-20 flex items-center justify-center px-4 sm:px-6 lg:px-8">
+                    <div class="text-white max-w-4xl mx-auto text-center">
+                        <div class="relative px-6 py-8 md:px-10 md:py-12 bg-gradient-to-r from-blue-800/80 to-blue-600/80 rounded-xl shadow-2xl border border-blue-300/20">
+                            <h2 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 leading-tight text-shadow-lg">
+                                <span class="block">Serving Nyamira</span>
+                                <span class="block text-blue-100">With Excellence</span>
+                            </h2>
+                            <p class="text-xl md:text-2xl mb-8 md:mb-10 max-w-3xl mx-auto font-medium">
                                 Your trusted partner in water and sanitation services
                             </p>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 5 - Additional Image -->
+            <div class="swiper-slide relative">
+                <img src="/img/water-hero-5.jpeg" alt="Water Treatment"
+                     class="w-full h-full object-cover object-center">
+                <div class="absolute inset-0 z-20 flex items-center justify-center px-4 sm:px-6 lg:px-8">
+                    <div class="text-white max-w-4xl mx-auto text-center">
+                        <div class="relative px-6 py-8 md:px-10 md:py-12 bg-gradient-to-r from-cyan-800/80 to-blue-700/80 rounded-xl shadow-2xl border border-blue-300/20">
+                            <h2 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 leading-tight text-shadow-lg">
+                                <span class="block">Advanced Treatment</span>
+                                <span class="block text-cyan-100">Technology</span>
+                            </h2>
+                            <p class="text-xl md:text-2xl mb-8 md:mb-10 max-w-3xl mx-auto font-medium">
+                                State-of-the-art facilities for pure, safe water
+                            </p>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 6 - Additional Image -->
+            <div class="swiper-slide relative">
+                <img src="/img/water-hero-3.jpeg" alt="Community Service"
+                     class="w-full h-full object-cover object-center">
+                <div class="absolute inset-0 z-20 flex items-center justify-center px-4 sm:px-6 lg:px-8">
+                    <div class="text-white max-w-4xl mx-auto text-center">
+                        <div class="relative px-6 py-8 md:px-10 md:py-12 bg-gradient-to-r from-blue-700/80 to-teal-700/80 rounded-xl shadow-2xl border border-blue-300/20">
+                            <h2 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 leading-tight text-shadow-lg">
+                                <span class="block">Community First</span>
+                                <span class="block text-blue-100">Approach</span>
+                            </h2>
+                            <p class="text-xl md:text-2xl mb-8 md:mb-10 max-w-3xl mx-auto font-medium">
+                                Putting the needs of our community at the forefront
+                            </p>
                             <a href="#contact"
-                               class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 md:px-8 md:py-4 rounded-lg font-semibold text-base md:text-lg transition duration-300 transform hover:scale-105 inline-block text-center">
-                                Contact Us
+                               class="bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-lg font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl">
+                                Get Connected
                             </a>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="swiper-pagination !bottom-4"></div>
-            <div class="swiper-button-prev !w-10 !h-10 md:!w-12 md:!h-12 !left-2 bg-white bg-opacity-20 rounded-full shadow-lg"></div>
-            <div class="swiper-button-next !w-10 !h-10 md:!w-12 md:!h-12 !right-2 bg-white bg-opacity-20 rounded-full shadow-lg"></div>
+            <!-- Slide 7 - Additional Image -->
+            <div class="swiper-slide relative">
+                <img src="/img/water-hero-2.jpeg" alt="Water Distribution"
+                     class="w-full h-full object-cover object-center">
+                <div class="absolute inset-0 z-20 flex items-center justify-center px-4 sm:px-6 lg:px-8">
+                    <div class="text-white max-w-4xl mx-auto text-center">
+                        <div class="relative px-6 py-8 md:px-10 md:py-12 bg-gradient-to-r from-blue-800/80 to-cyan-700/80 rounded-xl shadow-2xl border border-blue-300/20">
+                            <h2 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 leading-tight text-shadow-lg">
+                                <span class="block">Reliable Distribution</span>
+                                <span class="block text-cyan-100">Network</span>
+                            </h2>
+                            <p class="text-xl md:text-2xl mb-8 md:mb-10 max-w-3xl mx-auto font-medium">
+                                Ensuring water reaches every corner of Nyamira County
+                            </p>
+                            <a href="#services"
+                               class="border-2 border-white text-white hover:bg-white/10 px-8 py-4 rounded-lg font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl">
+                                Our Services
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 8 - Additional Image -->
+            <div class="swiper-slide relative">
+                <img src="/img/water-hero-1.jpeg" alt="Sustainable Water"
+                     class="w-full h-full object-cover object-center">
+                <div class="absolute inset-0 z-20 flex items-center justify-center px-4 sm:px-6 lg:px-8">
+                    <div class="text-white max-w-4xl mx-auto text-center">
+                        <div class="relative px-6 py-8 md:px-10 md:py-12 bg-gradient-to-r from-teal-800/80 to-blue-700/80 rounded-xl shadow-2xl border border-blue-300/20">
+                            <h2 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 leading-tight text-shadow-lg">
+                                <span class="block">Sustainable Future</span>
+                                <span class="block text-teal-100">For All</span>
+                            </h2>
+                            <p class="text-xl md:text-2xl mb-8 md:mb-10 max-w-3xl mx-auto font-medium">
+                                Building a water-secure future for generations to come
+                            </p>
+                            <a href="#sustainability"
+                               class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl inline-flex items-center justify-center gap-2">
+                                Sustainability Goals
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-    </section>
+
+        <!-- Pagination -->
+        <div class="swiper-pagination !bottom-8"></div>
+
+        <!-- Navigation -->
+        <div class="swiper-button-prev !left-4 !w-12 !h-12 bg-white/20 rounded-full hover:bg-white/30 transition-colors shadow-lg">
+            <svg class="!w-6 !h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+        </div>
+        <div class="swiper-button-next !right-4 !w-12 !h-12 bg-white/20 rounded-full hover:bg-white/30 transition-colors shadow-lg">
+            <svg class="!w-6 !h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+        </div>
+    </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const heroSwiper = new Swiper('.hero-swiper', {
+        loop: true,
+        speed: 800,
+        effect: 'fade',
+        fadeEffect: {
+            crossFade: true
+        },
+        autoplay: {
+            delay: 8000,
+            disableOnInteraction: false,
+            pauseOnMouseEnter: true,
+        },
+        pagination: {
+            el: '.swiper-pagination',
+            type: 'bullets',
+            clickable: true,
+            bulletClass: 'swiper-pagination-bullet !bg-white/70 !w-2 !h-2 !mx-1',
+            bulletActiveClass: 'swiper-pagination-bullet-active !bg-white !w-8',
+        },
+        navigation: {
+            nextEl: '.swiper-button-next',
+            prevEl: '.swiper-button-prev',
+        },
+        keyboard: {
+            enabled: true,
+        },
+        on: {
+            init: function() {
+                document.querySelectorAll('.swiper-slide img').forEach(img => {
+                    img.style.transform = 'scale(1.1)';
+                    img.style.transition = 'transform 10s ease-out';
+                });
+            },
+            slideChangeTransitionStart: function() {
+                document.querySelectorAll('.swiper-slide img').forEach(img => {
+                    img.style.transform = 'scale(1.1)';
+                });
+            },
+            slideChangeTransitionEnd: function() {
+                const activeSlide = this.slides[this.activeIndex];
+                const activeImg = activeSlide.querySelector('img');
+                if (activeImg) {
+                    setTimeout(() => {
+                        activeImg.style.transform = 'scale(1)';
+                    }, 50);
+                }
+            }
+        }
+    });
+
+    // Pause autoplay on hover
+    const swiperContainer = document.querySelector('.hero-swiper');
+    swiperContainer.addEventListener('mouseenter', () => {
+        heroSwiper.autoplay.stop();
+    });
+
+    swiperContainer.addEventListener('mouseleave', () => {
+        heroSwiper.autoplay.start();
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') {
+            heroSwiper.slidePrev();
+        } else if (e.key === 'ArrowRight') {
+            heroSwiper.slideNext();
+        } else if (e.key === ' ') {
+            e.preventDefault();
+            if (heroSwiper.autoplay.running) {
+                heroSwiper.autoplay.stop();
+            } else {
+                heroSwiper.autoplay.start();
+            }
+        }
+    });
+});
+</script>
+
+<style>
+.hero-swiper {
+    --swiper-theme-color: #fff;
+    --swiper-navigation-size: 24px;
+    --swiper-pagination-bullet-size: 8px;
+    --swiper-pagination-bullet-inactive-color: rgba(255, 255, 255, 0.7);
+    --swiper-pagination-bullet-inactive-opacity: 1;
+}
+
+.swiper-button-prev:after,
+.swiper-button-next:after {
+    display: none;
+}
+
+.swiper-pagination-bullet {
+    transition: all 0.3s ease;
+    opacity: 1;
+}
+
+.swiper-pagination-bullet-active {
+    background: #fff;
+    transform: scale(1.2);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.swiper-slide {
+    overflow: hidden;
+}
+
+.swiper-slide img {
+    will-change: transform;
+}
+
+/* Text readability improvements */
+.text-shadow-lg {
+    text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Smooth transitions */
+.transition-all {
+    transition-property: all;
+}
+
+/* Water theme gradients */
+.from-blue-900\/80 {
+    --tw-gradient-from: rgba(30, 58, 138, 0.8);
+}
+
+.to-blue-700\/80 {
+    --tw-gradient-to: rgba(29, 78, 216, 0.8);
+}
+
+.from-cyan-800\/80 {
+    --tw-gradient-from: rgba(21, 94, 117, 0.8);
+}
+
+.to-teal-700\/80 {
+    --tw-gradient-to: rgba(15, 118, 110, 0.8);
+}
+</style>
 
     <!-- Quick Links Section -->
     <section class="quick-links-section py-12">
