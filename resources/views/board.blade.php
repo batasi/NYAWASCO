@@ -236,10 +236,7 @@
                                Dr. CPA Asenath Maobe is a self-driven individual with over fifteen years of strong interdisciplinary experience in;
                                 Administration, Research, gender works, operational risk management, accounting,
                                  auditing, training, education, education policy, investment banking, budgeting,
-                                 and  leadership. She has an unwavering commitment to client service and delivery,
-                                  ability to beat deadlines, an unquestionable  work ethic;
-                                  a respected and trusted team member.
-                                  Moreover, she has been involved in a QUAL CASE on Carbon Literacy levels among small holder farmers from Kisii and Nyamira counties, in collaboration with the University College London, UK.
+                                 and  leadership.
 
                             </p>
                         </div>
@@ -277,6 +274,7 @@
                             <ul class="list-disc list-inside text-gray-600 text-sm space-y-1">
                                 <li>Senior Lecturer - Kisii University</li>
                                 <li>Chair - Institutional Scientific Ethics Review Committee</li>
+                                <li>Involved in a Qual Case with University College London on carbon literacy levels among farmers in Kisii and Nyamira counties</li>
                             </ul>
                         </div>
 
@@ -357,67 +355,67 @@
             </div>
 
             <!-- Member 5: Dr. Lugard Kaunda Ogaro -->
-<div class="bg-white rounded-lg shadow-lg overflow-hidden transform transition duration-300 hover:scale-105 hover:shadow-xl">
-    <div class="p-6">
-        <div class="flex flex-col items-center mb-6">
-            <div class="w-40 h-40 mb-4 rounded-full overflow-hidden border-4 border-blue-100">
-                <img src="/img/board-members/lugard-ogaro.jpeg" alt="Dr. Lugard Kaunda Ogaro" class="w-full h-full object-cover">
-            </div>
-            <h3 class="text-2xl font-bold text-blue-700 mb-2">Dr. Lugard Kaunda Ogaro</h3>
-            <p class="text-blue-600 font-semibold mb-4">Board Member</p>
-        </div>
+            <div class="bg-white rounded-lg shadow-lg overflow-hidden transform transition duration-300 hover:scale-105 hover:shadow-xl">
+                <div class="p-6">
+                    <div class="flex flex-col items-center mb-6">
+                        <div class="w-40 h-40 mb-4 rounded-full overflow-hidden border-4 border-blue-100">
+                            <img src="/img/board-members/lugard-ogaro.jpeg" alt="Dr. Lugard Kaunda Ogaro" class="w-full h-full object-cover">
+                        </div>
+                        <h3 class="text-2xl font-bold text-blue-700 mb-2">Dr. Lugard Kaunda Ogaro</h3>
+                        <p class="text-blue-600 font-semibold mb-4">Board Member</p>
+                    </div>
 
-        <div class="space-y-4">
-            <div>
-                <h4 class="font-semibold text-gray-900 mb-2">Education</h4>
-                <ul class="list-disc list-inside text-gray-600 text-sm space-y-1">
-                    <li>PhD, Disaster Management & Sustainable Development - MMUST</li>
-                    <li>MSc Civil Engineering (Environmental Health) - University of Nairobi</li>
-                    <li>BSc Civil Engineering - JKUAT</li>
-                    <li>Diploma, International Environmental Law - UNITAR</li>
-                </ul>
-            </div>
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-2">Education</h4>
+                            <ul class="list-disc list-inside text-gray-600 text-sm space-y-1">
+                                <li>PhD, Disaster Management & Sustainable Development - MMUST</li>
+                                <li>MSc Civil Engineering (Environmental Health) - University of Nairobi</li>
+                                <li>BSc Civil Engineering - JKUAT</li>
+                                <li>Diploma, International Environmental Law - UNITAR</li>
+                            </ul>
+                        </div>
 
-            <div>
-                <h4 class="font-semibold text-gray-900 mb-2">Current Position</h4>
-                <p class="text-gray-600 text-sm">
-                    Adjunct Lecturer<br>
-                    Department of Disaster Management and Sustainable Development<br>
-                    Masinde Muliro University of Science and Technology
-                </p>
-            </div>
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-2">Current Position</h4>
+                            <p class="text-gray-600 text-sm">
+                                Adjunct Lecturer<br>
+                                Department of Disaster Management and Sustainable Development<br>
+                                Masinde Muliro University of Science and Technology
+                            </p>
+                        </div>
 
-            <div>
-                <h4 class="font-semibold text-gray-900 mb-2">International Experience</h4>
-                <ul class="list-disc list-inside text-gray-600 text-sm space-y-1">
-                    <li>WASH Technical Advisor - Mercy Corps Global (Sudan, 2024-present)</li>
-                    <li>Director of Programs - Mercy Corps Somalia (2020-2023)</li>
-                    <li>Technical Manager - Danish Refugee Council Somalia (2018-2019)</li>
-                    <li>Governance Manager - DAI-USAID KIWASH Kenya (2016-2018)</li>
-                </ul>
-            </div>
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-2">International Experience</h4>
+                            <ul class="list-disc list-inside text-gray-600 text-sm space-y-1">
+                                <li>WASH Technical Advisor - Mercy Corps Global (Sudan, 2024-present)</li>
+                                <li>Director of Programs - Mercy Corps Somalia (2020-2023)</li>
+                                <li>Technical Manager - Danish Refugee Council Somalia (2018-2019)</li>
+                                <li>Governance Manager - DAI-USAID KIWASH Kenya (2016-2018)</li>
+                            </ul>
+                        </div>
 
-            <div>
-                <h4 class="font-semibold text-gray-900 mb-2">Regional Experience</h4>
-                <p class="text-gray-600 text-sm">
-                    Extensive experience in Somalia, Kenya, South Sudan, Sudan, with remote technical support to Ethiopia, Djibouti, Uganda, and Yemen.
-                </p>
-            </div>
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-2">Regional Experience</h4>
+                            <p class="text-gray-600 text-sm">
+                                Extensive experience in Somalia, Kenya, South Sudan, Sudan, with remote technical support to Ethiopia, Djibouti, Uganda, and Yemen.
+                            </p>
+                        </div>
 
-            <div class="pt-4 border-t border-gray-200">
-                <h4 class="font-semibold text-gray-900 mb-2">Core Strengths</h4>
-                <div class="flex flex-wrap gap-2">
-                    <span class="px-3 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">Water Resource Management</span>
-                    <span class="px-3 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">WASH Governance</span>
-                    <span class="px-3 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">Disaster Risk Reduction</span>
-                    <span class="px-3 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">Infrastructure Design</span>
-                    <span class="px-3 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">Policy Reform</span>
-                    <span class="px-3 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">Emergency WASH</span>
+                        <div class="pt-4 border-t border-gray-200">
+                            <h4 class="font-semibold text-gray-900 mb-2">Core Strengths</h4>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="px-3 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">Water Resource Management</span>
+                                <span class="px-3 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">WASH Governance</span>
+                                <span class="px-3 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">Disaster Risk Reduction</span>
+                                <span class="px-3 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">Infrastructure Design</span>
+                                <span class="px-3 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">Policy Reform</span>
+                                <span class="px-3 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">Emergency WASH</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-    </div>
-</div>
             <!-- Member 6: CO. Hon. Richard Onyinkwa -->
             <div class="bg-white rounded-lg shadow-lg overflow-hidden transform transition duration-300 hover:scale-105 hover:shadow-xl">
                 <div class="p-6">
