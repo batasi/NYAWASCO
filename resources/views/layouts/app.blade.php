@@ -1286,9 +1286,252 @@ use Illuminate\Support\Facades\Route;
 
 
     <!-- Page Content -->
-    <main>
-        @yield('content')
-    </main>
+    @auth
+        <!-- Sidebar Layout for Authenticated Users -->
+        <div class="flex h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+            <!-- Sidebar -->
+            <div id="sidebar" class="bg-gradient-to-b from-blue-900 via-blue-800 to-blue-900 text-white w-72 space-y-8 py-8 px-6 absolute inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition-all duration-300 ease-in-out z-50 shadow-2xl">
+                <!-- Logo Section -->
+                <div class="flex flex-col items-center justify-center mb-8">
+                    <div class="w-16 h-16 bg-gradient-to-r from-green-400 to-blue-500 rounded-2xl flex items-center justify-center mb-3 shadow-lg">
+                        <span class="text-white text-2xl font-bold">NY</span>
+                    </div>
+                    <span class="text-lg font-bold text-white">Nyamira Water</span>
+                    <p class="text-sm text-blue-200 font-medium">Supply Company</p>
+                    <div class="w-20 h-1 bg-gradient-to-r from-green-400 to-blue-500 rounded-full mt-3"></div>
+                </div>
+
+                <!-- Menu -->
+                <nav class="space-y-2">
+                    <a href="{{ route('dashboard') }}" class="group flex items-center py-3 px-4 rounded-xl transition-all duration-200 hover:bg-white/10 hover:shadow-lg {{ request()->routeIs('dashboard') ? 'bg-white/20 shadow-lg border-l-4 border-green-400' : '' }}">
+                        <svg class="w-5 h-5 mr-3 {{ request()->routeIs('dashboard') ? 'text-green-400' : 'text-blue-200' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                        <span class="font-medium">Dashboard</span>
+                    </a>
+
+                    <a href="{{ route('customers.index') }}" class="group flex items-center py-3 px-4 rounded-xl transition-all duration-200 hover:bg-white/10 hover:shadow-lg {{ request()->routeIs('customers.*') ? 'bg-white/20 shadow-lg border-l-4 border-green-400' : '' }}">
+                        <svg class="w-5 h-5 mr-3 {{ request()->routeIs('customers.*') ? 'text-green-400' : 'text-blue-200' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                        </svg>
+                        <span class="font-medium">Customers</span>
+                    </a>
+
+                    <a href="{{ route('meters.index') }}" class="group flex items-center py-3 px-4 rounded-xl transition-all duration-200 hover:bg-white/10 hover:shadow-lg {{ request()->routeIs('meters.*') ? 'bg-white/20 shadow-lg border-l-4 border-green-400' : '' }}">
+                        <svg class="w-5 h-5 mr-3 {{ request()->routeIs('meters.*') ? 'text-green-400' : 'text-blue-200' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                        </svg>
+                        <span class="font-medium">Meters</span>
+                    </a>
+
+                    <a href="{{ route('bills.index') }}" class="group flex items-center py-3 px-4 rounded-xl transition-all duration-200 hover:bg-white/10 hover:shadow-lg {{ request()->routeIs('bills.*') ? 'bg-white/20 shadow-lg border-l-4 border-green-400' : '' }}">
+                        <svg class="w-5 h-5 mr-3 {{ request()->routeIs('bills.*') ? 'text-green-400' : 'text-blue-200' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                        </svg>
+                        <span class="font-medium">Bills</span>
+                    </a>
+
+                    <a href="{{ route('payments.index') }}" class="group flex items-center py-3 px-4 rounded-xl transition-all duration-200 hover:bg-white/10 hover:shadow-lg {{ request()->routeIs('payments.*') ? 'bg-white/20 shadow-lg border-l-4 border-green-400' : '' }}">
+                        <svg class="w-5 h-5 mr-3 {{ request()->routeIs('payments.*') ? 'text-green-400' : 'text-blue-200' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                        </svg>
+                        <span class="font-medium">Payments</span>
+                    </a>
+
+                    <!-- Reports -->
+                    <li>
+                        <button id="reports-toggle" class="text-blue-100 hover:text-white hover:bg-blue-800 group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold w-full text-left">
+                            <svg class="text-blue-200 group-hover:text-white h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25M9 16.5v.75m3-3v3M15 12v5.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                            </svg>
+                            Reports
+                            <svg id="reports-arrow" class="ml-auto h-5 w-5 text-blue-200 group-hover:text-white transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </button>
+                        <ul id="reports-submenu" class="hidden ml-6 space-y-1 transition-all duration-200">
+                            <!-- Revenue Reports -->
+                            <li>
+                                <button id="revenue-toggle" class="text-blue-100 hover:text-white hover:bg-blue-800 group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold w-full text-left">
+                                    Revenue Reports
+                                    <svg id="revenue-arrow" class="ml-auto h-5 w-5 text-blue-200 group-hover:text-white transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </button>
+                                <ul id="revenue-submenu" class="hidden ml-6 space-y-1 transition-all duration-200">
+                                    <li>
+                                        <a href="{{ route('reports.index') }}?category=revenue&type=incometype-dashboard" class="text-blue-100 hover:text-white hover:bg-blue-800 block rounded-md p-2 text-sm leading-6 font-medium">
+                                            Incometype Dashboard
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ route('reports.index') }}?category=revenue&type=department-dashboard" class="text-blue-100 hover:text-white hover:bg-blue-800 block rounded-md p-2 text-sm leading-6 font-medium">
+                                            Department Dashboard
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ route('reports.index') }}?category=revenue&type=chart-summary" class="text-blue-100 hover:text-white hover:bg-blue-800 block rounded-md p-2 text-sm leading-6 font-medium">
+                                            Chart Summary
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ route('reports.index') }}?category=revenue&type=subcounties-summary" class="text-blue-100 hover:text-white hover:bg-blue-800 block rounded-md p-2 text-sm leading-6 font-medium">
+                                            Subcounties Summary
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ route('reports.index') }}?category=revenue&type=streams-summary" class="text-blue-100 hover:text-white hover:bg-blue-800 block rounded-md p-2 text-sm leading-6 font-medium">
+                                            Streams Summary
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ route('reports.index') }}?category=revenue&type=revenue-streams" class="text-blue-100 hover:text-white hover:bg-blue-800 block rounded-md p-2 text-sm leading-6 font-medium">
+                                            Revenue Streams
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ route('reports.index') }}?category=revenue&type=per-stream" class="text-blue-100 hover:text-white hover:bg-blue-800 block rounded-md p-2 text-sm leading-6 font-medium">
+                                            Per Stream
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ route('reports.index') }}?category=revenue&type=payment-mode-summary" class="text-blue-100 hover:text-white hover:bg-blue-800 block rounded-md p-2 text-sm leading-6 font-medium">
+                                            Payment Mode Summary
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                            <!-- Performance Reports -->
+                            <li>
+                                <button id="performance-toggle" class="text-blue-100 hover:text-white hover:bg-blue-800 group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold w-full text-left">
+                                    Performance Reports
+                                    <svg id="performance-arrow" class="ml-auto h-5 w-5 text-blue-200 group-hover:text-white transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </button>
+                                <ul id="performance-submenu" class="hidden ml-6 space-y-1 transition-all duration-200">
+                                    <li>
+                                        <a href="{{ route('reports.index') }}?category=performance&type=all-bills-raised" class="text-blue-100 hover:text-white hover:bg-blue-800 block rounded-md p-2 text-sm leading-6 font-medium">
+                                            All Bills Raised
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ route('reports.index') }}?category=performance&type=all-bills-receipted" class="text-blue-100 hover:text-white hover:bg-blue-800 block rounded-md p-2 text-sm leading-6 font-medium">
+                                            All Bills Receipted
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ route('reports.index') }}?category=performance&type=bills-raised" class="text-blue-100 hover:text-white hover:bg-blue-800 block rounded-md p-2 text-sm leading-6 font-medium">
+                                            Bills Raised
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ route('reports.index') }}?category=performance&type=bills-receipted" class="text-blue-100 hover:text-white hover:bg-blue-800 block rounded-md p-2 text-sm leading-6 font-medium">
+                                            Bills Receipted
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ route('reports.index') }}?category=performance&type=billed-location" class="text-blue-100 hover:text-white hover:bg-blue-800 block rounded-md p-2 text-sm leading-6 font-medium">
+                                            Billed Location
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ route('reports.index') }}?category=performance&type=receipted-printed-location" class="text-blue-100 hover:text-white hover:bg-blue-800 block rounded-md p-2 text-sm leading-6 font-medium">
+                                            Receipted and Printed Location
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                </nav>
+            </div>
+
+            <!-- Overlay for mobile -->
+            <div id="overlay" class="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm z-40 md:hidden hidden" onclick="toggleSidebar()"></div>
+
+            <!-- Main content -->
+            <div class="flex-1 flex flex-col overflow-hidden">
+                <!-- Header -->
+                <header class="bg-white/95 backdrop-blur-sm shadow-xl border-b border-gray-200/50 px-8 py-5">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <button onclick="toggleSidebar()" class="md:hidden p-2 rounded-lg text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-all duration-200 mr-4">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                                </svg>
+                            </button>
+                            <div>
+                                <h1 class="text-2xl font-bold text-gray-800">Nyamira Water</h1>
+                                <p class="text-sm text-gray-600">Supply Company Management System</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-6">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-green-500 rounded-full flex items-center justify-center">
+                                    <span class="text-white font-bold text-sm">{{ strtoupper(substr(auth()->user()->full_name ?? 'U', 0, 1)) }}</span>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-800">{{ auth()->user()->full_name ?? 'User' }}</p>
+                                    <p class="text-xs text-gray-500">{{ auth()->user()->role->name ?? 'User' }}</p>
+                                </div>
+                            </div>
+                            <form method="POST" action="{{ route('logout') }}" class="inline">
+                                @csrf
+                                <button type="submit" class="bg-gradient-to-r from-red-500 to-red-600 text-white px-6 py-2 rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                                    <span class="font-medium">Logout</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- Content -->
+                <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gradient-to-br from-slate-50 to-blue-50 p-8">
+                    @yield('content')
+                </main>
+            </div>
+        </div>
+
+        <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('-translate-x-full');
+            sidebar.classList.toggle('translate-x-0');
+            const overlay = document.getElementById('overlay');
+            overlay.classList.toggle('hidden');
+        }
+
+        // Reports menu toggle
+        document.getElementById('reports-toggle').addEventListener('click', function() {
+            const submenu = document.getElementById('reports-submenu');
+            submenu.classList.toggle('hidden');
+            document.getElementById('reports-arrow').classList.toggle('rotate-90');
+        });
+
+        // Revenue Reports toggle
+        document.getElementById('revenue-toggle').addEventListener('click', function(e) {
+            e.stopPropagation(); // Prevent triggering parent
+            const submenu = document.getElementById('revenue-submenu');
+            submenu.classList.toggle('hidden');
+            document.getElementById('revenue-arrow').classList.toggle('rotate-90');
+        });
+
+        // Performance Reports toggle
+        document.getElementById('performance-toggle').addEventListener('click', function(e) {
+            e.stopPropagation();
+            const submenu = document.getElementById('performance-submenu');
+            submenu.classList.toggle('hidden');
+            document.getElementById('performance-arrow').classList.toggle('rotate-90');
+        });
+
+        </script>
+    @else
+        <!-- Original Layout for Non-Authenticated Users -->
+        <main>
+            @yield('content')
+        </main>
+    @endauth
 
 
 
@@ -1439,76 +1682,6 @@ use Illuminate\Support\Facades\Route;
         });
     </script>
 
-    @php
-        $bill_status_counts = $bill_status_counts ?? [
-            'paid' => 0,
-            'unpaid' => 0,
-            'overdue' => 0,
-        ];
-
-        $monthly_billed = $monthly_billed ?? array_fill(0, 12, 0);
-        $monthly_collected = $monthly_collected ?? array_fill(0, 12, 0);
-    @endphp
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-
-            // Monthly Billing vs Collections
-            const monthlyLabels = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-
-            const billingData = @json($monthly_billed);
-            const collectedData = @json($monthly_collected);
-
-            new Chart(document.getElementById("billingCollectionsChart"), {
-                type: "line",
-                data: {
-                    labels: monthlyLabels,
-                    datasets: [
-                        {
-                            label: "Billed",
-                            data: billingData,
-                            borderColor: "rgb(37, 99, 235)",
-                            backgroundColor: "rgba(37, 99, 235, 0.3)",
-                            borderWidth: 2,
-                            tension: 0.4
-                        },
-                        {
-                            label: "Collected",
-                            data: collectedData,
-                            borderColor: "rgb(16, 185, 129)",
-                            backgroundColor: "rgba(16, 185, 129, 0.3)",
-                            borderWidth: 2,
-                            tension: 0.4
-                        }
-                    ]
-                }
-            });
-
-            // Bill Status Distribution
-            const billStatusCounts = @json($bill_status_counts);
-
-            new Chart(document.getElementById("billStatusChart"), {
-                type: "pie",
-                data: {
-                    labels: ["Paid", "Unpaid", "Overdue"],
-                    datasets: [{
-                        data: [
-                            billStatusCounts.paid,
-                            billStatusCounts.unpaid,
-                            billStatusCounts.overdue
-                        ],
-                        backgroundColor: [
-                            "rgb(34, 197, 94)",
-                            "rgb(234, 179, 8)",
-                            "rgb(239, 68, 68)"
-                        ]
-                    }]
-                }
-            });
-
-        });
-    </script>
 
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
     <script src="{{ asset('js/services/OCRService.js') }}"></script>
