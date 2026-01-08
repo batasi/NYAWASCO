@@ -430,7 +430,7 @@
                         <div>
                             <h4 class="font-semibold text-gray-900 mb-2">Current Position</h4>
                             <p class="text-gray-600 text-sm">
-                                County Chief Officer - Environment, Water, Irrigation & Sanitation
+                                County Chief Officer - Environment, Water, Irrigation & Sanitation County Government of Nyamira
 
                             </p>
                         </div>
