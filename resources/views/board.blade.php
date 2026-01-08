@@ -430,9 +430,8 @@
                         <div>
                             <h4 class="font-semibold text-gray-900 mb-2">Current Position</h4>
                             <p class="text-gray-600 text-sm">
-                                County Chief Officer<br>
-                                Economic Planning, Resource Mobilization and ICT<br>
-                                County Government of Nyamira
+                                County Chief Officer - Environment, Water, Irrigation & Sanitation
+
                             </p>
                         </div>
 
@@ -448,7 +447,9 @@
                         <div>
                             <h4 class="font-semibold text-gray-900 mb-2">Previous Roles</h4>
                             <ul class="list-disc list-inside text-gray-600 text-sm space-y-1">
-                                <li>County Chief Officer - Environment, Water, Irrigation & Sanitation</li>
+                                <li> County Chief Officer
+                                Economic Planning, Resource Mobilization and ICT
+                                County Government of Nyamira
                                 <li>Elected Member of County Assembly - Magombo Ward (2017-2022)</li>
                             </ul>
                         </div>
