@@ -1057,10 +1057,10 @@ use Illuminate\Support\Facades\Route;
                     <i class="fas fa-chevron-down transition-transform" :class="{ 'rotate-180': mobileDropdowns.about }"></i>
                 </button>
                 <div class="mobile-dropdown-content" :class="{ 'open': mobileDropdowns.about }">
-                    <a href="{{ route('about') }}" @click="mobileMenuOpen = false">Company Profile</a>
-                    <a href="#" @click="mobileMenuOpen = false">Board of Directors</a>
-                    <a href="{{ route('management') }}" @click="mobileMenuOpen = false">Management Team</a>
-                    <a href="#" @click="mobileMenuOpen = false">Mission & Vision</a>
+                    <!-- <a href="{{ route('about') }}" @click="mobileMenuOpen = false">Company Profile</a> -->
+                    <a href="{{ route('board-of-directors') }}" @click="mobileMenuOpen = false">Board of Directors</a>
+                    <!-- <a href="{{ route('management') }}" @click="mobileMenuOpen = false">Management Team</a> -->
+                    <!-- <a href="#" @click="mobileMenuOpen = false">Mission & Vision</a> -->
                 </div>
             </div>
 
