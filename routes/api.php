@@ -3,10 +3,12 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\CustomerSearchController;
+use App\Http\Controllers\Api\BalanceInquiryController;
+use App\Http\Controllers\Api\MeterReadingController;
+use App\Http\Controllers\Api\ReadingHistoryController;
 use App\Models\Bill;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Admin\CustomerController;
-use App\Http\Controllers\Admin\MeterReadingController;
 // Use web middleware for authentication
 Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/customers/search', [CustomerSearchController::class, 'search'])
@@ -50,16 +52,16 @@ Route::prefix('v1')->group(function () {
     // Login check
     Route::post('auth/login', [AuthController::class, 'login']);
 
-    // Customer search
-    Route::get('customers', [CustomerController::class, 'search']);
+    // 1. Search customers
+    Route::get('/customers/search', [CustomerSearchController::class, 'search']);
 
-    // Customer details + previous reading + balance
-    Route::get('customers/{id}', [CustomerController::class, 'details']);
+    // 2. Submit reading and get bill
+    Route::post('/meter-readings/submit', [MeterReadingController::class, 'submitReading']);
 
-    // Balance inquiry
-    Route::get('customers/{id}/balance', [CustomerController::class, 'balance']);
+    // 3. Balance inquiry
+    Route::get('/customers/{customerId}/balance', [BalanceInquiryController::class, 'getBalance']);
 
-    // Meter reading submission
-    Route::post('meter-readings', [MeterReadingController::class, 'store']);
+    // 4. Reading history
+    Route::get('/meter-readings/history', [ReadingHistoryController::class, 'getReadingHistory']);
 
 });

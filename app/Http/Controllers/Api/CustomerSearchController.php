@@ -4,113 +4,78 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
+use App\Models\Meter;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-use Carbon\Carbon;
 
 class CustomerSearchController extends Controller
 {
+    /**
+     * Search customers by account number, name, phone, or meter serial
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function search(Request $request)
     {
-        try {
-            Log::info('Customer search API called', ['search' => $request->get('search')]);
+        $request->validate([
+            'search' => 'required|string|min:1|max:255',
+        ]);
 
-            $search = $request->get('search', '');
-            
-            if (empty($search)) {
-                return response()->json([]);
-            }
+        $searchTerm = $request->input('search');
 
-            // Enhanced search with meter relationships and recent reading check
-            $customers = Customer::with(['meter', 'meterReadings' => function($query) {
-                $query->latest()->limit(1);
-            }])
-            ->where('status', 'active')
-            ->where(function($query) use ($search) {
-                $query->where('first_name', 'like', "%{$search}%")
-                      ->orWhere('last_name', 'like', "%{$search}%")
-                      ->orWhere('customer_number', 'like', "%{$search}%")
-                      ->orWhere('phone', 'like', "%{$search}%")
-                      ->orWhere('email', 'like', "%{$search}%")
-                      ->orWhere('id_number', 'like', "%{$search}%")
-                      ->orWhere('plot_number', 'like', "%{$search}%")
-                      ->orWhere('house_number', 'like', "%{$search}%")
-                      ->orWhere('estate', 'like', "%{$search}%")
-                      ->orWhereHas('meter', function($meterQuery) use ($search) {
-                          $meterQuery->where('meter_number', 'like', "%{$search}%")
-                                    ->orWhere('meter_type', 'like', "%{$search}%");
-                      });
+        // Search in customers table
+        $customers = Customer::where(function($query) use ($searchTerm) {
+                $query->where('customer_number', 'LIKE', "%{$searchTerm}%")
+                    ->orWhere('first_name', 'LIKE', "%{$searchTerm}%")
+                    ->orWhere('last_name', 'LIKE', "%{$searchTerm}%")
+                    ->orWhere('phone', 'LIKE', "%{$searchTerm}%")
+                    ->orWhere('id_number', 'LIKE', "%{$searchTerm}%");
             })
+            ->where('status', 'active') // Only active customers
+            ->with(['meters' => function($query) {
+                $query->select('id', 'meter_number', 'customer_id', 'current_reading', 'status');
+            }])
             ->limit(20)
-            ->get()
-            ->map(function($customer) {
-                $latestReading = $customer->meterReadings->first();
-                $hasRecentReading = false;
-                $recentReadingInfo = null;
-                
-                // Check if there's a reading in the current month
-                if ($latestReading) {
-                    $currentMonth = Carbon::now()->format('Y-m');
-                    $readingMonth = Carbon::parse($latestReading->reading_date)->format('Y-m');
-                    $hasRecentReading = ($currentMonth === $readingMonth);
-                    
-                    if ($hasRecentReading) {
-                        $recentReadingInfo = [
-                            'reading_date' => $latestReading->reading_date,
-                            'current_reading' => $latestReading->current_reading,
-                            'reading_period' => $latestReading->reading_period,
-                            'days_ago' => Carbon::parse($latestReading->reading_date)->diffInDays(Carbon::now())
-                        ];
-                    }
-                }
-                
-                return [
-                    'id' => $customer->id,
-                    'first_name' => $customer->first_name,
-                    'last_name' => $customer->last_name,
-                    'customer_number' => $customer->customer_number,
-                    'phone' => $customer->phone,
-                    'email' => $customer->email,
-                    'plot_number' => $customer->plot_number,
-                    'house_number' => $customer->house_number,
-                    'estate' => $customer->estate,
-                    'physical_address' => $customer->physical_address,
-                    'meter' => $customer->meter ? [
-                        'id' => $customer->meter->id,
-                        'meter_number' => $customer->meter->meter_number,
-                        'meter_type' => $customer->meter->meter_type,
-                        'meter_model' => $customer->meter->meter_model,
-                        'current_reading' => $customer->meter->current_reading,
-                        'initial_reading' => $customer->meter->initial_reading,
-                        'installation_date' => $customer->meter->installation_date,
-                        'installation_address' => $customer->meter->installation_address,
-                        'status' => $customer->meter->status,
-                    ] : null,
-                    'last_reading' => $latestReading ? [
-                        'id' => $latestReading->id,
-                        'current_reading' => $latestReading->current_reading,
-                        'previous_reading' => $latestReading->previous_reading,
-                        'consumption' => $latestReading->consumption,
-                        'reading_date' => $latestReading->reading_date,
-                        'reading_period' => $latestReading->reading_period,
-                        'billed' => $latestReading->billed,
-                    ] : null,
-                    'has_recent_reading' => $hasRecentReading,
-                    'recent_reading_info' => $recentReadingInfo
-                ];
-            });
+            ->get(['id', 'customer_number', 'first_name', 'last_name', 'phone', 'email',
+                   'physical_address', 'plot_number', 'house_number', 'status',
+                   'credit_balance']);
 
-            Log::info('Search completed', ['found' => $customers->count()]);
+        // If no results in customers, search by meter number
+        if ($customers->isEmpty()) {
+            $meter = Meter::where('meter_number', 'LIKE', "%{$searchTerm}%")
+                ->where('status', 'active')
+                ->with('customer')
+                ->first();
 
-            return response()->json($customers);
-
-        } catch (\Exception $e) {
-            Log::error('Customer search error: ' . $e->getMessage());
-            Log::error('Stack trace: ' . $e->getTraceAsString());
-            
-            return response()->json([
-                'error' => 'Search failed: ' . $e->getMessage()
-            ], 500);
+            if ($meter && $meter->customer) {
+                $customers = collect([$meter->customer]);
+            }
         }
+
+        $formattedCustomers = $customers->map(function($customer) {
+            return [
+                'id' => $customer->id,
+                'customer_number' => $customer->customer_number,
+                'full_name' => $customer->first_name . ' ' . $customer->last_name,
+                'phone' => $customer->phone,
+                'email' => $customer->email,
+                'address' => $customer->plot_number . ', ' . $customer->house_number,
+                'credit_balance' => (float) $customer->credit_balance,
+                'status' => $customer->status,
+                'meters' => $customer->meters->map(function($meter) {
+                    return [
+                        'meter_number' => $meter->meter_number,
+                        'current_reading' => (float) $meter->current_reading,
+                        'status' => $meter->status,
+                    ];
+                })
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $formattedCustomers,
+            'count' => $formattedCustomers->count()
+        ]);
     }
 }

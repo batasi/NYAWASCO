@@ -55,6 +55,25 @@ Route::view('/help', 'static.help', ['title' => 'Help Center - NYAWASCO'])->name
 Route::get('/board-of-directors', function () {
     return view('board');
 })->name('board-of-directors');
+// routes/web.php
+Route::get('/publications', function () {
+    return view('publications');
+})->name('publications');
+
+// Route for single publication
+Route::get('/publications/{slug}', function ($slug) {
+    // For now, we'll use a simple approach
+    // In a real application, you'd fetch the publication from database
+    return view('publication-single', [
+        'publication' => [
+            'title' => 'Nyamira County Unveils NYAWASCO Board, Paves Way for Universal Water Access',
+            'date' => '8th January, 2026',
+            'type' => 'Press Release',
+            'content' => '...', // Your full content here
+            'slug' => $slug
+        ]
+    ]);
+})->name('publication.show');
 // Service Routes
 Route::view('/services', 'services.index')->name('services');
 Route::view('/services/water-supply', 'services.water-supply')->name('water-supply');

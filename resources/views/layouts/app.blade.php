@@ -1014,7 +1014,7 @@ use Illuminate\Support\Facades\Route;
                         </div>
                     </div>
 
-                    <a href="#" class="nav-link">Projects</a>
+                    <a href="{{ route('publications') }}" class="nav-link">Publications</a>
                     <a href="#" class="nav-link">Careers</a>
                 </div>
 
@@ -1077,7 +1077,7 @@ use Illuminate\Support\Facades\Route;
                 </div>
             </div>
 
-            <a href="{{ route('projects') }}" class="mobile-nav-link" @click="mobileMenuOpen = false">Projects</a>
+            <a href="{{ route('publications') }}" class="mobile-nav-link" @click="mobileMenuOpen = false">Publications</a>
         </div>
 
         @guest
