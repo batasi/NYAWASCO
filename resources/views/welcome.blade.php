@@ -884,7 +884,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
                 <div class="flex items-center">
                     <i class="fas fa-phone-alt mr-2"></i>
-                    <span>+254 728 725 559 (24/7 Emergency Line)</span>
+                    <span>+254 787 080 455 (24/7 Emergency Line)</span>
                 </div>
             </div>
         </div>
