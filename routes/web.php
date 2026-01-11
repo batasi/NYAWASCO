@@ -42,6 +42,7 @@ use App\Http\Controllers\Admin\MeterCategoryController;
 */
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/login', [HomeController::class, 'index'])->name('login');
 
 // Static Pages
 Route::view('/about', 'about.index')->name('about');
