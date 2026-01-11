@@ -123,36 +123,36 @@ class PaymentController extends Controller
     }
 
 
-/**
- * Search assigned meters for autocomplete
- */
-public function searchMeters(Request $request)
-{
-    $search = $request->get('search', '');
+    /**
+     * Search assigned meters for autocomplete
+     */
+    public function searchMeters(Request $request)
+    {
+        $search = $request->get('search', '');
 
-    if (strlen($search) < 2) {
-        return response()->json([]);
+        if (strlen($search) < 2) {
+            return response()->json([]);
+        }
+
+        // Search assigned meters with partial match
+        $meters = Meter::with('customer')
+            ->where('status', 'active')
+            ->whereNotNull('customer_id')
+            ->where('meter_number', 'LIKE', $search . '%') // Partial match from start
+            ->limit(10)
+            ->get()
+            ->map(function($meter) {
+                return [
+                    'id' => $meter->id,
+                    'meter_number' => $meter->meter_number,
+                    'customer_name' => $meter->customer->name ?? 'Unknown Customer',
+                    'status' => $meter->status,
+                    'display_text' => "{$meter->meter_number} - {$meter->customer->name}"
+                ];
+            });
+
+        return response()->json($meters);
     }
-
-    // Search assigned meters with partial match
-    $meters = Meter::with('customer')
-        ->where('status', 'active')
-        ->whereNotNull('customer_id')
-        ->where('meter_number', 'LIKE', $search . '%') // Partial match from start
-        ->limit(10)
-        ->get()
-        ->map(function($meter) {
-            return [
-                'id' => $meter->id,
-                'meter_number' => $meter->meter_number,
-                'customer_name' => $meter->customer->name ?? 'Unknown Customer',
-                'status' => $meter->status,
-                'display_text' => "{$meter->meter_number} - {$meter->customer->name}"
-            ];
-        });
-
-    return response()->json($meters);
-}
 
 
 
