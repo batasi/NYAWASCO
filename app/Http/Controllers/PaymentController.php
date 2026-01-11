@@ -220,7 +220,9 @@ class PaymentController extends Controller
         $results = [
             'success' => 0,
             'failed' => 0,
-            'errors' => []
+            'errors' => [],
+            'skipped' => 0,
+            'not_found_customers' => []
         ];
 
         foreach ($rows as $rowNumber => $row) {
@@ -228,11 +230,12 @@ class PaymentController extends Controller
 
             // Skip empty rows
             if (empty($row[$headerMap['Particulars']])) {
+                $results['skipped']++;
                 continue;
             }
 
             try {
-                DB::transaction(function () use ($sheet, $rowNumber, $headerMap, $foundDateColumn, $rows) {
+                DB::transaction(function () use ($sheet, $rowNumber, $headerMap, $foundDateColumn, $rows, &$results) {
                     // ========== DATE PARSING ==========
                     $dateColumnLetter = $headerMap[$foundDateColumn];
                     $dateCell = $sheet->getCell($dateColumnLetter . $rowNumber);
@@ -258,76 +261,24 @@ class PaymentController extends Controller
                         }
                     }
 
-                    // ========== AMOUNT PARSING (FIXED) ==========
+                    // ========== AMOUNT PARSING ==========
                     $amountColumnLetter = $headerMap['Credit Amt.'];
                     $amountCell = $sheet->getCell($amountColumnLetter . $rowNumber);
                     $excelAmountValue = $amountCell->getValue();
 
-                    Log::info("Row {$rowNumber} - Raw amount value: " . print_r($excelAmountValue, true));
-                    Log::info("Row {$rowNumber} - Amount formatted value: " . $amountCell->getFormattedValue());
-                    Log::info("Row {$rowNumber} - Amount data type: " . gettype($excelAmountValue));
-
-                    // Get the cell's format code to understand how it's formatted
-                    $style = $sheet->getStyle($amountColumnLetter . $rowNumber);
-                    $formatCode = $style->getNumberFormat()->getFormatCode();
-                    Log::info("Row {$rowNumber} - Amount format code: " . $formatCode);
-
                     // Try multiple ways to get the correct amount
                     $amount = null;
 
-                    // Method 1: If it's numeric but small (likely mis-interpreted as date)
+                    // Method 1: Direct numeric value
                     if (is_numeric($excelAmountValue)) {
-                        // Check if it's likely a date serial number (dates are usually > 40000)
-                        // Amounts are usually much smaller unless it's a huge amount
-                        if ($excelAmountValue < 100000) {
-                            // This is probably an amount, not a date
-                            $amount = (float) $excelAmountValue;
-                        } else {
-                            // Might be a date formatted as number, try to get formatted value
-                            $formatted = $amountCell->getFormattedValue();
-                            if (is_numeric($formatted)) {
-                                $amount = (float) $formatted;
-                            } else {
-                                // Try to extract number from formatted string
-                                preg_match('/[\d,]+\.?\d*/', $formatted, $matches);
-                                if ($matches) {
-                                    $amount = (float) str_replace(',', '', $matches[0]);
-                                }
-                            }
-                        }
+                        $amount = (float) $excelAmountValue;
                     }
-                    // Method 2: If it's a string (like "4000.00")
+                    // Method 2: String value
                     elseif (is_string($excelAmountValue)) {
                         $amount = (float) str_replace(',', '', $excelAmountValue);
                     }
-
-                    // Method 3: Fallback to array value
-                    if ($amount === null || $amount == 0) {
-                        $arrayValue = $rows[$rowNumber][$headerMap['Credit Amt.']];
-                        if (is_numeric($arrayValue)) {
-                            $amount = (float) $arrayValue;
-                        } elseif (is_string($arrayValue)) {
-                            $amount = (float) str_replace(',', '', $arrayValue);
-                        }
-                    }
-
-                    // Method 4: Use PhpSpreadsheet's calculation (most reliable)
-                    if (($amount === null || $amount == 0) && is_numeric($excelAmountValue)) {
-                        // Try to calculate the actual value
-                        try {
-                            $calculatedValue = \PhpOffice\PhpSpreadsheet\Calculation\Calculation::getInstance()
-                                ->calculateCellValue($sheet, $amountColumnLetter . $rowNumber);
-
-                            if (is_numeric($calculatedValue)) {
-                                $amount = (float) $calculatedValue;
-                            }
-                        } catch (\Exception $e) {
-                            // Ignore calculation errors
-                        }
-                    }
-
-                    // If still no amount, use the formatted value as last resort
-                    if (($amount === null || $amount == 0)) {
+                    // Method 3: Formatted value
+                    else {
                         $formatted = $amountCell->getFormattedValue();
                         if (preg_match('/[\d,]+\.?\d*/', $formatted, $matches)) {
                             $amount = (float) str_replace(',', '', $matches[0]);
@@ -338,8 +289,6 @@ class PaymentController extends Controller
                     if ($amount === null || $amount <= 0) {
                         throw new \Exception('Invalid or zero amount: ' . print_r($excelAmountValue, true));
                     }
-
-                    Log::info("Row {$rowNumber} - Final parsed amount: " . $amount);
 
                     // ========== PARTICULAR PARSING ==========
                     $particulars = trim($rows[$rowNumber][$headerMap['Particulars']]);
@@ -361,10 +310,8 @@ class PaymentController extends Controller
                     }
 
                     if (!$customerNumber) {
-                        throw new \Exception('Customer account number not found in: ' . substr($particulars, 0, 100));
+                        throw new \Exception('Customer account number not found');
                     }
-
-                    Log::info("Row {$rowNumber} - Processing: Customer#{$customerNumber}, Amount: {$amount}, Date: {$paymentDate->format('Y-m-d')}");
 
                     // 2️⃣ Find customer
                     $customer = Customer::where('customer_number', $customerNumber)
@@ -372,11 +319,19 @@ class PaymentController extends Controller
                         ->first();
 
                     if (!$customer) {
-                        throw new \Exception("Customer with number {$customerNumber} not found");
+                        // Record missing customer but don't fail the entire import
+                        $results['not_found_customers'][] = [
+                            'row' => $rowNumber,
+                            'customer_number' => $customerNumber,
+                            'amount' => $amount,
+                            'date' => $paymentDate->format('Y-m-d'),
+                            'particulars' => substr($particulars, 0, 200)
+                        ];
+                        throw new \Exception("Customer with number {$customerNumber} not found - skipped");
                     }
 
                     if ($customer->status !== 'active') {
-                        throw new \Exception('Customer inactive');
+                        throw new \Exception("Customer {$customerNumber} is {$customer->status}");
                     }
 
                     // 3️⃣ Find meter
@@ -414,9 +369,9 @@ class PaymentController extends Controller
                     );
 
                     Log::info("Row {$rowNumber} - Successfully processed payment for customer {$customerNumber}");
-                });
 
-                $results['success']++;
+                    $results['success']++;
+                });
 
             } catch (\Exception $e) {
                 $results['failed']++;
@@ -430,15 +385,34 @@ class PaymentController extends Controller
                     ]
                 ];
 
-                Log::error('Payment import failed', [
-                    'row' => $rowNumber,
-                    'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
-                ]);
+                // Don't log missing customers as errors, just info
+                if (strpos($e->getMessage(), 'Customer with number') !== false && strpos($e->getMessage(), 'not found') !== false) {
+                    Log::info('Customer not found during import: ' . $e->getMessage());
+                } else {
+                    Log::error('Payment import failed', [
+                        'row' => $rowNumber,
+                        'error' => $e->getMessage()
+                    ]);
+                }
             }
         }
 
-        return back()->with('import_result', $results);
+        // Create a summary report
+        $summary = [
+            'total_rows' => count($rows) - 1, // minus header
+            'successful' => $results['success'],
+            'failed' => $results['failed'],
+            'skipped' => $results['skipped'],
+            'not_found_customers_count' => count($results['not_found_customers']),
+            'not_found_customers' => $results['not_found_customers']
+        ];
+
+        Log::info('Import completed', $summary);
+
+        return back()->with([
+            'import_result' => $results,
+            'import_summary' => $summary
+        ]);
     }
 
     private function extractTransactionRef(string $text): ?string
