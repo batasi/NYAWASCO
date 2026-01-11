@@ -170,213 +170,292 @@ class PaymentController extends Controller
      */
 
 
-public function import(Request $request)
-{
-    $request->validate([
-        'file' => 'required|file|mimes:xlsx,xls'
-    ]);
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls'
+        ]);
 
-    $spreadsheet = IOFactory::load($request->file('file')->getPathname());
-    $sheet = $spreadsheet->getActiveSheet();
+        $spreadsheet = IOFactory::load($request->file('file')->getPathname());
+        $sheet = $spreadsheet->getActiveSheet();
 
-    // Get the highest row and column
-    $highestRow = $sheet->getHighestRow();
-    $highestColumn = $sheet->getHighestColumn();
+        // Get the highest row and column
+        $highestRow = $sheet->getHighestRow();
+        $highestColumn = $sheet->getHighestColumn();
 
-    // Get all cells as an array
-    $rows = $sheet->rangeToArray('A1:' . $highestColumn . $highestRow, null, true, true, true);
+        // Get all cells as an array
+        $rows = $sheet->rangeToArray('A1:' . $highestColumn . $highestRow, null, true, true, true);
 
-    // First row = headers
-    $headers = array_map('trim', $rows[1]);
+        // First row = headers
+        $headers = array_map('trim', $rows[1]);
 
-    // Map header names to column letters
-    $headerMap = array_flip($headers);
+        // Map header names to column letters
+        $headerMap = array_flip($headers);
 
-    // Debug: log what we found
-    Log::info('Headers found:', $headers);
+        // Debug: log what we found
+        Log::info('Headers found:', $headers);
 
-    // 🔒 Ensure required columns exist
-    $requiredColumns = ['Credit Amt.', 'Particulars'];
-    $dateColumns = ['Tran. Date', 'Value Date'];
+        // 🔒 Ensure required columns exist
+        $requiredColumns = ['Credit Amt.', 'Particulars'];
+        $dateColumns = ['Tran. Date', 'Value Date'];
 
-    $foundDateColumn = null;
-    foreach ($dateColumns as $dateCol) {
-        if (isset($headerMap[$dateCol])) {
-            $foundDateColumn = $dateCol;
-            break;
-        }
-    }
-
-    if (!$foundDateColumn) {
-        throw new \Exception('No date column found. Available columns: ' . implode(', ', array_keys($headerMap)));
-    }
-
-    foreach ($requiredColumns as $requiredColumn) {
-        if (!isset($headerMap[$requiredColumn])) {
-            throw new \Exception("Missing column: {$requiredColumn}. Available: " . implode(', ', array_keys($headerMap)));
-        }
-    }
-
-    $results = [
-        'success' => 0,
-        'failed' => 0,
-        'errors' => []
-    ];
-
-    foreach ($rows as $rowNumber => $row) {
-        if ($rowNumber === 1) continue;
-
-        // Skip empty rows
-        if (empty($row[$headerMap['Particulars']])) {
-            continue;
+        $foundDateColumn = null;
+        foreach ($dateColumns as $dateCol) {
+            if (isset($headerMap[$dateCol])) {
+                $foundDateColumn = $dateCol;
+                break;
+            }
         }
 
-        try {
-            DB::transaction(function () use ($sheet, $rowNumber, $headerMap, $foundDateColumn, $rows) {
-                // Get the CELL OBJECT for the date
-                $dateColumnLetter = $headerMap[$foundDateColumn];
-                $cell = $sheet->getCell($dateColumnLetter . $rowNumber);
+        if (!$foundDateColumn) {
+            throw new \Exception('No date column found. Available columns: ' . implode(', ', array_keys($headerMap)));
+        }
 
-                // Get the raw Excel value
-                $excelValue = $cell->getValue();
+        foreach ($requiredColumns as $requiredColumn) {
+            if (!isset($headerMap[$requiredColumn])) {
+                throw new \Exception("Missing column: {$requiredColumn}. Available: " . implode(', ', array_keys($headerMap)));
+            }
+        }
 
-                // Handle date - simpler approach
-                if (is_numeric($excelValue)) {
-                    // Excel serial date - convert to DateTime
-                    $utcDays = $excelValue - 25569; // Excel to Unix days
-                    $paymentDate = Carbon::createFromTimestamp($utcDays * 86400);
-                } else {
-                    // Try to parse as normal date
-                    try {
-                        $paymentDate = Carbon::parse($excelValue);
-                    } catch (\Exception $e) {
-                        // If it contains Chinese characters, extract date
-                        $formattedValue = $cell->getFormattedValue();
-                        if (preg_match('/(\d{4})年(\d{1,2})月(\d{1,2})日/', $formattedValue, $matches)) {
-                            $paymentDate = Carbon::create($matches[1], $matches[2], $matches[3]);
-                        } else {
-                            throw new \Exception("Could not parse date: {$formattedValue}");
+        $results = [
+            'success' => 0,
+            'failed' => 0,
+            'errors' => []
+        ];
+
+        foreach ($rows as $rowNumber => $row) {
+            if ($rowNumber === 1) continue;
+
+            // Skip empty rows
+            if (empty($row[$headerMap['Particulars']])) {
+                continue;
+            }
+
+            try {
+                DB::transaction(function () use ($sheet, $rowNumber, $headerMap, $foundDateColumn, $rows) {
+                    // ========== DATE PARSING ==========
+                    $dateColumnLetter = $headerMap[$foundDateColumn];
+                    $dateCell = $sheet->getCell($dateColumnLetter . $rowNumber);
+                    $excelDateValue = $dateCell->getValue();
+
+                    // Handle date
+                    if (is_numeric($excelDateValue)) {
+                        // Excel serial date - convert to DateTime
+                        $utcDays = $excelDateValue - 25569; // Excel to Unix days
+                        $paymentDate = Carbon::createFromTimestamp($utcDays * 86400);
+                    } else {
+                        // Try to parse as normal date
+                        try {
+                            $paymentDate = Carbon::parse($excelDateValue);
+                        } catch (\Exception $e) {
+                            // If it contains Chinese characters, extract date
+                            $formattedValue = $dateCell->getFormattedValue();
+                            if (preg_match('/(\d{4})年(\d{1,2})月(\d{1,2})日/', $formattedValue, $matches)) {
+                                $paymentDate = Carbon::create($matches[1], $matches[2], $matches[3]);
+                            } else {
+                                throw new \Exception("Could not parse date: {$formattedValue}");
+                            }
                         }
                     }
-                }
 
-                // Get amount and particulars
-                $amount = (float) $rows[$rowNumber][$headerMap['Credit Amt.']];
-                $particulars = trim($rows[$rowNumber][$headerMap['Particulars']]);
+                    // ========== AMOUNT PARSING (FIXED) ==========
+                    $amountColumnLetter = $headerMap['Credit Amt.'];
+                    $amountCell = $sheet->getCell($amountColumnLetter . $rowNumber);
+                    $excelAmountValue = $amountCell->getValue();
 
-                // Skip if amount is empty or zero
-                if (empty($amount) || $amount == 0) {
-                    throw new \Exception('Amount is zero or empty');
-                }
+                    Log::info("Row {$rowNumber} - Raw amount value: " . print_r($excelAmountValue, true));
+                    Log::info("Row {$rowNumber} - Amount formatted value: " . $amountCell->getFormattedValue());
+                    Log::info("Row {$rowNumber} - Amount data type: " . gettype($excelAmountValue));
 
-                // 1️⃣ Extract customer number
-                $customerNumber = null;
+                    // Get the cell's format code to understand how it's formatted
+                    $style = $sheet->getStyle($amountColumnLetter . $rowNumber);
+                    $formatCode = $style->getNumberFormat()->getFormatCode();
+                    Log::info("Row {$rowNumber} - Amount format code: " . $formatCode);
 
-                // Pattern 1: # followed by numbers (most common in your data: #13764, #03844, etc.)
-                if (preg_match('/#(\d{4,})/', $particulars, $matches)) {
-                    $customerNumber = $matches[1];
-                }
-                // Pattern 2: 48133# followed by numbers
-                elseif (preg_match('/48133\s*#\s*(\d+)/', $particulars, $matches)) {
-                    $customerNumber = $matches[1];
-                }
-                // Pattern 3: Look for 5+ digit numbers (fallback)
-                elseif (preg_match('/\b(\d{5,})\b/', $particulars, $matches)) {
-                    $customerNumber = $matches[1];
-                }
+                    // Try multiple ways to get the correct amount
+                    $amount = null;
 
-                if (!$customerNumber) {
-                    throw new \Exception('Customer account number not found in: ' . substr($particulars, 0, 100));
-                }
+                    // Method 1: If it's numeric but small (likely mis-interpreted as date)
+                    if (is_numeric($excelAmountValue)) {
+                        // Check if it's likely a date serial number (dates are usually > 40000)
+                        // Amounts are usually much smaller unless it's a huge amount
+                        if ($excelAmountValue < 100000) {
+                            // This is probably an amount, not a date
+                            $amount = (float) $excelAmountValue;
+                        } else {
+                            // Might be a date formatted as number, try to get formatted value
+                            $formatted = $amountCell->getFormattedValue();
+                            if (is_numeric($formatted)) {
+                                $amount = (float) $formatted;
+                            } else {
+                                // Try to extract number from formatted string
+                                preg_match('/[\d,]+\.?\d*/', $formatted, $matches);
+                                if ($matches) {
+                                    $amount = (float) str_replace(',', '', $matches[0]);
+                                }
+                            }
+                        }
+                    }
+                    // Method 2: If it's a string (like "4000.00")
+                    elseif (is_string($excelAmountValue)) {
+                        $amount = (float) str_replace(',', '', $excelAmountValue);
+                    }
 
-                Log::info("Row {$rowNumber} - Processing: Customer#{$customerNumber}, Amount: {$amount}");
+                    // Method 3: Fallback to array value
+                    if ($amount === null || $amount == 0) {
+                        $arrayValue = $rows[$rowNumber][$headerMap['Credit Amt.']];
+                        if (is_numeric($arrayValue)) {
+                            $amount = (float) $arrayValue;
+                        } elseif (is_string($arrayValue)) {
+                            $amount = (float) str_replace(',', '', $arrayValue);
+                        }
+                    }
 
-                // 2️⃣ Find customer
-                $customer = Customer::where('customer_number', $customerNumber)
-                    ->lockForUpdate()
-                    ->first();
+                    // Method 4: Use PhpSpreadsheet's calculation (most reliable)
+                    if (($amount === null || $amount == 0) && is_numeric($excelAmountValue)) {
+                        // Try to calculate the actual value
+                        try {
+                            $calculatedValue = \PhpOffice\PhpSpreadsheet\Calculation\Calculation::getInstance()
+                                ->calculateCellValue($sheet, $amountColumnLetter . $rowNumber);
 
-                if (!$customer) {
-                    throw new \Exception("Customer with number {$customerNumber} not found");
-                }
+                            if (is_numeric($calculatedValue)) {
+                                $amount = (float) $calculatedValue;
+                            }
+                        } catch (\Exception $e) {
+                            // Ignore calculation errors
+                        }
+                    }
 
-                if ($customer->status !== 'active') {
-                    throw new \Exception('Customer inactive');
-                }
+                    // If still no amount, use the formatted value as last resort
+                    if (($amount === null || $amount == 0)) {
+                        $formatted = $amountCell->getFormattedValue();
+                        if (preg_match('/[\d,]+\.?\d*/', $formatted, $matches)) {
+                            $amount = (float) str_replace(',', '', $matches[0]);
+                        }
+                    }
 
-                // 3️⃣ Find meter
-                $meter = Meter::where('customer_id', $customer->id)
-                    ->lockForUpdate()
-                    ->first();
+                    // Validate amount
+                    if ($amount === null || $amount <= 0) {
+                        throw new \Exception('Invalid or zero amount: ' . print_r($excelAmountValue, true));
+                    }
 
-                if (!$meter) {
-                    throw new \Exception("Meter for customer {$customerNumber} not found");
-                }
+                    Log::info("Row {$rowNumber} - Final parsed amount: " . $amount);
 
-                // 4️⃣ Extract transaction reference
-                $transactionRef = $this->extractTransactionRef($particulars);
+                    // ========== PARTICULAR PARSING ==========
+                    $particulars = trim($rows[$rowNumber][$headerMap['Particulars']]);
 
-                // Check for duplicate transaction reference
-                if ($transactionRef) {
-                    $existingPayment = Payment::where('transaction_reference', $transactionRef)
-                        ->where('payment_method', 'mpesa')
-                        ->where('payment_status', 'completed')
+                    // 1️⃣ Extract customer number
+                    $customerNumber = null;
+
+                    // Pattern 1: # followed by numbers (most common in your data: #13764, #03844, etc.)
+                    if (preg_match('/#(\d{4,})/', $particulars, $matches)) {
+                        $customerNumber = $matches[1];
+                    }
+                    // Pattern 2: 48133# followed by numbers
+                    elseif (preg_match('/48133\s*#\s*(\d+)/', $particulars, $matches)) {
+                        $customerNumber = $matches[1];
+                    }
+                    // Pattern 3: Look for 5+ digit numbers (fallback)
+                    elseif (preg_match('/\b(\d{5,})\b/', $particulars, $matches)) {
+                        $customerNumber = $matches[1];
+                    }
+
+                    if (!$customerNumber) {
+                        throw new \Exception('Customer account number not found in: ' . substr($particulars, 0, 100));
+                    }
+
+                    Log::info("Row {$rowNumber} - Processing: Customer#{$customerNumber}, Amount: {$amount}, Date: {$paymentDate->format('Y-m-d')}");
+
+                    // 2️⃣ Find customer
+                    $customer = Customer::where('customer_number', $customerNumber)
+                        ->lockForUpdate()
                         ->first();
 
-                    if ($existingPayment) {
-                        throw new \Exception('Transaction reference has already been used');
+                    if (!$customer) {
+                        throw new \Exception("Customer with number {$customerNumber} not found");
                     }
-                }
 
-                // 5️⃣ Process payment using your PaymentProcessingService
-                $this->paymentService->processPayment(
-                    $meter,
-                    $amount,
-                    'mpesa',
-                    $transactionRef,
-                    $paymentDate,
-                    auth()->id()
-                );
+                    if ($customer->status !== 'active') {
+                        throw new \Exception('Customer inactive');
+                    }
 
-                Log::info("Row {$rowNumber} - Successfully processed payment for customer {$customerNumber}");
-            });
+                    // 3️⃣ Find meter
+                    $meter = Meter::where('customer_id', $customer->id)
+                        ->lockForUpdate()
+                        ->first();
 
-            $results['success']++;
+                    if (!$meter) {
+                        throw new \Exception("Meter for customer {$customerNumber} not found");
+                    }
 
-        } catch (\Exception $e) {
-            $results['failed']++;
-            $results['errors'][] = [
-                'row' => $rowNumber,
-                'reason' => $e->getMessage()
-            ];
+                    // 4️⃣ Extract transaction reference
+                    $transactionRef = $this->extractTransactionRef($particulars);
 
-            Log::error('Payment import failed', [
-                'row' => $rowNumber,
-                'error' => $e->getMessage(),
-                'particulars' => $rows[$rowNumber][$headerMap['Particulars']] ?? 'N/A',
-                'amount' => $rows[$rowNumber][$headerMap['Credit Amt.']] ?? 'N/A'
-            ]);
+                    // Check for duplicate transaction reference
+                    if ($transactionRef) {
+                        $existingPayment = Payment::where('transaction_reference', $transactionRef)
+                            ->where('payment_method', 'mpesa')
+                            ->where('payment_status', 'completed')
+                            ->first();
+
+                        if ($existingPayment) {
+                            throw new \Exception('Transaction reference has already been used');
+                        }
+                    }
+
+                    // 5️⃣ Process payment using your PaymentProcessingService
+                    $this->paymentService->processPayment(
+                        $meter,
+                        $amount,
+                        'mpesa',
+                        $transactionRef,
+                        $paymentDate,
+                        auth()->id()
+                    );
+
+                    Log::info("Row {$rowNumber} - Successfully processed payment for customer {$customerNumber}");
+                });
+
+                $results['success']++;
+
+            } catch (\Exception $e) {
+                $results['failed']++;
+                $results['errors'][] = [
+                    'row' => $rowNumber,
+                    'reason' => $e->getMessage(),
+                    'raw_data' => [
+                        'date' => $rows[$rowNumber][$headerMap[$foundDateColumn]] ?? 'N/A',
+                        'amount' => $rows[$rowNumber][$headerMap['Credit Amt.']] ?? 'N/A',
+                        'particulars' => $rows[$rowNumber][$headerMap['Particulars']] ?? 'N/A'
+                    ]
+                ];
+
+                Log::error('Payment import failed', [
+                    'row' => $rowNumber,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+            }
         }
+
+        return back()->with('import_result', $results);
     }
 
-    return back()->with('import_result', $results);
-}
+    private function extractTransactionRef(string $text): ?string
+    {
+        // Extract transaction reference from MPS entries
+        // Pattern like: MPS 254712838480 TKUD6BJ0IK 48133#13764
+        if (preg_match('/MPS\s+\d+\s+([A-Z0-9]{8,15})\b/', $text, $matches)) {
+            return $matches[1]; // Returns TKUD6BJ0IK
+        }
 
-private function extractTransactionRef(string $text): ?string
-{
-    // Extract transaction reference from MPS entries
-    // Pattern like: MPS 254712838480 TKUD6BJ0IK 48133#13764
-    if (preg_match('/MPS\s+\d+\s+([A-Z0-9]{8,15})\b/', $text, $matches)) {
-        return $matches[1]; // Returns TKUD6BJ0IK
+        // Alternative: look for any 8-15 char alphanumeric code
+        if (preg_match('/\b([A-Z0-9]{8,15})\b/', $text, $matches)) {
+            return $matches[1];
+        }
+
+        return null;
     }
-
-    // Alternative: look for any 8-15 char alphanumeric code
-    if (preg_match('/\b([A-Z0-9]{8,15})\b/', $text, $matches)) {
-        return $matches[1];
-    }
-
-    return null;
-}
     public function store(Request $request)
     {
         $validated = $request->validate([
