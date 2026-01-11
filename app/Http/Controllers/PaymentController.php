@@ -192,7 +192,6 @@ class PaymentController extends Controller
         // Map header names to column letters
         $headerMap = array_flip($headers);
 
-        // Debug: log what we found
         Log::info('Headers found:', $headers);
 
         // 🔒 Ensure required columns exist
@@ -222,143 +221,188 @@ class PaymentController extends Controller
             'failed' => 0,
             'errors' => [],
             'skipped' => 0,
-            'not_found_customers' => []
+            'not_found_customers' => [],
+            'empty_amounts' => 0
         ];
 
         foreach ($rows as $rowNumber => $row) {
             if ($rowNumber === 1) continue;
 
-            // Skip empty rows
+            // Skip empty rows or rows with empty particulars
             if (empty($row[$headerMap['Particulars']])) {
                 $results['skipped']++;
                 continue;
             }
 
             try {
-                DB::transaction(function () use ($sheet, $rowNumber, $headerMap, $foundDateColumn, $rows, &$results) {
-                    // ========== DATE PARSING ==========
-                    $dateColumnLetter = $headerMap[$foundDateColumn];
-                    $dateCell = $sheet->getCell($dateColumnLetter . $rowNumber);
-                    $excelDateValue = $dateCell->getValue();
+                // ========== AMOUNT CHECK FIRST ==========
+                // Get amount cell FIRST to check if it's empty
+                $amountColumnLetter = $headerMap['Credit Amt.'];
+                $amountCell = $sheet->getCell($amountColumnLetter . $rowNumber);
+                $excelAmountValue = $amountCell->getValue();
 
-                    // Handle date
-                    if (is_numeric($excelDateValue)) {
-                        // Excel serial date - convert to DateTime
-                        $utcDays = $excelDateValue - 25569; // Excel to Unix days
-                        $paymentDate = Carbon::createFromTimestamp($utcDays * 86400);
+                // Debug logging
+                Log::info("Row {$rowNumber} - Amount raw: " . print_r($excelAmountValue, true));
+                Log::info("Row {$rowNumber} - Amount formatted: " . $amountCell->getFormattedValue());
+
+                // Check if amount is empty or null
+                $isAmountEmpty = false;
+                if ($excelAmountValue === null || $excelAmountValue === '' || $excelAmountValue === ' ') {
+                    $isAmountEmpty = true;
+                } elseif (is_string($excelAmountValue) && trim($excelAmountValue) === '') {
+                    $isAmountEmpty = true;
+                }
+
+                // Also check the array value
+                $arrayAmountValue = $rows[$rowNumber][$headerMap['Credit Amt.']];
+                if ($isAmountEmpty && ($arrayAmountValue === null || $arrayAmountValue === '' || trim($arrayAmountValue) === '')) {
+                    $isAmountEmpty = true;
+                } else {
+                    $isAmountEmpty = false;
+                }
+
+                // If amount is empty, skip this row - it's not a payment!
+                if ($isAmountEmpty) {
+                    $results['empty_amounts']++;
+                    Log::info("Row {$rowNumber} - Skipping: Empty amount field");
+                    continue;
+                }
+
+                // ========== DATE PARSING ==========
+                $dateColumnLetter = $headerMap[$foundDateColumn];
+                $dateCell = $sheet->getCell($dateColumnLetter . $rowNumber);
+                $excelDateValue = $dateCell->getValue();
+
+                // Handle date
+                if (is_numeric($excelDateValue)) {
+                    // Excel serial date - convert to DateTime
+                    $utcDays = $excelDateValue - 25569;
+                    $paymentDate = Carbon::createFromTimestamp($utcDays * 86400);
+                } else {
+                    try {
+                        $paymentDate = Carbon::parse($excelDateValue);
+                    } catch (\Exception $e) {
+                        $formattedValue = $dateCell->getFormattedValue();
+                        if (preg_match('/(\d{4})年(\d{1,2})月(\d{1,2})日/', $formattedValue, $matches)) {
+                            $paymentDate = Carbon::create($matches[1], $matches[2], $matches[3]);
+                        } else {
+                            throw new \Exception("Could not parse date: {$formattedValue}");
+                        }
+                    }
+                }
+
+                // ========== AMOUNT PARSING ==========
+                $amount = null;
+
+                // Try multiple parsing methods
+                if (is_numeric($excelAmountValue)) {
+                    $amount = (float) $excelAmountValue;
+                } elseif (is_string($excelAmountValue)) {
+                    $amount = (float) str_replace(',', '', $excelAmountValue);
+                } else {
+                    $formatted = $amountCell->getFormattedValue();
+                    if (preg_match('/[\d,]+\.?\d*/', $formatted, $matches)) {
+                        $amount = (float) str_replace(',', '', $matches[0]);
+                    }
+                }
+
+                // If still null, try array value
+                if ($amount === null && is_numeric($arrayAmountValue)) {
+                    $amount = (float) $arrayAmountValue;
+                }
+
+                // Validate amount
+                if ($amount === null || $amount <= 0) {
+                    throw new \Exception("Invalid amount. Raw: " . print_r($excelAmountValue, true) .
+                                        ", Formatted: " . $amountCell->getFormattedValue());
+                }
+
+                // ========== PARTICULAR PARSING ==========
+                $particulars = trim($rows[$rowNumber][$headerMap['Particulars']]);
+
+                // Extract customer number
+                $customerNumber = null;
+
+                // Pattern 1: # followed by numbers
+                if (preg_match('/#(\d{3,})/', $particulars, $matches)) {
+                    $customerNumber = $matches[1];
+                }
+                // Pattern 2: Look for standalone 3+ digit numbers
+                elseif (preg_match('/\b(\d{3,})\b/', $particulars, $matches)) {
+                    $customerNumber = $matches[1];
+                }
+
+                if (!$customerNumber) {
+                    // Check if this is a non-payment entry (like charges, withdrawals)
+                    $nonPaymentKeywords = [
+                        'Cash Withdrawal Charge',
+                        'Inward Clearing Charge',
+                        'Inter Sol Cash Wdrawal charge',
+                        'Cash Withdrawal Charge',
+                        'JARED ATEMBA', // These might be withdrawals by staff
+                        'ChequeNo',
+                        'Chq:'
+                    ];
+
+                    $isNonPayment = false;
+                    foreach ($nonPaymentKeywords as $keyword) {
+                        if (stripos($particulars, $keyword) !== false) {
+                            $isNonPayment = true;
+                            break;
+                        }
+                    }
+
+                    if ($isNonPayment) {
+                        $results['skipped']++;
+                        Log::info("Row {$rowNumber} - Skipping non-payment entry: " . substr($particulars, 0, 50));
+                        continue;
                     } else {
-                        // Try to parse as normal date
-                        try {
-                            $paymentDate = Carbon::parse($excelDateValue);
-                        } catch (\Exception $e) {
-                            // If it contains Chinese characters, extract date
-                            $formattedValue = $dateCell->getFormattedValue();
-                            if (preg_match('/(\d{4})年(\d{1,2})月(\d{1,2})日/', $formattedValue, $matches)) {
-                                $paymentDate = Carbon::create($matches[1], $matches[2], $matches[3]);
-                            } else {
-                                throw new \Exception("Could not parse date: {$formattedValue}");
-                            }
-                        }
-                    }
-
-                    // ========== AMOUNT PARSING ==========
-                    $amountColumnLetter = $headerMap['Credit Amt.'];
-                    $amountCell = $sheet->getCell($amountColumnLetter . $rowNumber);
-                    $excelAmountValue = $amountCell->getValue();
-
-                    // Try multiple ways to get the correct amount
-                    $amount = null;
-
-                    // Method 1: Direct numeric value
-                    if (is_numeric($excelAmountValue)) {
-                        $amount = (float) $excelAmountValue;
-                    }
-                    // Method 2: String value
-                    elseif (is_string($excelAmountValue)) {
-                        $amount = (float) str_replace(',', '', $excelAmountValue);
-                    }
-                    // Method 3: Formatted value
-                    else {
-                        $formatted = $amountCell->getFormattedValue();
-                        if (preg_match('/[\d,]+\.?\d*/', $formatted, $matches)) {
-                            $amount = (float) str_replace(',', '', $matches[0]);
-                        }
-                    }
-
-                    // Validate amount
-                    if ($amount === null || $amount <= 0) {
-                        throw new \Exception('Invalid or zero amount: ' . print_r($excelAmountValue, true));
-                    }
-
-                    // ========== PARTICULAR PARSING ==========
-                    $particulars = trim($rows[$rowNumber][$headerMap['Particulars']]);
-
-                    // 1️⃣ Extract customer number
-                    $customerNumber = null;
-
-                    // Pattern 1: # followed by numbers (most common in your data: #13764, #03844, etc.)
-                    if (preg_match('/#(\d{4,})/', $particulars, $matches)) {
-                        $customerNumber = $matches[1];
-                    }
-                    // Pattern 2: 48133# followed by numbers
-                    elseif (preg_match('/48133\s*#\s*(\d+)/', $particulars, $matches)) {
-                        $customerNumber = $matches[1];
-                    }
-                    // Pattern 3: Look for 5+ digit numbers (fallback)
-                    elseif (preg_match('/\b(\d{5,})\b/', $particulars, $matches)) {
-                        $customerNumber = $matches[1];
-                    }
-
-                    if (!$customerNumber) {
                         throw new \Exception('Customer account number not found');
                     }
+                }
 
-                    // 2️⃣ Find customer
-                    $customer = Customer::where('customer_number', $customerNumber)
-                        ->lockForUpdate()
+                // Find customer
+                $customer = Customer::where('customer_number', $customerNumber)->first();
+
+                if (!$customer) {
+                    $results['not_found_customers'][] = [
+                        'row' => $rowNumber,
+                        'customer_number' => $customerNumber,
+                        'amount' => $amount,
+                        'date' => $paymentDate->format('Y-m-d'),
+                        'particulars' => substr($particulars, 0, 200)
+                    ];
+                    throw new \Exception("Customer {$customerNumber} not found - skipped");
+                }
+
+                if ($customer->status !== 'active') {
+                    throw new \Exception("Customer {$customerNumber} is {$customer->status}");
+                }
+
+                // Find meter
+                $meter = Meter::where('customer_id', $customer->id)->first();
+
+                if (!$meter) {
+                    throw new \Exception("Meter for customer {$customerNumber} not found");
+                }
+
+                // Extract transaction reference
+                $transactionRef = $this->extractTransactionRef($particulars);
+
+                // Check for duplicate transaction reference
+                if ($transactionRef) {
+                    $existingPayment = Payment::where('transaction_reference', $transactionRef)
+                        ->where('payment_method', 'mpesa')
+                        ->where('payment_status', 'completed')
                         ->first();
 
-                    if (!$customer) {
-                        // Record missing customer but don't fail the entire import
-                        $results['not_found_customers'][] = [
-                            'row' => $rowNumber,
-                            'customer_number' => $customerNumber,
-                            'amount' => $amount,
-                            'date' => $paymentDate->format('Y-m-d'),
-                            'particulars' => substr($particulars, 0, 200)
-                        ];
-                        throw new \Exception("Customer with number {$customerNumber} not found - skipped");
+                    if ($existingPayment) {
+                        throw new \Exception('Transaction reference has already been used');
                     }
+                }
 
-                    if ($customer->status !== 'active') {
-                        throw new \Exception("Customer {$customerNumber} is {$customer->status}");
-                    }
-
-                    // 3️⃣ Find meter
-                    $meter = Meter::where('customer_id', $customer->id)
-                        ->lockForUpdate()
-                        ->first();
-
-                    if (!$meter) {
-                        throw new \Exception("Meter for customer {$customerNumber} not found");
-                    }
-
-                    // 4️⃣ Extract transaction reference
-                    $transactionRef = $this->extractTransactionRef($particulars);
-
-                    // Check for duplicate transaction reference
-                    if ($transactionRef) {
-                        $existingPayment = Payment::where('transaction_reference', $transactionRef)
-                            ->where('payment_method', 'mpesa')
-                            ->where('payment_status', 'completed')
-                            ->first();
-
-                        if ($existingPayment) {
-                            throw new \Exception('Transaction reference has already been used');
-                        }
-                    }
-
-                    // 5️⃣ Process payment using your PaymentProcessingService
+                // Process payment within transaction
+                DB::transaction(function () use ($meter, $amount, $transactionRef, $paymentDate, $customerNumber, $rowNumber) {
                     $this->paymentService->processPayment(
                         $meter,
                         $amount,
@@ -368,43 +412,46 @@ class PaymentController extends Controller
                         auth()->id()
                     );
 
-                    Log::info("Row {$rowNumber} - Successfully processed payment for customer {$customerNumber}");
-
-                    $results['success']++;
+                    Log::info("Row {$rowNumber} - Payment processed for customer {$customerNumber}");
                 });
 
-            } catch (\Exception $e) {
-                $results['failed']++;
-                $results['errors'][] = [
-                    'row' => $rowNumber,
-                    'reason' => $e->getMessage(),
-                    'raw_data' => [
-                        'date' => $rows[$rowNumber][$headerMap[$foundDateColumn]] ?? 'N/A',
-                        'amount' => $rows[$rowNumber][$headerMap['Credit Amt.']] ?? 'N/A',
-                        'particulars' => $rows[$rowNumber][$headerMap['Particulars']] ?? 'N/A'
-                    ]
-                ];
+                $results['success']++;
 
-                // Don't log missing customers as errors, just info
-                if (strpos($e->getMessage(), 'Customer with number') !== false && strpos($e->getMessage(), 'not found') !== false) {
-                    Log::info('Customer not found during import: ' . $e->getMessage());
-                } else {
-                    Log::error('Payment import failed', [
+            } catch (\Exception $e) {
+                // Check error type
+                $errorMsg = $e->getMessage();
+
+                if (strpos($errorMsg, 'Customer') !== false &&
+                    strpos($errorMsg, 'not found') !== false &&
+                    strpos($errorMsg, 'skipped') !== false) {
+                    $results['skipped']++;
+                    Log::info("Row {$rowNumber} skipped: " . $errorMsg);
+                } elseif (strpos($errorMsg, 'Invalid amount') !== false) {
+                    $results['failed']++;
+                    $results['errors'][] = [
                         'row' => $rowNumber,
-                        'error' => $e->getMessage()
-                    ]);
+                        'reason' => $errorMsg
+                    ];
+                    Log::error("Row {$rowNumber} amount error: " . $errorMsg);
+                } else {
+                    $results['failed']++;
+                    $results['errors'][] = [
+                        'row' => $rowNumber,
+                        'reason' => $errorMsg
+                    ];
+                    Log::error("Row {$rowNumber} failed: " . $errorMsg);
                 }
             }
         }
 
-        // Create a summary report
+        // Create summary
         $summary = [
-            'total_rows' => count($rows) - 1, // minus header
+            'total_rows' => count($rows) - 1,
             'successful' => $results['success'],
             'failed' => $results['failed'],
             'skipped' => $results['skipped'],
-            'not_found_customers_count' => count($results['not_found_customers']),
-            'not_found_customers' => $results['not_found_customers']
+            'empty_amounts' => $results['empty_amounts'],
+            'not_found_customers' => count($results['not_found_customers'])
         ];
 
         Log::info('Import completed', $summary);
