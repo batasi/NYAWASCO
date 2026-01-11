@@ -224,6 +224,8 @@ Route::middleware(['auth'])->group(function () {
 
     // Payments
     Route::get('/payments/search', [PaymentController::class, 'search'])->name('payments.search');
+    Route::post('/payments/import', [PaymentController::class, 'import'])
+        ->name('payments.import');
 
     Route::prefix('payments')->group(function () {
         Route::get('/', [PaymentController::class, 'index'])->name('payments.index');

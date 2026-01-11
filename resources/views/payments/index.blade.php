@@ -162,6 +162,31 @@
             <div class="px-6 py-4 border-b border-gray-200">
                 <h2 class="text-xl font-semibold text-gray-800">Payments Management</h2>
             </div>
+            @if(session('import_result'))
+            <div class="mb-6 rounded-lg border border-green-200 bg-green-50 p-4">
+                <h4 class="font-semibold text-green-800 mb-2">
+                    Payment Import Summary
+                </h4>
+
+                <ul class="text-sm text-green-700 space-y-1">
+                    <li>✅ Successful: {{ session('import_result.success') }}</li>
+                    <li>❌ Failed: {{ session('import_result.failed') }}</li>
+                </ul>
+
+                @if(count(session('import_result.errors', [])))
+                    <details class="mt-3">
+                        <summary class="cursor-pointer text-sm text-red-600 font-medium">
+                            View Errors
+                        </summary>
+                        <ul class="mt-2 text-xs text-red-700 list-disc pl-5 space-y-1">
+                            @foreach(session('import_result.errors') as $error)
+                                <li>Row {{ $error['row'] }}: {{ $error['reason'] }}</li>
+                            @endforeach
+                        </ul>
+                    </details>
+                @endif
+            </div>
+            @endif
 
             <!-- Payments Table -->
             <div class="overflow-x-auto">
@@ -357,11 +382,43 @@
                     </a>
                     @endcan
                     @can('add payments')
-                    <button onclick="openPaymentModal()"
-                       class="w-full bg-purple-100 hover:bg-purple-200 text-purple-700 px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
-                        <i class="fas fa-plus-circle mr-2"></i>
-                        Record New Payment
-                    </button>
+                    <div class="border border-dashed border-blue-300 rounded-lg p-4 bg-blue-50">
+                        <h4 class="text-sm font-semibold text-blue-800 mb-2 flex items-center">
+                            <i class="fas fa-file-excel mr-2"></i>
+                            Import Payments (Excel)
+                        </h4>
+
+                        <form action="{{ route('payments.import') }}"
+                            method="POST"
+                            enctype="multipart/form-data"
+                            class="space-y-3">
+                            @csrf
+
+                            <input type="file"
+                                name="file"
+                                accept=".xlsx,.xls"
+                                required
+                                class="block w-full text-sm text-gray-700
+                                        file:mr-4 file:py-2 file:px-4
+                                        file:rounded-lg file:border-0
+                                        file:bg-blue-600 file:text-white
+                                        hover:file:bg-blue-700 cursor-pointer">
+
+                            <p class="text-xs text-gray-500">
+                                Expected columns:
+                                <span class="font-mono">Tran. Date</span>,
+                                <span class="font-mono">Credit Amt.</span>,
+                                <span class="font-mono">Particulars</span>
+                            </p>
+
+                            <button type="submit"
+                                    class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition flex items-center justify-center">
+                                <i class="fas fa-upload mr-2"></i>
+                                Upload & Import
+                            </button>
+                        </form>
+                    </div>
+
                     @endcan
                 </div>
             </div>
@@ -551,6 +608,52 @@
 <!-- jQuery CDN -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script>
+    // Add this after your existing script
+document.addEventListener('DOMContentLoaded', function() {
+    const importForm = document.querySelector('form[action*="import"]');
+
+    if (importForm) {
+        console.log('Import form found:', importForm.action);
+
+        importForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            console.log('Form submit triggered');
+
+            // Get form data
+            const formData = new FormData(this);
+            const file = formData.get('file');
+
+            console.log('File selected:', file ? file.name : 'No file');
+            console.log('File size:', file ? file.size + ' bytes' : 'N/A');
+
+            // Manual submission for testing
+            console.log('Submitting form manually...');
+
+            fetch(this.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                return response.text();
+            })
+            .then(data => {
+                console.log('Response data:', data);
+                // Reload page if successful
+                window.location.reload();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+    } else {
+        console.error('Import form not found!');
+    }
+});
 /* Modal Open/Close */
 function openPaymentModal() {
     const modal = document.getElementById('paymentModal');

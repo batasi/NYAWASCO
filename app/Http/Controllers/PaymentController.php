@@ -15,8 +15,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 use Carbon\Carbon;
-
 
 class PaymentController extends Controller
 {
@@ -167,6 +168,215 @@ class PaymentController extends Controller
     /**
      * Store a newly created payment with proper transaction handling
      */
+
+
+public function import(Request $request)
+{
+    $request->validate([
+        'file' => 'required|file|mimes:xlsx,xls'
+    ]);
+
+    $spreadsheet = IOFactory::load($request->file('file')->getPathname());
+    $sheet = $spreadsheet->getActiveSheet();
+
+    // Get the highest row and column
+    $highestRow = $sheet->getHighestRow();
+    $highestColumn = $sheet->getHighestColumn();
+
+    // Get all cells as an array
+    $rows = $sheet->rangeToArray('A1:' . $highestColumn . $highestRow, null, true, true, true);
+
+    // First row = headers
+    $headers = array_map('trim', $rows[1]);
+
+    // Map header names to column letters
+    $headerMap = array_flip($headers);
+
+    // Debug: log what we found
+    Log::info('Headers found:', $headers);
+
+    // 🔒 Ensure required columns exist
+    $requiredColumns = ['Credit Amt.', 'Particulars'];
+    $dateColumns = ['Tran. Date', 'Value Date'];
+
+    $foundDateColumn = null;
+    foreach ($dateColumns as $dateCol) {
+        if (isset($headerMap[$dateCol])) {
+            $foundDateColumn = $dateCol;
+            break;
+        }
+    }
+
+    if (!$foundDateColumn) {
+        throw new \Exception('No date column found. Available columns: ' . implode(', ', array_keys($headerMap)));
+    }
+
+    foreach ($requiredColumns as $requiredColumn) {
+        if (!isset($headerMap[$requiredColumn])) {
+            throw new \Exception("Missing column: {$requiredColumn}. Available: " . implode(', ', array_keys($headerMap)));
+        }
+    }
+
+    $results = [
+        'success' => 0,
+        'failed' => 0,
+        'errors' => []
+    ];
+
+    foreach ($rows as $rowNumber => $row) {
+        if ($rowNumber === 1) continue;
+
+        // Skip empty rows
+        if (empty($row[$headerMap['Particulars']])) {
+            continue;
+        }
+
+        try {
+            DB::transaction(function () use ($sheet, $rowNumber, $headerMap, $foundDateColumn, $rows) {
+                // Get the CELL OBJECT for the date
+                $dateColumnLetter = $headerMap[$foundDateColumn];
+                $cell = $sheet->getCell($dateColumnLetter . $rowNumber);
+
+                // Get the raw Excel value
+                $excelValue = $cell->getValue();
+
+                // Handle date - simpler approach
+                if (is_numeric($excelValue)) {
+                    // Excel serial date - convert to DateTime
+                    $utcDays = $excelValue - 25569; // Excel to Unix days
+                    $paymentDate = Carbon::createFromTimestamp($utcDays * 86400);
+                } else {
+                    // Try to parse as normal date
+                    try {
+                        $paymentDate = Carbon::parse($excelValue);
+                    } catch (\Exception $e) {
+                        // If it contains Chinese characters, extract date
+                        $formattedValue = $cell->getFormattedValue();
+                        if (preg_match('/(\d{4})年(\d{1,2})月(\d{1,2})日/', $formattedValue, $matches)) {
+                            $paymentDate = Carbon::create($matches[1], $matches[2], $matches[3]);
+                        } else {
+                            throw new \Exception("Could not parse date: {$formattedValue}");
+                        }
+                    }
+                }
+
+                // Get amount and particulars
+                $amount = (float) $rows[$rowNumber][$headerMap['Credit Amt.']];
+                $particulars = trim($rows[$rowNumber][$headerMap['Particulars']]);
+
+                // Skip if amount is empty or zero
+                if (empty($amount) || $amount == 0) {
+                    throw new \Exception('Amount is zero or empty');
+                }
+
+                // 1️⃣ Extract customer number
+                $customerNumber = null;
+
+                // Pattern 1: # followed by numbers (most common in your data: #13764, #03844, etc.)
+                if (preg_match('/#(\d{4,})/', $particulars, $matches)) {
+                    $customerNumber = $matches[1];
+                }
+                // Pattern 2: 48133# followed by numbers
+                elseif (preg_match('/48133\s*#\s*(\d+)/', $particulars, $matches)) {
+                    $customerNumber = $matches[1];
+                }
+                // Pattern 3: Look for 5+ digit numbers (fallback)
+                elseif (preg_match('/\b(\d{5,})\b/', $particulars, $matches)) {
+                    $customerNumber = $matches[1];
+                }
+
+                if (!$customerNumber) {
+                    throw new \Exception('Customer account number not found in: ' . substr($particulars, 0, 100));
+                }
+
+                Log::info("Row {$rowNumber} - Processing: Customer#{$customerNumber}, Amount: {$amount}");
+
+                // 2️⃣ Find customer
+                $customer = Customer::where('customer_number', $customerNumber)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$customer) {
+                    throw new \Exception("Customer with number {$customerNumber} not found");
+                }
+
+                if ($customer->status !== 'active') {
+                    throw new \Exception('Customer inactive');
+                }
+
+                // 3️⃣ Find meter
+                $meter = Meter::where('customer_id', $customer->id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$meter) {
+                    throw new \Exception("Meter for customer {$customerNumber} not found");
+                }
+
+                // 4️⃣ Extract transaction reference
+                $transactionRef = $this->extractTransactionRef($particulars);
+
+                // Check for duplicate transaction reference
+                if ($transactionRef) {
+                    $existingPayment = Payment::where('transaction_reference', $transactionRef)
+                        ->where('payment_method', 'mpesa')
+                        ->where('payment_status', 'completed')
+                        ->first();
+
+                    if ($existingPayment) {
+                        throw new \Exception('Transaction reference has already been used');
+                    }
+                }
+
+                // 5️⃣ Process payment using your PaymentProcessingService
+                $this->paymentService->processPayment(
+                    $meter,
+                    $amount,
+                    'mpesa',
+                    $transactionRef,
+                    $paymentDate,
+                    auth()->id()
+                );
+
+                Log::info("Row {$rowNumber} - Successfully processed payment for customer {$customerNumber}");
+            });
+
+            $results['success']++;
+
+        } catch (\Exception $e) {
+            $results['failed']++;
+            $results['errors'][] = [
+                'row' => $rowNumber,
+                'reason' => $e->getMessage()
+            ];
+
+            Log::error('Payment import failed', [
+                'row' => $rowNumber,
+                'error' => $e->getMessage(),
+                'particulars' => $rows[$rowNumber][$headerMap['Particulars']] ?? 'N/A',
+                'amount' => $rows[$rowNumber][$headerMap['Credit Amt.']] ?? 'N/A'
+            ]);
+        }
+    }
+
+    return back()->with('import_result', $results);
+}
+
+private function extractTransactionRef(string $text): ?string
+{
+    // Extract transaction reference from MPS entries
+    // Pattern like: MPS 254712838480 TKUD6BJ0IK 48133#13764
+    if (preg_match('/MPS\s+\d+\s+([A-Z0-9]{8,15})\b/', $text, $matches)) {
+        return $matches[1]; // Returns TKUD6BJ0IK
+    }
+
+    // Alternative: look for any 8-15 char alphanumeric code
+    if (preg_match('/\b([A-Z0-9]{8,15})\b/', $text, $matches)) {
+        return $matches[1];
+    }
+
+    return null;
+}
     public function store(Request $request)
     {
         $validated = $request->validate([

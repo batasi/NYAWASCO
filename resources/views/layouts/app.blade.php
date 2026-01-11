@@ -947,7 +947,7 @@ use Illuminate\Support\Facades\Route;
     mobileDropdowns: {}
 }" class="font-sans antialiased body-bg">
     @php
-        $showFooter = !auth()->check() || request()->routeIs('home', 'login');
+        $showFooter = !auth()->check() || request()->routeIs('home', 'login','board-of-directors','publications','water-supply','sewerage','water-connection',);
     @endphp
     <!-- Top Navigation Bar -->
     @if($showFooter)
@@ -1286,7 +1286,8 @@ use Illuminate\Support\Facades\Route;
 
 
     <!-- Page Content -->
-    @auth
+     @if(!$showFooter)
+
         <!-- Sidebar Layout for Authenticated Users -->
         <div class="flex h-screen bg-gradient-to-br from-slate-50 to-blue-50">
             <!-- Sidebar -->
