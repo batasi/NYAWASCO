@@ -29,7 +29,6 @@ class DashboardController extends Controller
         // Base data available for all dashboards
         $data = [
             'user' => $user,
-
         ];
 
         // Safeguard for users without assigned roles
@@ -51,9 +50,9 @@ class DashboardController extends Controller
                 $data = array_merge($data, $this->getVendorData($user));
                 return view('dashboard.vendor', $data);
 
-            default: // attendee or fallback
-                $data = array_merge($data, $this->getAdminData($user));
-                return view('dashboard.admin', $data);
+            default: // customer or fallback
+                $data = array_merge($data, $this->getCustomerData($user));
+                return view('dashboard', $data);
         }
     }
 
@@ -108,6 +107,7 @@ private function getAdminData()
     $pending_approvals = $pending_approval_items->count();
     // Monthly billed
     $monthly_billed = Bill::selectRaw('MONTH(billing_period_start) as month, SUM(total_amount) as total')
+        ->whereYear('billing_period_start', now()->year)
         ->groupBy('month')
         ->pluck('total', 'month')
         ->toArray();
@@ -116,6 +116,7 @@ private function getAdminData()
 
     // Monthly collected
     $monthly_collected = Payment::selectRaw('MONTH(payment_date) as month, SUM(amount) as total')
+        ->whereYear('payment_date', now()->year)
         ->groupBy('month')
         ->pluck('total', 'month')
         ->toArray();
@@ -129,6 +130,101 @@ private function getAdminData()
         'overdue' => Bill::where('bill_status', 'unpaid')
                         ->where('due_date', '<', now())->count(),
     ];
+
+    // Additional analytics data for charts
+    // Customer growth over time (last 12 months)
+    $customer_growth = Customer::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as count')
+        ->where('created_at', '>=', now()->subMonths(12))
+        ->groupBy('month')
+        ->orderBy('month')
+        ->pluck('count', 'month')
+        ->toArray();
+
+    // Meter status distribution
+    $meter_status_counts = Meter::selectRaw('status, COUNT(*) as count')
+        ->groupBy('status')
+        ->pluck('count', 'status')
+        ->toArray();
+
+    // Payment methods breakdown with amounts
+    $payment_methods_breakdown = Payment::selectRaw('payment_method, COUNT(*) as transactions, SUM(amount) as total_amount')
+        ->groupBy('payment_method')
+        ->get()
+        ->map(function($item) {
+            return [
+                'method' => $item->payment_method,
+                'transactions' => $item->transactions,
+                'amount' => $item->total_amount
+            ];
+        });
+
+    // Connection applications status
+    $application_status_counts = WaterConnectionApplication::selectRaw('status, COUNT(*) as count')
+        ->groupBy('status')
+        ->pluck('count', 'status')
+        ->toArray();
+
+    // Revenue trend (last 12 months)
+    $revenue_trend = Payment::selectRaw('DATE_FORMAT(payment_date, "%Y-%m") as month, SUM(amount) as revenue')
+        ->where('payment_date', '>=', now()->subMonths(12))
+        ->groupBy('month')
+        ->orderBy('month')
+        ->pluck('revenue', 'month')
+        ->toArray();
+
+    // Monthly bill generation trend
+    $bill_generation_trend = Bill::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as bills')
+        ->where('created_at', '>=', now()->subMonths(12))
+        ->groupBy('month')
+        ->orderBy('month')
+        ->pluck('bills', 'month')
+        ->toArray();
+
+    // Payment status breakdown
+    $payment_status_breakdown = Payment::selectRaw('payment_status, COUNT(*) as count, SUM(amount) as total')
+        ->groupBy('payment_status')
+        ->get()
+        ->map(function($item) {
+            return [
+                'status' => $item->payment_status,
+                'count' => $item->count,
+                'total' => $item->total
+            ];
+        });
+
+
+    // Meter reading trends (last 12 months)
+    $meter_reading_trend = \App\Models\MeterReading::selectRaw('DATE_FORMAT(reading_date, "%Y-%m") as month, COUNT(*) as readings, AVG(consumption) as avg_consumption')
+        ->where('reading_date', '>=', now()->subMonths(12))
+        ->groupBy('month')
+        ->orderBy('month')
+        ->get()
+        ->map(function($item) {
+            return [
+                'month' => $item->month,
+                'readings' => $item->readings,
+                'avg_consumption' => $item->avg_consumption
+            ];
+        });
+
+    // Bill payment timeliness (on-time vs late payments)
+    $payment_timeliness = Bill::selectRaw('
+        CASE
+            WHEN payment_date IS NULL AND due_date < NOW() THEN "overdue"
+            WHEN payment_date IS NULL AND due_date >= NOW() THEN "pending"
+            WHEN payment_date <= due_date THEN "on_time"
+            WHEN payment_date > due_date THEN "late"
+            ELSE "unknown"
+        END as payment_status,
+        COUNT(*) as count
+    ')
+    ->groupBy('payment_status')
+    ->pluck('count', 'payment_status')
+    ->toArray();
+
+
+    // Zone-wise customer distribution (if zones exist)
+    $zone_distribution = collect(); // Empty collection since zones are not implemented
 
     //spartie permissions
     $permissions_list = \Spatie\Permission\Models\Permission::all();
@@ -154,7 +250,8 @@ private function getAdminData()
         'payments_today'       => $payments_today,
         'payments_this_month'  => $payments_this_month,
         'pending_payments'     => $pending_payments,
-
+        'total_payments'        => Payment::count(),
+   
         'payment_methods'      => $payment_methods,
         'recent_payments'      => $recent_payments,
         'recent_bills'         => $recent_bills,
@@ -169,6 +266,17 @@ private function getAdminData()
         'monthly_billed' => array_values($monthly_billed),
         'monthly_collected' => array_values($monthly_collected),
         'bill_status_counts' => $bill_status_counts,
+
+        // Additional analytics data from database
+        'customer_growth' => array_values($customer_growth),
+        'revenue_trend' => array_values($revenue_trend),
+        'meter_status_counts' => $meter_status_counts,
+        'payment_methods_breakdown' => $payment_methods_breakdown,
+        'application_status_counts' => $application_status_counts,
+        'bill_generation_trend' => array_values($bill_generation_trend),
+        'payment_status_breakdown' => $payment_status_breakdown,
+        'payment_timeliness' => $payment_timeliness,
+        'meter_reading_trend' => $meter_reading_trend,
 
          //permissions list
         'permissions_list' => $permissions_list,
@@ -334,6 +442,19 @@ private function getOrganizerData(User $user)
                 ->where('status', 'confirmed')
                 ->where('payment_status', 'paid')
                 ->sum('amount_paid'),
+        ];
+    }
+
+    private function getCustomerData(User $user)
+    {
+        // For now, return empty data since users and customers are separate entities
+        // In a real system, you might link users to customers via email or other means
+        return [
+            'user_bills_count' => 0,
+            'pending_payments_count' => 0,
+            'total_paid' => 0,
+            'recent_user_bills' => collect(),
+            'is_customer' => false,
         ];
     }
 

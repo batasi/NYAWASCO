@@ -28,35 +28,35 @@
     ])
     <br>
     <!-- Statistics -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="w-full px-2.5 py-4 md:py-8">
 
-   <!-- Stats Cards -->
-    @can('view paymentss')
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6 text-center hover:shadow-xl transition-all duration-300 hover:border-blue-200">
-            <div class="text-3xl font-bold text-blue-600 mb-2">{{ $stats['total'] }}</div>
-            <div class="text-gray-700 font-medium">Total Meters</div>
-            <div class="text-xs text-gray-500 mt-1">All registered meters</div>
-        </div>
+    <!-- Stats Cards -->
+     @can('view paymentss')
+     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
+         <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-4 md:p-6 text-center hover:shadow-xl transition-all duration-300 hover:border-blue-200">
+             <div class="text-lg md:text-2xl lg:text-3xl font-bold text-blue-600 mb-1 md:mb-2">{{ $stats['total'] }}</div>
+             <div class="text-gray-700 font-medium text-xs md:text-sm lg:text-base">Total Meters</div>
+             <div class="text-xs text-gray-500 mt-1 hidden sm:block">All registered meters</div>
+         </div>
 
-        <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6 text-center hover:shadow-xl transition-all duration-300 hover:border-green-200">
-            <div class="text-3xl font-bold text-green-600 mb-2">{{ $stats['assigned'] }}</div>
-            <div class="text-gray-700 font-medium">Active</div>
-            <div class="text-xs text-gray-500 mt-1">Currently assigned to customers</div>
-        </div>
+         <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-4 md:p-6 text-center hover:shadow-xl transition-all duration-300 hover:border-green-200">
+             <div class="text-lg md:text-2xl lg:text-3xl font-bold text-green-600 mb-1 md:mb-2">{{ $stats['assigned'] }}</div>
+             <div class="text-gray-700 font-medium text-xs md:text-sm lg:text-base">Active</div>
+             <div class="text-xs text-gray-500 mt-1 hidden sm:block">Currently assigned to customers</div>
+         </div>
 
-        <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6 text-center hover:shadow-xl transition-all duration-300 hover:border-orange-200">
-            <div class="text-3xl font-bold text-orange-600 mb-2">{{ $stats['available'] }}</div>
-            <div class="text-gray-700 font-medium">Available</div>
-            <div class="text-xs text-gray-500 mt-1">Ready for assignment</div>
-        </div>
+         <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-4 md:p-6 text-center hover:shadow-xl transition-all duration-300 hover:border-orange-200">
+             <div class="text-lg md:text-2xl lg:text-3xl font-bold text-orange-600 mb-1 md:mb-2">{{ $stats['available'] }}</div>
+             <div class="text-gray-700 font-medium text-xs md:text-sm lg:text-base">Available</div>
+             <div class="text-xs text-gray-500 mt-1 hidden sm:block">Ready for assignment</div>
+         </div>
 
-        <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6 text-center hover:shadow-xl transition-all duration-300 hover:border-red-200">
-            <div class="text-3xl font-bold text-red-600 mb-2">{{ $stats['faulty'] }}</div>
-            <div class="text-gray-700 font-medium">Faulty</div>
-            <div class="text-xs text-gray-500 mt-1">Needs maintenance</div>
-        </div>
-    </div>
+         <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-4 md:p-6 text-center hover:shadow-xl transition-all duration-300 hover:border-red-200">
+             <div class="text-lg md:text-2xl lg:text-3xl font-bold text-red-600 mb-1 md:mb-2">{{ $stats['faulty'] }}</div>
+             <div class="text-gray-700 font-medium text-xs md:text-sm lg:text-base">Faulty</div>
+             <div class="text-xs text-gray-500 mt-1 hidden sm:block">Needs maintenance</div>
+         </div>
+     </div>
 
     <!-- Quick Actions with Active Filter Indicators -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-1 mb-3">

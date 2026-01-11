@@ -1290,52 +1290,55 @@ use Illuminate\Support\Facades\Route;
         <!-- Sidebar Layout for Authenticated Users -->
         <div class="flex h-screen bg-gradient-to-br from-slate-50 to-blue-50">
             <!-- Sidebar -->
-            <div id="sidebar" class="bg-gradient-to-b from-blue-900 via-blue-800 to-blue-900 text-white w-72 space-y-8 py-8 px-6 absolute inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition-all duration-300 ease-in-out z-50 shadow-2xl">
+            <div id="sidebar" class="bg-gradient-to-b from-blue-900 via-blue-800 to-blue-900 text-white w-64 md:w-72 space-y-6 md:space-y-8 py-6 md:py-8 px-4 md:px-6 absolute inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition-all duration-300 ease-in-out z-50 shadow-2xl">
                 <!-- Logo Section -->
-                <div class="flex flex-col items-center justify-center mb-8">
-                    <div class="w-16 h-16 bg-gradient-to-r from-green-400 to-blue-500 rounded-2xl flex items-center justify-center mb-3 shadow-lg">
-                        <span class="text-white text-2xl font-bold">NY</span>
+                <div class="relative flex flex-col items-center justify-center mb-8">
+                    <button onclick="toggleSidebar()" class="absolute top-0 right-0 text-white hover:text-gray-300 p-2 md:hidden">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <div class="flex items-center justify-center mb-3">
+                        <img src="{{ asset('img/Logo.png') }}" alt="NYAWASCO Logo" class="w-12 h-12 md:w-16 md:h-16 rounded-2xl shadow-lg object-cover">
                     </div>
-                    <span class="text-lg font-bold text-white">Nyamira Water</span>
-                    <p class="text-sm text-blue-200 font-medium">Supply Company</p>
+                    <span class="text-sm md:text-lg font-bold text-white">Nyamira Water</span>
+                    <p class="text-xs md:text-sm text-blue-200 font-medium">Supply Company</p>
                     <div class="w-20 h-1 bg-gradient-to-r from-green-400 to-blue-500 rounded-full mt-3"></div>
                 </div>
 
                 <!-- Menu -->
                 <nav class="space-y-2">
-                    <a href="{{ route('dashboard') }}" class="group flex items-center py-3 px-4 rounded-xl transition-all duration-200 hover:bg-white/10 hover:shadow-lg {{ request()->routeIs('dashboard') ? 'bg-white/20 shadow-lg border-l-4 border-green-400' : '' }}">
-                        <svg class="w-5 h-5 mr-3 {{ request()->routeIs('dashboard') ? 'text-green-400' : 'text-blue-200' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <a href="{{ route('dashboard') }}" onclick="if (window.innerWidth < 768) toggleSidebar()" class="group flex items-center py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-white/10 hover:shadow-lg {{ request()->routeIs('dashboard') ? 'bg-white/20 shadow-lg border-l-4 border-green-400' : '' }}">
+                        <svg class="w-4 h-4 md:w-5 md:h-5 mr-3 {{ request()->routeIs('dashboard') ? 'text-green-400' : 'text-blue-200' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                         </svg>
                         <span class="font-medium">Dashboard</span>
                     </a>
                     @can('view customers')
-                    <a href="{{ route('customers.index') }}" class="group flex items-center py-3 px-4 rounded-xl transition-all duration-200 hover:bg-white/10 hover:shadow-lg {{ request()->routeIs('customers.*') ? 'bg-white/20 shadow-lg border-l-4 border-green-400' : '' }}">
-                        <svg class="w-5 h-5 mr-3 {{ request()->routeIs('customers.*') ? 'text-green-400' : 'text-blue-200' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <a href="{{ route('customers.index') }}" onclick="if (window.innerWidth < 768) toggleSidebar()" class="group flex items-center py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-white/10 hover:shadow-lg {{ request()->routeIs('customers.*') ? 'bg-white/20 shadow-lg border-l-4 border-green-400' : '' }}">
+                        <svg class="w-4 h-4 md:w-5 md:h-5 mr-3 {{ request()->routeIs('customers.*') ? 'text-green-400' : 'text-blue-200' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                         </svg>
                         <span class="font-medium">Customers</span>
                     </a>
                     @endcan
                     @can('view meters')
-                    <a href="{{ route('meters.index') }}" class="group flex items-center py-3 px-4 rounded-xl transition-all duration-200 hover:bg-white/10 hover:shadow-lg {{ request()->routeIs('meters.*') ? 'bg-white/20 shadow-lg border-l-4 border-green-400' : '' }}">
-                        <svg class="w-5 h-5 mr-3 {{ request()->routeIs('meters.*') ? 'text-green-400' : 'text-blue-200' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <a href="{{ route('meters.index') }}" onclick="if (window.innerWidth < 768) toggleSidebar()" class="group flex items-center py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-white/10 hover:shadow-lg {{ request()->routeIs('meters.*') ? 'bg-white/20 shadow-lg border-l-4 border-green-400' : '' }}">
+                        <svg class="w-4 h-4 md:w-5 md:h-5 mr-3 {{ request()->routeIs('meters.*') ? 'text-green-400' : 'text-blue-200' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
                         </svg>
                         <span class="font-medium">Meters</span>
                     </a>
                     @endcan
                     @can('view bills')
-                    <a href="{{ route('bills.index') }}" class="group flex items-center py-3 px-4 rounded-xl transition-all duration-200 hover:bg-white/10 hover:shadow-lg {{ request()->routeIs('bills.*') ? 'bg-white/20 shadow-lg border-l-4 border-green-400' : '' }}">
-                        <svg class="w-5 h-5 mr-3 {{ request()->routeIs('bills.*') ? 'text-green-400' : 'text-blue-200' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <a href="{{ route('bills.index') }}" onclick="if (window.innerWidth < 768) toggleSidebar()" class="group flex items-center py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-white/10 hover:shadow-lg {{ request()->routeIs('bills.*') ? 'bg-white/20 shadow-lg border-l-4 border-green-400' : '' }}">
+                        <svg class="w-4 h-4 md:w-5 md:h-5 mr-3 {{ request()->routeIs('bills.*') ? 'text-green-400' : 'text-blue-200' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
                         </svg>
                         <span class="font-medium">Bills</span>
                     </a>
                     @endcan
                     @can('view payments')
-                    <a href="{{ route('payments.index') }}" class="group flex items-center py-3 px-4 rounded-xl transition-all duration-200 hover:bg-white/10 hover:shadow-lg {{ request()->routeIs('payments.*') ? 'bg-white/20 shadow-lg border-l-4 border-green-400' : '' }}">
-                        <svg class="w-5 h-5 mr-3 {{ request()->routeIs('payments.*') ? 'text-green-400' : 'text-blue-200' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <a href="{{ route('payments.index') }}" onclick="if (window.innerWidth < 768) toggleSidebar()" class="group flex items-center py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-white/10 hover:shadow-lg {{ request()->routeIs('payments.*') ? 'bg-white/20 shadow-lg border-l-4 border-green-400' : '' }}">
+                        <svg class="w-4 h-4 md:w-5 md:h-5 mr-3 {{ request()->routeIs('payments.*') ? 'text-green-400' : 'text-blue-200' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
                         </svg>
                         <span class="font-medium">Payments</span>
@@ -1458,26 +1461,34 @@ use Illuminate\Support\Facades\Route;
             <!-- Main content -->
             <div class="flex-1 flex flex-col overflow-hidden">
                 <!-- Header -->
-                <header class="bg-white/95 backdrop-blur-sm shadow-xl border-b border-gray-200/50 px-8 py-5">
+                <header class="bg-white/95 backdrop-blur-sm shadow-xl border-b border-gray-200/50 px-4 md:px-8 py-3 md:py-5">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center">
-                            <button onclick="toggleSidebar()" class="md:hidden p-2 rounded-lg text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-all duration-200 mr-4">
+                            <button onclick="toggleSidebar()" class="block p-2 rounded-lg text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-all duration-200 mr-4">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
                                 </svg>
                             </button>
                             <div>
-                                <h1 class="text-2xl font-bold text-gray-800">Nyamira Water</h1>
-                                <p class="text-sm text-gray-600">Supply Company Management System</p>
+                                <h1 class="text-lg md:text-2xl font-bold text-gray-800">Nyamira Water</h1>
+                                <p class="text-xs md:text-sm text-gray-600">Supply Company Management System</p>
                             </div>
                         </div>
                         <div class="flex items-center space-x-6">
-                            <div class="flex items-center space-x-3">
-
+                            <a href="{{ route('profile.edit') }}" class="flex items-center space-x-3 hover:bg-gray-100 rounded-lg px-3 py-2 transition-colors duration-200">
+                                @if(auth()->user()->avatar)
+                                    <img src="{{ Storage::url(auth()->user()->avatar) }}" alt="{{ auth()->user()->name }}" class="h-8 w-8 rounded-full object-cover border border-gray-200">
+                                @else
+                                    <div class="h-8 w-8 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center border border-gray-200">
+                                        <span class="text-sm font-semibold text-blue-700">
+                                            {{ strtoupper(substr(auth()->user()->name ?? 'U', 0, 1)) }}
+                                        </span>
+                                    </div>
+                                @endif
                                 <div>
                                     <p class="text-sm font-semibold text-gray-800">{{ auth()->user()->name ?? 'User' }}</p>
                                 </div>
-                            </div>
+                            </a>
                             <form method="POST" action="{{ route('logout') }}" class="inline">
                                 @csrf
                                 <button type="submit" class="bg-gradient-to-r from-red-500 to-red-600 text-white px-6 py-2 rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
@@ -1489,7 +1500,7 @@ use Illuminate\Support\Facades\Route;
                 </header>
 
                 <!-- Content -->
-                <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gradient-to-br from-slate-50 to-blue-50 p-8">
+                <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gradient-to-br from-slate-50 to-blue-50 p-2.5">
                     @yield('content')
                 </main>
             </div>
@@ -1498,10 +1509,35 @@ use Illuminate\Support\Facades\Route;
         <script>
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
-            sidebar.classList.toggle('-translate-x-full');
-            sidebar.classList.toggle('translate-x-0');
             const overlay = document.getElementById('overlay');
-            overlay.classList.toggle('hidden');
+
+            if (window.innerWidth >= 768) {
+                // Desktop toggle
+                const isVisible = sidebar.classList.contains('md:translate-x-0');
+                if (isVisible) {
+                    // Hide sidebar
+                    sidebar.classList.remove('md:translate-x-0', 'md:relative');
+                    sidebar.classList.add('md:-translate-x-full');
+                } else {
+                    // Show sidebar
+                    sidebar.classList.remove('md:-translate-x-full');
+                    sidebar.classList.add('md:translate-x-0', 'md:relative');
+                }
+            } else {
+                // Mobile toggle
+                const isOpen = sidebar.classList.contains('translate-x-0');
+                if (isOpen) {
+                    // Close mobile sidebar
+                    sidebar.classList.remove('translate-x-0');
+                    sidebar.classList.add('-translate-x-full');
+                    overlay.classList.add('hidden');
+                } else {
+                    // Open mobile sidebar
+                    sidebar.classList.remove('-translate-x-full');
+                    sidebar.classList.add('translate-x-0');
+                    overlay.classList.remove('hidden');
+                }
+            }
         }
 
         // Reports menu toggle
@@ -1687,6 +1723,8 @@ use Illuminate\Support\Facades\Route;
 
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
     <script src="{{ asset('js/services/OCRService.js') }}"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Before closing body -->
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 

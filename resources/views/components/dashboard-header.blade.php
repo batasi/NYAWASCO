@@ -14,8 +14,8 @@
         <div class="flex items-center space-x-4">
 
             <div>
-                <h1 class="text-2xl font-bold text-gray-900">{{ $title }}</h1>
-                <p class="text-sm text-gray-500">{{ $subtitle }}</p>
+                <h1 class="text-xl md:text-2xl font-bold text-gray-900">{{ $title }}</h1>
+                <p class="text-xs md:text-sm text-gray-500">{{ $subtitle }}</p>
             </div>
         </div>
 

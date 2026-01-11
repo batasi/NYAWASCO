@@ -20,7 +20,7 @@
         'subtitle' => 'customer Management Platform',
         'actionButtons' => $actionButtons
     ])
-<div class="container mx-auto px-4 py-8 relative z-10">
+<div class="w-full px-2.5 py-8 relative z-10">
 
     <!-- Header Section -->
     <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
@@ -506,20 +506,44 @@ document.addEventListener('keydown', function(e) {
 /* Responsive table styles */
 @media (max-width: 768px) {
     table {
-        font-size: 0.875rem;
+        font-size: 0.75rem;
     }
 
     th, td {
-        padding: 0.75rem 0.5rem;
-    }
-
-    .container {
-        padding-left: 1rem;
-        padding-right: 1rem;
+        padding: 0.5rem 0.25rem;
     }
 
     .bg-white\/80 {
         background: rgba(255, 255, 255, 0.95);
+    }
+
+    /* Reduce text sizes for mobile */
+    h3 {
+        font-size: 1rem;
+    }
+
+    p {
+        font-size: 0.875rem;
+    }
+
+    button {
+        font-size: 0.75rem;
+    }
+
+    input, select, textarea {
+        font-size: 0.75rem;
+    }
+
+    label {
+        font-size: 0.75rem;
+    }
+
+    .text-sm {
+        font-size: 0.75rem;
+    }
+
+    .text-xs {
+        font-size: 0.625rem;
     }
 }
 

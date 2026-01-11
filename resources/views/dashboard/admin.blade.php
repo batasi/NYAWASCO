@@ -12,7 +12,7 @@
     <!-- Enhanced Header -->
     @include('components.dashboard-header')
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="w-full px-0 py-8">
 
         <!-- Enhanced Stats Cards -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -96,7 +96,7 @@
                         </div>
                         <div class="ml-4 flex-1">
                             <dt class="text-sm font-medium text-gray-500 truncate">Suspended Customers</dt>
-                            <dd class="text-2xl font-semibold text-gray-900">{{ $suspended_customers ?? '' }}</dd>
+                            <dd class="text-2xl font-semibold text-gray-900">{{ $inactive_customers ?? 0 }}</dd>
                         </div>
                     </div>
                 </div>
@@ -217,7 +217,7 @@
                 <div class="p-6 flex items-center justify-between">
                     <div>
                         <dt class="text-sm font-medium text-gray-500">Total Revenue Collected</dt>
-                        <dd class="text-3xl font-bold text-gray-900 mt-1">KES 0</dd>
+                        <dd class="text-3xl font-bold text-gray-900 mt-1">KES {{ number_format($total_revenue, 0) }}</dd>
                     </div>
                     <div class="flex-shrink-0">
                         <div class="h-16 w-16 rounded-xl bg-teal-50 flex items-center justify-center">
@@ -235,23 +235,244 @@
         <!-- Charts Section -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-10">
             <!-- Monthly Billing vs Collections -->
-            @can('view payments')
-            <div class="bg-white rounded-xl shadow p-6">
-                <h3 class="text-lg font-semibold mb-4 text-gray-700">
-                    Monthly Billing vs Collections
-                </h3>
-                <canvas id="billingCollectionsChart" height="120"></canvas>
+            <div class="bg-white rounded-xl shadow p-6 chart-container">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-700">
+                        Monthly Billing vs Collections
+                    </h3>
+                    <button class="fullscreen-btn text-gray-400 hover:text-gray-600 p-1" data-chart="billingCollectionsChart">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="relative h-80 w-full">
+                    <canvas id="billingCollectionsChart" class="w-full h-full"></canvas>
+                </div>
             </div>
-            @endcan
-            @can('view bills')
+
             <!-- Bill Status Distribution -->
-            <div class="bg-white rounded-xl shadow p-6">
-                <h3 class="text-lg font-semibold mb-4 text-gray-700">
-                    Bill Status Distribution
-                </h3>
-                <canvas id="billStatusChart" height="120"></canvas>
+            <div class="bg-white rounded-xl shadow p-6 chart-container">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-700">
+                        Bill Status Distribution
+                    </h3>
+                    <button class="fullscreen-btn text-gray-400 hover:text-gray-600 p-1" data-chart="billStatusChart">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="relative h-80 w-full flex items-center justify-center">
+                    <canvas id="billStatusChart" class="w-full h-full"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Additional Analytics Charts -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+            <!-- Customer Growth Trend -->
+            <div class="bg-white rounded-xl shadow p-6 chart-container">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-700">
+                        Customer Growth Trend
+                    </h3>
+                    <button class="fullscreen-btn text-gray-400 hover:text-gray-600 p-1" data-chart="customerGrowthChart">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="relative h-64 w-full">
+                    <canvas id="customerGrowthChart" class="w-full h-full"></canvas>
+                </div>
+            </div>
+
+            <!-- Revenue Trend -->
+            <div class="bg-white rounded-xl shadow p-6 chart-container">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-700">
+                        Revenue Trend
+                    </h3>
+                    <button class="fullscreen-btn text-gray-400 hover:text-gray-600 p-1" data-chart="revenueTrendChart">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="relative h-64 w-full">
+                    <canvas id="revenueTrendChart" class="w-full h-full"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Third Row of Analytics -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
+            <!-- Connection Applications Status -->
+            @can('view applications')
+            <div class="bg-white rounded-xl shadow p-6 chart-container">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-700">
+                        Connection Applications
+                    </h3>
+                    <button class="fullscreen-btn text-gray-400 hover:text-gray-600 p-1" data-chart="applicationsChart">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="relative h-64 w-full flex items-center justify-center">
+                    <canvas id="applicationsChart" class="w-full h-full"></canvas>
+                </div>
             </div>
             @endcan
+
+            <!-- Bill Generation Trend -->
+            @can('view bills')
+            <div class="bg-white rounded-xl shadow p-6 chart-container">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-700">
+                        Bill Generation Trend
+                    </h3>
+                    <button class="fullscreen-btn text-gray-400 hover:text-gray-600 p-1" data-chart="billGenerationChart">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="relative h-64 w-full">
+                    <canvas id="billGenerationChart" class="w-full h-full"></canvas>
+                </div>
+            </div>
+            @endcan
+
+            <!-- Meter Status Distribution -->
+            @can('view meters')
+            <div class="bg-white rounded-xl shadow p-6 chart-container">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-700">
+                        Meter Status Distribution
+                    </h3>
+                    <button class="fullscreen-btn text-gray-400 hover:text-gray-600 p-1" data-chart="meterStatusChart">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="relative h-64 w-full flex items-center justify-center">
+                    <canvas id="meterStatusChart" class="w-full h-full"></canvas>
+                </div>
+            </div>
+            @endcan
+        </div>
+
+        <!-- Fourth Row of Analytics -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
+            <!-- Payment Status Breakdown -->
+            <div class="bg-white rounded-xl shadow p-6 chart-container">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-700">
+                        Payment Status Breakdown
+                    </h3>
+                    <button class="fullscreen-btn text-gray-400 hover:text-gray-600 p-1" data-chart="paymentStatusChart">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="relative h-64 w-full flex items-center justify-center">
+                    <canvas id="paymentStatusChart" class="w-full h-full"></canvas>
+                </div>
+            </div>
+
+            <!-- Payment Methods Chart -->
+            <div class="bg-white rounded-xl shadow p-6 chart-container">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-700">
+                        Payment Methods
+                    </h3>
+                    <button class="fullscreen-btn text-gray-400 hover:text-gray-600 p-1" data-chart="paymentMethodsChart">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="relative h-64 w-full flex items-center justify-center">
+                    <canvas id="paymentMethodsChart" class="w-full h-full"></canvas>
+                </div>
+            </div>
+
+            <!-- Payment Timeliness -->
+            @can('view bills')
+            <div class="bg-white rounded-xl shadow p-6 chart-container">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-700">
+                        Payment Timeliness
+                    </h3>
+                    <button class="fullscreen-btn text-gray-400 hover:text-gray-600 p-1" data-chart="paymentTimelinessChart">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="relative h-64 w-full flex items-center justify-center">
+                    <canvas id="paymentTimelinessChart" class="w-full h-full"></canvas>
+                </div>
+            </div>
+            @endcan
+        </div>
+
+        <!-- Meter Reading Trends -->
+        <div class="grid grid-cols-1 gap-8 mt-8">
+            @can('view meters')
+            <div class="bg-white rounded-xl shadow p-6 chart-container">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-700">
+                        Meter Reading Trends
+                    </h3>
+                    <button class="fullscreen-btn text-gray-400 hover:text-gray-600 p-1" data-chart="meterReadingChart">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="relative h-64 w-full">
+                    <canvas id="meterReadingChart" class="w-full h-full"></canvas>
+                </div>
+            </div>
+            @endcan
+        </div>
+
+        <!-- System Overview Summary -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+            <!-- System Overview Summary -->
+            <div class="bg-white rounded-xl shadow p-6 col-span-1 lg:col-span-2">
+                <h3 class="text-lg font-semibold mb-4 text-gray-700">
+                    System Overview
+                </h3>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-blue-600">{{ $total_users }}</div>
+                        <div class="text-sm text-gray-600">System Users</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-green-600">{{ $active_customers }}</div>
+                        <div class="text-sm text-gray-600">Active Customers</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-purple-600">{{ $installed_meters }}</div>
+                        <div class="text-sm text-gray-600">Installed Meters</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-orange-600">{{ $pending_approvals }}</div>
+                        <div class="text-sm text-gray-600">Pending Approvals</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-teal-600">KES {{ number_format($total_revenue, 0) }}</div>
+                        <div class="text-sm text-gray-600">Total Revenue</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Users Table Section -->
@@ -520,6 +741,23 @@
             </div>
         </div>
         @endcan
+    </div>
+</div>
+
+<!-- Fullscreen Chart Modal -->
+<div id="fullscreenModal" class="fixed inset-0 z-50 hidden bg-black bg-opacity-75 flex items-center justify-center p-4">
+    <div class="relative w-full max-w-6xl h-5/6 bg-white rounded-lg shadow-2xl flex flex-col">
+        <div class="flex justify-between items-center p-4 border-b">
+            <h3 id="fullscreenTitle" class="text-xl font-semibold text-gray-800"></h3>
+            <button id="closeFullscreen" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        <div class="flex-1 p-4 min-h-0">
+            <canvas id="fullscreenChart" width="800" height="600" class="w-full h-full"></canvas>
+        </div>
     </div>
 </div>
 
@@ -1245,6 +1483,616 @@ document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => notification.remove(), 300);
         }, 4000);
     }
+});
+
+// Chart.js initialization for dashboard charts
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize all charts
+    // Monthly Billing vs Collections Chart
+    const billingCollectionsCtx = document.getElementById('billingCollectionsChart');
+    if (billingCollectionsCtx) {
+        const billingCollectionsChart = new Chart(billingCollectionsCtx, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                datasets: [{
+                    label: 'Monthly Billed',
+                    data: @json($monthly_billed ?? []),
+                    borderColor: 'rgb(59, 130, 246)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }, {
+                    label: 'Monthly Collected',
+                    data: @json($monthly_collected ?? []),
+                    borderColor: 'rgb(16, 185, 129)',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Monthly Billing vs Collections'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return 'KES ' + value.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Bill Status Distribution Chart
+    const billStatusCtx = document.getElementById('billStatusChart');
+    if (billStatusCtx) {
+        const billStatusData = @json($bill_status_counts ?? []);
+        const billStatusChart = new Chart(billStatusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Paid', 'Unpaid', 'Overdue'],
+                datasets: [{
+                    data: [billStatusData.paid || 0, billStatusData.unpaid || 0, billStatusData.overdue || 0],
+                    backgroundColor: [
+                        'rgb(16, 185, 129)', // Green for paid
+                        'rgb(245, 158, 11)', // Yellow for unpaid
+                        'rgb(239, 68, 68)'   // Red for overdue
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Bill Status Distribution'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Customer Growth Chart
+    const customerGrowthCtx = document.getElementById('customerGrowthChart');
+    if (customerGrowthCtx) {
+        const customerGrowthChart = new Chart(customerGrowthCtx, {
+            type: 'line',
+            data: {
+                labels: Array.from({length: 12}, (_, i) => {
+                    const date = new Date();
+                    date.setMonth(date.getMonth() - (11 - i));
+                    return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                }),
+                datasets: [{
+                    label: 'New Customers',
+                    data: @json($customer_growth ?? []),
+                    borderColor: 'rgb(59, 130, 246)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Meter Status Distribution Chart
+    const meterStatusCtx = document.getElementById('meterStatusChart');
+    if (meterStatusCtx) {
+        const meterStatusData = @json($meter_status_counts ?? []);
+        const meterStatusChart = new Chart(meterStatusCtx, {
+            type: 'pie',
+            data: {
+                labels: Object.keys(meterStatusData).map(status => status.charAt(0).toUpperCase() + status.slice(1)),
+                datasets: [{
+                    data: Object.values(meterStatusData),
+                    backgroundColor: [
+                        'rgb(16, 185, 129)',   // Green
+                        'rgb(59, 130, 246)',   // Blue
+                        'rgb(245, 158, 11)',   // Yellow
+                        'rgb(239, 68, 68)',    // Red
+                        'rgb(139, 92, 246)'    // Purple
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Payment Methods Chart
+    const paymentMethodsCtx = document.getElementById('paymentMethodsChart');
+    if (paymentMethodsCtx) {
+        let paymentMethodsData = @json($payment_methods_breakdown ?? []);
+        if (!paymentMethodsData || paymentMethodsData.length === 0) {
+            paymentMethodsData = [
+                {method: 'M-Pesa', transactions: 0, amount: 0},
+                {method: 'Cash', transactions: 0, amount: 0},
+                {method: 'Bank Transfer', transactions: 0, amount: 0}
+            ];
+        }
+        const paymentMethodsChart = new Chart(paymentMethodsCtx, {
+            type: 'bar',
+            data: {
+                labels: paymentMethodsData.map(item => item.method.charAt(0).toUpperCase() + item.method.slice(1)),
+                datasets: [{
+                    label: 'Transactions',
+                    data: paymentMethodsData.map(item => item.transactions),
+                    backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                    borderColor: 'rgb(59, 130, 246)',
+                    borderWidth: 1
+                }, {
+                    label: 'Revenue (KES)',
+                    data: paymentMethodsData.map(item => item.amount),
+                    backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                    borderColor: 'rgb(16, 185, 129)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value, index) {
+                                if (index === 1) { // Revenue dataset
+                                    return 'KES ' + value.toLocaleString();
+                                }
+                                return value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Applications Status Chart
+    const applicationsCtx = document.getElementById('applicationsChart');
+    if (applicationsCtx) {
+        const applicationsData = @json($application_status_counts ?? []);
+        const applicationsChart = new Chart(applicationsCtx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(applicationsData).map(status => status.charAt(0).toUpperCase() + status.slice(1)),
+                datasets: [{
+                    data: Object.values(applicationsData),
+                    backgroundColor: [
+                        'rgb(245, 158, 11)',   // Yellow for pending
+                        'rgb(16, 185, 129)',   // Green for approved
+                        'rgb(239, 68, 68)',    // Red for rejected
+                        'rgb(59, 130, 246)'    // Blue for others
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Revenue Trend Chart
+    const revenueTrendCtx = document.getElementById('revenueTrendChart');
+    if (revenueTrendCtx) {
+        const revenueTrendChart = new Chart(revenueTrendCtx, {
+            type: 'line',
+            data: {
+                labels: Array.from({length: 12}, (_, i) => {
+                    const date = new Date();
+                    date.setMonth(date.getMonth() - (11 - i));
+                    return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                }),
+                datasets: [{
+                    label: 'Monthly Revenue',
+                    data: @json($revenue_trend ?? []),
+                    borderColor: 'rgb(16, 185, 129)',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return 'KES ' + value.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Bill Generation Trend Chart
+    const billGenerationCtx = document.getElementById('billGenerationChart');
+    if (billGenerationCtx) {
+        const billGenerationChart = new Chart(billGenerationCtx, {
+            type: 'bar',
+            data: {
+                labels: Array.from({length: 12}, (_, i) => {
+                    const date = new Date();
+                    date.setMonth(date.getMonth() - (11 - i));
+                    return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                }),
+                datasets: [{
+                    label: 'Bills Generated',
+                    data: @json($bill_generation_trend ?? []),
+                    backgroundColor: 'rgba(245, 158, 11, 0.8)',
+                    borderColor: 'rgb(245, 158, 11)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Payment Status Breakdown Chart
+    const paymentStatusCtx = document.getElementById('paymentStatusChart');
+    if (paymentStatusCtx) {
+        let paymentStatusData = @json($payment_status_breakdown ?? []);
+        if (!paymentStatusData || paymentStatusData.length === 0) {
+            paymentStatusData = [
+                {status: 'completed', count: 0, total: 0},
+                {status: 'pending', count: 0, total: 0},
+                {status: 'failed', count: 0, total: 0}
+            ];
+        }
+        const paymentStatusChart = new Chart(paymentStatusCtx, {
+            type: 'pie',
+            data: {
+                labels: paymentStatusData.map(item => item.status.charAt(0).toUpperCase() + item.status.slice(1)),
+                datasets: [{
+                    data: paymentStatusData.map(item => item.count),
+                    backgroundColor: [
+                        'rgb(16, 185, 129)',   // Green for completed
+                        'rgb(245, 158, 11)',   // Yellow for pending
+                        'rgb(239, 68, 68)',    // Red for failed
+                        'rgb(59, 130, 246)'    // Blue for others
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Payment Timeliness Chart
+    const paymentTimelinessCtx = document.getElementById('paymentTimelinessChart');
+    if (paymentTimelinessCtx) {
+        const timelinessData = @json($payment_timeliness ?? []);
+        const paymentTimelinessChart = new Chart(paymentTimelinessCtx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(timelinessData).map(status => status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')),
+                datasets: [{
+                    data: Object.values(timelinessData),
+                    backgroundColor: [
+                        'rgb(16, 185, 129)',   // Green for on_time
+                        'rgb(245, 158, 11)',   // Yellow for pending
+                        'rgb(239, 68, 68)',    // Red for overdue/late
+                        'rgb(156, 163, 175)'   // Gray for unknown
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+
+    // Meter Reading Trends Chart
+    const meterReadingCtx = document.getElementById('meterReadingChart');
+    if (meterReadingCtx) {
+        const meterReadingData = @json($meter_reading_trend ?? []);
+        const meterReadingChart = new Chart(meterReadingCtx, {
+            type: 'line',
+            data: {
+                labels: meterReadingData.map(item => {
+                    const date = new Date(item.month + '-01');
+                    return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                }),
+                datasets: [{
+                    label: 'Number of Readings',
+                    data: meterReadingData.map(item => item.readings),
+                    borderColor: 'rgb(59, 130, 246)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    yAxisID: 'y',
+                    tension: 0.4
+                }, {
+                    label: 'Average Consumption',
+                    data: meterReadingData.map(item => item.avg_consumption),
+                    borderColor: 'rgb(245, 158, 11)',
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    yAxisID: 'y1',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Number of Readings'
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Average Consumption'
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Fullscreen functionality
+    let currentFullscreenChart = null;
+    let fullscreenChartInstance = null;
+
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.fullscreen-btn')) {
+            const button = e.target.closest('.fullscreen-btn');
+            const chartId = button.dataset.chart;
+            const chartTitle = button.closest('.chart-container').querySelector('h3').textContent;
+
+            openFullscreenChart(chartId, chartTitle);
+        }
+    });
+
+    document.getElementById('closeFullscreen').addEventListener('click', closeFullscreenChart);
+    document.getElementById('fullscreenModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeFullscreenChart();
+        }
+    });
+
+    function openFullscreenChart(chartId, title) {
+        const modal = document.getElementById('fullscreenModal');
+        const titleElement = document.getElementById('fullscreenTitle');
+        const canvas = document.getElementById('fullscreenChart');
+
+        titleElement.textContent = title;
+        modal.classList.remove('hidden');
+
+        // Destroy any existing fullscreen chart
+        if (fullscreenChartInstance) {
+            fullscreenChartInstance.destroy();
+            fullscreenChartInstance = null;
+        }
+
+        // Get the original chart instance
+        const originalChart = Chart.getChart(chartId);
+        if (originalChart) {
+            currentFullscreenChart = originalChart;
+
+            // Create fullscreen chart with same data but optimized options
+            const fullscreenConfig = {
+                type: originalChart.config.type,
+                data: originalChart.config.data,
+                options: {
+                    ...originalChart.config.options,
+                    maintainAspectRatio: false,
+                    responsive: true,
+                    plugins: {
+                        ...originalChart.config.options.plugins,
+                        title: {
+                            display: true,
+                            text: title,
+                            font: {
+                                size: 18,
+                                weight: 'bold'
+                            },
+                            padding: {
+                                top: 10,
+                                bottom: 30
+                            }
+                        },
+                        legend: {
+                            ...originalChart.config.options.plugins?.legend,
+                            position: 'bottom'
+                        }
+                    },
+                    scales: originalChart.config.options.scales
+                }
+            };
+
+            fullscreenChartInstance = new Chart(canvas, fullscreenConfig);
+        } else {
+            console.error('Original chart not found for ID:', chartId);
+        }
+    }
+
+    function closeFullscreenChart() {
+        const modal = document.getElementById('fullscreenModal');
+        modal.classList.add('hidden');
+
+        if (fullscreenChartInstance) {
+            fullscreenChartInstance.destroy();
+            fullscreenChartInstance = null;
+        }
+        currentFullscreenChart = null;
+    }
+
 });
 </script>
 

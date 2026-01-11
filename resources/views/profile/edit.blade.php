@@ -16,7 +16,7 @@
         'subtitle' => 'Manage your account settings and preferences',
         'actionButtons' => $actionButtons
     ])
-    <div class="container mx-auto px-4 py-8 max-w-4xl">
+    <div class="w-full px-0 py-8">
         <!-- Page Header -->
 
 

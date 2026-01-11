@@ -16,7 +16,7 @@
     ])
 
     <!-- Main Content -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="w-full px-0 py-8">
         <!-- Report Selection Card -->
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
             <h2 class="text-xl font-semibold text-gray-800 mb-6">Generate Report</h2>
