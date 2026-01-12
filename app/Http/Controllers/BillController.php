@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Bill;
 use App\Models\Meter;
 use App\Models\Pricing_Tier;
+use App\Models\Payment;
 use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,7 +15,7 @@ use PDF;
 
 class BillController extends Controller
 {
-    public function index(Request $request)
+     public function index(Request $request)
     {
         $status = $request->get('status');
         $sort = $request->get('sort', 'newest');
@@ -52,27 +53,40 @@ class BillController extends Controller
         // Paginated results
         $bills = $billsQuery->paginate(10);
 
-        // COUNTS FOR CARDS MUST RESPECT BILLER FILTER
-        $summaryQuery = Bill::query()
+        // CREATE BASE QUERY THAT RESPECTS USER PERMISSIONS
+        $baseQuery = Bill::query()
             ->when($user->hasRole('biller'), function ($query) use ($user) {
                 $query->where('created_by', $user->id);
             });
 
-        $totalBillsCount = $summaryQuery->count();
-        $unpaidBillsCount = $summaryQuery->clone()->where('bill_status', 'unpaid')->count();
-        $paidBillsCount = $summaryQuery->clone()->where('bill_status', 'paid')->count();
-        $partialBillsCount = $summaryQuery->clone()->where('bill_status', 'partial')->count();
-        $overdueBillsCount = $summaryQuery->clone()
+        // COUNTS FOR FILTER BUTTONS (using base query)
+        $totalBillsCount = $baseQuery->count();
+        $unpaidBillsCount = $baseQuery->clone()->where('bill_status', 'unpaid')->count();
+        $paidBillsCount = $baseQuery->clone()->where('bill_status', 'paid')->count();
+        $partialBillsCount = $baseQuery->clone()->where('bill_status', 'partial')->count();
+        $overdueBillsCount = $baseQuery->clone()
             ->where('due_date', '<', now())
             ->where('bill_status', 'unpaid')
             ->count();
 
-        // Dashboard statistics from visible bills
-        $totalRevenue = Bill::query()->sum('total_amount');
-        $outstandingBalance = Bill::query()->where('bill_status', '!=', 'paid')->sum('total_amount');
-        $totalBills = Bill::query()->count();
-        $paidBills = $bills->where('bill_status', 'paid')->count();
-        $collectionRate = $totalBills > 0 ? ($paidBills / $totalBills) * 100 : 0;
+        // DASHBOARD STATISTICS (using same filtered base query)
+        $totalRevenue = $baseQuery->clone()->sum('total_amount');
+
+        // Outstanding Balance: sum of balances for unpaid + partial bills
+        $outstandingBalance = $totalRevenue - Payment::where('payment_status', 'completed')
+        ->whereNull('voided_at')
+        ->sum('amount');
+
+        // Total Bills for display (use the count from filtered query)
+        $totalBills = $totalBillsCount;
+
+        // Calculate total paid amount from filtered bills
+        $totalPaidAmount = $baseQuery->clone()->sum('paid_amount');
+
+        // Collection Rate: total paid amount / total revenue
+        $collectionRate = $totalRevenue > 0
+            ? ($totalPaidAmount / $totalRevenue) * 100
+            : 0;
 
         return view('bills.index', compact(
             'bills',
@@ -87,9 +101,6 @@ class BillController extends Controller
             'overdueBillsCount'
         ));
     }
-
-
-
     /**
      * Store a newly created bill in storage.
      */

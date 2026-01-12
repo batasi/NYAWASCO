@@ -195,7 +195,7 @@
                         </p>
                         <p class="text-xs text-red-600 mt-1">
                             <i class="fas fa-exclamation-triangle mr-1"></i>
-                            Requires attention
+                            {{ $unpaidBillsCount + $partialBillsCount }} unpaid bills
                         </p>
                     </div>
                     <div class="p-3 rounded-lg bg-red-100">
