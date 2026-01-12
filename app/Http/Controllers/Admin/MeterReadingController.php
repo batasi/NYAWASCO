@@ -283,7 +283,8 @@ class MeterReadingController extends Controller
 
         // Update meter balance to reflect new charges
         $meter->update([
-            'current_balance' => $meter->current_balance + $totalAmount
+            'current_balance' => $meter->current_balance + $totalAmount,
+            'balance_bf' => $meter->balance_bf + $totalAmount
         ]);
 
         // Mark reading as billed

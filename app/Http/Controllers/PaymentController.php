@@ -531,16 +531,21 @@ class PaymentController extends Controller
             }
 
             // Process payment within transaction
-            $result = DB::transaction(function () use ($validated, $meter) {
+            $paymentDate = isset($validated['payment_date'])
+                ? Carbon::parse($validated['payment_date'])
+                : now();
+
+            $result = DB::transaction(function () use ($validated, $meter, $paymentDate) {
                 return $this->paymentService->processPayment(
                     $meter,
                     $validated['amount'],
                     $validated['payment_method'],
                     $validated['transaction_reference'] ?? null,
-                    $validated['payment_date'] ?? now(),
+                    $paymentDate, // ✅ always Carbon
                     auth()->id()
                 );
             });
+
 
             // Log successful payment
             Log::info('Payment processed successfully', [
