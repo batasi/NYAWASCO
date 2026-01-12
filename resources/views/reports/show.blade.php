@@ -198,13 +198,23 @@
         <!-- Actions -->
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h3 class="text-lg font-semibold text-gray-800 mb-4">Export Options</h3>
+            <!-- In your reports/show.blade.php -->
             <div class="flex space-x-4">
                 <button onclick="exportReport('pdf')"
                         class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition duration-200 flex items-center">
                     <i class="fas fa-file-pdf mr-2"></i>
                     Export as PDF
                 </button>
-
+                <button onclick="exportReport('excel')"
+                        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition duration-200 flex items-center">
+                    <i class="fas fa-file-excel mr-2"></i>
+                    Export as Excel
+                </button>
+                <button onclick="exportReport('csv')"
+                        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition duration-200 flex items-center">
+                    <i class="fas fa-file-csv mr-2"></i>
+                    Export as CSV
+                </button>
             </div>
         </div>
     </div>

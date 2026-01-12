@@ -61,7 +61,7 @@
                     </div>
                 </div>
 
-                <!-- Export Format -->
+                <!-- In your reports/index.blade.php -->
                 <div class="mt-6">
                     <label class="block text-sm font-medium text-gray-700 mb-2">
                         Export Format
@@ -69,16 +69,38 @@
                     <div class="flex space-x-4">
                         <label class="inline-flex items-center">
                             <input type="radio" name="format" value="view" checked
-                                   class="text-blue-600 border-gray-300 focus:ring-blue-500">
+                                class="text-blue-600 border-gray-300 focus:ring-blue-500">
                             <span class="ml-2 text-sm text-gray-700">View in Browser</span>
                         </label>
                         <label class="inline-flex items-center">
                             <input type="radio" name="format" value="pdf"
-                                   class="text-blue-600 border-gray-300 focus:ring-blue-500">
+                                class="text-blue-600 border-gray-300 focus:ring-blue-500">
                             <span class="ml-2 text-sm text-gray-700">Download PDF</span>
                         </label>
-
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="format" value="excel"
+                                class="text-blue-600 border-gray-300 focus:ring-blue-500">
+                            <span class="ml-2 text-sm text-gray-700">Download Excel</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="format" value="csv"
+                                class="text-blue-600 border-gray-300 focus:ring-blue-500">
+                            <span class="ml-2 text-sm text-gray-700">Download CSV</span>
+                        </label>
                     </div>
+                </div>
+
+                <!-- Add detail level selection -->
+                <div class="mt-6">
+                    <label for="detail_level" class="block text-sm font-medium text-gray-700 mb-2">
+                        Detail Level
+                    </label>
+                    <select id="detail_level" name="detail_level"
+                            class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="summary">Summary Only</option>
+                        <option value="detailed">Detailed Data</option>
+                        <option value="full">Full Report</option>
+                    </select>
                 </div>
 
                 <!-- Generate Button -->
