@@ -339,6 +339,7 @@ class MeterReadingController extends Controller
     {
         // Update meter balance
         $newMeterBalance = $meter->current_balance + $billAmount;
+        $newMet = $meter->balance_bf + $billAmount;
 
     }
 
