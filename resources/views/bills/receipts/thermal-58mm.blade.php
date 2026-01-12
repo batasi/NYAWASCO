@@ -358,7 +358,7 @@
 
     <!-- Print Button -->
     <button class="print-btn no-print" onclick="printReceipt()">
-        ЁЯЦия╕П PRINT RECEIPT
+     PRINT RECEIPT
     </button>
 
     <script>

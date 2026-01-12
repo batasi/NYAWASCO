@@ -15,7 +15,7 @@ use PDF;
 
 class BillController extends Controller
 {
-     public function index(Request $request)
+    public function index(Request $request)
     {
         $status = $request->get('status');
         $sort = $request->get('sort', 'newest');
