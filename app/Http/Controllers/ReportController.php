@@ -21,8 +21,6 @@ use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
-use PhpOffice\PhpSpreadsheet\Cell\DataType;
-use PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
 
 class ReportController extends Controller
 {
@@ -259,7 +257,7 @@ class ReportController extends Controller
         });
 
         // Category breakdown
-        $categoryStats = $meters->groupBy('meter_category_id')->map(function ($group) {
+        $categoryStats = $meters->groupBy('meter_category_id')->map(function ($group) use ($meters) {
             return [
                 'category' => $group->first()->meterCategory->name ?? 'Unknown',
                 'count' => $group->count(),
@@ -271,7 +269,7 @@ class ReportController extends Controller
         });
 
         // Zone breakdown
-        $zoneStats = $meters->groupBy('zone_id')->map(function ($group) {
+        $zoneStats = $meters->groupBy('zone_id')->map(function ($group) use ($meters) {
             return [
                 'zone' => $group->first()->zone->name ?? 'Unassigned',
                 'count' => $group->count(),
@@ -280,8 +278,8 @@ class ReportController extends Controller
             ];
         });
 
-        // Status breakdown
-        $statusStats = $meters->groupBy('status')->map(function ($group) {
+        // Status breakdown - FIXED: Pass $meters to closure
+        $statusStats = $meters->groupBy('status')->map(function ($group) use ($meters) {
             return [
                 'status' => $group->first()->status,
                 'count' => $group->count(),
@@ -427,7 +425,7 @@ class ReportController extends Controller
             ->get();
 
         // Payment method breakdown
-        $methodBreakdown = $payments->groupBy('payment_method')->map(function ($group, $method) {
+        $methodBreakdown = $payments->groupBy('payment_method')->map(function ($group, $method) use ($payments) {
             return [
                 'method' => $method,
                 'total_amount' => $group->sum('amount'),
@@ -1103,6 +1101,450 @@ class ReportController extends Controller
         }
     }
 
+    private function generateConsumptionExcel($spreadsheet, $reportData, $startDate, $endDate)
+    {
+        // Worksheet 1: Summary
+        $summarySheet = $spreadsheet->createSheet();
+        $summarySheet->setTitle('Summary');
+        $this->addReportHeader($summarySheet, $reportData['type'], $startDate, $endDate);
+
+        $summaryRow = 5;
+        foreach ($reportData['summary'] as $key => $value) {
+            $summarySheet->setCellValue('A' . $summaryRow, $this->formatHeader($key));
+            if (is_numeric($value)) {
+                if (strpos($key, 'consumption') !== false) {
+                    $summarySheet->setCellValue('B' . $summaryRow, $value);
+                    $summarySheet->getStyle('B' . $summaryRow)->getNumberFormat()->setFormatCode('#,##0.00');
+                } else {
+                    $summarySheet->setCellValue('B' . $summaryRow, $value);
+                }
+            } else {
+                $summarySheet->setCellValue('B' . $summaryRow, $value);
+            }
+            $summaryRow++;
+        }
+
+        // Worksheet 2: Monthly Consumption
+        if (isset($reportData['monthly_consumption'])) {
+            $monthlySheet = $spreadsheet->createSheet();
+            $monthlySheet->setTitle('Monthly Consumption');
+
+            $headers = ['Year', 'Month', 'Reading Count', 'Total Consumption', 'Average Consumption', 'Max Consumption', 'Min Consumption'];
+            $this->addSheetHeader($monthlySheet, $headers);
+
+            $row = 2;
+            foreach ($reportData['monthly_consumption'] as $month) {
+                $monthlySheet->setCellValue('A' . $row, $month->year);
+                $monthlySheet->setCellValue('B' . $row, date('F', mktime(0, 0, 0, $month->month, 1)));
+                $monthlySheet->setCellValue('C' . $row, $month->reading_count);
+                $monthlySheet->setCellValue('D' . $row, $month->total_consumption);
+                $monthlySheet->setCellValue('E' . $row, $month->avg_consumption);
+                $monthlySheet->setCellValue('F' . $row, $month->max_consumption);
+                $monthlySheet->setCellValue('G' . $row, $month->min_consumption);
+
+                // Format numbers
+                $monthlySheet->getStyle('D' . $row . ':G' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+
+                $row++;
+            }
+
+            // Add totals
+            $this->addSheetTotals($monthlySheet, $row, [
+                'C' => 'count',
+                'D' => 'sum',
+            ]);
+        }
+
+        // Worksheet 3: Detailed Readings
+        if (isset($reportData['readings']) && $reportData['readings']->count() > 0) {
+            $readingsSheet = $spreadsheet->createSheet();
+            $readingsSheet->setTitle('Detailed Readings');
+
+            $headers = [
+                'Reading Date', 'Customer Number', 'Customer Name', 'Meter Number',
+                'Category', 'Zone', 'Previous Reading', 'Current Reading',
+                'Consumption (m³)', 'Reading Type', 'Reading Status', 'Estimated'
+            ];
+            $this->addSheetHeader($readingsSheet, $headers);
+
+            $row = 2;
+            foreach ($reportData['readings'] as $reading) {
+                $readingsSheet->setCellValue('A' . $row, $reading->reading_date ? $reading->reading_date->format('d/m/Y') : '');
+                $readingsSheet->setCellValue('B' . $row, $reading->customer->customer_number ?? '');
+                $readingsSheet->setCellValue('C' . $row, $reading->customer ?
+                    trim($reading->customer->first_name . ' ' . $reading->customer->last_name) : '');
+                $readingsSheet->setCellValue('D' . $row, $reading->meter->meter_number ?? '');
+                $readingsSheet->setCellValue('E' . $row, $reading->meter->meterCategory->name ?? '');
+                $readingsSheet->setCellValue('F' . $row, $reading->meter->zone->name ?? '');
+                $readingsSheet->setCellValue('G' . $row, $reading->previous_reading);
+                $readingsSheet->setCellValue('H' . $row, $reading->current_reading);
+                $readingsSheet->setCellValue('I' . $row, $reading->consumption);
+                $readingsSheet->setCellValue('J' . $row, ucfirst($reading->reading_type));
+                $readingsSheet->setCellValue('K' . $row, ucfirst($reading->reading_status));
+                $readingsSheet->setCellValue('L' . $row, $reading->estimated ? 'Yes' : 'No');
+
+                // Format numbers
+                $readingsSheet->getStyle('G' . $row . ':I' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+
+                $row++;
+            }
+
+            // Auto-size columns
+            foreach (range('A', 'L') as $column) {
+                $readingsSheet->getColumnDimension($column)->setAutoSize(true);
+            }
+        }
+    }
+
+    private function generateCollectionExcel($spreadsheet, $reportData, $startDate, $endDate)
+    {
+        // Worksheet 1: Summary
+        $summarySheet = $spreadsheet->createSheet();
+        $summarySheet->setTitle('Summary');
+        $this->addReportHeader($summarySheet, $reportData['type'], $startDate, $endDate);
+
+        $summaryRow = 5;
+        foreach ($reportData['summary'] as $key => $value) {
+            $summarySheet->setCellValue('A' . $summaryRow, $this->formatHeader($key));
+            if (is_numeric($value)) {
+                if (strpos($key, 'amount') !== false || strpos($key, 'collected') !== false ||
+                    strpos($key, 'payment') !== false) {
+                    $summarySheet->setCellValue('B' . $summaryRow, $value);
+                    $summarySheet->getStyle('B' . $summaryRow)->getNumberFormat()->setFormatCode('#,##0.00');
+                } elseif (strpos($key, 'rate') !== false || strpos($key, 'efficiency') !== false) {
+                    $summarySheet->setCellValue('B' . $summaryRow, $value / 100);
+                    $summarySheet->getStyle('B' . $summaryRow)->getNumberFormat()->setFormatCode('0.00%');
+                } else {
+                    $summarySheet->setCellValue('B' . $summaryRow, $value);
+                }
+            } else {
+                $summarySheet->setCellValue('B' . $summaryRow, $value);
+            }
+            $summaryRow++;
+        }
+
+        // Worksheet 2: Daily Collection
+        if (isset($reportData['daily_collection'])) {
+            $dailySheet = $spreadsheet->createSheet();
+            $dailySheet->setTitle('Daily Collection');
+
+            $headers = ['Date', 'Payment Count', 'Total Amount', 'Average Amount'];
+            $this->addSheetHeader($dailySheet, $headers);
+
+            $row = 2;
+            foreach ($reportData['daily_collection'] as $day) {
+                $dailySheet->setCellValue('A' . $row, $day->payment_date ? Carbon::parse($day->payment_date)->format('d/m/Y') : '');
+                $dailySheet->setCellValue('B' . $row, $day->payment_count);
+                $dailySheet->setCellValue('C' . $row, $day->total_amount);
+                $dailySheet->setCellValue('D' . $row, $day->avg_amount);
+
+                // Format numbers
+                $dailySheet->getStyle('C' . $row . ':D' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+
+                $row++;
+            }
+
+            // Add totals
+            $this->addSheetTotals($dailySheet, $row, [
+                'B' => 'count',
+                'C' => 'sum',
+            ]);
+        }
+
+        // Worksheet 3: Payment Details
+        if (isset($reportData['payments']) && $reportData['payments']->count() > 0) {
+            $paymentsSheet = $spreadsheet->createSheet();
+            $paymentsSheet->setTitle('Payment Details');
+
+            $headers = [
+                'Payment Date', 'Payment Number', 'Receipt Number', 'Customer Number',
+                'Customer Name', 'Meter Number', 'Amount', 'Payment Method',
+                'Transaction Reference', 'Payment Status', 'Collector', 'Bill Number'
+            ];
+            $this->addSheetHeader($paymentsSheet, $headers);
+
+            $row = 2;
+            foreach ($reportData['payments'] as $payment) {
+                $paymentsSheet->setCellValue('A' . $row, $payment->payment_date ? $payment->payment_date->format('d/m/Y') : '');
+                $paymentsSheet->setCellValue('B' . $row, $payment->payment_no);
+                $paymentsSheet->setCellValue('C' . $row, $payment->receipt_number);
+                $paymentsSheet->setCellValue('D' . $row, $payment->customer->customer_number ?? '');
+                $paymentsSheet->setCellValue('E' . $row, $payment->customer ?
+                    trim($payment->customer->first_name . ' ' . $payment->customer->last_name) : '');
+                $paymentsSheet->setCellValue('F' . $row, $payment->meter->meter_number ?? '');
+                $paymentsSheet->setCellValue('G' . $row, $payment->amount);
+                $paymentsSheet->setCellValue('H' . $row, ucfirst($payment->payment_method));
+                $paymentsSheet->setCellValue('I' . $row, $payment->transaction_reference);
+                $paymentsSheet->setCellValue('J' . $row, ucfirst($payment->payment_status));
+                $paymentsSheet->setCellValue('K' . $row, $payment->collector->name ?? '');
+                $paymentsSheet->setCellValue('L' . $row, $payment->bill->bill_number ?? '');
+
+                // Format numbers
+                $paymentsSheet->getStyle('G' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+
+                $row++;
+            }
+
+            // Auto-size columns
+            foreach (range('A', 'L') as $column) {
+                $paymentsSheet->getColumnDimension($column)->setAutoSize(true);
+            }
+        }
+    }
+
+    private function generateArrearsExcel($spreadsheet, $reportData, $startDate, $endDate)
+    {
+        // Worksheet 1: Summary
+        $summarySheet = $spreadsheet->createSheet();
+        $summarySheet->setTitle('Summary');
+        $this->addReportHeader($summarySheet, $reportData['type'], $startDate, $endDate);
+
+        $summaryRow = 5;
+        foreach ($reportData['summary'] as $key => $value) {
+            $summarySheet->setCellValue('A' . $summaryRow, $this->formatHeader($key));
+            if (is_numeric($value)) {
+                if (strpos($key, 'amount') !== false || strpos($key, 'arrears') !== false ||
+                    strpos($key, 'balance') !== false || strpos($key, 'fees') !== false) {
+                    $summarySheet->setCellValue('B' . $summaryRow, $value);
+                    $summarySheet->getStyle('B' . $summaryRow)->getNumberFormat()->setFormatCode('#,##0.00');
+                } elseif ($value instanceof \Carbon\Carbon) {
+                    $summarySheet->setCellValue('B' . $summaryRow, $value->format('d/m/Y'));
+                } else {
+                    $summarySheet->setCellValue('B' . $summaryRow, $value);
+                }
+            } else {
+                $summarySheet->setCellValue('B' . $summaryRow, $value);
+            }
+            $summaryRow++;
+        }
+
+        // Worksheet 2: Age Analysis
+        if (isset($reportData['age_analysis'])) {
+            $ageSheet = $spreadsheet->createSheet();
+            $ageSheet->setTitle('Age Analysis');
+
+            $headers = ['Age Category', 'Bill Count', 'Amount Outstanding', 'Percentage'];
+            $this->addSheetHeader($ageSheet, $headers);
+
+            $row = 2;
+            $totalArrears = array_sum(array_column($reportData['age_analysis'], 'amount'));
+
+            foreach ($reportData['age_analysis'] as $category => $data) {
+                $ageSheet->setCellValue('A' . $row, $this->formatAgeCategory($category));
+                $ageSheet->setCellValue('B' . $row, $data['count']);
+                $ageSheet->setCellValue('C' . $row, $data['amount']);
+                $ageSheet->setCellValue('D' . $row, $totalArrears > 0 ? ($data['amount'] / $totalArrears) : 0);
+
+                // Format numbers
+                $ageSheet->getStyle('C' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+                $ageSheet->getStyle('D' . $row)->getNumberFormat()->setFormatCode('0.00%');
+
+                $row++;
+            }
+
+            // Add totals
+            $ageSheet->setCellValue('A' . $row, 'TOTAL:');
+            $ageSheet->getStyle('A' . $row)->getFont()->setBold(true);
+            $ageSheet->setCellValue('B' . $row, '=SUM(B2:B' . ($row - 1) . ')');
+            $ageSheet->setCellValue('C' . $row, '=SUM(C2:C' . ($row - 1) . ')');
+            $ageSheet->setCellValue('D' . $row, '=SUM(D2:D' . ($row - 1) . ')');
+            $ageSheet->getStyle('B' . $row . ':D' . $row)->getFont()->setBold(true);
+            $ageSheet->getStyle('B' . $row . ':D' . $row)->getBorders()->getTop()->setBorderStyle(Border::BORDER_DOUBLE);
+        }
+
+        // Worksheet 3: Top Debtors
+        if (isset($reportData['top_debtors']) && $reportData['top_debtors']->count() > 0) {
+            $debtorsSheet = $spreadsheet->createSheet();
+            $debtorsSheet->setTitle('Top Debtors');
+
+            $headers = [
+                'Customer Number', 'Customer Name', 'Phone', 'Total Arrears',
+                'Bill Count', 'Oldest Bill', 'Newest Bill', 'Average Arrears per Bill'
+            ];
+            $this->addSheetHeader($debtorsSheet, $headers);
+
+            $row = 2;
+            foreach ($reportData['top_debtors'] as $debtor) {
+                $debtorsSheet->setCellValue('A' . $row, $debtor['customer']->customer_number ?? '');
+                $debtorsSheet->setCellValue('B' . $row, trim($debtor['customer']->first_name . ' ' . $debtor['customer']->last_name));
+                $debtorsSheet->setCellValue('C' . $row, $debtor['customer']->phone ?? '');
+                $debtorsSheet->setCellValue('D' . $row, $debtor['total_arrears']);
+                $debtorsSheet->setCellValue('E' . $row, $debtor['bill_count']);
+                $debtorsSheet->setCellValue('F' . $row, $debtor['oldest_bill'] ? $debtor['oldest_bill']->format('d/m/Y') : '');
+                $debtorsSheet->setCellValue('G' . $row, $debtor['newest_bill'] ? $debtor['newest_bill']->format('d/m/Y') : '');
+                $debtorsSheet->setCellValue('H' . $row, $debtor['average_arrears_per_bill']);
+
+                // Format numbers
+                $debtorsSheet->getStyle('D' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+                $debtorsSheet->getStyle('H' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+
+                $row++;
+            }
+
+            // Auto-size columns
+            foreach (range('A', 'H') as $column) {
+                $debtorsSheet->getColumnDimension($column)->setAutoSize(true);
+            }
+        }
+    }
+
+    private function generateCategoryExcel($spreadsheet, $reportData, $startDate, $endDate)
+    {
+        // Worksheet 1: Summary
+        $summarySheet = $spreadsheet->createSheet();
+        $summarySheet->setTitle('Summary');
+        $this->addReportHeader($summarySheet, $reportData['type'], $startDate, $endDate);
+
+        $summaryRow = 5;
+        foreach ($reportData['summary'] as $key => $value) {
+            $summarySheet->setCellValue('A' . $summaryRow, $this->formatHeader($key));
+            if (is_numeric($value)) {
+                if (strpos($key, 'amount') !== false || strpos($key, 'revenue') !== false ||
+                    strpos($key, 'collected') !== false || strpos($key, 'arrears') !== false) {
+                    $summarySheet->setCellValue('B' . $summaryRow, $value);
+                    $summarySheet->getStyle('B' . $summaryRow)->getNumberFormat()->setFormatCode('#,##0.00');
+                } elseif (strpos($key, 'consumption') !== false) {
+                    $summarySheet->setCellValue('B' . $summaryRow, $value);
+                    $summarySheet->getStyle('B' . $summaryRow)->getNumberFormat()->setFormatCode('#,##0.00');
+                } elseif (strpos($key, 'rate') !== false) {
+                    $summarySheet->setCellValue('B' . $summaryRow, $value / 100);
+                    $summarySheet->getStyle('B' . $summaryRow)->getNumberFormat()->setFormatCode('0.00%');
+                } else {
+                    $summarySheet->setCellValue('B' . $summaryRow, $value);
+                }
+            } else {
+                $summarySheet->setCellValue('B' . $summaryRow, $value);
+            }
+            $summaryRow++;
+        }
+
+        // Worksheet 2: Category Details
+        if (isset($reportData['categories']) && $reportData['categories']->count() > 0) {
+            $categoriesSheet = $spreadsheet->createSheet();
+            $categoriesSheet->setTitle('Category Details');
+
+            $headers = [
+                'Category Name', 'Code', 'Default Rate', 'Active', 'Meter Count',
+                'Meters with Customers', 'Total Revenue', 'Total Collected',
+                'Total Arrears', 'Total Consumption', 'Average Consumption',
+                'Reading Count', 'Bill Count', 'Collection Rate', 'Average Bill Amount'
+            ];
+            $this->addSheetHeader($categoriesSheet, $headers);
+
+            $row = 2;
+            foreach ($reportData['categories'] as $category) {
+                $categoriesSheet->setCellValue('A' . $row, $category->name);
+                $categoriesSheet->setCellValue('B' . $row, $category->code);
+                $categoriesSheet->setCellValue('C' . $row, $category->default_rate);
+                $categoriesSheet->setCellValue('D' . $row, $category->is_active ? 'Yes' : 'No');
+                $categoriesSheet->setCellValue('E' . $row, $category->meters_count);
+                $categoriesSheet->setCellValue('F' . $row, $category->meters_with_customers);
+                $categoriesSheet->setCellValue('G' . $row, $category->total_revenue);
+                $categoriesSheet->setCellValue('H' . $row, $category->total_paid);
+                $categoriesSheet->setCellValue('I' . $row, $category->total_balance);
+                $categoriesSheet->setCellValue('J' . $row, $category->total_consumption);
+                $categoriesSheet->setCellValue('K' . $row, $category->average_consumption);
+                $categoriesSheet->setCellValue('L' . $row, $category->reading_count);
+                $categoriesSheet->setCellValue('M' . $row, $category->bill_count);
+                $categoriesSheet->setCellValue('N' . $row, $category->collection_rate / 100);
+                $categoriesSheet->setCellValue('O' . $row, $category->average_bill_amount);
+
+                // Format numbers
+                $categoriesSheet->getStyle('C' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+                $categoriesSheet->getStyle('G' . $row . ':I' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+                $categoriesSheet->getStyle('J' . $row . ':K' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+                $categoriesSheet->getStyle('N' . $row)->getNumberFormat()->setFormatCode('0.00%');
+                $categoriesSheet->getStyle('O' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+
+                $row++;
+            }
+
+            // Auto-size columns
+            foreach (range('A', 'O') as $column) {
+                $categoriesSheet->getColumnDimension($column)->setAutoSize(true);
+            }
+        }
+    }
+
+    private function generateZoneExcel($spreadsheet, $reportData, $startDate, $endDate)
+    {
+        // Worksheet 1: Summary
+        $summarySheet = $spreadsheet->createSheet();
+        $summarySheet->setTitle('Summary');
+        $this->addReportHeader($summarySheet, $reportData['type'], $startDate, $endDate);
+
+        $summaryRow = 5;
+        foreach ($reportData['summary'] as $key => $value) {
+            $summarySheet->setCellValue('A' . $summaryRow, $this->formatHeader($key));
+            if (is_numeric($value)) {
+                if (strpos($key, 'amount') !== false || strpos($key, 'revenue') !== false ||
+                    strpos($key, 'collected') !== false || strpos($key, 'arrears') !== false) {
+                    $summarySheet->setCellValue('B' . $summaryRow, $value);
+                    $summarySheet->getStyle('B' . $summaryRow)->getNumberFormat()->setFormatCode('#,##0.00');
+                } elseif (strpos($key, 'consumption') !== false) {
+                    $summarySheet->setCellValue('B' . $summaryRow, $value);
+                    $summarySheet->getStyle('B' . $summaryRow)->getNumberFormat()->setFormatCode('#,##0.00');
+                } elseif (strpos($key, 'rate') !== false) {
+                    $summarySheet->setCellValue('B' . $summaryRow, $value / 100);
+                    $summarySheet->getStyle('B' . $summaryRow)->getNumberFormat()->setFormatCode('0.00%');
+                } else {
+                    $summarySheet->setCellValue('B' . $summaryRow, $value);
+                }
+            } else {
+                $summarySheet->setCellValue('B' . $summaryRow, $value);
+            }
+            $summaryRow++;
+        }
+
+        // Worksheet 2: Zone Details
+        if (isset($reportData['zones']) && $reportData['zones']->count() > 0) {
+            $zonesSheet = $spreadsheet->createSheet();
+            $zonesSheet->setTitle('Zone Details');
+
+            $headers = [
+                'Zone Name', 'Description', 'Meter Count', 'Customer Count',
+                'Walk Route Count', 'Total Revenue', 'Total Collected',
+                'Total Arrears', 'Total Consumption', 'Average Consumption',
+                'Reading Count', 'Bill Count', 'Payment Count', 'Collection Rate',
+                'Average Bill Amount', 'Average Payment Amount'
+            ];
+            $this->addSheetHeader($zonesSheet, $headers);
+
+            $row = 2;
+            foreach ($reportData['zones'] as $zone) {
+                $zonesSheet->setCellValue('A' . $row, $zone->name);
+                $zonesSheet->setCellValue('B' . $row, $zone->description);
+                $zonesSheet->setCellValue('C' . $row, $zone->meter_count);
+                $zonesSheet->setCellValue('D' . $row, $zone->customer_count);
+                $zonesSheet->setCellValue('E' . $row, $zone->walk_route_count);
+                $zonesSheet->setCellValue('F' . $row, $zone->total_revenue);
+                $zonesSheet->setCellValue('G' . $row, $zone->total_collected);
+                $zonesSheet->setCellValue('H' . $row, $zone->total_arrears);
+                $zonesSheet->setCellValue('I' . $row, $zone->total_consumption);
+                $zonesSheet->setCellValue('J' . $row, $zone->average_consumption);
+                $zonesSheet->setCellValue('K' . $row, $zone->reading_count);
+                $zonesSheet->setCellValue('L' . $row, $zone->bill_count);
+                $zonesSheet->setCellValue('M' . $row, $zone->payment_count);
+                $zonesSheet->setCellValue('N' . $row, $zone->collection_rate / 100);
+                $zonesSheet->setCellValue('O' . $row, $zone->average_bill_amount);
+                $zonesSheet->setCellValue('P' . $row, $zone->average_payment_amount);
+
+                // Format numbers
+                $zonesSheet->getStyle('F' . $row . ':H' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+                $zonesSheet->getStyle('I' . $row . ':J' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+                $zonesSheet->getStyle('N' . $row)->getNumberFormat()->setFormatCode('0.00%');
+                $zonesSheet->getStyle('O' . $row . ':P' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+
+                $row++;
+            }
+
+            // Auto-size columns
+            foreach (range('A', 'P') as $column) {
+                $zonesSheet->getColumnDimension($column)->setAutoSize(true);
+            }
+        }
+    }
+
     // Helper methods for Excel generation
     private function addReportHeader($sheet, $reportType, $startDate, $endDate)
     {
@@ -1145,9 +1587,9 @@ class ReportController extends Controller
 
         foreach ($columns as $col => $type) {
             if ($type === 'sum') {
-                $sheet->setCellValue($col . $row, '=SUM(' . $col . '2:' . $col . ($row-1) . ')');
+                $sheet->setCellValue($col . $row, '=SUM(' . $col . '2:' . $col . ($row - 1) . ')');
             } elseif ($type === 'count') {
-                $sheet->setCellValue($col . $row, '=COUNT(' . $col . '2:' . $col . ($row-1) . ')');
+                $sheet->setCellValue($col . $row, '=COUNT(' . $col . '2:' . $col . ($row - 1) . ')');
             }
             $sheet->getStyle($col . $row)->getFont()->setBold(true);
             $sheet->getStyle($col . $row)->getBorders()->getTop()->setBorderStyle(Border::BORDER_DOUBLE);
@@ -1159,55 +1601,65 @@ class ReportController extends Controller
         return ucwords(str_replace('_', ' ', $key));
     }
 
-    // Note: You need to implement similar methods for other report types
-    // For brevity, I've shown Revenue, Customer, and Meter reports
+    // Helper method for age category formatting
+    private function formatAgeCategory($category)
+    {
+        $formatted = [
+            '0-30_days' => '0-30 Days',
+            '31-60_days' => '31-60 Days',
+            '61-90_days' => '61-90 Days',
+            'over_90_days' => 'Over 90 Days'
+        ];
 
-   private function generateCSV($reportData, $reportType, $startDate, $endDate)
-{
-    $filename = 'NYAWASCO_' . str_replace(' ', '_', $reportData['type']) . '_' .
-                ($startDate ? $startDate->format('Y_m_d') . '_to_' . $endDate->format('Y_m_d') : 'All_Time') .
-                '_' . now()->format('Y_m_d') . '.csv';
-
-    header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename="' . $filename . '"');
-    header('Cache-Control: max-age=0');
-
-    $output = fopen('php://output', 'w');
-
-    // Add BOM for UTF-8
-    fwrite($output, "\xEF\xBB\xBF");
-
-    // Generate CSV based on report type
-    switch ($reportType) {
-        case 'revenue':
-            $this->generateRevenueCSV($output, $reportData);
-            break;
-        case 'customer':
-            $this->generateCustomerCSV($output, $reportData);
-            break;
-        case 'meter':
-            $this->generateMeterCSV($output, $reportData);
-            break;
-        case 'consumption':
-            $this->generateConsumptionCSV($output, $reportData);
-            break;
-        case 'collection':
-            $this->generateCollectionCSV($output, $reportData);
-            break;
-        case 'arrears':
-            $this->generateArrearsCSV($output, $reportData);
-            break;
-        case 'category':
-            $this->generateCategoryCSV($output, $reportData);
-            break;
-        case 'zone':
-            $this->generateZoneCSV($output, $reportData);
-            break;
+        return $formatted[$category] ?? ucwords(str_replace('_', ' ', $category));
     }
 
-    fclose($output);
-    exit;
-}
+    private function generateCSV($reportData, $reportType, $startDate, $endDate)
+    {
+        $filename = 'NYAWASCO_' . str_replace(' ', '_', $reportData['type']) . '_' .
+                    ($startDate ? $startDate->format('Y_m_d') . '_to_' . $endDate->format('Y_m_d') : 'All_Time') .
+                    '_' . now()->format('Y_m_d') . '.csv';
+
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+
+        $output = fopen('php://output', 'w');
+
+        // Add BOM for UTF-8
+        fwrite($output, "\xEF\xBB\xBF");
+
+        // Generate CSV based on report type
+        switch ($reportType) {
+            case 'revenue':
+                $this->generateRevenueCSV($output, $reportData);
+                break;
+            case 'customer':
+                $this->generateCustomerCSV($output, $reportData);
+                break;
+            case 'meter':
+                $this->generateMeterCSV($output, $reportData);
+                break;
+            case 'consumption':
+                $this->generateConsumptionCSV($output, $reportData);
+                break;
+            case 'collection':
+                $this->generateCollectionCSV($output, $reportData);
+                break;
+            case 'arrears':
+                $this->generateArrearsCSV($output, $reportData);
+                break;
+            case 'category':
+                $this->generateCategoryCSV($output, $reportData);
+                break;
+            case 'zone':
+                $this->generateZoneCSV($output, $reportData);
+                break;
+        }
+
+        fclose($output);
+        exit;
+    }
 
     private function generateRevenueCSV($output, $reportData)
     {
@@ -1371,230 +1823,231 @@ class ReportController extends Controller
             }
         }
     }
+
     private function generateConsumptionCSV($output, $reportData)
-{
-    fputcsv($output, ['CONSUMPTION REPORT - SUMMARY']);
-    fputcsv($output, []);
+    {
+        fputcsv($output, ['CONSUMPTION REPORT - SUMMARY']);
+        fputcsv($output, []);
 
-    foreach ($reportData['summary'] as $key => $value) {
-        $label = $this->formatHeader($key);
-        if (is_numeric($value)) {
-            if (strpos($key, 'consumption') !== false) {
-                fputcsv($output, [$label, number_format($value, 2) . ' m³']);
+        foreach ($reportData['summary'] as $key => $value) {
+            $label = $this->formatHeader($key);
+            if (is_numeric($value)) {
+                if (strpos($key, 'consumption') !== false) {
+                    fputcsv($output, [$label, number_format($value, 2) . ' m³']);
+                } else {
+                    fputcsv($output, [$label, number_format($value)]);
+                }
             } else {
-                fputcsv($output, [$label, number_format($value)]);
+                fputcsv($output, [$label, $value]);
             }
-        } else {
-            fputcsv($output, [$label, $value]);
+        }
+
+        fputcsv($output, []);
+        fputcsv($output, ['MONTHLY CONSUMPTION']);
+
+        if (isset($reportData['monthly_consumption'])) {
+            fputcsv($output, ['Year', 'Month', 'Reading Count', 'Total Consumption', 'Average Consumption', 'Max Consumption', 'Min Consumption']);
+
+            foreach ($reportData['monthly_consumption'] as $month) {
+                fputcsv($output, [
+                    $month->year,
+                    date('F', mktime(0, 0, 0, $month->month, 1)),
+                    $month->reading_count,
+                    number_format($month->total_consumption, 2) . ' m³',
+                    number_format($month->avg_consumption, 2) . ' m³',
+                    number_format($month->max_consumption, 2) . ' m³',
+                    number_format($month->min_consumption, 2) . ' m³'
+                ]);
+            }
         }
     }
 
-    fputcsv($output, []);
-    fputcsv($output, ['MONTHLY CONSUMPTION']);
+    private function generateCollectionCSV($output, $reportData)
+    {
+        fputcsv($output, ['COLLECTION REPORT - SUMMARY']);
+        fputcsv($output, []);
 
-    if (isset($reportData['monthly_consumption'])) {
-        fputcsv($output, ['Year', 'Month', 'Reading Count', 'Total Consumption', 'Average Consumption', 'Max Consumption', 'Min Consumption']);
-
-        foreach ($reportData['monthly_consumption'] as $month) {
-            fputcsv($output, [
-                $month->year,
-                date('F', mktime(0, 0, 0, $month->month, 1)),
-                $month->reading_count,
-                number_format($month->total_consumption, 2) . ' m³',
-                number_format($month->avg_consumption, 2) . ' m³',
-                number_format($month->max_consumption, 2) . ' m³',
-                number_format($month->min_consumption, 2) . ' m³'
-            ]);
-        }
-    }
-}
-
-private function generateCollectionCSV($output, $reportData)
-{
-    fputcsv($output, ['COLLECTION REPORT - SUMMARY']);
-    fputcsv($output, []);
-
-    foreach ($reportData['summary'] as $key => $value) {
-        $label = $this->formatHeader($key);
-        if (is_numeric($value)) {
-            if (strpos($key, 'amount') !== false || strpos($key, 'collected') !== false ||
-                strpos($key, 'payment') !== false) {
-                fputcsv($output, [$label, 'KSh ' . number_format($value, 2)]);
-            } elseif (strpos($key, 'rate') !== false || strpos($key, 'percentage') !== false) {
-                fputcsv($output, [$label, number_format($value, 2) . '%']);
+        foreach ($reportData['summary'] as $key => $value) {
+            $label = $this->formatHeader($key);
+            if (is_numeric($value)) {
+                if (strpos($key, 'amount') !== false || strpos($key, 'collected') !== false ||
+                    strpos($key, 'payment') !== false) {
+                    fputcsv($output, [$label, 'KSh ' . number_format($value, 2)]);
+                } elseif (strpos($key, 'rate') !== false || strpos($key, 'percentage') !== false) {
+                    fputcsv($output, [$label, number_format($value, 2) . '%']);
+                } else {
+                    fputcsv($output, [$label, number_format($value)]);
+                }
             } else {
-                fputcsv($output, [$label, number_format($value)]);
+                fputcsv($output, [$label, $value]);
             }
-        } else {
-            fputcsv($output, [$label, $value]);
+        }
+
+        fputcsv($output, []);
+        fputcsv($output, ['PAYMENT DETAILS']);
+
+        if (isset($reportData['payments']) && $reportData['payments']->count() > 0) {
+            $headers = [
+                'Payment Date', 'Payment Number', 'Customer Name', 'Meter Number',
+                'Amount', 'Payment Method', 'Payment Status'
+            ];
+            fputcsv($output, $headers);
+
+            foreach ($reportData['payments'] as $payment) {
+                fputcsv($output, [
+                    $payment->payment_date ? $payment->payment_date->format('d/m/Y') : '',
+                    $payment->payment_no,
+                    $payment->customer ? trim($payment->customer->first_name . ' ' . $payment->customer->last_name) : '',
+                    $payment->meter->meter_number ?? '',
+                    'KSh ' . number_format($payment->amount, 2),
+                    ucfirst($payment->payment_method),
+                    ucfirst($payment->payment_status)
+                ]);
+            }
         }
     }
 
-    fputcsv($output, []);
-    fputcsv($output, ['PAYMENT DETAILS']);
+    private function generateArrearsCSV($output, $reportData)
+    {
+        fputcsv($output, ['ARREARS REPORT - SUMMARY']);
+        fputcsv($output, []);
 
-    if (isset($reportData['payments']) && $reportData['payments']->count() > 0) {
-        $headers = [
-            'Payment Date', 'Payment Number', 'Customer Name', 'Meter Number',
-            'Amount', 'Payment Method', 'Payment Status'
-        ];
-        fputcsv($output, $headers);
-
-        foreach ($reportData['payments'] as $payment) {
-            fputcsv($output, [
-                $payment->payment_date ? $payment->payment_date->format('d/m/Y') : '',
-                $payment->payment_no,
-                $payment->customer ? trim($payment->customer->first_name . ' ' . $payment->customer->last_name) : '',
-                $payment->meter->meter_number ?? '',
-                'KSh ' . number_format($payment->amount, 2),
-                ucfirst($payment->payment_method),
-                ucfirst($payment->payment_status)
-            ]);
-        }
-    }
-}
-
-private function generateArrearsCSV($output, $reportData)
-{
-    fputcsv($output, ['ARREARS REPORT - SUMMARY']);
-    fputcsv($output, []);
-
-    foreach ($reportData['summary'] as $key => $value) {
-        $label = $this->formatHeader($key);
-        if (is_numeric($value)) {
-            if (strpos($key, 'amount') !== false || strpos($key, 'arrears') !== false ||
-                strpos($key, 'balance') !== false || strpos($key, 'fees') !== false) {
-                fputcsv($output, [$label, 'KSh ' . number_format($value, 2)]);
-            } elseif ($value instanceof \Carbon\Carbon) {
-                fputcsv($output, [$label, $value->format('d/m/Y')]);
+        foreach ($reportData['summary'] as $key => $value) {
+            $label = $this->formatHeader($key);
+            if (is_numeric($value)) {
+                if (strpos($key, 'amount') !== false || strpos($key, 'arrears') !== false ||
+                    strpos($key, 'balance') !== false || strpos($key, 'fees') !== false) {
+                    fputcsv($output, [$label, 'KSh ' . number_format($value, 2)]);
+                } elseif ($value instanceof \Carbon\Carbon) {
+                    fputcsv($output, [$label, $value->format('d/m/Y')]);
+                } else {
+                    fputcsv($output, [$label, number_format($value)]);
+                }
             } else {
-                fputcsv($output, [$label, number_format($value)]);
+                fputcsv($output, [$label, $value]);
             }
-        } else {
-            fputcsv($output, [$label, $value]);
+        }
+
+        fputcsv($output, []);
+        fputcsv($output, ['TOP DEBTORS']);
+
+        if (isset($reportData['top_debtors']) && $reportData['top_debtors']->count() > 0) {
+            $headers = [
+                'Customer Number', 'Customer Name', 'Phone', 'Total Arrears',
+                'Bill Count', 'Oldest Bill', 'Newest Bill'
+            ];
+            fputcsv($output, $headers);
+
+            foreach ($reportData['top_debtors'] as $debtor) {
+                fputcsv($output, [
+                    $debtor['customer']->customer_number ?? '',
+                    trim($debtor['customer']->first_name . ' ' . $debtor['customer']->last_name),
+                    $debtor['customer']->phone ?? '',
+                    'KSh ' . number_format($debtor['total_arrears'], 2),
+                    $debtor['bill_count'],
+                    $debtor['oldest_bill'] ? $debtor['oldest_bill']->format('d/m/Y') : '',
+                    $debtor['newest_bill'] ? $debtor['newest_bill']->format('d/m/Y') : ''
+                ]);
+            }
         }
     }
 
-    fputcsv($output, []);
-    fputcsv($output, ['TOP DEBTORS']);
+    private function generateCategoryCSV($output, $reportData)
+    {
+        fputcsv($output, ['CATEGORY REPORT - SUMMARY']);
+        fputcsv($output, []);
 
-    if (isset($reportData['top_debtors']) && $reportData['top_debtors']->count() > 0) {
-        $headers = [
-            'Customer Number', 'Customer Name', 'Phone', 'Total Arrears',
-            'Bill Count', 'Oldest Bill', 'Newest Bill'
-        ];
-        fputcsv($output, $headers);
-
-        foreach ($reportData['top_debtors'] as $debtor) {
-            fputcsv($output, [
-                $debtor['customer']->customer_number ?? '',
-                trim($debtor['customer']->first_name . ' ' . $debtor['customer']->last_name),
-                $debtor['customer']->phone ?? '',
-                'KSh ' . number_format($debtor['total_arrears'], 2),
-                $debtor['bill_count'],
-                $debtor['oldest_bill'] ? $debtor['oldest_bill']->format('d/m/Y') : '',
-                $debtor['newest_bill'] ? $debtor['newest_bill']->format('d/m/Y') : ''
-            ]);
-        }
-    }
-}
-
-private function generateCategoryCSV($output, $reportData)
-{
-    fputcsv($output, ['CATEGORY REPORT - SUMMARY']);
-    fputcsv($output, []);
-
-    foreach ($reportData['summary'] as $key => $value) {
-        $label = $this->formatHeader($key);
-        if (is_numeric($value)) {
-            if (strpos($key, 'amount') !== false || strpos($key, 'revenue') !== false ||
-                strpos($key, 'collected') !== false || strpos($key, 'arrears') !== false) {
-                fputcsv($output, [$label, 'KSh ' . number_format($value, 2)]);
-            } elseif (strpos($key, 'consumption') !== false) {
-                fputcsv($output, [$label, number_format($value, 2) . ' m³']);
-            } elseif (strpos($key, 'rate') !== false) {
-                fputcsv($output, [$label, number_format($value, 2) . '%']);
+        foreach ($reportData['summary'] as $key => $value) {
+            $label = $this->formatHeader($key);
+            if (is_numeric($value)) {
+                if (strpos($key, 'amount') !== false || strpos($key, 'revenue') !== false ||
+                    strpos($key, 'collected') !== false || strpos($key, 'arrears') !== false) {
+                    fputcsv($output, [$label, 'KSh ' . number_format($value, 2)]);
+                } elseif (strpos($key, 'consumption') !== false) {
+                    fputcsv($output, [$label, number_format($value, 2) . ' m³']);
+                } elseif (strpos($key, 'rate') !== false) {
+                    fputcsv($output, [$label, number_format($value, 2) . '%']);
+                } else {
+                    fputcsv($output, [$label, number_format($value)]);
+                }
             } else {
-                fputcsv($output, [$label, number_format($value)]);
+                fputcsv($output, [$label, $value]);
             }
-        } else {
-            fputcsv($output, [$label, $value]);
+        }
+
+        fputcsv($output, []);
+        fputcsv($output, ['CATEGORY DETAILS']);
+
+        if (isset($reportData['categories']) && $reportData['categories']->count() > 0) {
+            $headers = [
+                'Category Name', 'Code', 'Meter Count', 'Total Revenue',
+                'Total Collected', 'Total Arrears', 'Total Consumption',
+                'Collection Rate', 'Average Bill Amount'
+            ];
+            fputcsv($output, $headers);
+
+            foreach ($reportData['categories'] as $category) {
+                fputcsv($output, [
+                    $category->name,
+                    $category->code,
+                    $category->meters_count,
+                    'KSh ' . number_format($category->total_revenue, 2),
+                    'KSh ' . number_format($category->total_paid, 2),
+                    'KSh ' . number_format($category->total_balance, 2),
+                    number_format($category->total_consumption, 2) . ' m³',
+                    number_format($category->collection_rate, 2) . '%',
+                    'KSh ' . number_format($category->average_bill_amount, 2)
+                ]);
+            }
         }
     }
 
-    fputcsv($output, []);
-    fputcsv($output, ['CATEGORY DETAILS']);
+    private function generateZoneCSV($output, $reportData)
+    {
+        fputcsv($output, ['ZONE REPORT - SUMMARY']);
+        fputcsv($output, []);
 
-    if (isset($reportData['categories']) && $reportData['categories']->count() > 0) {
-        $headers = [
-            'Category Name', 'Code', 'Meter Count', 'Total Revenue',
-            'Total Collected', 'Total Arrears', 'Total Consumption',
-            'Collection Rate', 'Average Bill Amount'
-        ];
-        fputcsv($output, $headers);
-
-        foreach ($reportData['categories'] as $category) {
-            fputcsv($output, [
-                $category->name,
-                $category->code,
-                $category->meters_count,
-                'KSh ' . number_format($category->total_revenue, 2),
-                'KSh ' . number_format($category->total_paid, 2),
-                'KSh ' . number_format($category->total_balance, 2),
-                number_format($category->total_consumption, 2) . ' m³',
-                number_format($category->collection_rate, 2) . '%',
-                'KSh ' . number_format($category->average_bill_amount, 2)
-            ]);
-        }
-    }
-}
-
-private function generateZoneCSV($output, $reportData)
-{
-    fputcsv($output, ['ZONE REPORT - SUMMARY']);
-    fputcsv($output, []);
-
-    foreach ($reportData['summary'] as $key => $value) {
-        $label = $this->formatHeader($key);
-        if (is_numeric($value)) {
-            if (strpos($key, 'amount') !== false || strpos($key, 'revenue') !== false ||
-                strpos($key, 'collected') !== false || strpos($key, 'arrears') !== false) {
-                fputcsv($output, [$label, 'KSh ' . number_format($value, 2)]);
-            } elseif (strpos($key, 'consumption') !== false) {
-                fputcsv($output, [$label, number_format($value, 2) . ' m³']);
-            } elseif (strpos($key, 'rate') !== false) {
-                fputcsv($output, [$label, number_format($value, 2) . '%']);
+        foreach ($reportData['summary'] as $key => $value) {
+            $label = $this->formatHeader($key);
+            if (is_numeric($value)) {
+                if (strpos($key, 'amount') !== false || strpos($key, 'revenue') !== false ||
+                    strpos($key, 'collected') !== false || strpos($key, 'arrears') !== false) {
+                    fputcsv($output, [$label, 'KSh ' . number_format($value, 2)]);
+                } elseif (strpos($key, 'consumption') !== false) {
+                    fputcsv($output, [$label, number_format($value, 2) . ' m³']);
+                } elseif (strpos($key, 'rate') !== false) {
+                    fputcsv($output, [$label, number_format($value, 2) . '%']);
+                } else {
+                    fputcsv($output, [$label, number_format($value)]);
+                }
             } else {
-                fputcsv($output, [$label, number_format($value)]);
+                fputcsv($output, [$label, $value]);
             }
-        } else {
-            fputcsv($output, [$label, $value]);
+        }
+
+        fputcsv($output, []);
+        fputcsv($output, ['ZONE DETAILS']);
+
+        if (isset($reportData['zones']) && $reportData['zones']->count() > 0) {
+            $headers = [
+                'Zone Name', 'Meter Count', 'Customer Count', 'Total Revenue',
+                'Total Collected', 'Total Arrears', 'Total Consumption',
+                'Collection Rate'
+            ];
+            fputcsv($output, $headers);
+
+            foreach ($reportData['zones'] as $zone) {
+                fputcsv($output, [
+                    $zone->name,
+                    $zone->meter_count,
+                    $zone->customer_count,
+                    'KSh ' . number_format($zone->total_revenue, 2),
+                    'KSh ' . number_format($zone->total_collected, 2),
+                    'KSh ' . number_format($zone->total_arrears, 2),
+                    number_format($zone->total_consumption, 2) . ' m³',
+                    number_format($zone->collection_rate, 2) . '%'
+                ]);
+            }
         }
     }
-
-    fputcsv($output, []);
-    fputcsv($output, ['ZONE DETAILS']);
-
-    if (isset($reportData['zones']) && $reportData['zones']->count() > 0) {
-        $headers = [
-            'Zone Name', 'Meter Count', 'Customer Count', 'Total Revenue',
-            'Total Collected', 'Total Arrears', 'Total Consumption',
-            'Collection Rate'
-        ];
-        fputcsv($output, $headers);
-
-        foreach ($reportData['zones'] as $zone) {
-            fputcsv($output, [
-                $zone->name,
-                $zone->meter_count,
-                $zone->customer_count,
-                'KSh ' . number_format($zone->total_revenue, 2),
-                'KSh ' . number_format($zone->total_collected, 2),
-                'KSh ' . number_format($zone->total_arrears, 2),
-                number_format($zone->total_consumption, 2) . ' m³',
-                number_format($zone->collection_rate, 2) . '%'
-            ]);
-        }
-    }
-}
 }

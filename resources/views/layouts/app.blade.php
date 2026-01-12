@@ -1347,111 +1347,13 @@ use Illuminate\Support\Facades\Route;
                     @endcan
                     @can('view reports')
                     <!-- Reports -->
-                    <li>
-                        <button id="reports-toggle" class="text-blue-100 hover:text-white hover:bg-blue-800 group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold w-full text-left">
-                            <svg class="text-blue-200 group-hover:text-white h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25M9 16.5v.75m3-3v3M15 12v5.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                            </svg>
-                            Reports
-                            <svg id="reports-arrow" class="ml-auto h-5 w-5 text-blue-200 group-hover:text-white transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                            </svg>
-                        </button>
-                        <ul id="reports-submenu" class="hidden ml-6 space-y-1 transition-all duration-200">
-                            <!-- Revenue Reports -->
-                            <li>
-                                <button id="revenue-toggle" class="text-blue-100 hover:text-white hover:bg-blue-800 group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold w-full text-left">
-                                    Revenue Reports
-                                    <svg id="revenue-arrow" class="ml-auto h-5 w-5 text-blue-200 group-hover:text-white transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                                    </svg>
-                                </button>
-                                <ul id="revenue-submenu" class="hidden ml-6 space-y-1 transition-all duration-200">
-                                    <li>
-                                        <a href="{{ route('reports.index') }}?category=revenue&type=incometype-dashboard" class="text-blue-100 hover:text-white hover:bg-blue-800 block rounded-md p-2 text-sm leading-6 font-medium">
-                                            Incometype Dashboard
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="{{ route('reports.index') }}?category=revenue&type=department-dashboard" class="text-blue-100 hover:text-white hover:bg-blue-800 block rounded-md p-2 text-sm leading-6 font-medium">
-                                            Department Dashboard
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="{{ route('reports.index') }}?category=revenue&type=chart-summary" class="text-blue-100 hover:text-white hover:bg-blue-800 block rounded-md p-2 text-sm leading-6 font-medium">
-                                            Chart Summary
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="{{ route('reports.index') }}?category=revenue&type=subcounties-summary" class="text-blue-100 hover:text-white hover:bg-blue-800 block rounded-md p-2 text-sm leading-6 font-medium">
-                                            Subcounties Summary
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="{{ route('reports.index') }}?category=revenue&type=streams-summary" class="text-blue-100 hover:text-white hover:bg-blue-800 block rounded-md p-2 text-sm leading-6 font-medium">
-                                            Streams Summary
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="{{ route('reports.index') }}?category=revenue&type=revenue-streams" class="text-blue-100 hover:text-white hover:bg-blue-800 block rounded-md p-2 text-sm leading-6 font-medium">
-                                            Revenue Streams
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="{{ route('reports.index') }}?category=revenue&type=per-stream" class="text-blue-100 hover:text-white hover:bg-blue-800 block rounded-md p-2 text-sm leading-6 font-medium">
-                                            Per Stream
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="{{ route('reports.index') }}?category=revenue&type=payment-mode-summary" class="text-blue-100 hover:text-white hover:bg-blue-800 block rounded-md p-2 text-sm leading-6 font-medium">
-                                            Payment Mode Summary
-                                        </a>
-                                    </li>
-                                </ul>
-                            </li>
-                            <!-- Performance Reports -->
-                            <li>
-                                <button id="performance-toggle" class="text-blue-100 hover:text-white hover:bg-blue-800 group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold w-full text-left">
-                                    Performance Reports
-                                    <svg id="performance-arrow" class="ml-auto h-5 w-5 text-blue-200 group-hover:text-white transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                                    </svg>
-                                </button>
-                                <ul id="performance-submenu" class="hidden ml-6 space-y-1 transition-all duration-200">
-                                    <li>
-                                        <a href="{{ route('reports.index') }}?category=performance&type=all-bills-raised" class="text-blue-100 hover:text-white hover:bg-blue-800 block rounded-md p-2 text-sm leading-6 font-medium">
-                                            All Bills Raised
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="{{ route('reports.index') }}?category=performance&type=all-bills-receipted" class="text-blue-100 hover:text-white hover:bg-blue-800 block rounded-md p-2 text-sm leading-6 font-medium">
-                                            All Bills Receipted
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="{{ route('reports.index') }}?category=performance&type=bills-raised" class="text-blue-100 hover:text-white hover:bg-blue-800 block rounded-md p-2 text-sm leading-6 font-medium">
-                                            Bills Raised
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="{{ route('reports.index') }}?category=performance&type=bills-receipted" class="text-blue-100 hover:text-white hover:bg-blue-800 block rounded-md p-2 text-sm leading-6 font-medium">
-                                            Bills Receipted
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="{{ route('reports.index') }}?category=performance&type=billed-location" class="text-blue-100 hover:text-white hover:bg-blue-800 block rounded-md p-2 text-sm leading-6 font-medium">
-                                            Billed Location
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="{{ route('reports.index') }}?category=performance&type=receipted-printed-location" class="text-blue-100 hover:text-white hover:bg-blue-800 block rounded-md p-2 text-sm leading-6 font-medium">
-                                            Receipted and Printed Location
-                                        </a>
-                                    </li>
-                                </ul>
-                            </li>
-                        </ul>
-                    </li>
+                       <a href="{{ route('reports.index') }}" onclick="if (window.innerWidth < 768) toggleSidebar()" class="group flex items-center py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-white/10 hover:shadow-lg {{ request()->routeIs('payments.*') ? 'bg-white/20 shadow-lg border-l-4 border-green-400' : '' }}">
+                       <svg class="text-blue-200 group-hover:text-white h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25M9 16.5v.75m3-3v3M15 12v5.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                        </svg>
+                        <span class="font-medium">Reports</span>
+                    </a>
+
                     @endcan
                 </nav>
             </div>
