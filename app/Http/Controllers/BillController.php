@@ -220,6 +220,7 @@ class BillController extends Controller
                         $q->where('meter_number', 'like', "%{$search}%");
                     });
             })
+            ->orderBy('created_at', 'desc')
             ->limit(20)
             ->get();
 
