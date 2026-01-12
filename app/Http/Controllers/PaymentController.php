@@ -221,7 +221,7 @@ class PaymentController extends Controller
             'failed' => 0,
             'errors' => [],
             'skipped' => 0,
-            'not_found_customers' => [],
+            'not_found_meters' => [], // Changed from not_found_customers
             'empty_amounts' => 0
         ];
 
@@ -240,10 +240,6 @@ class PaymentController extends Controller
                 $amountColumnLetter = $headerMap['Credit Amt.'];
                 $amountCell = $sheet->getCell($amountColumnLetter . $rowNumber);
                 $excelAmountValue = $amountCell->getValue();
-
-                // Debug logging
-                Log::info("Row {$rowNumber} - Amount raw: " . print_r($excelAmountValue, true));
-                Log::info("Row {$rowNumber} - Amount formatted: " . $amountCell->getFormattedValue());
 
                 // Check if amount is empty or null
                 $isAmountEmpty = false;
@@ -320,19 +316,19 @@ class PaymentController extends Controller
                 // ========== PARTICULAR PARSING ==========
                 $particulars = trim($rows[$rowNumber][$headerMap['Particulars']]);
 
-                // Extract customer number
-                $customerNumber = null;
+                // Extract METER number (not customer number)
+                $meterNumber = null;
 
-                // Pattern 1: # followed by numbers
+                // Pattern 1: # followed by numbers (most common: #13764)
                 if (preg_match('/#(\d{3,})/', $particulars, $matches)) {
-                    $customerNumber = $matches[1];
+                    $meterNumber = $matches[1];
                 }
                 // Pattern 2: Look for standalone 3+ digit numbers
                 elseif (preg_match('/\b(\d{3,})\b/', $particulars, $matches)) {
-                    $customerNumber = $matches[1];
+                    $meterNumber = $matches[1];
                 }
 
-                if (!$customerNumber) {
+                if (!$meterNumber) {
                     // Check if this is a non-payment entry (like charges, withdrawals)
                     $nonPaymentKeywords = [
                         'Cash Withdrawal Charge',
@@ -357,35 +353,44 @@ class PaymentController extends Controller
                         Log::info("Row {$rowNumber} - Skipping non-payment entry: " . substr($particulars, 0, 50));
                         continue;
                     } else {
-                        throw new \Exception('Customer account number not found');
+                        throw new \Exception('Meter number not found in particulars');
                     }
                 }
 
-                // Find customer
-                $customer = Customer::where('customer_number', $customerNumber)->first();
+                Log::info("Row {$rowNumber} - Extracted meter number: {$meterNumber}, Amount: {$amount}");
 
-                if (!$customer) {
-                    $results['not_found_customers'][] = [
+                // ========== FIND METER AND CUSTOMER ==========
+                // First, find the meter by meter_number
+                $meter = Meter::where('meter_number', $meterNumber)->first();
+
+                if (!$meter) {
+                    $results['not_found_meters'][] = [
                         'row' => $rowNumber,
-                        'customer_number' => $customerNumber,
+                        'meter_number' => $meterNumber,
                         'amount' => $amount,
                         'date' => $paymentDate->format('Y-m-d'),
                         'particulars' => substr($particulars, 0, 200)
                     ];
-                    throw new \Exception("Customer {$customerNumber} not found - skipped");
+                    throw new \Exception("Meter {$meterNumber} not found - skipped");
+                }
+
+                // Check if meter is assigned to a customer
+                if (!$meter->customer_id) {
+                    throw new \Exception("Meter {$meterNumber} is not assigned to any customer");
+                }
+
+                // Get the customer from the meter
+                $customer = $meter->customer;
+
+                if (!$customer) {
+                    throw new \Exception("Customer for meter {$meterNumber} not found");
                 }
 
                 if ($customer->status !== 'active') {
-                    throw new \Exception("Customer {$customerNumber} is {$customer->status}");
+                    throw new \Exception("Customer for meter {$meterNumber} is {$customer->status}");
                 }
 
-                // Find meter
-                $meter = Meter::where('customer_id', $customer->id)->first();
-
-                if (!$meter) {
-                    throw new \Exception("Meter for customer {$customerNumber} not found");
-                }
-
+                // ========== PAYMENT PROCESSING ==========
                 // Extract transaction reference
                 $transactionRef = $this->extractTransactionRef($particulars);
 
@@ -402,7 +407,7 @@ class PaymentController extends Controller
                 }
 
                 // Process payment within transaction
-                DB::transaction(function () use ($meter, $amount, $transactionRef, $paymentDate, $customerNumber, $rowNumber) {
+                DB::transaction(function () use ($meter, $amount, $transactionRef, $paymentDate, $meterNumber, $rowNumber) {
                     $this->paymentService->processPayment(
                         $meter,
                         $amount,
@@ -412,7 +417,7 @@ class PaymentController extends Controller
                         auth()->id()
                     );
 
-                    Log::info("Row {$rowNumber} - Payment processed for customer {$customerNumber}");
+                    Log::info("Row {$rowNumber} - Payment processed for meter {$meterNumber}");
                 });
 
                 $results['success']++;
@@ -421,7 +426,7 @@ class PaymentController extends Controller
                 // Check error type
                 $errorMsg = $e->getMessage();
 
-                if (strpos($errorMsg, 'Customer') !== false &&
+                if (strpos($errorMsg, 'Meter') !== false &&
                     strpos($errorMsg, 'not found') !== false &&
                     strpos($errorMsg, 'skipped') !== false) {
                     $results['skipped']++;
@@ -451,7 +456,7 @@ class PaymentController extends Controller
             'failed' => $results['failed'],
             'skipped' => $results['skipped'],
             'empty_amounts' => $results['empty_amounts'],
-            'not_found_customers' => count($results['not_found_customers'])
+            'not_found_meters' => count($results['not_found_meters'])
         ];
 
         Log::info('Import completed', $summary);
