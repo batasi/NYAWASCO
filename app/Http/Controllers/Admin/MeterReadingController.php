@@ -271,6 +271,9 @@ class MeterReadingController extends Controller
             'bill_status' => 'unpaid',
             'notes' => 'Auto-generated from ' . ($readingStatus === 'estimated' ? 'estimated' : '') . ' meter reading #' . $reading->id . ' for meter ' . $meter->meter_number,
             'created_by' => auth()->id(),
+
+            'balance' => $totalAmount, // This is missing!
+            'paid_amount' => 0, // Should be explicitly set
         ]);
 
         // Generate safe bill number using the bill ID
@@ -336,11 +339,6 @@ class MeterReadingController extends Controller
     {
         // Update meter balance
         $newMeterBalance = $meter->current_balance + $billAmount;
-        $meter->update([
-            'current_balance' => $newMeterBalance
-        ]);
-
-
 
     }
 
