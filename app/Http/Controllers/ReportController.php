@@ -1369,7 +1369,7 @@ class ReportController extends Controller
             $debtorsSheet->setTitle('Top Debtors');
 
             $headers = [
-                'Customer Number', 'Customer Name', 'Phone', 'Total Arrears',
+                'Customer', 'Customer Name', 'Phone', 'Total Arrears',
                 'Bill Count', 'Oldest Bill', 'Newest Bill', 'Average Arrears per Bill'
             ];
             $this->addSheetHeader($debtorsSheet, $headers);
