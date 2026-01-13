@@ -966,9 +966,7 @@ class ReportController extends Controller
             $customersSheet->setTitle('Customer Details');
 
             $headers = [
-                'Customer Number', 'Full Name', 'Phone', 'Email', 'ID Number',
-                'Physical Address', 'Plot Number', 'House Number', 'Estate',
-                'Status', 'KRA PIN', 'Property Owner', 'Expected Users',
+                 'Full Name', 'Phone','Status',
                 'Total Billed', 'Total Paid', 'Total Balance', 'Total Consumption',
                 'Bill Count', 'Meter Count', 'Last Payment Date', 'Last Payment Amount',
                 'Last Bill Date', 'Credit Balance'
@@ -977,29 +975,19 @@ class ReportController extends Controller
 
             $row = 2;
             foreach ($reportData['customers'] as $customer) {
-                $customersSheet->setCellValue('A' . $row, $customer->customer_number);
-                $customersSheet->setCellValue('B' . $row, trim($customer->first_name . ' ' . $customer->last_name));
-                $customersSheet->setCellValue('C' . $row, $customer->phone);
-                $customersSheet->setCellValue('D' . $row, $customer->email);
-                $customersSheet->setCellValue('E' . $row, $customer->id_number);
-                $customersSheet->setCellValue('F' . $row, $customer->physical_address);
-                $customersSheet->setCellValue('G' . $row, $customer->plot_number);
-                $customersSheet->setCellValue('H' . $row, $customer->house_number);
-                $customersSheet->setCellValue('I' . $row, $customer->estate);
-                $customersSheet->setCellValue('J' . $row, ucfirst($customer->status));
-                $customersSheet->setCellValue('K' . $row, $customer->kra_pin);
-                $customersSheet->setCellValue('L' . $row, $customer->property_owner);
-                $customersSheet->setCellValue('M' . $row, $customer->expected_users);
-                $customersSheet->setCellValue('N' . $row, $customer->total_billed ?? 0);
-                $customersSheet->setCellValue('O' . $row, $customer->total_paid ?? 0);
-                $customersSheet->setCellValue('P' . $row, $customer->total_balance ?? 0);
-                $customersSheet->setCellValue('Q' . $row, $customer->total_consumption ?? 0);
-                $customersSheet->setCellValue('R' . $row, $customer->bill_count ?? 0);
-                $customersSheet->setCellValue('S' . $row, $customer->meter_count ?? 0);
-                $customersSheet->setCellValue('T' . $row, $customer->last_payment_date ? $customer->last_payment_date->format('d/m/Y') : '');
-                $customersSheet->setCellValue('U' . $row, $customer->last_payment_amount ?? 0);
-                $customersSheet->setCellValue('V' . $row, $customer->last_bill_date ? $customer->last_bill_date->format('d/m/Y') : '');
-                $customersSheet->setCellValue('W' . $row, $customer->credit_balance ?? 0);
+                $customersSheet->setCellValue('A' . $row, trim($customer->first_name . ' ' . $customer->last_name));
+                $customersSheet->setCellValue('B' . $row, $customer->phone);
+                $customersSheet->setCellValue('C' . $row, ucfirst($customer->status));
+                $customersSheet->setCellValue('D' . $row, $customer->total_billed ?? 0);
+                $customersSheet->setCellValue('E' . $row, $customer->total_paid ?? 0);
+                $customersSheet->setCellValue('F' . $row, $customer->total_balance ?? 0);
+                $customersSheet->setCellValue('G' . $row, $customer->total_consumption ?? 0);
+                $customersSheet->setCellValue('H' . $row, $customer->bill_count ?? 0);
+                $customersSheet->setCellValue('I' . $row, $customer->meter_count ?? 0);
+                $customersSheet->setCellValue('J' . $row, $customer->last_payment_date ? $customer->last_payment_date->format('d/m/Y') : '');
+                $customersSheet->setCellValue('K' . $row, $customer->last_payment_amount ?? 0);
+                $customersSheet->setCellValue('L' . $row, $customer->last_bill_date ? $customer->last_bill_date->format('d/m/Y') : '');
+                $customersSheet->setCellValue('M' . $row, $customer->credit_balance ?? 0);
 
                 // Format numbers
                 $customersSheet->getStyle('N' . $row . ':P' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
