@@ -1269,7 +1269,7 @@ class ReportController extends Controller
             $paymentsSheet->setTitle('Payment Details');
 
             $headers = [
-                'Payment Date', 'Payment Number', 'Receipt Number', 'Customer Number',
+                'Payment Date', 'Payment Number', 'Receipt Number', 'Customer Acc',
                 'Customer Name', 'Meter Number', 'Amount', 'Payment Method',
                 'Transaction Reference', 'Payment Status', 'Collector', 'Bill Number'
             ];
@@ -1280,7 +1280,7 @@ class ReportController extends Controller
                 $paymentsSheet->setCellValue('A' . $row, $payment->payment_date ? $payment->payment_date->format('d/m/Y') : '');
                 $paymentsSheet->setCellValue('B' . $row, $payment->payment_no);
                 $paymentsSheet->setCellValue('C' . $row, $payment->receipt_number);
-                $paymentsSheet->setCellValue('D' . $row, $payment->customer->customer_number ?? '');
+                $paymentsSheet->setCellValue('D' . $row, $payment->meter->meter_number ?? '');
                 $paymentsSheet->setCellValue('E' . $row, $payment->customer ?
                     trim($payment->customer->first_name . ' ' . $payment->customer->last_name) : '');
                 $paymentsSheet->setCellValue('F' . $row, $payment->meter->meter_number ?? '');
@@ -1288,8 +1288,7 @@ class ReportController extends Controller
                 $paymentsSheet->setCellValue('H' . $row, ucfirst($payment->payment_method));
                 $paymentsSheet->setCellValue('I' . $row, $payment->transaction_reference);
                 $paymentsSheet->setCellValue('J' . $row, ucfirst($payment->payment_status));
-                $paymentsSheet->setCellValue('K' . $row, $payment->collector->name ?? '');
-                $paymentsSheet->setCellValue('L' . $row, $payment->bill->bill_number ?? '');
+                $paymentsSheet->setCellValue('K' . $row, $payment->collector->name ?? 'System');
 
                 // Format numbers
                 $paymentsSheet->getStyle('G' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
@@ -1298,7 +1297,7 @@ class ReportController extends Controller
             }
 
             // Auto-size columns
-            foreach (range('A', 'L') as $column) {
+            foreach (range('A', 'K') as $column) {
                 $paymentsSheet->getColumnDimension($column)->setAutoSize(true);
             }
         }

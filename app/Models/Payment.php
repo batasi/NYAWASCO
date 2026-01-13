@@ -42,6 +42,10 @@ class Payment extends Model
     {
         return $this->belongsTo(User::class);
     }
+     public function collector()
+    {
+        return $this->belongsTo(User::class);
+    }
 
     /**
      * Payment belongs to a meter.
