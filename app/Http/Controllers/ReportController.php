@@ -1173,7 +1173,7 @@ class ReportController extends Controller
             $readingsSheet->setTitle('Detailed Readings');
 
             $headers = [
-                'Reading Date', 'Customer Number', 'Customer Name', 'Meter Number',
+                'Reading Date', 'Customer Acc', 'Customer Name', 'Meter Number',
                 'Category', 'Zone', 'Previous Reading', 'Current Reading',
                 'Consumption (m³)', 'Reading Type', 'Reading Status', 'Estimated'
             ];
@@ -1182,7 +1182,7 @@ class ReportController extends Controller
             $row = 2;
             foreach ($reportData['readings'] as $reading) {
                 $readingsSheet->setCellValue('A' . $row, $reading->reading_date ? $reading->reading_date->format('d/m/Y') : '');
-                $readingsSheet->setCellValue('B' . $row, $reading->customer->customer_number ?? '');
+                $readingsSheet->setCellValue('B' . $row, $reading->meter->meter_number ?? '');
                 $readingsSheet->setCellValue('C' . $row, $reading->customer ?
                     trim($reading->customer->first_name . ' ' . $reading->customer->last_name) : '');
                 $readingsSheet->setCellValue('D' . $row, $reading->meter->meter_number ?? '');
