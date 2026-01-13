@@ -65,3 +65,4 @@ Route::prefix('v1')->group(function () {
     Route::get('/meter-readings/history', [ReadingHistoryController::class, 'getReadingHistory']);
 
 });
+

@@ -158,35 +158,27 @@
 
         <!-- Payments DataTable -->
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            <!-- Table Header -->
-            <div class="px-6 py-4 border-b border-gray-200">
-                <h2 class="text-xl font-semibold text-gray-800">Payments Management</h2>
-            </div>
-            @if(session('import_result'))
-            <div class="mb-6 rounded-lg border border-green-200 bg-green-50 p-4">
-                <h4 class="font-semibold text-green-800 mb-2">
-                    Payment Import Summary
-                </h4>
+            <!-- Table Header --> <br>
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 text-sm text-gray-600">
 
-                <ul class="text-sm text-green-700 space-y-1">
-                    <li>✅ Successful: {{ session('import_result.success') }}</li>
-                    <li>❌ Failed: {{ session('import_result.failed') }}</li>
-                </ul>
-
-                @if(count(session('import_result.errors', [])))
-                    <details class="mt-3">
-                        <summary class="cursor-pointer text-sm text-red-600 font-medium">
-                            View Errors
-                        </summary>
-                        <ul class="mt-2 text-xs text-red-700 list-disc pl-5 space-y-1">
-                            @foreach(session('import_result.errors') as $error)
-                                <li>Row {{ $error['row'] }}: {{ $error['reason'] }}</li>
-                            @endforeach
-                        </ul>
-                    </details>
-                @endif
+            <div>
+                <h2 class="text-xl font-semibold text-gray-800"> Payments Management</h2>
             </div>
-            @endif
+            <div class="flex items-center space-x-4 mt-2 sm:mt-0">
+                <!-- Download Button -->
+
+                <a href="{{ route('reports.generate', ['report_type' => 'collection', 'format' => 'excel', 'detail_level' => 'full']) }}"
+
+                    class="download-excel-btn flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-sm transition duration-200"
+                    >
+                    <i id="downloadIcon" class="fas fa-file-excel"></i>
+                        <span id="downloadText">Export Excel</span>
+                        <i id="downloadSpinner" class="fas fa-spinner fa-spin hidden"></i>
+                </a>
+
+
+            </div>
+            </div>
 
             <!-- Payments Table -->
             <div class="overflow-x-auto">

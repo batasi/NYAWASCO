@@ -157,6 +157,17 @@
                 Showing {{ $customers->firstItem() }} to {{ $customers->lastItem() }} of {{ $customers->total() }} results
             </div>
             <div class="flex items-center space-x-4 mt-2 sm:mt-0">
+                <!-- Download Button -->
+
+                <a href="{{ route('reports.generate', ['report_type' => 'customer', 'format' => 'excel', 'detail_level' => 'full']) }}"
+
+                    class="download-excel-btn flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-sm transition duration-200"
+                    >
+                    <i id="downloadIcon" class="fas fa-file-excel"></i>
+                        <span id="downloadText">Export Excel</span>
+                        <i id="downloadSpinner" class="fas fa-spinner fa-spin hidden"></i>
+                </a>
+
                 <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
                     Page {{ $customers->currentPage() }} of {{ $customers->lastPage() }}
                 </span>
@@ -398,6 +409,7 @@
 </div>
 
 <script>
+
 let currentCustomerId = null;
 
 function assignMeter(customerId) {

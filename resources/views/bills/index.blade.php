@@ -304,11 +304,27 @@
 
         <!-- Bills DataTable -->
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            <!-- Table Header -->
-            <div class="px-6 py-4 border-b border-gray-200">
+
+    <!-- Table Stats --> <br>
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 text-sm text-gray-600">
+            <div>
                 <h2 class="text-xl font-semibold text-gray-800">Bills Management</h2>
             </div>
+            <div class="flex items-center space-x-4 mt-2 sm:mt-0">
+                <!-- Download Button -->
 
+                <a href="{{ route('reports.generate', ['report_type' => 'revenue', 'format' => 'excel', 'detail_level' => 'full']) }}"
+
+                    class="download-excel-btn flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-sm transition duration-200"
+                    >
+                    <i id="downloadIcon" class="fas fa-file-excel"></i>
+                        <span id="downloadText">Export Excel</span>
+                        <i id="downloadSpinner" class="fas fa-spinner fa-spin hidden"></i>
+                </a>
+
+
+            </div>
+        </div>
             <!-- Bills Table -->
             <div class="overflow-x-auto">
                 <table class="w-full">

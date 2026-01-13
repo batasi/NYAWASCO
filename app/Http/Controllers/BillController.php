@@ -196,7 +196,7 @@ class BillController extends Controller
     }
 
     // Simple API for AJAX features
-   public function search(Request $request)
+    public function search(Request $request)
     {
         $search = trim($request->get('search'));
         $user = auth()->user();

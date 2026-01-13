@@ -41,6 +41,7 @@ class ReportController extends Controller
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'format' => 'nullable|in:pdf,excel,csv,view',
             'detail_level' => 'nullable|in:summary,detailed,full',
+            'customer_id' => 'required_if:report_type,statement|exists:customers,id',
         ]);
 
         $startDate = $request->start_date ? Carbon::parse($request->start_date) : null;
@@ -75,6 +76,12 @@ class ReportController extends Controller
                 return $this->generateCollectionReport($startDate, $endDate, $detailLevel);
             case 'arrears':
                 return $this->generateArrearsReport($startDate, $endDate, $detailLevel);
+            case 'statement':
+                $customerId = request()->get('customer_id');
+                if (!$customerId) {
+                    throw new \Exception('Customer ID is required for statement report');
+                }
+                return $this->generateCustomerStatementReport($customerId, $startDate, $endDate, $detailLevel);
             case 'category':
                 return $this->generateCategoryReport($startDate, $endDate, $detailLevel);
             case 'zone':
@@ -850,6 +857,9 @@ class ReportController extends Controller
                 break;
             case 'arrears':
                 $this->generateArrearsExcel($spreadsheet, $reportData, $startDate, $endDate);
+                break;
+            case 'statement':
+                $this->generateStatementExcel($spreadsheet, $reportData, $startDate, $endDate);
                 break;
             case 'category':
                 $this->generateCategoryExcel($spreadsheet, $reportData, $startDate, $endDate);
@@ -2061,4 +2071,260 @@ class ReportController extends Controller
             }
         }
     }
+    private function generateCustomerStatementReport($customerId, $startDate, $endDate, $detailLevel)
+    {
+        $customer = Customer::with([
+            'meters.meterCategory',
+            'meters.zone',
+            'meters.walkRoute',
+            'bills' => function ($q) use ($startDate, $endDate) {
+                if ($startDate) {
+                    $q->whereBetween('billing_period_end', [$startDate, $endDate]);
+                }
+                $q->with('payments');
+            },
+            'meterReadings' => function ($q) use ($startDate, $endDate) {
+                if ($startDate) {
+                    $q->whereBetween('reading_date', [$startDate, $endDate]);
+                }
+                $q->with('meter');
+            },
+            'payments' => function ($q) use ($startDate, $endDate) {
+                if ($startDate) {
+                    $q->whereBetween('payment_date', [$startDate, $endDate]);
+                }
+                $q->with('bill');
+            }
+        ])->findOrFail($customerId);
+
+        // Calculate summary statistics
+        $summary = [
+            'total_billed' => $customer->bills->sum('total_amount'),
+            'total_paid' => $customer->payments->sum('amount'),
+            'outstanding_balance' => $customer->bills->sum('total_amount') - $customer->payments->sum('amount'),
+            'total_consumption' => $customer->meterReadings->sum('consumption'),
+            'average_monthly_consumption' => $customer->meterReadings->avg('consumption'),
+            'bills_count' => $customer->bills->count(),
+            'payments_count' => $customer->payments->count(),
+            'readings_count' => $customer->meterReadings->count(),
+            'meter_count' => $customer->meters->count(),
+            'account_age_days' => $customer->created_at ? now()->diffInDays($customer->created_at) : 0,
+            'last_payment_date' => $customer->payments->max('payment_date'),
+            'last_payment_amount' => $customer->payments->where('payment_date', $customer->payments->max('payment_date'))->first()->amount ?? 0,
+            'last_reading_date' => $customer->meterReadings->max('reading_date'),
+            'last_bill_date' => $customer->bills->max('billing_period_end'),
+        ];
+
+        return [
+            'type' => 'Customer Statement',
+            'detail_level' => $detailLevel,
+            'customer' => $customer,
+            'summary' => $summary,
+            'bills' => $customer->bills,
+            'payments' => $customer->payments,
+            'meter_readings' => $customer->meterReadings,
+            'meters' => $customer->meters,
+        ];
+    }
+private function generateStatementExcel($spreadsheet, $reportData, $startDate, $endDate)
+{
+    $customer = $reportData['customer'];
+
+    // Worksheet 1: Customer Information
+    $infoSheet = $spreadsheet->createSheet();
+    $infoSheet->setTitle('Customer Information');
+    $this->addReportHeader($infoSheet, $reportData['type'], $startDate, $endDate);
+
+    $row = 5;
+    $infoSheet->setCellValue('A' . $row, 'CUSTOMER INFORMATION');
+    $infoSheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(12);
+    $row += 2;
+
+    // Customer Details
+    $details = [
+        ['Customer Number:', $customer->customer_number],
+        ['Full Name:', trim($customer->first_name . ' ' . $customer->last_name)],
+        ['Phone:', $customer->phone],
+        ['Email:', $customer->email],
+        ['ID Number:', $customer->id_number],
+        ['KRA PIN:', $customer->kra_pin ?? 'N/A'],
+        ['Physical Address:', $customer->physical_address],
+        ['Plot Number:', $customer->plot_number],
+        ['House Number:', $customer->house_number],
+        ['Estate:', $customer->estate ?? 'N/A'],
+        ['Account Status:', ucfirst($customer->status)],
+        ['Property Owner:', $customer->property_owner],
+        ['Expected Users:', $customer->expected_users ?? 'N/A'],
+        ['Created Date:', $customer->created_at->format('d/m/Y')],
+        ['Last Updated:', $customer->updated_at->format('d/m/Y')],
+    ];
+
+    foreach ($details as $detail) {
+        $infoSheet->setCellValue('A' . $row, $detail[0]);
+        $infoSheet->setCellValue('B' . $row, $detail[1]);
+        $infoSheet->getStyle('A' . $row)->getFont()->setBold(true);
+        $row++;
+    }
+
+    // Account Summary
+    $row += 2;
+    $infoSheet->setCellValue('A' . $row, 'ACCOUNT SUMMARY');
+    $infoSheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(12);
+    $row += 2;
+
+    $summaryDetails = [
+        ['Total Billed:', 'KSh ' . number_format($reportData['summary']['total_billed'], 2)],
+        ['Total Paid:', 'KSh ' . number_format($reportData['summary']['total_paid'], 2)],
+        ['Outstanding Balance:', 'KSh ' . number_format($reportData['summary']['outstanding_balance'], 2)],
+        ['Total Consumption:', number_format($reportData['summary']['total_consumption'], 2) . ' m³'],
+        ['Average Monthly Consumption:', number_format($reportData['summary']['average_monthly_consumption'], 2) . ' m³'],
+        ['Number of Bills:', $reportData['summary']['bills_count']],
+        ['Number of Payments:', $reportData['summary']['payments_count']],
+        ['Number of Readings:', $reportData['summary']['readings_count']],
+        ['Number of Meters:', $reportData['summary']['meter_count']],
+        ['Account Age:', $reportData['summary']['account_age_days'] . ' days'],
+        ['Last Payment Date:', $reportData['summary']['last_payment_date'] ? Carbon::parse($reportData['summary']['last_payment_date'])->format('d/m/Y') : 'N/A'],
+        ['Last Payment Amount:', 'KSh ' . number_format($reportData['summary']['last_payment_amount'], 2)],
+        ['Last Reading Date:', $reportData['summary']['last_reading_date'] ? Carbon::parse($reportData['summary']['last_reading_date'])->format('d/m/Y') : 'N/A'],
+        ['Last Bill Date:', $reportData['summary']['last_bill_date'] ? Carbon::parse($reportData['summary']['last_bill_date'])->format('d/m/Y') : 'N/A'],
+    ];
+
+    foreach ($summaryDetails as $detail) {
+        $infoSheet->setCellValue('A' . $row, $detail[0]);
+        $infoSheet->setCellValue('B' . $row, $detail[1]);
+        $infoSheet->getStyle('A' . $row)->getFont()->setBold(true);
+        $row++;
+    }
+
+    // Auto-size columns
+    $infoSheet->getColumnDimension('A')->setWidth(25);
+    $infoSheet->getColumnDimension('B')->setWidth(40);
+
+    // Worksheet 2: Bills History (if detailed or full)
+    if ($reportData['detail_level'] === 'detailed' || $reportData['detail_level'] === 'full') {
+        if ($reportData['bills']->count() > 0) {
+            $billsSheet = $spreadsheet->createSheet();
+            $billsSheet->setTitle('Bills History');
+
+            $headers = [
+                'Bill Number', 'Billing Period', 'Consumption (m³)',
+                'Total Amount', 'Paid Amount', 'Balance', 'Status', 'Due Date'
+            ];
+            $this->addSheetHeader($billsSheet, $headers);
+
+            $row = 2;
+            foreach ($reportData['bills'] as $bill) {
+                $billsSheet->setCellValue('A' . $row, $bill->bill_number);
+                $billsSheet->setCellValue('B' . $row,
+                    ($bill->billing_period_start ? $bill->billing_period_start->format('d/m/Y') : '') . ' - ' .
+                    ($bill->billing_period_end ? $bill->billing_period_end->format('d/m/Y') : '')
+                );
+                $billsSheet->setCellValue('C' . $row, $bill->consumption);
+                $billsSheet->setCellValue('D' . $row, $bill->total_amount);
+                $billsSheet->setCellValue('E' . $row, $bill->paid_amount);
+                $billsSheet->setCellValue('F' . $row, $bill->balance);
+                $billsSheet->setCellValue('G' . $row, ucfirst($bill->bill_status));
+                $billsSheet->setCellValue('H' . $row, $bill->due_date ? $bill->due_date->format('d/m/Y') : '');
+
+                // Format numbers
+                $billsSheet->getStyle('C' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+                $billsSheet->getStyle('D' . $row . ':F' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+
+                $row++;
+            }
+
+            // Add totals
+            $this->addSheetTotals($billsSheet, $row, [
+                'C' => 'sum',
+                'D' => 'sum',
+                'E' => 'sum',
+                'F' => 'sum'
+            ]);
+
+            // Auto-size columns
+            foreach (range('A', 'H') as $column) {
+                $billsSheet->getColumnDimension($column)->setAutoSize(true);
+            }
+        }
+    }
+
+    // Worksheet 3: Payment History (if detailed or full)
+    if ($reportData['detail_level'] === 'detailed' || $reportData['detail_level'] === 'full') {
+        if ($reportData['payments']->count() > 0) {
+            $paymentsSheet = $spreadsheet->createSheet();
+            $paymentsSheet->setTitle('Payment History');
+
+            $headers = [
+                'Payment Date', 'Payment Number', 'Receipt Number', 'Amount',
+                'Payment Method', 'Transaction Reference', 'Status', 'Bill Number'
+            ];
+            $this->addSheetHeader($paymentsSheet, $headers);
+
+            $row = 2;
+            foreach ($reportData['payments'] as $payment) {
+                $paymentsSheet->setCellValue('A' . $row, $payment->payment_date ? $payment->payment_date->format('d/m/Y') : '');
+                $paymentsSheet->setCellValue('B' . $row, $payment->payment_no);
+                $paymentsSheet->setCellValue('C' . $row, $payment->receipt_number);
+                $paymentsSheet->setCellValue('D' . $row, $payment->amount);
+                $paymentsSheet->setCellValue('E' . $row, ucfirst($payment->payment_method));
+                $paymentsSheet->setCellValue('F' . $row, $payment->transaction_reference);
+                $paymentsSheet->setCellValue('G' . $row, ucfirst($payment->payment_status));
+                $paymentsSheet->setCellValue('H' . $row, $payment->bill->bill_number ?? 'N/A');
+
+                // Format numbers
+                $paymentsSheet->getStyle('D' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+
+                $row++;
+            }
+
+            // Add totals
+            $this->addSheetTotals($paymentsSheet, $row, ['D' => 'sum']);
+
+            // Auto-size columns
+            foreach (range('A', 'H') as $column) {
+                $paymentsSheet->getColumnDimension($column)->setAutoSize(true);
+            }
+        }
+    }
+
+    // Worksheet 4: Meter Details (if full)
+    if ($reportData['detail_level'] === 'full') {
+        if ($reportData['meters']->count() > 0) {
+            $metersSheet = $spreadsheet->createSheet();
+            $metersSheet->setTitle('Meter Details');
+
+            $headers = [
+                'Meter Number', 'Meter Type', 'Category', 'Status',
+                'Installation Address', 'Installation Date', 'Initial Reading',
+                'Current Balance', 'Paid Amount', 'Zone', 'Walk Route'
+            ];
+            $this->addSheetHeader($metersSheet, $headers);
+
+            $row = 2;
+            foreach ($reportData['meters'] as $meter) {
+                $metersSheet->setCellValue('A' . $row, $meter->meter_number);
+                $metersSheet->setCellValue('B' . $row, $meter->meter_type);
+                $metersSheet->setCellValue('C' . $row, $meter->meterCategory->name ?? '');
+                $metersSheet->setCellValue('D' . $row, ucfirst($meter->status));
+                $metersSheet->setCellValue('E' . $row, $meter->installation_address);
+                $metersSheet->setCellValue('F' . $row, $meter->installation_date ? $meter->installation_date->format('d/m/Y') : '');
+                $metersSheet->setCellValue('G' . $row, $meter->initial_reading);
+                $metersSheet->setCellValue('H' . $row, $meter->current_balance);
+                $metersSheet->setCellValue('I' . $row, $meter->paid_amount);
+                $metersSheet->setCellValue('J' . $row, $meter->zone->name ?? '');
+                $metersSheet->setCellValue('K' . $row, $meter->walkRoute->name ?? '');
+
+                // Format numbers
+                $metersSheet->getStyle('G' . $row . ':I' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+
+                $row++;
+            }
+
+            // Auto-size columns
+            foreach (range('A', 'K') as $column) {
+                $metersSheet->getColumnDimension($column)->setAutoSize(true);
+            }
+        }
+    }
+}
 }
