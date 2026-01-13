@@ -593,7 +593,7 @@ class ReportController extends Controller
                 'newest_bill' => $bills->max('due_date'),
                 'average_arrears_per_bill' => $bills->avg('balance'),
             ];
-        })->sortByDesc('total_arrears')->take(20);
+        })->sortByDesc('total_arrears');
 
         // Category arrears
         $categoryArrears = $arrears->groupBy(function ($bill) {
