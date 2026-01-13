@@ -164,6 +164,10 @@ private function getAdminData()
         ->pluck('count', 'status')
         ->toArray();
 
+    // Ensure default statuses are present with 0 if no data
+    $default_statuses = ['pending' => 0, 'approved' => 0, 'rejected' => 0];
+    $application_status_counts = array_merge($default_statuses, $application_status_counts);
+
     // Revenue trend (last 12 months)
     $revenue_trend = Payment::selectRaw('DATE_FORMAT(payment_date, "%Y-%m") as month, SUM(amount) as revenue')
         ->where('payment_date', '>=', now()->subMonths(12))

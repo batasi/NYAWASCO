@@ -8,6 +8,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use App\Models\Department;
+use App\Models\Ward;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -23,6 +25,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'bio',
         'avatar',
         'is_active',
+        'last_activity',
+        'last_login_at',
         'email_verified_at',
         'preferences',
         // Organizer fields
@@ -79,6 +83,8 @@ class User extends Authenticatable implements MustVerifyEmail
 
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'last_activity' => 'datetime',
+        'last_login_at' => 'datetime',
         'is_active' => 'boolean',
         'is_verified' => 'boolean',
         'is_featured' => 'boolean',
@@ -137,6 +143,16 @@ class User extends Authenticatable implements MustVerifyEmail
     public function bookings()
     {
         return $this->hasMany(Booking::class);
+    }
+
+    public function department()
+    {
+        return $this->belongsTo(Department::class);
+    }
+
+    public function ward()
+    {
+        return $this->belongsTo(Ward::class);
     }
 
     // Scopes

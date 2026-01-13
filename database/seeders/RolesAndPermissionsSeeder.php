@@ -22,6 +22,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'edit users',
             'delete users',
             'manage roles',
+            'users.manage',
 
             // Customer management
             'add customers',
@@ -85,6 +86,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $developerRole = Role::firstOrCreate(['name' => 'developer']);
         $managerRole = Role::firstOrCreate(['name' => 'manager']);
         $ceoRole = Role::firstOrCreate(['name' => 'ceo']);
+        $superAdminRole = Role::firstOrCreate(['name' => 'super-admin']);
         $chiefRole = Role::firstOrCreate(['name' => 'chief']);
         $billerRole = Role::firstOrCreate(['name' => 'biller']);
         $registrarRole = Role::firstOrCreate(['name' => 'registrar']);
@@ -92,7 +94,9 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // ✅ Assign permissions per role
         $developerRole->syncPermissions(Permission::all());
-
+        
+        $superAdminRole->syncPermissions(Permission::all());
+        
         $adminRole->syncPermissions([
             // User management
             'add users',
@@ -100,7 +104,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'edit users',
             'delete users',
             'manage roles',
-
+            'users.manage',
+            
             // Customer management
             'add customers',
             'view customers',

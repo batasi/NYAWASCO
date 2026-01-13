@@ -39,7 +39,14 @@ use Illuminate\Support\Facades\Route;
     <!-- Livewire Styles -->
     @livewireStyles
 
-<style>
+    <!-- Preload critical routes for faster navigation -->
+    <link rel="preload" href="{{ route('dashboard') }}" as="document">
+    <link rel="preload" href="{{ route('customers.index') }}" as="document">
+    <link rel="preload" href="{{ route('meters.index') }}" as="document">
+    <link rel="dns-prefetch" href="//fonts.bunny.net">
+    <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
+
+    <style>
     [x-cloak] {
         display: none !important;
     }
@@ -650,6 +657,44 @@ use Illuminate\Support\Facades\Route;
         .footer-grid {
             grid-template-columns: repeat(4, 1fr);
         }
+    }
+
+    /* ===== PERFORMANCE OPTIMIZATIONS ===== */
+    /* Optimize rendering performance */
+    * {
+        box-sizing: border-box;
+    }
+
+    /* Optimize animations */
+    .sidebar-link {
+        will-change: opacity, transform;
+        backface-visibility: hidden;
+        transform: translateZ(0);
+    }
+
+    /* ===== SIDEBAR SCROLLBAR STYLING ===== */
+    #sidebar::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    #sidebar::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+    }
+
+    #sidebar::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #22c55e, #16a34a);
+        border-radius: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    #sidebar::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(135deg, #16a34a, #15803d);
+    }
+
+    #sidebar {
+        scrollbar-width: thin;
+        scrollbar-color: #22c55e rgba(255, 255, 255, 0.1);
     }
 
     /* ===== UTILITY CLASSES ===== */
@@ -1291,70 +1336,172 @@ use Illuminate\Support\Facades\Route;
         <!-- Sidebar Layout for Authenticated Users -->
         <div class="flex h-screen bg-gradient-to-br from-slate-50 to-blue-50">
             <!-- Sidebar -->
-            <div id="sidebar" class="bg-gradient-to-b from-blue-900 via-blue-800 to-blue-900 text-white w-64 md:w-72 space-y-6 md:space-y-8 py-6 md:py-8 px-4 md:px-6 absolute inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition-all duration-300 ease-in-out z-50 shadow-2xl">
+            <div id="sidebar" class="bg-gradient-to-b from-blue-200 via-blue-300 to-blue-400 text-gray-800 w-64 md:w-72 space-y-6 md:space-y-8 py-6 md:py-8 px-4 md:px-6 absolute left-0 top-0 transform -translate-x-full md:relative md:translate-x-0 transition-all duration-300 ease-in-out z-50 shadow-2xl min-h-screen overflow-y-auto">
                 <!-- Logo Section -->
                 <div class="relative flex flex-col items-center justify-center mb-8">
                     <button onclick="toggleSidebar()" class="absolute top-0 right-0 text-white hover:text-gray-300 p-2 md:hidden">
                         <i class="fas fa-times"></i>
                     </button>
                     <div class="flex items-center justify-center mb-3">
-                        <img src="{{ asset('img/Logo.png') }}" alt="NYAWASCO Logo" class="w-12 h-12 md:w-16 md:h-16 rounded-2xl shadow-lg object-cover">
+                        <div class="bg-white p-2 rounded-2xl shadow-lg">
+                            <img src="{{ asset('img/Logo.png') }}" alt="NYAWASCO Logo" class="w-8 h-8 md:w-12 md:h-12 rounded-xl object-cover">
+                        </div>
                     </div>
-                    <span class="text-sm md:text-lg font-bold text-white">Nyamira Water</span>
-                    <p class="text-xs md:text-sm text-blue-200 font-medium">Supply Company</p>
+                    <span class="text-sm md:text-lg font-bold text-gray-800">Nyamira Water</span>
+                    <p class="text-xs md:text-sm text-blue-600 font-medium">and Sanitation Company</p>
                     <div class="w-20 h-1 bg-gradient-to-r from-green-400 to-blue-500 rounded-full mt-3"></div>
                 </div>
 
                 <!-- Menu -->
                 <nav class="space-y-2">
-                    <a href="{{ route('dashboard') }}" onclick="if (window.innerWidth < 768) toggleSidebar()" class="group flex items-center py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-white/10 hover:shadow-lg {{ request()->routeIs('dashboard') ? 'bg-white/20 shadow-lg border-l-4 border-green-400' : '' }}">
-                        <svg class="w-4 h-4 md:w-5 md:h-5 mr-3 {{ request()->routeIs('dashboard') ? 'text-green-400' : 'text-blue-200' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <a href="{{ route('dashboard') }}" onclick="handleSidebarLink(this); if (window.innerWidth < 768) toggleSidebar()" class="sidebar-link group flex items-center py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-blue-300/30 hover:shadow-lg {{ request()->routeIs('dashboard') ? 'bg-blue-300/50 shadow-lg border-l-4 border-green-600' : '' }}" data-route="dashboard">
+                        <svg class="w-4 h-4 md:w-5 md:h-5 mr-3 {{ request()->routeIs('dashboard') ? 'text-green-600' : 'text-blue-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                         </svg>
                         <span class="font-medium">Dashboard</span>
+                        <div class="sidebar-loading ml-auto hidden">
+                            <svg class="animate-spin w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </div>
                     </a>
                     @can('view customers')
-                    <a href="{{ route('customers.index') }}" onclick="if (window.innerWidth < 768) toggleSidebar()" class="group flex items-center py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-white/10 hover:shadow-lg {{ request()->routeIs('customers.*') ? 'bg-white/20 shadow-lg border-l-4 border-green-400' : '' }}">
-                        <svg class="w-4 h-4 md:w-5 md:h-5 mr-3 {{ request()->routeIs('customers.*') ? 'text-green-400' : 'text-blue-200' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <a href="{{ route('customers.index') }}" onclick="handleSidebarLink(this); if (window.innerWidth < 768) toggleSidebar()" class="sidebar-link group flex items-center py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-blue-300/30 hover:shadow-lg {{ request()->routeIs('customers.*') ? 'bg-blue-300/50 shadow-lg border-l-4 border-green-600' : '' }}" data-route="customers">
+                        <svg class="w-4 h-4 md:w-5 md:h-5 mr-3 {{ request()->routeIs('customers.*') ? 'text-green-600' : 'text-blue-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                         </svg>
                         <span class="font-medium">Customers</span>
+                        <div class="sidebar-loading ml-auto hidden">
+                            <svg class="animate-spin w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </div>
                     </a>
                     @endcan
                     @can('view meters')
-                    <a href="{{ route('meters.index') }}" onclick="if (window.innerWidth < 768) toggleSidebar()" class="group flex items-center py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-white/10 hover:shadow-lg {{ request()->routeIs('meters.*') ? 'bg-white/20 shadow-lg border-l-4 border-green-400' : '' }}">
-                        <svg class="w-4 h-4 md:w-5 md:h-5 mr-3 {{ request()->routeIs('meters.*') ? 'text-green-400' : 'text-blue-200' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <a href="{{ route('meters.index') }}" onclick="handleSidebarLink(this); if (window.innerWidth < 768) toggleSidebar()" class="sidebar-link group flex items-center py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-blue-300/30 hover:shadow-lg {{ request()->routeIs('meters.*') ? 'bg-blue-300/50 shadow-lg border-l-4 border-green-600' : '' }}" data-route="meters">
+                        <svg class="w-4 h-4 md:w-5 md:h-5 mr-3 {{ request()->routeIs('meters.*') ? 'text-green-600' : 'text-blue-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
                         </svg>
                         <span class="font-medium">Meters</span>
+                        <div class="sidebar-loading ml-auto hidden">
+                            <svg class="animate-spin w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </div>
                     </a>
                     @endcan
                     @can('view bills')
-                    <a href="{{ route('bills.index') }}" onclick="if (window.innerWidth < 768) toggleSidebar()" class="group flex items-center py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-white/10 hover:shadow-lg {{ request()->routeIs('bills.*') ? 'bg-white/20 shadow-lg border-l-4 border-green-400' : '' }}">
-                        <svg class="w-4 h-4 md:w-5 md:h-5 mr-3 {{ request()->routeIs('bills.*') ? 'text-green-400' : 'text-blue-200' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
-                        </svg>
-                        <span class="font-medium">Bills</span>
-                    </a>
+                    <a href="{{ route('bills.index') }}" onclick="handleSidebarLink(this); if (window.innerWidth < 768) toggleSidebar()" class="sidebar-link group flex items-center py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-blue-300/30 hover:shadow-lg {{ request()->routeIs('bills.*') ? 'bg-blue-300/50 shadow-lg border-l-4 border-green-600' : '' }}" data-route="bills">
+                       <svg class="w-4 h-4 md:w-5 md:h-5 mr-3 {{ request()->routeIs('bills.*') ? 'text-green-600' : 'text-blue-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                       </svg>
+                       <span class="font-medium">Bills</span>
+                       <div class="sidebar-loading ml-auto hidden">
+                           <svg class="animate-spin w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24">
+                               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                           </svg>
+                       </div>
+                   </a>
                     @endcan
                     @can('view payments')
-                    <a href="{{ route('payments.index') }}" onclick="if (window.innerWidth < 768) toggleSidebar()" class="group flex items-center py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-white/10 hover:shadow-lg {{ request()->routeIs('payments.*') ? 'bg-white/20 shadow-lg border-l-4 border-green-400' : '' }}">
-                        <svg class="w-4 h-4 md:w-5 md:h-5 mr-3 {{ request()->routeIs('payments.*') ? 'text-green-400' : 'text-blue-200' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                        </svg>
-                        <span class="font-medium">Payments</span>
-                    </a>
+                    <a href="{{ route('payments.index') }}" onclick="handleSidebarLink(this); if (window.innerWidth < 768) toggleSidebar()" class="sidebar-link group flex items-center py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-blue-300/30 hover:shadow-lg {{ request()->routeIs('payments.*') ? 'bg-blue-300/50 shadow-lg border-l-4 border-green-600' : '' }}" data-route="payments">
+                       <svg class="w-4 h-4 md:w-5 md:h-5 mr-3 {{ request()->routeIs('payments.*') ? 'text-green-600' : 'text-blue-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                       </svg>
+                       <span class="font-medium">Payments</span>
+                       <div class="sidebar-loading ml-auto hidden">
+                           <svg class="animate-spin w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24">
+                               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                           </svg>
+                       </div>
+                   </a>
                     @endcan
                     @can('view reports')
-                    <!-- Reports -->
-                    <a href="{{ route('reports.index') }}" onclick="if (window.innerWidth < 768) toggleSidebar()" class="group flex items-center py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-white/10 hover:shadow-lg {{ request()->routeIs('payments.*') ? 'bg-white/20 shadow-lg border-l-4 border-green-400' : '' }}">
-                       <svg class="text-blue-200 group-hover:text-white h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <a href="{{ route('reports.index') }}" onclick="handleSidebarLink(this); if (window.innerWidth < 768) toggleSidebar()" class="sidebar-link group flex items-center py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-blue-300/30 hover:shadow-lg {{ request()->routeIs('reports.*') ? 'bg-blue-300/50 shadow-lg border-l-4 border-green-600' : '' }}" data-route="reports">
+                        <svg class="w-4 h-4 md:w-5 md:h-5 mr-3 {{ request()->routeIs('reports.*') ? 'text-green-600' : 'text-blue-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25M9 16.5v.75m3-3v3M15 12v5.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                         </svg>
                         <span class="font-medium">Reports</span>
+                        <div class="sidebar-loading ml-auto hidden">
+                            <svg class="animate-spin w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </div>
                     </a>
-
                     @endcan
+
+                    <!-- System Administration -->
+                    <div class="px-3 md:px-4 py-2">
+                        <h3 class="text-xs md:text-sm font-bold text-gray-700 uppercase tracking-wider">System Administration</h3>
+                    </div>
+                    <a href="{{ route('system.management') }}" onclick="handleSidebarLink(this); if (window.innerWidth < 768) toggleSidebar()" class="sidebar-link group flex items-center py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-blue-300/30 hover:shadow-lg {{ request()->routeIs('system.management') ? 'bg-blue-300/50 shadow-lg border-l-4 border-green-600' : '' }}" data-route="system-management">
+                        <svg class="w-4 h-4 md:w-5 md:h-5 mr-3 {{ request()->routeIs('system.management') ? 'text-green-600' : 'text-blue-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span class="font-medium">System Management</span>
+                        <div class="sidebar-loading ml-auto hidden">
+                            <svg class="animate-spin w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </div>
+                    </a>
+                    <a href="{{ route('system.user.management') }}" onclick="handleSidebarLink(this); if (window.innerWidth < 768) toggleSidebar()" class="sidebar-link group flex items-center py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-blue-300/30 hover:shadow-lg {{ request()->routeIs('system.user.management') ? 'bg-blue-300/50 shadow-lg border-l-4 border-green-600' : '' }}" data-route="user-management">
+                        <svg class="w-4 h-4 md:w-5 md:h-5 mr-3 {{ request()->routeIs('system.user.management') ? 'text-green-600' : 'text-blue-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                        </svg>
+                        <span class="font-medium">User Management</span>
+                        <div class="sidebar-loading ml-auto hidden">
+                            <svg class="animate-spin w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </div>
+                    </a>
+                    <a href="{{ route('system.sessions.logs') }}" onclick="handleSidebarLink(this); if (window.innerWidth < 768) toggleSidebar()" class="sidebar-link group flex items-center py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-blue-300/30 hover:shadow-lg {{ request()->routeIs('system.sessions.logs') ? 'bg-blue-300/50 shadow-lg border-l-4 border-green-600' : '' }}" data-route="sessions-logs">
+                        <svg class="w-4 h-4 md:w-5 md:h-5 mr-3 {{ request()->routeIs('system.sessions.logs') ? 'text-green-600' : 'text-blue-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span class="font-medium">Sessions & Logs</span>
+                        <div class="sidebar-loading ml-auto hidden">
+                            <svg class="animate-spin w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </div>
+                    </a>
+                    <a href="{{ route('system.analysis') }}" onclick="handleSidebarLink(this); if (window.innerWidth < 768) toggleSidebar()" class="sidebar-link group flex items-center py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-blue-300/30 hover:shadow-lg {{ request()->routeIs('system.analysis') ? 'bg-blue-300/50 shadow-lg border-l-4 border-green-600' : '' }}" data-route="system-analysis">
+                        <svg class="w-4 h-4 md:w-5 md:h-5 mr-3 {{ request()->routeIs('system.analysis') ? 'text-green-600' : 'text-blue-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        <span class="font-medium">System Analysis</span>
+                        <div class="sidebar-loading ml-auto hidden">
+                            <svg class="animate-spin w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </div>
+                    </a>
+                    <a href="{{ route('system.backups') }}" onclick="handleSidebarLink(this); if (window.innerWidth < 768) toggleSidebar()" class="sidebar-link group flex items-center py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-blue-300/30 hover:shadow-lg {{ request()->routeIs('system.backups') ? 'bg-blue-300/50 shadow-lg border-l-4 border-green-600' : '' }}" data-route="system-backups">
+                        <svg class="w-4 h-4 md:w-5 md:h-5 mr-3 {{ request()->routeIs('system.backups') ? 'text-green-600' : 'text-blue-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                        </svg>
+                        <span class="font-medium">System Backups</span>
+                        <div class="sidebar-loading ml-auto hidden">
+                            <svg class="animate-spin w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </div>
+                    </a>
                 </nav>
             </div>
 
@@ -1364,38 +1511,68 @@ use Illuminate\Support\Facades\Route;
             <!-- Main content -->
             <div class="flex-1 flex flex-col overflow-hidden">
                 <!-- Header -->
-                <header class="bg-white/95 backdrop-blur-sm shadow-xl border-b border-gray-200/50 px-4 md:px-8 py-3 md:py-5">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center">
-                            <button onclick="toggleSidebar()" class="block p-2 rounded-lg text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-all duration-200 mr-4">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <header class="bg-white/90 backdrop-blur-xl shadow-2xl border-b border-gray-200/30 px-6 md:px-8 py-4 md:py-6 relative overflow-hidden">
+                    <!-- Background gradient overlay -->
+                    <div class="absolute inset-0 bg-gradient-to-r from-blue-50/50 via-white/50 to-green-50/50"></div>
+
+                    <div class="relative flex items-center justify-between">
+                        <div class="flex items-center space-x-4">
+                            <!-- Modernized Sidebar Toggle -->
+                            <button onclick="toggleSidebar()" class="group relative p-3 rounded-xl text-gray-600 hover:text-white hover:bg-gradient-to-r hover:from-blue-500 hover:to-green-500 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 mr-2">
+                                <svg class="w-6 h-6 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
                                 </svg>
+                                <div class="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/20 to-green-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                             </button>
-                            <div>
-                                <h1 class="text-lg md:text-2xl font-bold text-gray-800">Nyamira Water</h1>
-                                <p class="text-xs md:text-sm text-gray-600">Supply Company Management System</p>
+
+                            <!-- Company Branding -->
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 rounded-xl bg-white p-1 shadow-lg border border-gray-200/50">
+                                    <img src="{{ asset('img/Logo.png') }}" alt="NYAWASCO Logo" class="w-full h-full object-contain rounded-lg">
+                                </div>
+                                <div>
+                                    <h1 class="text-xl md:text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">Nyamira Water</h1>
+                                    <p class="text-xs md:text-sm text-blue-500 font-medium">and Sanitation Company</p>
+                                </div>
                             </div>
                         </div>
-                        <div class="flex items-center space-x-6">
-                            <a href="{{ route('profile.edit') }}" class="flex items-center space-x-3 hover:bg-gray-100 rounded-lg px-3 py-2 transition-colors duration-200">
-                                @if(auth()->user()->avatar)
-                                    <img src="{{ Storage::url(auth()->user()->avatar) }}" alt="{{ auth()->user()->name }}" class="h-8 w-8 rounded-full object-cover border border-gray-200">
-                                @else
-                                    <div class="h-8 w-8 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center border border-gray-200">
-                                        <span class="text-sm font-semibold text-blue-700">
-                                            {{ strtoupper(substr(auth()->user()->name ?? 'U', 0, 1)) }}
-                                        </span>
-                                    </div>
-                                @endif
-                                <div>
-                                    <p class="text-sm font-semibold text-gray-800">{{ auth()->user()->name ?? 'User' }}</p>
+
+                        <div class="flex items-center space-x-4">
+                            <!-- Modernized User Profile -->
+                            <a href="{{ route('profile.edit') }}" class="group flex items-center space-x-3 bg-white/70 backdrop-blur-sm rounded-xl px-4 py-3 hover:bg-white/90 transition-all duration-300 shadow-md hover:shadow-xl border border-gray-200/50 hover:border-blue-300/50 transform hover:scale-105">
+                                <div class="relative">
+                                    @if(auth()->user()->avatar)
+                                        <img src="{{ Storage::url(auth()->user()->avatar) }}" alt="{{ auth()->user()->name }}" class="h-10 w-10 rounded-full object-cover border-2 border-white shadow-lg ring-2 ring-blue-100">
+                                    @else
+                                        <div class="h-10 w-10 rounded-full bg-gradient-to-br from-blue-400 via-blue-500 to-green-500 flex items-center justify-center border-2 border-white shadow-lg ring-2 ring-blue-100">
+                                            <span class="text-white font-bold text-lg">
+                                                {{ strtoupper(substr(auth()->user()->name ?? 'U', 0, 1)) }}
+                                            </span>
+                                        </div>
+                                    @endif
+                                    <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white shadow-sm"></div>
                                 </div>
+                                <div class="hidden md:block">
+                                    <p class="text-sm font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">{{ auth()->user()->name ?? 'User' }}</p>
+                                    <p class="text-xs text-gray-500">Administrator</p>
+                                </div>
+                                <svg class="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                </svg>
                             </a>
+
+                            <!-- Modernized Logout Button -->
                             <form method="POST" action="{{ route('logout') }}" class="inline">
                                 @csrf
-                                <button type="submit" class="bg-gradient-to-r from-red-500 to-red-600 text-white px-6 py-2 rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
-                                    <span class="font-medium">Logout</span>
+                                <button type="submit" class="group relative bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-6 py-3 rounded-xl font-medium transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:scale-105 hover:-translate-y-1 overflow-hidden">
+                                    <span class="relative z-10 flex items-center space-x-2">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                                        </svg>
+                                        <span>Logout</span>
+                                    </span>
+                                    <div class="absolute inset-0 bg-gradient-to-r from-red-400 to-red-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                    <div class="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl"></div>
                                 </button>
                             </form>
                         </div>
@@ -1410,37 +1587,152 @@ use Illuminate\Support\Facades\Route;
         </div>
 
         <script>
+        // Global variable to track loading state
+        let isNavigating = false;
+
+        function handleSidebarLink(element) {
+            if (isNavigating) {
+                return false; // Prevent multiple clicks
+            }
+
+            isNavigating = true;
+
+            // Show loading spinner
+            const loadingElement = element.querySelector('.sidebar-loading');
+            if (loadingElement) {
+                loadingElement.classList.remove('hidden');
+            }
+
+            // Add visual feedback
+            element.classList.add('pointer-events-none', 'opacity-75');
+
+            // Disable all other sidebar links temporarily
+            document.querySelectorAll('.sidebar-link').forEach(link => {
+                if (link !== element) {
+                    link.classList.add('pointer-events-none', 'opacity-50');
+                }
+            });
+
+            // Set a timeout to reset if navigation takes too long (fallback)
+            setTimeout(() => {
+                if (isNavigating) {
+                    resetSidebarState();
+                }
+            }, 10000); // 10 second timeout
+
+            return true;
+        }
+
+        function resetSidebarState() {
+            isNavigating = false;
+
+            // Hide all loading spinners
+            document.querySelectorAll('.sidebar-loading').forEach(el => {
+                el.classList.add('hidden');
+            });
+
+            // Re-enable all sidebar links
+            document.querySelectorAll('.sidebar-link').forEach(link => {
+                link.classList.remove('pointer-events-none', 'opacity-75', 'opacity-50');
+            });
+        }
+
+        // Reset state when page becomes visible (user navigated back)
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                resetSidebarState();
+            }
+        });
+
+        // Reset state on page load
+        window.addEventListener('load', function() {
+            resetSidebarState();
+        });
+
+        // Performance optimizations
+        // Debounce function for better performance
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Optimize scroll performance
+        let ticking = false;
+        window.addEventListener('scroll', function() {
+            if (!ticking) {
+                requestAnimationFrame(function() {
+                    // Handle scroll-based optimizations here
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        });
+
+        // Preload critical resources
+        function preloadCriticalResources() {
+            // Preload critical images
+            const criticalImages = [
+                '{{ asset("img/Logo.png") }}',
+                '{{ asset("img/favicon-32x32.png") }}'
+            ];
+
+            criticalImages.forEach(src => {
+                const img = new Image();
+                img.src = src;
+            });
+        }
+
+        // Initialize performance optimizations
+        document.addEventListener('DOMContentLoaded', function() {
+            preloadCriticalResources();
+
+            // Add passive listeners for better scroll performance
+            document.addEventListener('touchstart', function() {}, { passive: true });
+            document.addEventListener('touchmove', function() {}, { passive: true });
+        });
+
+        // Optimized toggleSidebar function
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('overlay');
 
-            if (window.innerWidth >= 768) {
-                // Desktop toggle
-                const isVisible = sidebar.classList.contains('md:translate-x-0');
-                if (isVisible) {
-                    // Hide sidebar
-                    sidebar.classList.remove('md:translate-x-0', 'md:relative');
-                    sidebar.classList.add('md:-translate-x-full');
+            // Use requestAnimationFrame for smoother animations
+            requestAnimationFrame(() => {
+                if (window.innerWidth >= 768) {
+                    // Desktop toggle
+                    const isVisible = sidebar.classList.contains('md:translate-x-0');
+                    if (isVisible) {
+                        // Hide sidebar
+                        sidebar.classList.remove('md:translate-x-0', 'md:relative');
+                        sidebar.classList.add('md:-translate-x-full');
+                    } else {
+                        // Show sidebar
+                        sidebar.classList.remove('md:-translate-x-full');
+                        sidebar.classList.add('md:translate-x-0', 'md:relative');
+                    }
                 } else {
-                    // Show sidebar
-                    sidebar.classList.remove('md:-translate-x-full');
-                    sidebar.classList.add('md:translate-x-0', 'md:relative');
+                    // Mobile toggle
+                    const isOpen = sidebar.classList.contains('translate-x-0');
+                    if (isOpen) {
+                        // Close mobile sidebar
+                        sidebar.classList.remove('translate-x-0');
+                        sidebar.classList.add('-translate-x-full');
+                        overlay.classList.add('hidden');
+                    } else {
+                        // Open mobile sidebar
+                        sidebar.classList.remove('-translate-x-full');
+                        sidebar.classList.add('translate-x-0');
+                        overlay.classList.remove('hidden');
+                    }
                 }
-            } else {
-                // Mobile toggle
-                const isOpen = sidebar.classList.contains('translate-x-0');
-                if (isOpen) {
-                    // Close mobile sidebar
-                    sidebar.classList.remove('translate-x-0');
-                    sidebar.classList.add('-translate-x-full');
-                    overlay.classList.add('hidden');
-                } else {
-                    // Open mobile sidebar
-                    sidebar.classList.remove('-translate-x-full');
-                    sidebar.classList.add('translate-x-0');
-                    overlay.classList.remove('hidden');
-                }
-            }
+            });
         }
 
         // Reports menu toggle
@@ -1465,6 +1757,7 @@ use Illuminate\Support\Facades\Route;
             submenu.classList.toggle('hidden');
             document.getElementById('performance-arrow').classList.toggle('rotate-90');
         });
+
 
         </script>
     @else

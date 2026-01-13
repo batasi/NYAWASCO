@@ -34,6 +34,7 @@ use App\Http\Controllers\QuickBillController;
 use App\Http\Controllers\Admin\MeterReadingController;
 use App\Http\Controllers\Admin\WaterConnectionController;
 use App\Http\Controllers\Admin\MeterCategoryController;
+use App\Http\Controllers\Admin\SystemManagementController;
 
 /*
 |--------------------------------------------------------------------------
@@ -373,6 +374,35 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{application}', [WaterConnectionController::class, 'show'])->name('show');
         Route::post('/{application}/approve', [WaterConnectionController::class, 'approve'])->name('approve');
         Route::post('/{application}/decline', [WaterConnectionController::class, 'decline'])->name('decline');
+    });
+
+    // System Administration Routes
+    Route::prefix('system')->name('system.')->group(function () {
+        Route::get('/management', [SystemManagementController::class, 'index'])->name('management');
+        Route::post('/management/clear-cache', [SystemManagementController::class, 'clearCache'])->name('management.clear-cache');
+        Route::post('/management/clear-app-cache', [SystemManagementController::class, 'clearApplicationCache'])->name('management.clear-app-cache');
+        Route::post('/management/clear-route-cache', [SystemManagementController::class, 'clearRouteCache'])->name('management.clear-route-cache');
+        Route::post('/management/clear-config-cache', [SystemManagementController::class, 'clearConfigCache'])->name('management.clear-config-cache');
+        Route::post('/management/clear-view-cache', [SystemManagementController::class, 'clearViewCache'])->name('management.clear-view-cache');
+        Route::post('/management/optimize-db', [SystemManagementController::class, 'optimizeDatabase'])->name('management.optimize-db');
+        Route::post('/management/restart-services', [SystemManagementController::class, 'restartServices'])->name('management.restart-services');
+        Route::post('/management/save-config', [SystemManagementController::class, 'saveConfiguration'])->name('management.save-config');
+
+        Route::get('/user-management', function () {
+            return view('user-management');
+        })->name('user.management');
+
+        Route::get('/sessions-logs', function () {
+            return view('sessions-logs');
+        })->name('sessions.logs');
+
+        Route::get('/analysis', function () {
+            return view('analysis');
+        })->name('analysis');
+
+        Route::get('/backups', function () {
+            return view('system.backups');
+        })->name('backups');
     });
 });
 
