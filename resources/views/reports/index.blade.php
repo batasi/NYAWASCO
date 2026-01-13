@@ -37,7 +37,6 @@
                             <option value="consumption">Consumption Report</option>
                             <option value="collection">Collection Report</option>
                             <option value="arrears">Arrears Report</option>
-                            <option value="category">Meter Category Report</option>
                         </select>
                     </div>
 
@@ -61,36 +60,27 @@
                     </div>
                 </div>
 
-                <!-- In your reports/index.blade.php -->
+                <!-- Export Format Section - Only Excel/CSV -->
                 <div class="mt-6">
                     <label class="block text-sm font-medium text-gray-700 mb-2">
-                        Export Format
+                        Export Format *
                     </label>
                     <div class="flex space-x-4">
                         <label class="inline-flex items-center">
-                            <input type="radio" name="format" value="view" checked
+                            <input type="radio" name="format" value="excel" required
                                 class="text-blue-600 border-gray-300 focus:ring-blue-500">
-                            <span class="ml-2 text-sm text-gray-700">View in Browser</span>
-                        </label>
-                        <label class="inline-flex items-center">
-                            <input type="radio" name="format" value="pdf"
-                                class="text-blue-600 border-gray-300 focus:ring-blue-500">
-                            <span class="ml-2 text-sm text-gray-700">Download PDF</span>
+                            <span class="ml-2 text-sm text-gray-700">Download Excel (.xlsx)</span>
                         </label>
                         <label class="inline-flex items-center">
                             <input type="radio" name="format" value="excel"
                                 class="text-blue-600 border-gray-300 focus:ring-blue-500">
-                            <span class="ml-2 text-sm text-gray-700">Download Excel</span>
-                        </label>
-                        <label class="inline-flex items-center">
-                            <input type="radio" name="format" value="csv"
-                                class="text-blue-600 border-gray-300 focus:ring-blue-500">
-                            <span class="ml-2 text-sm text-gray-700">Download CSV</span>
+                            <span class="ml-2 text-sm text-gray-700">Download CSV (.csv)</span>
                         </label>
                     </div>
+                    <p class="text-xs text-gray-500 mt-1">Reports are only available for download in spreadsheet formats</p>
                 </div>
 
-                <!-- Add detail level selection -->
+                <!-- Detail Level - Default to Full Report -->
                 <div class="mt-6">
                     <label for="detail_level" class="block text-sm font-medium text-gray-700 mb-2">
                         Detail Level
@@ -99,16 +89,26 @@
                             class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         <option value="summary">Summary Only</option>
                         <option value="detailed">Detailed Data</option>
-                        <option value="full">Full Report</option>
+                        <option value="full" selected>Full Report</option>
                     </select>
+                    <p class="text-xs text-gray-500 mt-1">Full Report includes all data fields with comprehensive details</p>
                 </div>
 
-                <!-- Generate Button -->
+                <!-- Generate Button with Loading Animation -->
                 <div class="mt-8 flex justify-end">
-                    <button type="submit"
-                            class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition duration-200 flex items-center">
-                        <i class="fas fa-chart-bar mr-2"></i>
-                        Generate Report
+                    <button type="submit" id="generateBtn"
+                            class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-all duration-300 flex items-center justify-center min-w-[160px] disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-blue-400">
+                        <span id="btnText">
+                            <i class="fas fa-chart-bar mr-2"></i>
+                            Generate Report
+                        </span>
+                        <span id="btnLoading" class="hidden">
+                            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Generating...
+                        </span>
                     </button>
                 </div>
             </form>
@@ -239,49 +239,49 @@
 
         <!-- Quick Reports -->
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 class="text-lg font-semibold text-gray-800 mb-4">Quick Reports</h3>
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Quick Downloads</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <a href="{{ route('reports.generate', ['report_type' => 'revenue', 'format' => 'pdf']) }}"
+                <a href="{{ route('reports.generate', ['report_type' => 'revenue', 'format' => 'excel', 'detail_level' => 'full']) }}"
                    class="bg-green-50 hover:bg-green-100 p-4 rounded-lg border border-green-200 transition duration-200">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="font-medium text-green-800">Revenue PDF</p>
-                            <p class="text-xs text-green-600">This Month</p>
+                            <p class="font-medium text-green-800">Revenue Excel</p>
+                            <p class="text-xs text-green-600">Full Report</p>
                         </div>
-                        <i class="fas fa-file-pdf text-green-600"></i>
+                        <i class="fas fa-file-excel text-green-600"></i>
                     </div>
                 </a>
 
-                <a href="{{ route('reports.generate', ['report_type' => 'arrears', 'format' => 'pdf']) }}"
+                <a href="{{ route('reports.generate', ['report_type' => 'arrears', 'format' => 'excel', 'detail_level' => 'full']) }}"
                    class="bg-red-50 hover:bg-red-100 p-4 rounded-lg border border-red-200 transition duration-200">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="font-medium text-red-800">Arrears PDF</p>
-                            <p class="text-xs text-red-600">Overdue Bills</p>
+                            <p class="font-medium text-red-800">Arrears Excel</p>
+                            <p class="text-xs text-red-600">Full Report</p>
                         </div>
-                        <i class="fas fa-file-pdf text-red-600"></i>
+                        <i class="fas fa-file-excel text-red-600"></i>
                     </div>
                 </a>
 
-                <a href="{{ route('reports.generate', ['report_type' => 'collection', 'format' => 'csv']) }}"
+                <a href="{{ route('reports.generate', ['report_type' => 'collection', 'format' => 'csv', 'detail_level' => 'full']) }}"
                    class="bg-blue-50 hover:bg-blue-100 p-4 rounded-lg border border-blue-200 transition duration-200">
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="font-medium text-blue-800">Collection CSV</p>
-                            <p class="text-xs text-blue-600">Last 30 Days</p>
+                            <p class="text-xs text-blue-600">Full Report</p>
                         </div>
                         <i class="fas fa-file-csv text-blue-600"></i>
                     </div>
                 </a>
 
-                <a href="{{ route('reports.generate', ['report_type' => 'customer', 'format' => 'pdf']) }}"
+                <a href="{{ route('reports.generate', ['report_type' => 'customer', 'format' => 'excel', 'detail_level' => 'full']) }}"
                    class="bg-purple-50 hover:bg-purple-100 p-4 rounded-lg border border-purple-200 transition duration-200">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="font-medium text-purple-800">Customer PDF</p>
-                            <p class="text-xs text-purple-600">Active Customers</p>
+                            <p class="font-medium text-purple-800">Customer Excel</p>
+                            <p class="text-xs text-purple-600">Full Report</p>
                         </div>
-                        <i class="fas fa-file-pdf text-purple-600"></i>
+                        <i class="fas fa-file-excel text-purple-600"></i>
                     </div>
                 </a>
             </div>
@@ -296,7 +296,7 @@ function selectReport(type) {
     document.getElementById('report_type').focus();
 }
 
-// Set default dates
+// Set default dates and format
 document.addEventListener('DOMContentLoaded', function() {
     const today = new Date().toISOString().split('T')[0];
     const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 2)
@@ -304,6 +304,84 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.getElementById('start_date').value = firstDayOfMonth;
     document.getElementById('end_date').value = today;
+
+    // Set Excel as default format
+    const excelRadio = document.querySelector('input[value="excel"]');
+    if (excelRadio) {
+        excelRadio.checked = true;
+    }
+
+    // Set default detail level to Full Report
+    const detailLevel = document.getElementById('detail_level');
+    if (detailLevel) {
+        detailLevel.value = 'full';
+    }
+});
+
+// Form submission handler with loading animation
+document.getElementById('reportForm').addEventListener('submit', function(e) {
+    const generateBtn = document.getElementById('generateBtn');
+    const btnText = document.getElementById('btnText');
+    const btnLoading = document.getElementById('btnLoading');
+
+    // Validate format is selected
+    const formatSelected = document.querySelector('input[name="format"]:checked');
+    if (!formatSelected) {
+        e.preventDefault();
+        alert('Please select an export format (Excel or CSV)');
+        return;
+    }
+
+    // Show loading animation
+    generateBtn.disabled = true;
+    btnText.classList.add('hidden');
+    btnLoading.classList.remove('hidden');
+
+    // The form will now submit normally, animation will stop when page reloads
+});
+
+// Optional: Add keyboard shortcut for generating report
+document.addEventListener('keydown', function(e) {
+    // Ctrl + G or Cmd + G to generate report
+    if ((e.ctrlKey || e.metaKey) && e.key === 'g') {
+        e.preventDefault();
+        document.getElementById('reportForm').submit();
+    }
 });
 </script>
+
+<style>
+/* Smooth transition for button states */
+#generateBtn {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Spin animation */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+/* Optional: Add subtle pulse animation to button before click */
+@keyframes subtle-pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0);
+    }
+}
+
+#generateBtn:not(:disabled):hover {
+    animation: subtle-pulse 2s infinite;
+}
+</style>
 @endsection
