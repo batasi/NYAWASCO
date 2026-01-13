@@ -200,6 +200,8 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('/reports/generate', [ReportController::class, 'generate'])->name('reports.generate');
+    Route::get('admin/customers/{customer}/statement', [CustomerController::class, 'statement'])->name('admin.customers.statement');
+    Route::get('admin/customers/{customer}/statement/pdf', [CustomerController::class, 'statementPdf'])->name('admin.customers.statement.pdf');
 
       Route::prefix('profile')->name('profile.')->group(function () {
         // Main profile page

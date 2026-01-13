@@ -17,6 +17,7 @@ class Payment extends Model
         'user_id',
         'bill_id',
         'customer_id',
+        'customer_id',
         'payment_no',
         'balance',
         'payment_date',
@@ -66,9 +67,10 @@ class Payment extends Model
     /**
      * Get customer through meter
      */
+   // In Payment.php
     public function customer()
     {
-        return $this->hasOneThrough(Customer::class, Meter::class, 'id', 'id', 'meter_id', 'customer_id');
+        return $this->belongsTo(Customer::class, 'customer_id');
     }
     public function allocations()
     {

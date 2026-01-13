@@ -1078,4 +1078,196 @@ private function validateAuth(Request $request)
     }
     return null;
 }
+public function statement(Request $request, Customer $customer)
+{
+    // Validate date inputs
+    $request->validate([
+        'start_date' => 'required|date',
+        'end_date' => 'required|date|after_or_equal:start_date',
+    ]);
+
+    $startDate = Carbon::parse($request->start_date)->startOfDay();
+    $endDate = Carbon::parse($request->end_date)->endOfDay();
+
+    // Fetch payments for this customer within date range
+    $payments = $customer->payments()
+        ->where(function($query) use ($startDate, $endDate) {
+            $query->whereBetween('payment_date', [$startDate, $endDate])
+                  ->orWhereBetween('created_at', [$startDate, $endDate]);
+        })
+        ->orderBy('payment_date')
+        ->get();
+
+    // Fetch meter readings for this customer within date range
+    $meterReadings = $customer->meterReadings()
+        ->whereBetween('reading_date', [$startDate, $endDate])
+        ->with('meter')
+        ->orderBy('reading_date')
+        ->get();
+
+    // FIXED: Get bills using a more flexible approach
+    $bills = $customer->bills()
+        ->where(function($query) use ($startDate, $endDate) {
+            // Option 1: Bill created within date range
+            $query->whereBetween('created_at', [$startDate, $endDate])
+                  // Option 2: Bill's due date within date range
+                  ->orWhere(function($q) use ($startDate, $endDate) {
+                      $q->whereNotNull('due_date')
+                        ->whereBetween('due_date', [$startDate, $endDate]);
+                  })
+                  // Option 3: Bill's billing period overlaps with date range
+                  ->orWhere(function($q) use ($startDate, $endDate) {
+                      $q->whereNotNull('billing_period_start')
+                        ->whereNotNull('billing_period_end')
+                        ->where(function($sub) use ($startDate, $endDate) {
+                            $sub->whereBetween('billing_period_start', [$startDate, $endDate])
+                                ->orWhereBetween('billing_period_end', [$startDate, $endDate])
+                                ->orWhere(function($inner) use ($startDate, $endDate) {
+                                    $inner->where('billing_period_start', '<=', $startDate)
+                                          ->where('billing_period_end', '>=', $endDate);
+                                });
+                        });
+                  });
+        })
+        ->orderBy('created_at')
+        ->get();
+
+    // Debug: Log what we're getting
+    Log::info('Statement data:', [
+        'customer_id' => $customer->id,
+        'customer_name' => $customer->first_name . ' ' . $customer->last_name,
+        'payments_count' => $payments->count(),
+        'readings_count' => $meterReadings->count(),
+        'bills_count' => $bills->count(),
+        'start_date' => $startDate->toDateString(),
+        'end_date' => $endDate->toDateString(),
+        'all_bills_count' => $customer->bills()->count(),
+    ]);
+
+    // Calculate opening balance (balance before start date)
+    $openingBalance = $this->calculateOpeningBalance($customer, $startDate);
+
+    // Calculate closing balance
+    $totalDebits = $bills->sum('total_amount');
+    $totalCredits = $payments->sum('amount');
+    $closingBalance = $openingBalance + $totalDebits - $totalCredits;
+
+    return view('admin.customers.statement', compact(
+        'customer',
+        'payments',
+        'meterReadings',
+        'bills',
+        'startDate',
+        'endDate',
+        'openingBalance',
+        'closingBalance',
+        'totalDebits',
+        'totalCredits'
+    ));
+}
+
+private function calculateOpeningBalance(Customer $customer, Carbon $startDate)
+{
+    // Calculate total bills before start date FOR THIS CUSTOMER ONLY
+    $totalBillsBefore = $customer->bills()
+        ->where('created_at', '<', $startDate)
+        ->sum('total_amount');
+
+    // Calculate total payments before start date FOR THIS CUSTOMER ONLY
+    $totalPaymentsBefore = $customer->payments()
+        ->where('created_at', '<', $startDate)
+        ->sum('amount');
+
+    $openingBalance = $totalBillsBefore - $totalPaymentsBefore;
+
+    Log::info('Opening balance calculation:', [
+        'total_bills_before' => $totalBillsBefore,
+        'total_payments_before' => $totalPaymentsBefore,
+        'opening_balance' => $openingBalance,
+    ]);
+
+    return $openingBalance;
+}
+
+
+
+public function statementPdf(Request $request, Customer $customer)
+{
+    $request->validate([
+        'start_date' => 'required|date',
+        'end_date' => 'required|date|after_or_equal:start_date',
+    ]);
+
+    $startDate = Carbon::parse($request->start_date)->startOfDay();
+    $endDate = Carbon::parse($request->end_date)->endOfDay();
+
+    // Fetch data (using same logic as statement method)
+    $payments = $customer->payments()
+        ->where(function($query) use ($startDate, $endDate) {
+            $query->whereBetween('payment_date', [$startDate, $endDate])
+                  ->orWhereBetween('created_at', [$startDate, $endDate]);
+        })
+        ->orderBy('payment_date')
+        ->get();
+
+    $meterReadings = $customer->meterReadings()
+        ->whereBetween('reading_date', [$startDate, $endDate])
+        ->with('meter')
+        ->orderBy('reading_date')
+        ->get();
+
+    // Same bill query as above
+    $bills = $customer->bills()
+        ->where(function($query) use ($startDate, $endDate) {
+            $query->whereBetween('created_at', [$startDate, $endDate])
+                  ->orWhere(function($q) use ($startDate, $endDate) {
+                      $q->whereNotNull('due_date')
+                        ->whereBetween('due_date', [$startDate, $endDate]);
+                  })
+                  ->orWhere(function($q) use ($startDate, $endDate) {
+                      $q->whereNotNull('billing_period_start')
+                        ->whereNotNull('billing_period_end')
+                        ->where(function($sub) use ($startDate, $endDate) {
+                            $sub->whereBetween('billing_period_start', [$startDate, $endDate])
+                                ->orWhereBetween('billing_period_end', [$startDate, $endDate])
+                                ->orWhere(function($inner) use ($startDate, $endDate) {
+                                    $inner->where('billing_period_start', '<=', $startDate)
+                                          ->where('billing_period_end', '>=', $endDate);
+                                });
+                        });
+                  });
+        })
+        ->orderBy('created_at')
+        ->get();
+
+    $openingBalance = $this->calculateOpeningBalance($customer, $startDate);
+    $totalDebits = $bills->sum('total_amount');
+    $totalCredits = $payments->sum('amount');
+    $closingBalance = $openingBalance + $totalDebits - $totalCredits;
+
+    $data = [
+        'customer' => $customer,
+        'payments' => $payments,
+        'meterReadings' => $meterReadings,
+        'bills' => $bills,
+        'startDate' => $startDate,
+        'endDate' => $endDate,
+        'openingBalance' => $openingBalance,
+        'closingBalance' => $closingBalance,
+        'totalDebits' => $totalDebits,
+        'totalCredits' => $totalCredits,
+        'company' => [
+            'name' => 'NYAWASCO',
+            'address' => 'Your Company Address',
+            'phone' => 'Your Company Phone',
+            'email' => 'Your Company Email',
+        ]
+    ];
+
+    $pdf = PDF::loadView('admin.customers.statement-pdf', $data);
+
+    $filename = "statement_{$customer->customer_number}_{$startDate->format('Y_m_d')}_to_{$endDate->format('Y_m_d')}.pdf";
+
+    return $pdf->download($filename);
+}
 }

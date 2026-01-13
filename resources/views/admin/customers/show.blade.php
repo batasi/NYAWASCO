@@ -1023,7 +1023,15 @@
                         Record Meter Reading
                     </a>
                     @endif
-
+                    <a href="{{ route('admin.customers.statement', [
+                        'customer' => $customer,
+                        'start_date' => now()->subMonth()->format('Y-m-d'),
+                        'end_date' => now()->format('Y-m-d')
+                    ]) }}"
+                    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
+                        <i class="fas fa-file-invoice mr-2"></i>
+                        View Statement
+                    </a>
                     <a href="{{ route('bills.index') }}?customer={{ $customer->id }}"
                        class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
                         <i class="fas fa-file-invoice mr-2"></i>
@@ -1131,7 +1139,32 @@
         </form>
     </div>
 </div>
-
+<!-- Add this modal or inline form -->
+<div class="modal fade" id="statementModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Generate Statement</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form action="{{ route('admin.customers.statement', $customer) }}" method="GET">
+                    <div class="mb-3">
+                        <label for="start_date" class="form-label">Start Date</label>
+                        <input type="date" class="form-control" id="start_date" name="start_date"
+                               value="{{ now()->subMonth()->format('Y-m-d') }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="end_date" class="form-label">End Date</label>
+                        <input type="date" class="form-control" id="end_date" name="end_date"
+                               value="{{ now()->format('Y-m-d') }}" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Generate Statement</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 <script>
 function confirmUnassignMeter(meterNumber) {
     return confirm(`Are you sure you want to unassign meter ${meterNumber}? This action will disconnect the meter from the customer and may affect billing.`);
