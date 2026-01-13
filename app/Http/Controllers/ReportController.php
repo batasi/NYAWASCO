@@ -31,6 +31,10 @@ class ReportController extends Controller
 
     public function generate(Request $request)
     {
+           // Increase memory limit and execution time
+        ini_set('memory_limit', '512M');  // Increase to 512MB or even 1G if needed
+        ini_set('max_execution_time', 300);
+
         $request->validate([
             'report_type' => 'required|in:revenue,customer,meter,consumption,collection,arrears,category,zone',
             'start_date' => 'nullable|date',
@@ -82,33 +86,35 @@ class ReportController extends Controller
 
     private function generateRevenueReport($startDate, $endDate, $detailLevel)
     {
-        $query = Bill::with(['customer', 'meter.meterCategory', 'meter.zone', 'meter.walkRoute']);
+        $query = Bill::with(['customer', 'meter.meterCategory', 'meter.zone', 'meter.walkroute']);
 
         if ($startDate) {
-            $query->whereBetween('billing_period_end', [$startDate, $endDate]);
+            // Include NULL records when filtering by date
+            $query->where(function($q) use ($startDate, $endDate) {
+                // Records with actual dates in the range
+                $q->whereBetween('billing_period_end', [$startDate, $endDate])
+                // OR records with NULL billing_period_end (treat as before start)
+                ->orWhereNull('billing_period_end');
+            });
         }
 
         $bills = $query->get();
 
-        // Monthly breakdown
+        // For the breakdown queries, you need to handle NULLs specially
         $monthlyRevenue = DB::table('bills')
             ->select(
-                DB::raw('YEAR(billing_period_end) as year'),
-                DB::raw('MONTH(billing_period_end) as month'),
+                DB::raw('YEAR(IFNULL(billing_period_end, "1900-01-01")) as year'),
+                DB::raw('MONTH(IFNULL(billing_period_end, "1900-01-01")) as month'),
                 DB::raw('SUM(total_amount) as total_amount'),
                 DB::raw('SUM(paid_amount) as paid_amount'),
                 DB::raw('COUNT(*) as bill_count'),
-                DB::raw('SUM(consumption) as total_consumption')
+                DB::raw('SUM(consumption) as total_consumption'),
+                DB::raw('SUM(CASE WHEN billing_period_end IS NULL THEN 1 ELSE 0 END) as is_legacy')
             )
-            ->when($startDate, function ($q) use ($startDate, $endDate) {
-                return $q->whereBetween('billing_period_end', [$startDate, $endDate]);
-            })
-            ->groupBy(DB::raw('YEAR(billing_period_end), MONTH(billing_period_end)'))
-            ->orderBy('year', 'desc')
-            ->orderBy('month', 'desc')
+            // ... rest of query
+            ->groupBy(DB::raw('YEAR(IFNULL(billing_period_end, "1900-01-01")), MONTH(IFNULL(billing_period_end, "1900-01-01"))'))
             ->get();
-
-        // Category breakdown
+        // Category breakdown with NULL handling
         $categoryRevenue = DB::table('bills')
             ->join('meters', 'bills.meter_id', '=', 'meters.id')
             ->join('meter_categories', 'meters.meter_category_id', '=', 'meter_categories.id')
@@ -118,26 +124,35 @@ class ReportController extends Controller
                 DB::raw('SUM(bills.total_amount) as total_amount'),
                 DB::raw('SUM(bills.paid_amount) as paid_amount'),
                 DB::raw('SUM(bills.consumption) as total_consumption'),
-                DB::raw('COUNT(*) as bill_count')
+                DB::raw('COUNT(*) as bill_count'),
+                // Flag for NULL billing periods
+                DB::raw('SUM(CASE WHEN bills.billing_period_end IS NULL THEN 1 ELSE 0 END) as legacy_records')
             )
             ->when($startDate, function ($q) use ($startDate, $endDate) {
-                return $q->whereBetween('bills.billing_period_end', [$startDate, $endDate]);
+                return $q->where(function($subQuery) use ($startDate, $endDate) {
+                    $subQuery->whereBetween('bills.billing_period_end', [$startDate, $endDate])
+                            ->orWhereNull('bills.billing_period_end');
+                });
             })
             ->groupBy('meter_categories.id', 'meter_categories.name', 'meter_categories.code')
             ->get();
 
-        // Zone breakdown
+        // Zone breakdown with NULL handling
         $zoneRevenue = DB::table('bills')
             ->join('meters', 'bills.meter_id', '=', 'meters.id')
             ->leftJoin('zones', 'meters.zone_id', '=', 'zones.id')
             ->select(
-                'zones.name as zone_name',
+                DB::raw('COALESCE(zones.name, "Unassigned") as zone_name'),
                 DB::raw('SUM(bills.total_amount) as total_amount'),
                 DB::raw('SUM(bills.paid_amount) as paid_amount'),
-                DB::raw('COUNT(*) as bill_count')
+                DB::raw('COUNT(*) as bill_count'),
+                DB::raw('SUM(CASE WHEN bills.billing_period_end IS NULL THEN 1 ELSE 0 END) as legacy_records')
             )
             ->when($startDate, function ($q) use ($startDate, $endDate) {
-                return $q->whereBetween('bills.billing_period_end', [$startDate, $endDate]);
+                return $q->where(function($subQuery) use ($startDate, $endDate) {
+                    $subQuery->whereBetween('bills.billing_period_end', [$startDate, $endDate])
+                            ->orWhereNull('bills.billing_period_end');
+                });
             })
             ->groupBy('zones.id', 'zones.name')
             ->get();
@@ -161,46 +176,68 @@ class ReportController extends Controller
                 'average_bill_amount' => $bills->avg('total_amount'),
                 'collection_efficiency' => $bills->sum('total_amount') > 0 ?
                     ($bills->sum('paid_amount') / $bills->sum('total_amount')) * 100 : 0,
+                // Add legacy records info
+                'legacy_records_count' => $bills->whereNull('billing_period_end')->count(),
+                'dated_records_count' => $bills->whereNotNull('billing_period_end')->count(),
             ]
         ];
     }
 
     private function generateCustomerReport($startDate, $endDate, $detailLevel)
     {
-        $query = Customer::with(['meters.meterCategory', 'meters.zone', 'meters.walkRoute', 'bills' => function ($q) use ($startDate, $endDate) {
-            if ($startDate) {
-                $q->whereBetween('billing_period_end', [$startDate, $endDate]);
-            }
-        }]);
+        // Always load all customers, with optional filtering of bills by date range
+        $query = Customer::with(['meters.meterCategory', 'meters.zone', 'meters.walkRoute',
+            'bills' => function ($q) use ($startDate, $endDate) {
+                if ($startDate) {
+                    // Only filter the bills relationship, not the customers
+                    $q->whereBetween('billing_period_end', [$startDate, $endDate]);
+                }
+            }]);
 
-        if ($startDate) {
-            $query->whereHas('bills', function ($q) use ($startDate, $endDate) {
-                $q->whereBetween('billing_period_end', [$startDate, $endDate]);
-            });
-        }
+        // REMOVED the whereHas clause - this ensures all customers are included
+        // No filtering based on bills - include ALL customers
 
-        $customers = $query->get()->map(function ($customer) {
+        $customers = $query->get()->map(function ($customer) use ($startDate) {
+            // Calculate totals from the pre-filtered bills relationship
+            // If date range is provided, bills are already filtered
+            // If no date range, all bills are included
+
             $customer->total_billed = $customer->bills->sum('total_amount');
             $customer->total_paid = $customer->bills->sum('paid_amount');
             $customer->total_balance = $customer->bills->sum('balance');
             $customer->total_consumption = $customer->bills->sum('consumption');
             $customer->bill_count = $customer->bills->count();
             $customer->meter_count = $customer->meters->count();
+
+            // Add a flag to show if customer had bills in the date range (if date range was provided)
+            if ($startDate) {
+                $customer->had_bills_in_period = $customer->bills->count() > 0;
+            }
+
             return $customer;
         });
 
-        // Status breakdown
+        // Status breakdown - now includes ALL customers
         $statusCounts = $customers->groupBy('status')->map->count();
 
-        // Zone distribution
+        // Zone distribution - includes customers with and without meters
         $zoneDistribution = $customers->flatMap(function ($customer) {
-            return $customer->meters->map(function ($meter) use ($customer) {
-                return [
+            if ($customer->meters->count() > 0) {
+                return $customer->meters->map(function ($meter) use ($customer) {
+                    return [
+                        'customer_id' => $customer->id,
+                        'zone_name' => $meter->zone->name ?? 'Unassigned',
+                        'customer_number' => $customer->customer_number,
+                    ];
+                });
+            } else {
+                // Include customers without meters in "No Meter Assigned" category
+                return [[
                     'customer_id' => $customer->id,
-                    'zone_name' => $meter->zone->name ?? 'Unassigned',
+                    'zone_name' => 'No Meter Assigned',
                     'customer_number' => $customer->customer_number,
-                ];
-            });
+                ]];
+            }
         })->groupBy('zone_name')->map(function ($items, $zone) {
             return [
                 'zone' => $zone,
@@ -211,6 +248,10 @@ class ReportController extends Controller
         return [
             'type' => 'Customer Report',
             'detail_level' => $detailLevel,
+            'date_range' => $startDate ? [
+                'start' => $startDate->format('Y-m-d'),
+                'end' => $endDate->format('Y-m-d')
+            ] : null,
             'customers' => $customers,
             'status_breakdown' => $statusCounts,
             'zone_distribution' => $zoneDistribution,
@@ -220,18 +261,29 @@ class ReportController extends Controller
                 'inactive_customers' => $customers->where('status', 'inactive')->count(),
                 'pending_customers' => $customers->where('status', 'pending')->count(),
                 'suspended_customers' => $customers->where('status', 'suspended')->count(),
+
+                // Financial totals - only from filtered bills if date range provided
                 'total_billed' => $customers->sum('total_billed'),
                 'total_paid' => $customers->sum('total_paid'),
                 'total_balance' => $customers->sum('total_balance'),
                 'total_consumption' => $customers->sum('total_consumption'),
+
+                // Metrics about bills in period (if date range provided)
+                'customers_with_bills_in_period' => $startDate ?
+                    $customers->where('had_bills_in_period', true)->count() :
+                    $customers->where('bill_count', '>', 0)->count(),
+                'customers_without_bills_in_period' => $startDate ?
+                    $customers->where('had_bills_in_period', false)->count() :
+                    $customers->where('bill_count', 0)->count(),
+
                 'average_consumption_per_customer' => $customers->avg('total_consumption'),
                 'average_bills_per_customer' => $customers->avg('bill_count'),
                 'customers_with_meters' => $customers->where('meter_count', '>', 0)->count(),
                 'customers_without_meters' => $customers->where('meter_count', 0)->count(),
+                'customers_without_bills_ever' => $customers->where('bill_count', 0)->count(),
             ]
         ];
     }
-
     private function generateMeterReport($startDate, $endDate, $detailLevel)
     {
         $query = Meter::with([
@@ -895,7 +947,7 @@ class ReportController extends Controller
             $billsSheet->setTitle('Detailed Bills');
 
             $headers = [
-                'Bill Number', 'Customer Number', 'Customer Name', 'Meter Number',
+                'Bill Number', 'Customer Name', 'Customer Acc',
                 'Category', 'Zone', 'Billing Period', 'Consumption (m³)',
                 'Total Amount', 'Paid Amount', 'Balance', 'Status', 'Due Date'
             ];
@@ -904,31 +956,30 @@ class ReportController extends Controller
             $row = 2;
             foreach ($reportData['bills'] as $bill) {
                 $billsSheet->setCellValue('A' . $row, $bill->bill_number);
-                $billsSheet->setCellValue('B' . $row, $bill->customer->customer_number ?? '');
-                $billsSheet->setCellValue('C' . $row, $bill->customer->first_name . ' ' . $bill->customer->last_name);
-                $billsSheet->setCellValue('D' . $row, $bill->meter->meter_number ?? '');
-                $billsSheet->setCellValue('E' . $row, $bill->meter->meterCategory->name ?? '');
-                $billsSheet->setCellValue('F' . $row, $bill->meter->zone->name ?? '');
-                $billsSheet->setCellValue('G' . $row,
+                $billsSheet->setCellValue('B' . $row, $bill->customer->first_name . ' ' . $bill->customer->last_name);
+                $billsSheet->setCellValue('C' . $row, $bill->meter->meter_number ?? '');
+                $billsSheet->setCellValue('D' . $row, $bill->meter->meterCategory->name ?? '');
+                $billsSheet->setCellValue('E' . $row, $bill->meter->zone->name ?? '');
+                $billsSheet->setCellValue('F' . $row,
                     ($bill->billing_period_start ? $bill->billing_period_start->format('d/m/Y') : '') . ' - ' .
                     ($bill->billing_period_end ? $bill->billing_period_end->format('d/m/Y') : '')
                 );
-                $billsSheet->setCellValue('H' . $row, $bill->consumption);
-                $billsSheet->setCellValue('I' . $row, $bill->total_amount);
-                $billsSheet->setCellValue('J' . $row, $bill->paid_amount);
-                $billsSheet->setCellValue('K' . $row, $bill->balance);
-                $billsSheet->setCellValue('L' . $row, ucfirst($bill->bill_status));
-                $billsSheet->setCellValue('M' . $row, $bill->due_date ? $bill->due_date->format('d/m/Y') : '');
+                $billsSheet->setCellValue('G' . $row, $bill->consumption);
+                $billsSheet->setCellValue('H' . $row, $bill->total_amount);
+                $billsSheet->setCellValue('I' . $row, $bill->paid_amount);
+                $billsSheet->setCellValue('J' . $row, $bill->balance);
+                $billsSheet->setCellValue('K' . $row, ucfirst($bill->bill_status));
+                $billsSheet->setCellValue('L' . $row, $bill->due_date ? $bill->due_date->format('d/m/Y') : '');
 
                 // Format numbers
-                $billsSheet->getStyle('H' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
-                $billsSheet->getStyle('I' . $row . ':K' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+                $billsSheet->getStyle('G' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+                $billsSheet->getStyle('H' . $row . ':I' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
 
                 $row++;
             }
 
             // Auto-size columns
-            foreach (range('A', 'M') as $column) {
+            foreach (range('A', 'L') as $column) {
                 $billsSheet->getColumnDimension($column)->setAutoSize(true);
             }
         }
@@ -966,40 +1017,28 @@ class ReportController extends Controller
             $customersSheet->setTitle('Customer Details');
 
             $headers = [
-                 'Full Name', 'Phone','Status',
-                'Total Billed', 'Total Paid', 'Total Balance', 'Total Consumption',
-                'Bill Count', 'Meter Count', 'Last Payment Date', 'Last Payment Amount',
-                'Last Bill Date', 'Credit Balance'
+                'Full Name', 'Phone', 'Status',
+                'Meter Count', 'Registration Date'
             ];
             $this->addSheetHeader($customersSheet, $headers);
 
             $row = 2;
             foreach ($reportData['customers'] as $customer) {
+
                 $customersSheet->setCellValue('A' . $row, trim($customer->first_name . ' ' . $customer->last_name));
                 $customersSheet->setCellValue('B' . $row, $customer->phone);
-                $customersSheet->setCellValue('C' . $row, ucfirst($customer->status));
-                $customersSheet->setCellValue('D' . $row, $customer->total_billed ?? 0);
-                $customersSheet->setCellValue('E' . $row, $customer->total_paid ?? 0);
-                $customersSheet->setCellValue('F' . $row, $customer->total_balance ?? 0);
-                $customersSheet->setCellValue('G' . $row, $customer->total_consumption ?? 0);
-                $customersSheet->setCellValue('H' . $row, $customer->bill_count ?? 0);
-                $customersSheet->setCellValue('I' . $row, $customer->meter_count ?? 0);
-                $customersSheet->setCellValue('J' . $row, $customer->last_payment_date ? $customer->last_payment_date->format('d/m/Y') : '');
-                $customersSheet->setCellValue('K' . $row, $customer->last_payment_amount ?? 0);
-                $customersSheet->setCellValue('L' . $row, $customer->last_bill_date ? $customer->last_bill_date->format('d/m/Y') : '');
-                $customersSheet->setCellValue('M' . $row, $customer->credit_balance ?? 0);
 
-                // Format numbers
-                $customersSheet->getStyle('N' . $row . ':P' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
-                $customersSheet->getStyle('Q' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
-                $customersSheet->getStyle('U' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
-                $customersSheet->getStyle('W' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+                $customersSheet->setCellValue('C' . $row, ucfirst($customer->status));
+
+
+                $customersSheet->setCellValue('D' . $row, $customer->meter_count ?? 0);
+                $customersSheet->setCellValue('E' . $row, $customer->created_at ? $customer->created_at->format('d/m/Y') : '');
 
                 $row++;
             }
 
             // Auto-size columns
-            foreach (range('A', 'W') as $column) {
+            foreach (range('A', 'E') as $column) {
                 $customersSheet->getColumnDimension($column)->setAutoSize(true);
             }
         }
@@ -1037,53 +1076,39 @@ class ReportController extends Controller
             $metersSheet->setTitle('Meter Details');
 
             $headers = [
-                'Meter Number', 'Meter Type', 'Category', 'Model', 'Manufacturer',
-                'Status', 'Customer Number', 'Customer Name', 'Zone', 'Walk Route',
-                'Installation Address', 'Installation Date', 'Last Maintenance',
-                'Initial Reading', 'Total Billed', 'Total Paid', 'Total Balance',
-                'Total Consumption', 'Bill Count', 'Current Balance', 'Paid Amount',
-                'Additional Charges', 'Last Reading Date'
+                'Customer Acc', 'Customer Name','Meter Type', 'Meter Number',
+                'Category',
+                'Status',  'Zone', 'Walk Route',
+                'Initial Reading', 'Balance Bf.',
+                'Current Balance', 'Paid Amount'
             ];
             $this->addSheetHeader($metersSheet, $headers);
 
             $row = 2;
             foreach ($reportData['meters'] as $meter) {
-                $metersSheet->setCellValue('A' . $row, $meter->meter_number);
-                $metersSheet->setCellValue('B' . $row, $meter->meter_type);
-                $metersSheet->setCellValue('C' . $row, $meter->meterCategory->name ?? '');
-                $metersSheet->setCellValue('D' . $row, $meter->meter_model);
-                $metersSheet->setCellValue('E' . $row, $meter->manufacturer);
-                $metersSheet->setCellValue('F' . $row, ucfirst($meter->status));
-                $metersSheet->setCellValue('G' . $row, $meter->customer->customer_number ?? '');
-                $metersSheet->setCellValue('H' . $row, $meter->customer ?
+                $metersSheet->setCellValue('A' . $row, $meter->meter_number ?? '');
+                $metersSheet->setCellValue('B' . $row, $meter->customer ?
                     trim($meter->customer->first_name . ' ' . $meter->customer->last_name) : '');
-                $metersSheet->setCellValue('I' . $row, $meter->zone->name ?? '');
-                $metersSheet->setCellValue('J' . $row, $meter->walkRoute->name ?? '');
-                $metersSheet->setCellValue('K' . $row, $meter->installation_address);
-                $metersSheet->setCellValue('L' . $row, $meter->installation_date ? $meter->installation_date->format('d/m/Y') : '');
-                $metersSheet->setCellValue('M' . $row, $meter->last_maintenance_date ? $meter->last_maintenance_date->format('d/m/Y') : '');
-                $metersSheet->setCellValue('N' . $row, $meter->initial_reading);
-                $metersSheet->setCellValue('O' . $row, $meter->total_billed ?? 0);
-                $metersSheet->setCellValue('P' . $row, $meter->total_paid ?? 0);
-                $metersSheet->setCellValue('Q' . $row, $meter->total_balance ?? 0);
-                $metersSheet->setCellValue('R' . $row, $meter->total_consumption ?? 0);
-                $metersSheet->setCellValue('S' . $row, $meter->bill_count ?? 0);
-                $metersSheet->setCellValue('T' . $row, $meter->current_balance);
-                $metersSheet->setCellValue('U' . $row, $meter->paid_amount);
-                $metersSheet->setCellValue('V' . $row, $meter->additional_charges);
-                $metersSheet->setCellValue('W' . $row, $meter->last_reading_date ? $meter->last_reading_date->format('d/m/Y') : '');
+                $metersSheet->setCellValue('C' . $row, $meter->meter_type);
+                $metersSheet->setCellValue('D' . $row, $meter->meter_number);
+                $metersSheet->setCellValue('E' . $row, $meter->meterCategory->name ?? '');
+                $metersSheet->setCellValue('F' . $row, ucfirst($meter->status));
+                $metersSheet->setCellValue('G' . $row, $meter->zone->name ?? '');
+                $metersSheet->setCellValue('H' . $row, $meter->walkroute->name ?? '');
+                $metersSheet->setCellValue('I' . $row, $meter->initial_reading);
+                $metersSheet->setCellValue('J' . $row, $meter->balance_bf ?? 0);
+                $metersSheet->setCellValue('K' . $row, $meter->current_balance);
+                $metersSheet->setCellValue('L' . $row, $meter->paid_amount);
 
                 // Format numbers
-                $metersSheet->getStyle('N' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
-                $metersSheet->getStyle('O' . $row . ':Q' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
-                $metersSheet->getStyle('R' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
-                $metersSheet->getStyle('T' . $row . ':U' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+                $metersSheet->getStyle('I' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+                $metersSheet->getStyle('K' . $row . ':L' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
 
                 $row++;
             }
 
             // Auto-size columns
-            foreach (range('A', 'W') as $column) {
+            foreach (range('A', 'L') as $column) {
                 $metersSheet->getColumnDimension($column)->setAutoSize(true);
             }
         }
