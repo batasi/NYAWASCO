@@ -365,8 +365,7 @@ class ReportController extends Controller
 
     private function generateConsumptionReport($startDate, $endDate, $detailLevel)
     {
-        $query = MeterReading::with(['customer', 'meter.meterCategory', 'meter.zone'])
-            ->where('billed', true);
+        $query = MeterReading::with(['customer', 'meter.meterCategory', 'meter.zone']);
 
         if ($startDate) {
             $query->whereBetween('reading_date', [$startDate, $endDate]);
