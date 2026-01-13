@@ -77,20 +77,20 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // ✅ Create permissions safely (avoiding duplicates)
         foreach ($permissions as $permission) {
-            Permission::firstOrCreate(['name' => $permission]);
+            Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
         }
 
         // ✅ Create roles safely
-        $adminRole = Role::firstOrCreate(['name' => 'admin']);
-        $ictRole = Role::firstOrCreate(['name' => 'ict']);
-        $developerRole = Role::firstOrCreate(['name' => 'developer']);
-        $managerRole = Role::firstOrCreate(['name' => 'manager']);
-        $ceoRole = Role::firstOrCreate(['name' => 'ceo']);
-        $superAdminRole = Role::firstOrCreate(['name' => 'super-admin']);
-        $chiefRole = Role::firstOrCreate(['name' => 'chief']);
-        $billerRole = Role::firstOrCreate(['name' => 'biller']);
-        $registrarRole = Role::firstOrCreate(['name' => 'registrar']);
-        $reportRole = Role::firstOrCreate(['name' => 'report']);
+        $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+        $ictRole = Role::firstOrCreate(['name' => 'ict', 'guard_name' => 'web']);
+        $developerRole = Role::firstOrCreate(['name' => 'developer', 'guard_name' => 'web']);
+        $managerRole = Role::firstOrCreate(['name' => 'manager', 'guard_name' => 'web']);
+        $ceoRole = Role::firstOrCreate(['name' => 'ceo', 'guard_name' => 'web']);
+        $superAdminRole = Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'web']);
+        $chiefRole = Role::firstOrCreate(['name' => 'chief', 'guard_name' => 'web']);
+        $billerRole = Role::firstOrCreate(['name' => 'biller', 'guard_name' => 'web']);
+        $registrarRole = Role::firstOrCreate(['name' => 'registrar', 'guard_name' => 'web']);
+        $reportRole = Role::firstOrCreate(['name' => 'report', 'guard_name' => 'web']);
 
         // ✅ Assign permissions per role
         $developerRole->syncPermissions(Permission::all());
