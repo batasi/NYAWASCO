@@ -338,9 +338,7 @@ class MeterReadingController extends Controller
      */
     private function updateBalances(Meter $meter, Customer $customer, $billAmount)
     {
-        // Update meter balance
-        $newMeterBalance = $meter->current_balance + $billAmount;
-        $newMet = $meter->balance_bf + $billAmount;
+
 
     }
 
