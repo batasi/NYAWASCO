@@ -1841,7 +1841,8 @@ use Illuminate\Support\Facades\Route;
 
             <!-- Bottom Bar -->
             <div class="footer-bottom">
-                <p>&copy; 2024 <strong>Nyamira Water and Sanitation Company (NYAWASCO)</strong>. All rights reserved.</p>
+                <p>&copy; {{ now()->year }} <strong>Nyamira Water and Sanitation Company. <br>
+                <span>  Powered by Quantum Inka Technologies</span></strong>. <br> All rights reserved.</p>
             </div>
         </div>
     </footer>
