@@ -399,9 +399,10 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label for="modal_meter_number" class="block text-sm font-medium text-gray-700 mb-1">Meter Number *</label>
-                                <input type="text" name="meter_number" id="modal_meter_number" required
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm"
-                                       placeholder="MTR20241215001">
+                                <input type="text" name="meter_number" id="modal_meter_number" readonly required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm bg-gray-50"
+                                    placeholder="Auto-generated...">
+                                <p class="text-xs text-gray-500 mt-1">Meter number will be auto-generated.</p>
                             </div>
 
                             <div>
@@ -740,10 +741,33 @@
 </div>
 
 <script>
-    function openMeterModal() {
-        document.getElementById('registerMeterModal').classList.remove('hidden');
-        document.body.classList.add('overflow-hidden');
-    }
+   // Update the openMeterModal function
+function openMeterModal() {
+    document.getElementById('registerMeterModal').classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+
+    // Fetch the next meter number from server
+    fetch('/admin/meters/next-meter-number')
+        .then(response => response.json())
+        .then(data => {
+            if (data.next_meter_number) {
+                document.getElementById('modal_meter_number').value = data.next_meter_number;
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching next meter number:', error);
+            // Fallback to client-side generation
+            generateNextMeterNumberClientSide();
+        });
+}
+
+// Client-side fallback generation
+function generateNextMeterNumberClientSide() {
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0,10).replace(/-/g, '');
+    const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    document.getElementById('modal_meter_number').value = 'MTR' + dateStr + randomNum;
+}
 
     function closeMeterModal() {
         document.getElementById('registerMeterModal').classList.add('hidden');

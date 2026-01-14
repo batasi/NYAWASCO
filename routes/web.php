@@ -320,9 +320,12 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/meters', [CustomerController::class, 'getCustomerMeters'])->name('get-customer-meters');
         });
     });
-
     // Meter Management
+
+    Route::get('/admin/meters/next-meter-number', [MeterController::class, 'getNextMeterNumber'])
+        ->name('admin.meters.next-meter-number');
     Route::prefix('meters')->name('meters.')->group(function () {
+
         Route::get('/', [MeterController::class, 'index'])->name('index');
         Route::post('/', [MeterController::class, 'store'])->name('store');
         Route::get('/available', [MeterController::class, 'availableMeters'])->name('available');

@@ -295,8 +295,8 @@ public function searchCustomers(Request $request)
 
     public function store(Request $request)
     {
+        // Validate without meter_number since we'll generate it
         $validated = $request->validate([
-            'meter_number' => 'required|string|max:50|unique:meters,meter_number',
             'meter_type' => 'required|string|in:domestic,commercial,industrial,institutional,smart,mechanical',
             'meter_category_id' => 'required|exists:meter_categories,id',
             'meter_model' => 'nullable|string|max:100',
@@ -308,24 +308,30 @@ public function searchCustomers(Request $request)
         ]);
 
         try {
+            // Auto-generate meter number
+            $meterNumber = $this->generateNextMeterNumber();
+
+            // Add the generated meter number to validated data
+            $validated['meter_number'] = $meterNumber;
+
             DB::transaction(function () use ($validated) {
                 // Determine status based on customer assignment
                 if ($validated['customer_id']) {
-                    $validated['status'] = Meter::STATUS_ACTIVE; // Changed from 'assigned' to 'active'
+                    $validated['status'] = Meter::STATUS_ACTIVE;
                 } else {
                     $validated['status'] = Meter::STATUS_AVAILABLE;
                 }
 
                 $validated['current_balance'] = $validated['balance_bf'] ?? 0;
 
-                // Create meter WITHOUT installation date
+                // Create meter
                 $meter = Meter::create($validated);
 
                 // If assigned to customer, update customer record and create initial reading
                 if ($validated['customer_id']) {
                     $customer = Customer::find($validated['customer_id']);
 
-                     // Update customer status to active if it's pending
+                    // Update customer status to active if it's pending
                     if ($customer->status === Customer::STATUS_PENDING) {
                         $customer->update([
                             'status' => Customer::STATUS_ACTIVE,
@@ -341,7 +347,7 @@ public function searchCustomers(Request $request)
                         'initial_reading_date' => now(),
                     ]);
 
-                    // Create initial meter reading with customer_id
+                    // Create initial meter reading
                     MeterReading::create([
                         'customer_id' => $customer->id,
                         'meter_id' => $meter->id,
@@ -356,7 +362,7 @@ public function searchCustomers(Request $request)
                         'notes' => 'Initial meter reading upon installation',
                     ]);
                 } else {
-                    // Create initial reading for unassigned meter WITHOUT customer_id
+                    // Create initial reading for unassigned meter
                     MeterReading::create([
                         'meter_id' => $meter->id,
                         'current_reading' => $validated['initial_reading'],
@@ -394,6 +400,59 @@ public function searchCustomers(Request $request)
                 ->withInput()
                 ->with('error', 'Error registering meter: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Generate the next meter number based on existing numbers
+     */
+    private function generateNextMeterNumber()
+    {
+        // Get the highest meter number from database
+        $lastMeter = Meter::orderBy('meter_number', 'desc')->first();
+
+        if (!$lastMeter) {
+            // If no meters exist yet, start from 09998 (as per your example, next would be 09998)
+            return '09998';
+        }
+
+        // Extract numeric part from meter number
+        $lastNumber = $lastMeter->meter_number;
+
+        // Check if it's a number (like 09997)
+        if (is_numeric($lastNumber)) {
+            $nextNumber = (int) $lastNumber + 1;
+            // Pad with leading zeros to maintain 5 digits
+            return str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+        }
+
+        // If meter numbers have a prefix like MTR001, extract numeric part
+        if (preg_match('/\d+$/', $lastNumber, $matches)) {
+            $nextNumber = (int) $matches[0] + 1;
+            // Try to maintain the same format
+            if (preg_match('/^[A-Za-z]+/', $lastNumber, $prefixMatches)) {
+                $prefix = $prefixMatches[0];
+                // Determine padding based on the last number's format
+                $lastDigits = $matches[0];
+                $padding = strlen($lastDigits);
+                return $prefix . str_pad($nextNumber, $padding, '0', STR_PAD_LEFT);
+            }
+        }
+
+        // Default: if we can't parse the format, generate a date-based number
+        $date = date('Ymd');
+        $random = mt_rand(100, 999);
+        return "MTR{$date}{$random}";
+    }
+    /**
+     * Get the next available meter number
+     */
+    public function getNextMeterNumber()
+    {
+        $nextNumber = $this->generateNextMeterNumber();
+
+        return response()->json([
+            'next_meter_number' => $nextNumber
+        ]);
     }
     public function show(Meter $meter)
     {
