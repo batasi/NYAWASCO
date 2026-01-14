@@ -3,7 +3,7 @@
 @section('title', 'Customer Statement - NYAWASCO')
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
+<div class="container mx-auto px-4 py-8" id="statement-content">
     <!-- Statement Header -->
     <div class="bg-white rounded-xl shadow-md p-6 mb-6">
         <div class="flex justify-between items-start mb-6">
@@ -15,8 +15,8 @@
                         <p class="font-semibold">{{ $customer->first_name }} {{ $customer->last_name }}</p>
                     </div>
                     <div>
-                        <p class="text-sm text-gray-600">Account Number:</p>
-                        <p class="font-semibold">{{ $customer->customer_number }}</p>
+                        <p class="text-sm text-gray-600">Customer Acc:</p>
+                        <p class="font-semibold">{{ $customer->meter->meter_number ?? ' ' }}</p>
                     </div>
                     <div>
                         <p class="text-sm text-gray-600">Statement Period:</p>
@@ -140,7 +140,7 @@
                             {{ $bill->bill_number }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            Water Bill - {{ $bill->billing_period_start?->format('M Y') ?? 'N/A' }}
+                            Water Bill - {{ $bill->billing_period_start?->format('M Y') ?? 'Nov 2025' }}
                             <div class="text-xs text-gray-500">
                                 Consumption: {{ number_format($bill->consumption, 2) }} m³
                             </div>
@@ -246,7 +246,7 @@
                class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition duration-200">
                 <i class="fas fa-file-pdf mr-2"></i> Download PDF
             </a>
-            <button onclick="window.print()"
+            <button onclick="printStatement()"
                     class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200">
                 <i class="fas fa-print mr-2"></i> Print Statement
             </button>
@@ -255,24 +255,136 @@
 </div>
 
 <style>
+    /* Simple print styles */
     @media print {
+        /* Hide everything except statement */
+        body * {
+            display: none;
+        }
+
+        #statement-content,
+        #statement-content * {
+            display: block;
+        }
+
+        #statement-content {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: white;
+            z-index: 9999;
+            padding: 20px;
+            margin: 0;
+            width: 100%;
+        }
+
+        /* Remove shadows and rounded corners for print */
+        .shadow-md, .rounded-xl, .rounded-lg {
+            box-shadow: none !important;
+            border-radius: 0 !important;
+        }
+
+        /* Ensure table prints properly */
+        table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+        }
+
+        th, td {
+            border: 1px solid #ddd !important;
+            padding: 8px !important;
+        }
+
+        /* Hide action buttons when printing */
         .no-print {
             display: none !important;
         }
-        .container {
-            padding: 0;
-        }
-        body {
-            font-size: 12px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            padding: 6px 8px;
-            border: 1px solid #ddd;
+
+        /* Remove background colors */
+        .bg-gray-50, .bg-red-50, .bg-green-50, .bg-blue-50 {
+            background: #f5f5f5 !important;
         }
     }
 </style>
+<style>
+@media print {
+    body.printing header,
+    body.printing nav,
+    body.printing aside,
+    body.printing .sidebar,
+    body.printing .navbar,
+    body.printing .no-print {
+        display: none !important;
+    }
+
+    body.printing {
+        background: white !important;
+    }
+
+    body.printing #statement-content {
+        position: static !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+    }
+
+    @page {
+        size: A4;
+        margin: 12mm;
+    }
+}
+</style>
+
+<script>
+function printStatement() {
+    // Add a class to body to control print layout
+    document.body.classList.add('printing');
+
+    window.print();
+
+    // Cleanup after print
+    window.onafterprint = () => {
+        document.body.classList.remove('printing');
+    };
+}
+
+// Alternative: Direct browser print (simpler but might show sidebar)
+function simplePrint() {
+    // Add a print class to body to hide sidebar
+    document.body.classList.add('printing');
+
+    // Create print-specific CSS
+    const printStyle = document.createElement('style');
+    printStyle.innerHTML = `
+        @media print {
+            .printing header,
+            .printing nav,
+            .printing aside,
+            .printing .sidebar,
+            .printing .navbar,
+            .printing .no-print {
+                display: none !important;
+            }
+
+            .printing .container {
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 20px !important;
+            }
+        }
+    `;
+    document.head.appendChild(printStyle);
+
+    // Print
+    window.print();
+
+    // Clean up
+    setTimeout(() => {
+        document.body.classList.remove('printing');
+        document.head.removeChild(printStyle);
+    }, 100);
+}
+</script>
 @endsection

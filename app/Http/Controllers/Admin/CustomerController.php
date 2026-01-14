@@ -1216,7 +1216,6 @@ public function statementPdf(Request $request, Customer $customer)
         ->orderBy('reading_date')
         ->get();
 
-    // Same bill query as above
     $bills = $customer->bills()
         ->where(function($query) use ($startDate, $endDate) {
             $query->whereBetween('created_at', [$startDate, $endDate])
@@ -1256,17 +1255,16 @@ public function statementPdf(Request $request, Customer $customer)
         'closingBalance' => $closingBalance,
         'totalDebits' => $totalDebits,
         'totalCredits' => $totalCredits,
-        'company' => [
-            'name' => 'NYAWASCO',
-            'address' => 'Your Company Address',
-            'phone' => 'Your Company Phone',
-            'email' => 'Your Company Email',
-        ]
     ];
 
-    $pdf = PDF::loadView('admin.customers.statement-pdf', $data);
+    // Configure PDF options
+    $pdf = PDF::loadView('admin.customers.statement-pdf', $data)
+        ->setPaper('A4', 'portrait')
+        ->setOption('defaultFont', 'Helvetica')
+        ->setOption('isHtml5ParserEnabled', true)
+        ->setOption('isRemoteEnabled', true);
 
-    $filename = "statement_{$customer->customer_number}_{$startDate->format('Y_m_d')}_to_{$endDate->format('Y_m_d')}.pdf";
+    $filename = "Statement_{$customer->customer_number}_{$startDate->format('Y_m_d')}_to_{$endDate->format('Y_m_d')}.pdf";
 
     return $pdf->download($filename);
 }

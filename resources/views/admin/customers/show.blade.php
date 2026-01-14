@@ -435,7 +435,15 @@
                                     </button>
                                 </form>
                                 @endif
-
+                                <a href="{{ route('admin.customers.statement', [
+                                    'customer' => $customer,
+                                    'start_date' => now()->subMonth()->format('Y-m-d'),
+                                    'end_date' => now()->format('Y-m-d')
+                                ]) }}"
+                                class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center space-x-2 shadow-sm">
+                                    <i class="fas fa-file-invoice mr-2"></i>
+                                    View Statement
+                                </a>
                                 <a href="{{ route('admin.meters.index', ['customer' => $customer->id]) }}"
                                 class="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center space-x-2 shadow-sm">
                                     <i class="fas fa-list"></i>

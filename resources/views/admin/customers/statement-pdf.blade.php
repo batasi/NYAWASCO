@@ -2,235 +2,658 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Statement - {{ $customer->customer_number }}</title>
+    <title>Water Account Statement - {{ $customer->customer_number }}</title>
     <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: 'DejaVu Sans', sans-serif;
-            font-size: 12px;
+            font-family: 'DejaVu Sans', 'Helvetica', 'Arial', sans-serif;
+            font-size: 11pt;
+            line-height: 1.4;
+            color: #333;
             margin: 0;
             padding: 20px;
+            background: #fff;
         }
+
+        /* Header Styles */
         .header {
-            text-align: center;
-            margin-bottom: 30px;
-            border-bottom: 2px solid #333;
-            padding-bottom: 10px;
+            border-bottom: 3px solid #2c3e50;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
         }
+
+        .company-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
         .company-info {
-            text-align: center;
-            margin-bottom: 20px;
+            flex: 1;
         }
+
+        .company-logo {
+            max-width: 200px;
+            margin-bottom: 10px;
+        }
+
+        .company-name {
+            font-size: 24pt;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .company-address {
+            font-size: 10pt;
+            color: #555;
+            margin-bottom: 3px;
+        }
+
+        .statement-title {
+            text-align: center;
+            margin: 25px 0;
+            padding: 10px 0;
+            border-top: 1px solid #ddd;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .statement-title h1 {
+            font-size: 18pt;
+            color: #2c3e50;
+            margin: 0;
+        }
+
+        .statement-title .subtitle {
+            font-size: 11pt;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        /* Customer Information */
         .customer-info {
-            margin-bottom: 20px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 25px;
+            border-left: 4px solid #3498db;
         }
-        .summary {
-            margin-bottom: 20px;
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
         }
-        .summary-box {
-            display: inline-block;
-            width: 24%;
-            text-align: center;
-            padding: 10px;
-            margin-right: 1%;
+
+        .info-item {
+            margin-bottom: 8px;
+        }
+
+        .info-label {
+            font-weight: bold;
+            color: #555;
+            font-size: 10pt;
+            display: block;
+        }
+
+        .info-value {
+            color: #333;
+            font-size: 11pt;
+        }
+
+        /* Balance Summary */
+        .balance-summary {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .balance-box {
             border: 1px solid #ddd;
-            vertical-align: top;
+            border-radius: 5px;
+            padding: 15px;
+            text-align: center;
+            background: #fff;
         }
-        .summary-box:last-child {
-            margin-right: 0;
+
+        .balance-box.opening {
+            border-top: 3px solid #3498db;
         }
-        table {
+
+        .balance-box.debits {
+            border-top: 3px solid #e74c3c;
+        }
+
+        .balance-box.credits {
+            border-top: 3px solid #27ae60;
+        }
+
+        .balance-box.closing {
+            border-top: 3px solid #9b59b6;
+        }
+
+        .balance-label {
+            font-size: 10pt;
+            color: #666;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .balance-amount {
+            font-size: 16pt;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .balance-amount.positive {
+            color: #27ae60;
+        }
+
+        .balance-amount.negative {
+            color: #e74c3c;
+        }
+
+        .balance-detail {
+            font-size: 9pt;
+            color: #777;
+        }
+
+        /* Transactions Table */
+        .transactions-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
+            margin-bottom: 30px;
+            page-break-inside: avoid;
         }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
+
+        .transactions-table thead th {
+            background: #2c3e50;
+            color: white;
+            padding: 10px 8px;
             text-align: left;
-        }
-        th {
-            background-color: #f5f5f5;
+            font-size: 10pt;
             font-weight: bold;
+            border: 1px solid #1a252f;
         }
-        .debit {
-            color: #d63031;
+
+        .transactions-table tbody td {
+            padding: 8px;
+            border: 1px solid #ddd;
+            font-size: 10pt;
         }
-        .credit {
-            color: #00b894;
+
+        .transactions-table tbody tr:nth-child(even) {
+            background: #f8f9fa;
         }
-        .footer {
-            margin-top: 30px;
-            padding-top: 10px;
-            border-top: 1px solid #333;
+
+        .transactions-table tbody tr:hover {
+            background: #e9f7fe;
+        }
+
+        .transaction-type {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 9pt;
+            font-weight: bold;
             text-align: center;
-            font-size: 10px;
+            min-width: 70px;
+        }
+
+        .type-opening {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .type-bill {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .type-payment {
+            background: #27ae60;
+            color: white;
+        }
+
+        .type-reading {
+            background: #3498db;
+            color: white;
+        }
+
+        .debit-amount {
+            color: #e74c3c;
+            font-weight: bold;
+            text-align: right;
+        }
+
+        .credit-amount {
+            color: #27ae60;
+            font-weight: bold;
+            text-align: right;
+        }
+
+        .balance-amount-cell {
+            font-weight: bold;
+            text-align: right;
+        }
+
+        .balance-positive {
+            color: #27ae60;
+        }
+
+        .balance-negative {
+            color: #e74c3c;
+        }
+
+        .transaction-details {
+            font-size: 9pt;
+            color: #666;
+            margin-top: 3px;
+        }
+
+        /* Statement Summary */
+        .statement-summary {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #2c3e50;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .summary-item {
+            margin-bottom: 10px;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #2c3e50;
+            text-align: center;
+            font-size: 9pt;
             color: #666;
         }
+
+        .footer-notes {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            font-size: 9pt;
+            color: #666;
+        }
+
+        .disclaimer {
+            margin-top: 20px;
+            font-size: 8pt;
+            color: #888;
+            font-style: italic;
+        }
+
+        /* Page breaks for printing */
         .page-break {
             page-break-after: always;
+        }
+
+        /* Utility classes */
+        .text-right {
+            text-align: right;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-bold {
+            font-weight: bold;
+        }
+
+        .mb-10 {
+            margin-bottom: 10px;
+        }
+
+        .mb-20 {
+            margin-bottom: 20px;
+        }
+
+        .mt-10 {
+            margin-top: 10px;
+        }
+
+        .mt-20 {
+            margin-top: 20px;
+        }
+
+        .no-border {
+            border: none;
+        }
+
+        .bg-light {
+            background: #f8f9fa;
         }
     </style>
 </head>
 <body>
+    <!-- Header -->
     <div class="header">
-        <h1 style="margin: 0; color: #2c3e50;">{{ $company['name'] }}</h1>
-        <p style="margin: 5px 0; color: #7f8c8d;">{{ $company['address'] }}</p>
-        <p style="margin: 5px 0; color: #7f8c8d;">Tel: {{ $company['phone'] }} | Email: {{ $company['email'] }}</p>
-        <h2 style="margin-top: 20px; color: #2c3e50;">CUSTOMER STATEMENT</h2>
+        <div class="company-header">
+            <div class="company-info">
+                <div class="company-name">NYAWASCO</div>
+                <div class="company-address">P.O Box 255-40500, NYAMIRA</div>
+                <div class="company-address">Tel: 0787 080 455 | Email: info@nyawasco.co.ke</div>
+                <div class="company-address">Website: www.nyawasco.co.ke</div>
+            </div>
+            <div class="statement-info">
+                <div class="info-item">
+                    <span class="info-label">Statement No:</span>
+                    <span class="info-value">STMT-{{ strtoupper(uniqid()) }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Generated:</span>
+                    <span class="info-value">{{ now()->format('F d, Y h:i A') }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Page:</span>
+                    <span class="info-value">1 of 1</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="statement-title">
+            <h1>WATER ACCOUNT STATEMENT</h1>
+            <div class="subtitle">Statement Period: {{ $startDate->format('F d, Y') }} to {{ $endDate->format('F d, Y') }}</div>
+        </div>
     </div>
 
+    <!-- Customer Information -->
     <div class="customer-info">
-        <table style="border: none; margin-bottom: 20px;">
-            <tr>
-                <td style="border: none; padding: 5px 20px 5px 0; width: 50%;">
-                    <strong>Customer:</strong> {{ $customer->first_name }} {{ $customer->last_name }}<br>
-                    <strong>Account No:</strong> {{ $customer->customer_number }}<br>
-                    <strong>Address:</strong> {{ $customer->physical_address }}
-                </td>
-                <td style="border: none; padding: 5px 0; width: 50%;">
-                    <strong>Statement Period:</strong> {{ $startDate->format('M d, Y') }} to {{ $endDate->format('M d, Y') }}<br>
-                    <strong>Generated:</strong> {{ now()->format('M d, Y h:i A') }}<br>
-                    <strong>Meter(s):</strong> {{ $customer->meters->pluck('meter_number')->implode(', ') }}
-                </td>
-            </tr>
-        </table>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">Account Number:</span>
+                <span class="info-value">{{ $customer->customer_number }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Customer Name:</span>
+                <span class="info-value">{{ $customer->first_name }} {{ $customer->last_name }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Phone Number:</span>
+                <span class="info-value">{{ $customer->phone }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Email Address:</span>
+                <span class="info-value">{{ $customer->email ?? 'Not provided' }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Physical Address:</span>
+                <span class="info-value">{{ $customer->plot_number }}, {{ $customer->house_number }}, {{ $customer->estate ?? '' }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">ID Number:</span>
+                <span class="info-value">{{ $customer->id_number }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Meter Number(s):</span>
+                <span class="info-value">
+                    @foreach($customer->meters as $meter)
+                        {{ $meter->meter_number }}{{ !$loop->last ? ', ' : '' }}
+                    @endforeach
+                </span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Account Status:</span>
+                <span class="info-value">
+                    <span style="color: {{ $customer->status == 'active' ? '#27ae60' : ($customer->status == 'suspended' ? '#e74c3c' : '#f39c12') }}; font-weight: bold;">
+                        {{ strtoupper($customer->status) }}
+                    </span>
+                </span>
+            </div>
+        </div>
     </div>
 
-    <div class="summary">
-        <div class="summary-box">
-            <h4>Opening Balance</h4>
-            <p style="font-size: 14px; font-weight: bold; {{ $openingBalance >= 0 ? 'color: #2980b9;' : 'color: #c0392b;' }}">
+    <!-- Balance Summary -->
+    <div class="balance-summary">
+        <div class="balance-box opening">
+            <div class="balance-label">Opening Balance</div>
+            <div class="balance-amount {{ $openingBalance >= 0 ? 'positive' : 'negative' }}">
                 KSh {{ number_format(abs($openingBalance), 2) }}
-            </p>
-            <small>{{ $openingBalance >= 0 ? 'Credit Balance' : 'Amount Owed' }}</small>
+            </div>
+            <div class="balance-detail">
+                {{ $openingBalance >= 0 ? 'Credit Balance' : 'Amount Owed' }}
+            </div>
         </div>
-        <div class="summary-box">
-            <h4>Total Debits</h4>
-            <p style="font-size: 14px; font-weight: bold; color: #c0392b;">
+
+        <div class="balance-box debits">
+            <div class="balance-label">Total Debits</div>
+            <div class="balance-amount negative">
                 KSh {{ number_format($totalDebits, 2) }}
-            </p>
-            <small>{{ $bills->count() }} bills</small>
+            </div>
+            <div class="balance-detail">
+                {{ $bills->count() }} bill(s)
+            </div>
         </div>
-        <div class="summary-box">
-            <h4>Total Credits</h4>
-            <p style="font-size: 14px; font-weight: bold; color: #27ae60;">
+
+        <div class="balance-box credits">
+            <div class="balance-label">Total Credits</div>
+            <div class="balance-amount positive">
                 KSh {{ number_format($totalCredits, 2) }}
-            </p>
-            <small>{{ $payments->count() }} payments</small>
+            </div>
+            <div class="balance-detail">
+                {{ $payments->count() }} payment(s)
+            </div>
         </div>
-        <div class="summary-box">
-            <h4>Closing Balance</h4>
-            <p style="font-size: 14px; font-weight: bold; {{ $closingBalance >= 0 ? 'color: #2980b9;' : 'color: #c0392b;' }}">
+
+        <div class="balance-box closing">
+            <div class="balance-label">Closing Balance</div>
+            <div class="balance-amount {{ $closingBalance >= 0 ? 'positive' : 'negative' }}">
                 KSh {{ number_format(abs($closingBalance), 2) }}
-            </p>
-            <small>{{ $closingBalance >= 0 ? 'Credit Balance' : 'Amount Owed' }}</small>
+            </div>
+            <div class="balance-detail">
+                {{ $closingBalance >= 0 ? 'Credit Balance' : 'Amount Owed' }}
+            </div>
         </div>
     </div>
 
-    <table>
+    <!-- Transactions Table -->
+    <h3 style="color: #2c3e50; margin-bottom: 15px; border-bottom: 2px solid #3498db; padding-bottom: 5px;">
+        TRANSACTION DETAILS
+    </h3>
+
+    <table class="transactions-table">
         <thead>
             <tr>
-                <th>Date</th>
-                <th>Type</th>
-                <th>Reference</th>
-                <th>Description</th>
-                <th>Debit</th>
-                <th>Credit</th>
-                <th>Balance</th>
+                <th width="12%">Date</th>
+                <th width="15%">Type</th>
+                <th width="15%">Reference</th>
+                <th width="28%">Description</th>
+                <th width="15%" class="text-right">Debit (KSh)</th>
+                <th width="15%" class="text-right">Credit (KSh)</th>
+                <th width="15%" class="text-right">Balance (KSh)</th>
             </tr>
         </thead>
         <tbody>
-            <!-- Opening Balance -->
-            <tr>
-                <td>{{ $startDate->format('M d, Y') }}</td>
-                <td><strong>Opening</strong></td>
-                <td>—</td>
-                <td>Opening Balance</td>
-                <td class="debit">
-                    @if($openingBalance < 0)
-                        KSh {{ number_format(abs($openingBalance), 2) }}
-                    @else
-                        —
-                    @endif
-                </td>
-                <td class="credit">
-                    @if($openingBalance > 0)
-                        KSh {{ number_format($openingBalance, 2) }}
-                    @else
-                        —
-                    @endif
-                </td>
-                <td><strong>{{ $openingBalance >= 0 ? 'KSh ' . number_format($openingBalance, 2) : '(KSh ' . number_format(abs($openingBalance), 2) . ')' }}</strong></td>
-            </tr>
-
             @php
                 $runningBalance = $openingBalance;
             @endphp
 
-            <!-- Bills -->
-            @foreach($bills as $bill)
-            @php
-                $runningBalance += $bill->total_amount;
-            @endphp
+            <!-- Opening Balance Row -->
             <tr>
-                <td>{{ $bill->created_at->format('M d, Y') }}</td>
-                <td>Bill</td>
-                <td>{{ $bill->bill_number }}</td>
+                <td>{{ $startDate->format('d/m/Y') }}</td>
                 <td>
-                    Water Bill - {{ $bill->billing_period_start?->format('M Y') ?? 'N/A' }}
-                    <br>
-                    <small>Consumption: {{ number_format($bill->consumption, 2) }} m³</small>
+                    <span class="transaction-type type-opening">OPENING</span>
                 </td>
-                <td class="debit">KSh {{ number_format($bill->total_amount, 2) }}</td>
                 <td>—</td>
-                <td><strong>{{ $runningBalance >= 0 ? 'KSh ' . number_format($runningBalance, 2) : '(KSh ' . number_format(abs($runningBalance), 2) . ')' }}</strong></td>
-            </tr>
-            @endforeach
-
-            <!-- Payments -->
-            @foreach($payments as $payment)
-            @php
-                $runningBalance -= $payment->amount;
-            @endphp
-            <tr>
-                <td>{{ $payment->payment_date?->format('M d, Y') ?? $payment->created_at->format('M d, Y') }}</td>
-                <td>Payment</td>
-                <td>{{ $payment->payment_no ?? $payment->receipt_number }}</td>
-                <td>
-                    Payment {{ $payment->payment_method ? 'via ' . $payment->payment_method : '' }}
-                    @if($payment->bill)
-                        <br>
-                        <small>For: {{ $payment->bill->bill_number }}</small>
+                <td>Opening Balance</td>
+                <td class="text-right">
+                    @if($openingBalance < 0)
+                        <span class="debit-amount">{{ number_format(abs($openingBalance), 2) }}</span>
+                    @else
+                        —
                     @endif
                 </td>
-                <td>—</td>
-                <td class="credit">KSh {{ number_format($payment->amount, 2) }}</td>
-                <td><strong>{{ $runningBalance >= 0 ? 'KSh ' . number_format($runningBalance, 2) : '(KSh ' . number_format(abs($runningBalance), 2) . ')' }}</strong></td>
+                <td class="text-right">
+                    @if($openingBalance > 0)
+                        <span class="credit-amount">{{ number_format($openingBalance, 2) }}</span>
+                    @else
+                        —
+                    @endif
+                </td>
+                <td class="balance-amount-cell {{ $runningBalance >= 0 ? 'balance-positive' : 'balance-negative' }}">
+                    {{ $runningBalance >= 0 ? '' : '(' }}{{ number_format(abs($runningBalance), 2) }}{{ $runningBalance >= 0 ? '' : ')' }}
+                </td>
             </tr>
+
+            <!-- Bills (Debits) -->
+            @foreach($bills as $bill)
+                @php
+                    $runningBalance += $bill->total_amount;
+                @endphp
+                <tr>
+                    <td>{{ $bill->created_at->format('d/m/Y') }}</td>
+                    <td>
+                        <span class="transaction-type type-bill">BILL</span>
+                    </td>
+                    <td>{{ $bill->bill_number }}</td>
+                    <td>
+                        Water Consumption Bill
+                        <div class="transaction-details">
+                            Period:
+                            @if($bill->billing_period_start && $bill->billing_period_end)
+                                {{ $bill->billing_period_start->format('M Y') }}
+                            @else
+                                N/A
+                            @endif
+                            | Consumption: {{ number_format($bill->consumption, 2) }} m³
+                        </div>
+                    </td>
+                    <td class="debit-amount">{{ number_format($bill->total_amount, 2) }}</td>
+                    <td class="text-right">—</td>
+                    <td class="balance-amount-cell {{ $runningBalance >= 0 ? 'balance-positive' : 'balance-negative' }}">
+                        {{ $runningBalance >= 0 ? '' : '(' }}{{ number_format(abs($runningBalance), 2) }}{{ $runningBalance >= 0 ? '' : ')' }}
+                    </td>
+                </tr>
             @endforeach
 
-            <!-- Meter Readings -->
+            <!-- Payments (Credits) -->
+            @foreach($payments as $payment)
+                @php
+                    $runningBalance -= $payment->amount;
+                @endphp
+                <tr>
+                    <td>{{ ($payment->payment_date ?? $payment->created_at)->format('d/m/Y') }}</td>
+                    <td>
+                        <span class="transaction-type type-payment">PAYMENT</span>
+                    </td>
+                    <td>{{ $payment->payment_no ?? $payment->receipt_number ?? 'N/A' }}</td>
+                    <td>
+                        Payment Received
+                        <div class="transaction-details">
+                            Method: {{ $payment->payment_method ?? 'Not specified' }}
+                            @if($payment->transaction_reference)
+                                | Ref: {{ $payment->transaction_reference }}
+                            @endif
+                        </div>
+                    </td>
+                    <td class="text-right">—</td>
+                    <td class="credit-amount">{{ number_format($payment->amount, 2) }}</td>
+                    <td class="balance-amount-cell {{ $runningBalance >= 0 ? 'balance-positive' : 'balance-negative' }}">
+                        {{ $runningBalance >= 0 ? '' : '(' }}{{ number_format(abs($runningBalance), 2) }}{{ $runningBalance >= 0 ? '' : ')' }}
+                    </td>
+                </tr>
+            @endforeach
+
+            <!-- Meter Readings (Informational) -->
             @foreach($meterReadings as $reading)
-            <tr style="background-color: #f9f9f9;">
-                <td>{{ $reading->reading_date->format('M d, Y') }}</td>
-                <td>Reading</td>
-                <td>{{ $reading->meter->meter_number ?? 'N/A' }}</td>
-                <td>
-                    Meter Reading
-                    <br>
-                    <small>{{ number_format($reading->previous_reading, 2) }} → {{ number_format($reading->current_reading, 2) }} m³</small>
-                </td>
-                <td>—</td>
-                <td>—</td>
-                <td>—</td>
-            </tr>
+                <tr class="bg-light">
+                    <td>{{ $reading->reading_date->format('d/m/Y') }}</td>
+                    <td>
+                        <span class="transaction-type type-reading">READING</span>
+                    </td>
+                    <td>{{ $reading->meter->meter_number ?? 'N/A' }}</td>
+                    <td>
+                        Meter Reading Recorded
+                        <div class="transaction-details">
+                            {{ number_format($reading->previous_reading, 2) }} → {{ number_format($reading->current_reading, 2) }} m³
+                            (Usage: {{ number_format($reading->consumption, 2) }} m³)
+                        </div>
+                    </td>
+                    <td class="text-right">—</td>
+                    <td class="text-right">—</td>
+                    <td class="text-right">—</td>
+                </tr>
             @endforeach
         </tbody>
     </table>
 
+    <!-- Statement Summary -->
+    <div class="statement-summary">
+        <h3 style="color: #2c3e50; margin-bottom: 15px;">STATEMENT SUMMARY</h3>
+        <div class="summary-grid">
+            <div class="summary-item">
+                <span class="info-label">Total Bills Generated:</span>
+                <span class="info-value">{{ $bills->count() }}</span>
+            </div>
+            <div class="summary-item">
+                <span class="info-label">Total Payments Received:</span>
+                <span class="info-value">{{ $payments->count() }}</span>
+            </div>
+            <div class="summary-item">
+                <span class="info-label">Total Meter Readings:</span>
+                <span class="info-value">{{ $meterReadings->count() }}</span>
+            </div>
+            <div class="summary-item">
+                <span class="info-label">Account Status:</span>
+                <span class="info-value" style="color: {{ $customer->status == 'active' ? '#27ae60' : ($customer->status == 'suspended' ? '#e74c3c' : '#f39c12') }};">
+                    {{ strtoupper($customer->status) }}
+                </span>
+            </div>
+            <div class="summary-item">
+                <span class="info-label">Statement Period:</span>
+                <span class="info-value">{{ $startDate->format('F d, Y') }} to {{ $endDate->format('F d, Y') }}</span>
+            </div>
+            <div class="summary-item">
+                <span class="info-label">Days in Period:</span>
+                <span class="info-value">{{ $startDate->diffInDays($endDate) + 1 }} days</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
     <div class="footer">
-        <p>This is a computer-generated statement. No signature is required.</p>
-        <p>Page 1 of 1 | Generated on {{ now()->format('Y-m-d H:i:s') }}</p>
+        <div class="footer-notes">
+            <p><strong>Important Notes:</strong></p>
+            <p>1. All amounts are in Kenya Shillings (KSh)</p>
+            <p>2. Payments may take up to 24 hours to reflect in your account</p>
+            <p>3. Outstanding balances attract a late payment fee as per company policy</p>
+            <p>4. For any discrepancies, please contact our customer service within 7 days</p>
+        </div>
+
+        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd;">
+            <p><strong>NYAWASCO - Nyanza Water & Sanitation Company</strong></p>
+            <p>P.O Box 255-40500, NYAMIRA | Tel: 0787 080 455 | Email: info@nyawasco.co.ke</p>
+            <p>Working Hours: Mon-Fri 8:00 AM - 5:00 PM, Sat 9:00 AM - 1:00 PM</p>
+        </div>
+
+        <div class="disclaimer">
+            <p>This is a computer-generated statement. No signature is required.</p>
+            <p>Statement generated on: {{ now()->format('F d, Y \a\t h:i A') }}</p>
+            <p>© {{ date('Y') }} NYAWASCO. All rights reserved.</p>
+        </div>
     </div>
 </body>
 </html>
