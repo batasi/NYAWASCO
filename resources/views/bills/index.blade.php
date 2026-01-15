@@ -251,55 +251,97 @@
                 <!-- Status Quick Filters -->
                 <div class="flex flex-wrap gap-2">
                     <a href="{{ route('bills.index') }}"
-                    class="px-4 py-2 rounded-lg font-medium transition duration-200 {{ !request('status') ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700 hover:bg-blue-200' }}">
+                    class="px-4 py-2 rounded-lg font-medium transition duration-200 {{ !request('status') && !request('zone') ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700 hover:bg-blue-200' }}">
                         All Bills
                         <span class="bg-blue-500 text-white px-2 py-1 rounded-full text-xs ml-1">{{ $totalBillsCount }}</span>
                     </a>
-                    <a href="{{ route('bills.index', ['status' => 'unpaid']) }}"
+                    <a href="{{ route('bills.index', ['status' => 'unpaid', 'zone' => request('zone')]) }}"
                     class="px-4 py-2 rounded-lg font-medium transition duration-200 {{ request('status') == 'unpaid' ? 'bg-red-600 text-white' : 'bg-red-100 text-red-700 hover:bg-red-200' }}">
                         Unpaid
                         <span class="bg-red-500 text-white px-2 py-1 rounded-full text-xs ml-1">{{ $unpaidBillsCount }}</span>
                     </a>
-                    <a href="{{ route('bills.index', ['status' => 'paid']) }}"
+                    <a href="{{ route('bills.index', ['status' => 'paid', 'zone' => request('zone')]) }}"
                     class="px-4 py-2 rounded-lg font-medium transition duration-200 {{ request('status') == 'paid' ? 'bg-green-600 text-white' : 'bg-green-100 text-green-700 hover:bg-green-200' }}">
                         Paid
                         <span class="bg-green-500 text-white px-2 py-1 rounded-full text-xs ml-1">{{ $paidBillsCount }}</span>
                     </a>
-                    <a href="{{ route('bills.index', ['status' => 'partial']) }}"
+                    <a href="{{ route('bills.index', ['status' => 'partial', 'zone' => request('zone')]) }}"
                     class="px-4 py-2 rounded-lg font-medium transition duration-200 {{ request('status') == 'partial' ? 'bg-yellow-600 text-white' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' }}">
                         Partial
                         <span class="bg-yellow-500 text-white px-2 py-1 rounded-full text-xs ml-1">{{ $partialBillsCount }}</span>
                     </a>
-                    <a href="{{ route('bills.index', ['status' => 'overdue']) }}"
+                    <a href="{{ route('bills.index', ['status' => 'overdue', 'zone' => request('zone')]) }}"
                     class="px-4 py-2 rounded-lg font-medium transition duration-200 {{ request('status') == 'overdue' ? 'bg-orange-600 text-white' : 'bg-orange-100 text-orange-700 hover:bg-orange-200' }}">
                         Overdue
                         <span class="bg-orange-500 text-white px-2 py-1 rounded-full text-xs ml-1">{{ $overdueBillsCount }}</span>
                     </a>
                 </div>
 
-                <!-- Search Box -->
-                <div class="flex space-x-2">
+                <div class="flex flex-col md:flex-row gap-4">
+                    <!-- Zone Filter -->
                     <div class="relative">
-                        <input type="text"
-                            id="billSearch"
-                            placeholder="Search (Bill No)..."
-                            class="w-40 border border-gray-300 rounded-lg px-4 py-2 pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
-                            autocomplete="off">
+                        <select id="zoneFilter"
+                            class="border border-gray-300 rounded-lg px-4 py-2 pr-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 appearance-none bg-white">
+                            <option value="all" {{ !request('zone') ? 'selected' : '' }}>All Zones</option>
+                            @foreach($zones as $zone)
+                                <option value="{{ $zone->id }}" {{ request('zone') == $zone->id ? 'selected' : '' }}>
+                                    {{ $zone->name }}
+                                </option>
+                            @endforeach
+                        </select>
 
                     </div>
 
-                    <button id="searchBtn"
-                        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition">
-                        Search
-                    </button>
+                    <!-- Search Box -->
+                    <div class="flex space-x-2">
+                        <div class="relative">
+                            <input type="text"
+                                id="billSearch"
+                                placeholder="Search (Bill No)..."
+                                class="w-40 border border-gray-300 rounded-lg px-4 py-2 pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                                autocomplete="off">
+                            <div class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                                <i class="fas fa-search"></i>
+                            </div>
+                        </div>
 
-                    <button id="resetBtn"
-                        class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg transition hidden">
-                        Reset
-                    </button>
+                        <button id="searchBtn"
+                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition">
+                            Search
+                        </button>
+
+                        <button id="resetBtn"
+                            class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg transition hidden">
+                            Reset
+                        </button>
+                    </div>
                 </div>
-
             </div>
+
+            <!-- Selected Filters Display -->
+            @if(request('zone') && $selectedZone)
+            <div class="mt-4 flex items-center text-sm text-gray-600">
+                <span class="mr-2">Active Filters:</span>
+                <span class="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800">
+                    <i class="fas fa-map-marker-alt mr-1"></i>
+                    Zone: {{ $selectedZone->name }}
+                    <a href="{{ route('bills.index', ['status' => request('status')]) }}"
+                    class="ml-2 text-blue-600 hover:text-blue-800">
+                        <i class="fas fa-times"></i>
+                    </a>
+                </span>
+                @if(request('status'))
+                <span class="inline-flex items-center px-3 py-1 rounded-full bg-{{ request('status') == 'unpaid' ? 'red' : (request('status') == 'paid' ? 'green' : (request('status') == 'partial' ? 'yellow' : 'orange')) }}-100 text-{{ request('status') == 'unpaid' ? 'red' : (request('status') == 'paid' ? 'green' : (request('status') == 'partial' ? 'yellow' : 'orange')) }}-800 ml-2">
+                    <i class="fas fa-filter mr-1"></i>
+                    Status: {{ ucfirst(request('status')) }}
+                    <a href="{{ route('bills.index', ['zone' => request('zone')]) }}"
+                    class="ml-2 text-{{ request('status') == 'unpaid' ? 'red' : (request('status') == 'paid' ? 'green' : (request('status') == 'partial' ? 'yellow' : 'orange')) }}-600 hover:text-{{ request('status') == 'unpaid' ? 'red' : (request('status') == 'paid' ? 'green' : (request('status') == 'partial' ? 'yellow' : 'orange')) }}-800">
+                        <i class="fas fa-times"></i>
+                    </a>
+                </span>
+                @endif
+            </div>
+            @endif
         </div>
 
         <!-- Bills DataTable -->
@@ -337,7 +379,7 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Consumption</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                            <!-- <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th> -->
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Zone</th>
                             <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
@@ -408,7 +450,14 @@
                                     @endif
                                 </span>
                             </td>
-
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                @if($bill->meter->zone)
+                                    <div class="text-sm font-medium text-gray-900">{{ $bill->meter->zone->name }}</div>
+                                    <div class="text-xs text-gray-500">{{ $bill->meter->zone->code ?? 'N/A' }}</div>
+                                @else
+                                    <span class="text-sm text-gray-400">—</span>
+                                @endif
+                            </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <div class="flex justify-end space-x-2">
                                     <a href="{{ route('bills.show', $bill->id) }}"
@@ -601,23 +650,62 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    async function performSearch(searchTerm) {
-        try {
-            const response = await fetch(`api/bills/search?search=${encodeURIComponent(searchTerm)}`, {
-                headers: {
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
+   async function performSearch(searchTerm) {
+    try {
+        const zoneId = document.getElementById('zoneFilter')?.value || 'all';
+        const url = `/api/bills/search?search=${encodeURIComponent(searchTerm)}&zone=${zoneId}`;
 
-            if (!response.ok) throw new Error('Search failed');
+        const response = await fetch(url, {
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
 
-            const bills = await response.json();
-            updateTableWithSearchResults(bills);
-        } catch (error) {
-            console.error(error);
-        }
+        if (!response.ok) throw new Error('Search failed');
+
+        const bills = await response.json();
+        updateTableWithSearchResults(bills);
+    } catch (error) {
+        console.error(error);
+        showNotification('Search failed. Please try again.', 'error');
     }
+}
+
+// Add zone filter change handler
+document.getElementById('zoneFilter')?.addEventListener('change', function() {
+    const zoneId = this.value;
+    const currentUrl = new URL(window.location.href);
+    const currentStatus = currentUrl.searchParams.get('status');
+
+    // Build new URL with zone filter
+    let newUrl = '{{ route("bills.index") }}?';
+    if (zoneId && zoneId !== 'all') {
+        newUrl += 'zone=' + zoneId;
+    }
+    if (currentStatus) {
+        newUrl += (zoneId && zoneId !== 'all' ? '&' : '') + 'status=' + currentStatus;
+    }
+
+    // Remove trailing ? if no params
+    if (newUrl.endsWith('?')) {
+        newUrl = newUrl.slice(0, -1);
+    }
+
+    window.location.href = newUrl;
+});
+
+// Also update the status filter links to preserve zone filter
+document.querySelectorAll('a[href*="status="]').forEach(link => {
+    const href = link.getAttribute('href');
+    const zoneId = document.getElementById('zoneFilter')?.value;
+
+    if (zoneId && zoneId !== 'all') {
+        const url = new URL(href, window.location.origin);
+        url.searchParams.set('zone', zoneId);
+        link.setAttribute('href', url.toString());
+    }
+});
 
     function updateTableWithSearchResults(bills) {
         const tbody = document.getElementById('billsTableBody');
@@ -725,6 +813,13 @@ document.addEventListener('DOMContentLoaded', function () {
                         <i class="fas ${statusIcon} mr-1"></i>
                         ${bill.bill_status.charAt(0).toUpperCase() + bill.bill_status.slice(1)} ${overdueSuffix}
                     </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    ${bill.meter?.zone
+                        ? `<div class="text-sm font-medium text-gray-900">${bill.meter.zone.name}</div>
+                        <div class="text-xs text-gray-500">${bill.meter.zone.code || 'N/A'}</div>`
+                        : '<span class="text-sm text-gray-400">—</span>'
+                    }
                 </td>
 
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

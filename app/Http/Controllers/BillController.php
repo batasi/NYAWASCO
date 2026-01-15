@@ -18,12 +18,14 @@ class BillController extends Controller
     public function index(Request $request)
     {
         $status = $request->get('status');
+        $zoneId = $request->get('zone');
         $sort = $request->get('sort', 'newest');
         $user = Auth::user();
 
         $billsQuery = Bill::with([
             'customer',
             'meter.meterCategory',
+            'meter.zone', // Add zone relationship
             'payments',
             'meterReading'
         ])
@@ -36,6 +38,11 @@ class BillController extends Controller
                             ->where('bill_status', 'unpaid');
             }
             return $query->where('bill_status', $status);
+        })
+        ->when($zoneId && $zoneId !== 'all', function ($query) use ($zoneId) {
+            return $query->whereHas('meter', function($q) use ($zoneId) {
+                $q->where('zone_id', $zoneId);
+            });
         })
         ->when($sort, function ($query) use ($sort) {
             switch ($sort) {
@@ -59,29 +66,45 @@ class BillController extends Controller
                 $query->where('created_by', $user->id);
             });
 
-        // COUNTS FOR FILTER BUTTONS (using base query)
-        $totalBillsCount = $baseQuery->count();
-        $unpaidBillsCount = $baseQuery->clone()->where('bill_status', 'unpaid')->count();
-        $paidBillsCount = $baseQuery->clone()->where('bill_status', 'paid')->count();
-        $partialBillsCount = $baseQuery->clone()->where('bill_status', 'partial')->count();
-        $overdueBillsCount = $baseQuery->clone()
+        // Get all zones for filter dropdown
+        $zones = \App\Models\Zone::orderBy('name')->get();
+
+        // Get selected zone for display
+        $selectedZone = $zoneId ? \App\Models\Zone::find($zoneId) : null;
+
+        // COUNTS FOR FILTER BUTTONS (using base query with zone filter if applied)
+        $zoneFilterQuery = clone $baseQuery;
+        if ($zoneId && $zoneId !== 'all') {
+            $zoneFilterQuery->whereHas('meter', function($q) use ($zoneId) {
+                $q->where('zone_id', $zoneId);
+            });
+        }
+
+        $totalBillsCount = $zoneFilterQuery->count();
+        $unpaidBillsCount = $zoneFilterQuery->clone()->where('bill_status', 'unpaid')->count();
+        $paidBillsCount = $zoneFilterQuery->clone()->where('bill_status', 'paid')->count();
+        $partialBillsCount = $zoneFilterQuery->clone()->where('bill_status', 'partial')->count();
+        $overdueBillsCount = $zoneFilterQuery->clone()
             ->where('due_date', '<', now())
             ->where('bill_status', 'unpaid')
             ->count();
 
         // DASHBOARD STATISTICS (using same filtered base query)
-        $totalRevenue = $baseQuery->clone()->sum('total_amount');
+        $totalRevenue = $zoneFilterQuery->clone()->sum('total_amount');
 
         // Outstanding Balance: sum of balances for unpaid + partial bills
-        $outstandingBalance = $totalRevenue - Payment::where('payment_status', 'completed')
-        ->whereNull('voided_at')
-        ->sum('amount');
+        $outstandingBalance = $zoneFilterQuery->clone()
+            ->whereIn('bill_status', ['unpaid', 'partial'])
+            ->sum('balance');
 
         // Total Bills for display (use the count from filtered query)
         $totalBills = $totalBillsCount;
 
         // Calculate total paid amount from filtered bills
-        $totalPaidAmount = $baseQuery->clone()->sum('paid_amount');
+        $totalPaidAmount = $zoneFilterQuery->clone()
+            ->withSum('payments', 'amount')
+            ->get()
+            ->sum('payments_sum_amount');
 
         // Collection Rate: total paid amount / total revenue
         $collectionRate = $totalRevenue > 0
@@ -90,6 +113,9 @@ class BillController extends Controller
 
         return view('bills.index', compact(
             'bills',
+            'zones',
+            'selectedZone',
+            'zoneId',
             'totalRevenue',
             'outstandingBalance',
             'totalBills',
@@ -199,11 +225,17 @@ class BillController extends Controller
     public function search(Request $request)
     {
         $search = trim($request->get('search'));
+        $zoneId = $request->get('zone');
         $user = auth()->user();
 
-        $bills = Bill::with(['customer', 'meter.meterCategory', 'payments'])
+        $bills = Bill::with(['customer', 'meter.meterCategory', 'meter.zone', 'payments'])
             ->when($user->hasRole('biller'), function ($query) use ($user) {
                 $query->where('created_by', $user->id);
+            })
+            ->when($zoneId && $zoneId !== 'all', function ($query) use ($zoneId) {
+                return $query->whereHas('meter', function($q) use ($zoneId) {
+                    $q->where('zone_id', $zoneId);
+                });
             })
             ->where(function($query) use ($search) {
                 $query->where('bill_number', 'like', "%{$search}%")
@@ -239,6 +271,7 @@ class BillController extends Controller
                 'payments' => $bill->payments,
                 'customer' => $bill->customer,
                 'meter' => $bill->meter,
+                'zone' => $bill->meter->zone, // Include zone in response
             ];
         });
 
@@ -308,104 +341,104 @@ class BillController extends Controller
         ]);
     }
 
- public function printReceipt(Bill $bill)
-{
-    // Load necessary data
-    $bill->load(['customer', 'meter', 'payments', 'meter.meterCategory', 'meterReading']);
+    public function printReceipt(Bill $bill)
+    {
+        // Load necessary data
+        $bill->load(['customer', 'meter', 'payments', 'meter.meterCategory', 'meterReading']);
 
-    // Get total paid amount
-    $totalPaid = $bill->payments->sum('amount');
-    $balance = $bill->total_amount - $totalPaid;
+        // Get total paid amount
+        $totalPaid = $bill->payments->sum('amount');
+        $balance = $bill->total_amount - $totalPaid;
 
-    // Get customer's previous unpaid balance (arrears)
-    $arrears = Bill::where('customer_id', $bill->customer_id)
-        ->where('id', '<', $bill->id)
-        ->where('bill_status', '!=', 'paid')
-        ->sum('balance');
+        // Get customer's previous unpaid balance (arrears)
+        $arrears = Bill::where('customer_id', $bill->customer_id)
+            ->where('id', '<', $bill->id)
+            ->where('bill_status', '!=', 'paid')
+            ->sum('balance');
 
-    // Format customer name
-    $customerName = $bill->customer->first_name . ' ' . $bill->customer->last_name;
-    if (strlen($customerName) > 20) {
-        $customerName = substr($customerName, 0, 17) . '...';
-    }
+        // Format customer name
+        $customerName = $bill->customer->first_name . ' ' . $bill->customer->last_name;
+        if (strlen($customerName) > 20) {
+            $customerName = substr($customerName, 0, 17) . '...';
+        }
 
-    // Format billing period
-    $billingPeriod = optional(optional($bill)->meterReading)->reading_period;
+        // Format billing period
+        $billingPeriod = optional(optional($bill)->meterReading)->reading_period;
 
-    // Get meter rent from meter category (default to 0 if not set)
-    $meterRent = $bill->meter->meterCategory->meter_rent ?? 0;
+        // Get meter rent from meter category (default to 0 if not set)
+        $meterRent = $bill->meter->meterCategory->meter_rent ?? 0;
 
-    // Calculate consumption charge from bill data
-    $tierRate = Bill::calculateTierRate($bill->meter->meter_category_id, $bill->consumption);
+        // Calculate consumption charge from bill data
+        $tierRate = Bill::calculateTierRate($bill->meter->meter_category_id, $bill->consumption);
 
-    $consumptionCharge = $bill->consumption_charge ?? ($bill->consumption * $tierRate);
-    // Calculate subtotal (sum of all charges BEFORE tax)
-    $subtotalBeforeTax = $bill->base_charge
-                       + $meterRent
-                       + $consumptionCharge
-                       + $arrears
-                       + ($bill->late_fee ?? 0);
+        $consumptionCharge = $bill->consumption_charge ?? ($bill->consumption * $tierRate);
+        // Calculate subtotal (sum of all charges BEFORE tax)
+        $subtotalBeforeTax = $bill->base_charge
+                        + $meterRent
+                        + $consumptionCharge
+                        + $arrears
+                        + ($bill->late_fee ?? 0);
 
-    // Calculate tax amount (16% of base + consumption) - same as your controller
-    $taxAmount = $bill->tax_amount;
-
-    // Verify the total matches
-    $calculatedTotal = $subtotalBeforeTax + $taxAmount;
-
-    // If there's a mismatch, use the bill's stored total
-    if (abs($calculatedTotal - $bill->total_amount) > 0.01) {
-        // Adjust tax amount to make totals match
+        // Calculate tax amount (16% of base + consumption) - same as your controller
         $taxAmount = $bill->tax_amount;
+
+        // Verify the total matches
+        $calculatedTotal = $subtotalBeforeTax + $taxAmount;
+
+        // If there's a mismatch, use the bill's stored total
+        if (abs($calculatedTotal - $bill->total_amount) > 0.01) {
+            // Adjust tax amount to make totals match
+            $taxAmount = $bill->tax_amount;
+        }
+
+        // Get printed by user info
+        $printedByName = auth()->user()->name ?? 'System';
+        if (strlen($printedByName) > 15) {
+            $printedByName = substr($printedByName, 0, 12) . '...';
+        }
+
+        // Prepare receipt data with correct calculations
+        $receiptData = [
+            'bill_number' => substr($bill->bill_number, 0, 15),
+            'date' => now()->format('d/m/Y H:i'),
+            'receipt_number' => 'RCP-' . str_pad($bill->id, 6, '0', STR_PAD_LEFT),
+            'customer_name' => $customerName,
+            'customer_number' => $bill->customer->customer_number,
+            'customer_phone' => $bill->customer->phone ?? 'N/A',
+            'meter_number' => $bill->meter->meter_number ?? 'N/A',
+            'billing_period' => $billingPeriod,
+            'consumption' => number_format($bill->consumption, 1) . ' m³',
+            'rate' => number_format($tierRate, 2) . '/m³',
+
+
+            // Detailed charges
+            'base_charge' => 'KSh ' . number_format($bill->base_charge, 2),
+            'meter_rent' => 'KSh ' . number_format($meterRent, 2),
+            'consumption_charge' => 'KSh ' . number_format($consumptionCharge, 2),
+            'arrears' => $arrears > 0 ? 'KSh ' . number_format($arrears, 2) : null,
+            'late_fee' => $bill->late_fee > 0 ? 'KSh ' . number_format($bill->late_fee, 2) : null,
+
+            // Subtotal before tax
+            'subtotal_before_tax' => 'KSh ' . number_format($subtotalBeforeTax, 2),
+            'printed_by' => $printedByName,
+            // Tax
+            'vat' => 'KSh ' . number_format($taxAmount, 2),
+
+            // Totals - using the actual bill total
+            'total_amount' => 'KSh ' . number_format($bill->meter->current_balance, 2),
+            'amount_paid' => 'KSh ' . number_format($totalPaid, 2),
+            'balance' => 'KSh ' . number_format($balance, 2),
+            'calculated_consumption_charge' => 'KSh ' . number_format($consumptionCharge, 2),
+
+            'payment_status' => strtoupper($bill->bill_status),
+            'due_date' => $bill->due_date ? $bill->due_date->format('d/m/Y') : 'N/A',
+            'footer_message' => 'Thank you for your payment!',
+            'printed_date' => now()->format('d/m/Y H:i'),
+        ];
+
+        // Return the 58mm optimized receipt view
+        return view('bills.receipts.thermal-58mm', compact('receiptData'));
     }
-
-     // Get printed by user info
-    $printedByName = auth()->user()->name ?? 'System';
-    if (strlen($printedByName) > 15) {
-        $printedByName = substr($printedByName, 0, 12) . '...';
-    }
-
-    // Prepare receipt data with correct calculations
-    $receiptData = [
-        'bill_number' => substr($bill->bill_number, 0, 15),
-        'date' => now()->format('d/m/Y H:i'),
-        'receipt_number' => 'RCP-' . str_pad($bill->id, 6, '0', STR_PAD_LEFT),
-        'customer_name' => $customerName,
-        'customer_number' => $bill->customer->customer_number,
-        'customer_phone' => $bill->customer->phone ?? 'N/A',
-        'meter_number' => $bill->meter->meter_number ?? 'N/A',
-        'billing_period' => $billingPeriod,
-        'consumption' => number_format($bill->consumption, 1) . ' m³',
-        'rate' => number_format($tierRate, 2) . '/m³',
-
-
-        // Detailed charges
-        'base_charge' => 'KSh ' . number_format($bill->base_charge, 2),
-        'meter_rent' => 'KSh ' . number_format($meterRent, 2),
-        'consumption_charge' => 'KSh ' . number_format($consumptionCharge, 2),
-        'arrears' => $arrears > 0 ? 'KSh ' . number_format($arrears, 2) : null,
-        'late_fee' => $bill->late_fee > 0 ? 'KSh ' . number_format($bill->late_fee, 2) : null,
-
-        // Subtotal before tax
-        'subtotal_before_tax' => 'KSh ' . number_format($subtotalBeforeTax, 2),
-        'printed_by' => $printedByName,
-        // Tax
-        'vat' => 'KSh ' . number_format($taxAmount, 2),
-
-        // Totals - using the actual bill total
-        'total_amount' => 'KSh ' . number_format($bill->meter->current_balance, 2),
-        'amount_paid' => 'KSh ' . number_format($totalPaid, 2),
-        'balance' => 'KSh ' . number_format($balance, 2),
-        'calculated_consumption_charge' => 'KSh ' . number_format($consumptionCharge, 2),
-
-        'payment_status' => strtoupper($bill->bill_status),
-        'due_date' => $bill->due_date ? $bill->due_date->format('d/m/Y') : 'N/A',
-        'footer_message' => 'Thank you for your payment!',
-        'printed_date' => now()->format('d/m/Y H:i'),
-    ];
-
-    // Return the 58mm optimized receipt view
-    return view('bills.receipts.thermal-58mm', compact('receiptData'));
-}
 
 
 }
