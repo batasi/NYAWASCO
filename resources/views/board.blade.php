@@ -133,7 +133,7 @@
                         <div>
                             <h4 class="font-semibold text-gray-900 mb-2">Academic Background</h4>
                             <ul class="list-disc list-inside text-gray-600 text-sm space-y-1">
-                                <li>BA Degree, Second Class (HONS)</li>
+                                <li>BA Degree, Second Class</li>
                                 <li>Specialist in evaluation monitoring and development</li>
                                 <li>Three diplomas in social work, comparative management and public administration</li>
                             </ul>
@@ -218,12 +218,12 @@
                 </div>
             </div>
 
-            <!-- Member 3: CPA Asenath Maobe, Ph.D. -->
+            <!-- Member 3: Dr. CPA Asenath Maobe, Ph.D. -->
             <div class="bg-white rounded-lg shadow-lg overflow-hidden transform transition duration-300 hover:scale-105 hover:shadow-xl">
                 <div class="p-6">
                     <div class="flex flex-col items-center mb-6">
                         <div class="w-40 h-40 mb-4 rounded-full overflow-hidden border-4 border-blue-100">
-                            <img src="/img/board-members/asenath-maobe.png" alt="CPA Asenath Maobe Ph.D." class="w-full h-tops object-cover">
+                            <img src="/img/board-members/asenath-maobe.png" alt="Dr. CPA Asenath Maobe Ph.D." class="w-full h-tops object-cover">
                         </div>
                         <h3 class="text-2xl font-bold text-blue-700 mb-2">Dr. CPA Asenath Maobe, Ph.D.</h3>
                         <p class="text-blue-600 font-semibold mb-4">Board Member</p>
@@ -456,7 +456,6 @@
                             <h4 class="font-semibold text-gray-900 mb-2">Previous Roles</h4>
                             <ul class="list-disc list-inside text-gray-600 text-sm space-y-1">
                                 <li>County Chief Officer - Economic Planning, Resource Mobilization and ICT, County Government of Nyamira</li>
-                                <li>Elected Member of County Assembly - Magombo Ward (2017-2022)</li>
                             </ul>
                         </div>
 
