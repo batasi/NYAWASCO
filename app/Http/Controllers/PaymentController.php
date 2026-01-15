@@ -24,25 +24,25 @@ class PaymentController extends Controller
     /**
      * Display a listing of payments.
      */
-      public function index(Request $request)
+    public function index(Request $request)
     {
-        $query = Payment::with(['customer', 'user', 'meter']);
+        $query = Payment::with(['customer', 'user', 'meter.zone']); // Add zone relationship
 
         // Search filter
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where('payment_no', 'like', "%{$search}%")
-                  ->orWhere('transaction_reference', 'like', "%{$search}%")
-                  ->orWhereHas('customer', function($q) use ($search) {
-                      $q->where('first_name', 'like', "%{$search}%")
+                ->orWhere('transaction_reference', 'like', "%{$search}%")
+                ->orWhereHas('customer', function($q) use ($search) {
+                    $q->where('first_name', 'like', "%{$search}%")
                         ->orWhere('last_name', 'like', "%{$search}%")
                         ->orWhere('customer_number', 'like', "%{$search}%")
                         ->orWhere('email', 'like', "%{$search}%")
                         ->orWhere('phone', 'like', "%{$search}%");
-                  })
-                  ->orWhereHas('meter', function($q) use ($search) {
-                      $q->where('meter_number', 'like', "%{$search}%");
-                  });
+                })
+                ->orWhereHas('meter', function($q) use ($search) {
+                    $q->where('meter_number', 'like', "%{$search}%");
+                });
         }
 
         // Status filter
@@ -50,23 +50,53 @@ class PaymentController extends Controller
             $query->where('payment_status', $request->status);
         }
 
+        // Zone filter
+        if ($request->filled('zone') && $request->zone != 'all') {
+            $query->whereHas('meter', function($q) use ($request) {
+                $q->where('zone_id', $request->zone);
+            });
+        }
+
         // Sorting
         $query->orderBy('payment_date', 'desc')->orderBy('created_at', 'desc');
 
         $payments = $query->paginate(10)->withQueryString();
 
-        // Calculate statistics for cards
-        $totalPayments = Payment::sum('amount');
-        $todayCollection = Payment::whereDate('payment_date', Carbon::today())
+        // Get all zones for filter dropdown
+        $zones = \App\Models\Zone::orderBy('name')->get();
+
+        // Get selected zone for display
+        $selectedZone = $request->filled('zone') && $request->zone != 'all'
+            ? \App\Models\Zone::find($request->zone)
+            : null;
+
+        $zoneId = $request->get('zone', 'all');
+
+        // Calculate statistics for cards WITH zone filter applied
+        $statsQuery = Payment::query();
+
+        // Apply zone filter to stats if needed
+        if ($request->filled('zone') && $request->zone != 'all') {
+            $statsQuery->whereHas('meter', function($q) use ($request) {
+                $q->where('zone_id', $request->zone);
+            });
+        }
+
+        $totalPayments = $statsQuery->clone()->sum('amount');
+        $todayCollection = $statsQuery->clone()
+            ->whereDate('payment_date', Carbon::today())
             ->where('payment_status', 'completed')
             ->sum('amount');
-        $totalPaymentsCount = Payment::count();
-        $completedPaymentsCount = Payment::where('payment_status', 'completed')->count();
-        $pendingPaymentsCount = Payment::where('payment_status', 'pending')->count();
-        $failedPaymentsCount = Payment::where('payment_status', 'failed')->count();
+        $totalPaymentsCount = $statsQuery->clone()->count();
+        $completedPaymentsCount = $statsQuery->clone()->where('payment_status', 'completed')->count();
+        $pendingPaymentsCount = $statsQuery->clone()->where('payment_status', 'pending')->count();
+        $failedPaymentsCount = $statsQuery->clone()->where('payment_status', 'failed')->count();
 
         return view('payments.index', compact(
             'payments',
+            'zones',
+            'selectedZone',
+            'zoneId',
             'totalPayments',
             'todayCollection',
             'totalPaymentsCount',
@@ -82,8 +112,14 @@ class PaymentController extends Controller
     public function search(Request $request)
     {
         $search = trim($request->get('search'));
+        $zoneId = $request->get('zone');
 
-        $payments = Payment::with(['customer', 'meter'])
+        $payments = Payment::with(['customer', 'meter.zone']) // Add zone
+            ->when($zoneId && $zoneId !== 'all', function ($query) use ($zoneId) {
+                return $query->whereHas('meter', function($q) use ($zoneId) {
+                    $q->where('zone_id', $zoneId);
+                });
+            })
             ->where(function($query) use ($search) {
                 $query->where('payment_no', 'like', "%{$search}%")
                     ->orWhere('transaction_reference', 'like', "%{$search}%")
@@ -116,6 +152,7 @@ class PaymentController extends Controller
                 'payment_date' => $payment->payment_date,
                 'customer' => $payment->customer,
                 'meter' => $payment->meter,
+                'zone' => $payment->meter->zone, // Include zone
                 'created_at' => $payment->created_at->format('Y-m-d H:i:s'),
             ];
         });

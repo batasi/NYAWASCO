@@ -104,31 +104,46 @@
             </div>
         </div>
 
-        <!-- Quick Stats & Filters -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-                <!-- Status Quick Filters -->
-                <div class="flex flex-wrap gap-2">
-                    <a href="{{ route('payments.index') }}"
-                    class="px-4 py-2 rounded-lg font-medium transition duration-200 {{ !request('status') ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700 hover:bg-blue-200' }}">
-                        All Payments
-                        <span class="bg-blue-500 text-white px-2 py-1 rounded-full text-xs ml-1">{{ $totalPaymentsCount }}</span>
-                    </a>
-                    <a href="{{ route('payments.index', ['status' => 'completed']) }}"
-                    class="px-4 py-2 rounded-lg font-medium transition duration-200 {{ request('status') == 'completed' ? 'bg-green-600 text-white' : 'bg-green-100 text-green-700 hover:bg-green-200' }}">
-                        Completed
-                        <span class="bg-green-500 text-white px-2 py-1 rounded-full text-xs ml-1">{{ $completedPaymentsCount }}</span>
-                    </a>
-                    <a href="{{ route('payments.index', ['status' => 'pending']) }}"
-                    class="px-4 py-2 rounded-lg font-medium transition duration-200 {{ request('status') == 'pending' ? 'bg-yellow-600 text-white' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' }}">
-                        Pending
-                        <span class="bg-yellow-500 text-white px-2 py-1 rounded-full text-xs ml-1">{{ $pendingPaymentsCount }}</span>
-                    </a>
-                    <a href="{{ route('payments.index', ['status' => 'failed']) }}"
-                    class="px-4 py-2 rounded-lg font-medium transition duration-200 {{ request('status') == 'failed' ? 'bg-red-600 text-white' : 'bg-red-100 text-red-700 hover:bg-red-200' }}">
-                        Failed
-                        <span class="bg-red-500 text-white px-2 py-1 rounded-full text-xs ml-1">{{ $failedPaymentsCount }}</span>
-                    </a>
+       <!-- Quick Stats & Filters -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+            <!-- Status Quick Filters -->
+            <div class="flex flex-wrap gap-2">
+                <a href="{{ route('payments.index') }}"
+                class="px-4 py-2 rounded-lg font-medium transition duration-200 {{ !request('status') && !request('zone') ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700 hover:bg-blue-200' }}">
+                    All Payments
+                    <span class="bg-blue-500 text-white px-2 py-1 rounded-full text-xs ml-1">{{ $totalPaymentsCount }}</span>
+                </a>
+                <a href="{{ route('payments.index', ['status' => 'completed', 'zone' => request('zone')]) }}"
+                class="px-4 py-2 rounded-lg font-medium transition duration-200 {{ request('status') == 'completed' ? 'bg-green-600 text-white' : 'bg-green-100 text-green-700 hover:bg-green-200' }}">
+                    Completed
+                    <span class="bg-green-500 text-white px-2 py-1 rounded-full text-xs ml-1">{{ $completedPaymentsCount }}</span>
+                </a>
+                <a href="{{ route('payments.index', ['status' => 'pending', 'zone' => request('zone')]) }}"
+                class="px-4 py-2 rounded-lg font-medium transition duration-200 {{ request('status') == 'pending' ? 'bg-yellow-600 text-white' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' }}">
+                    Pending
+                    <span class="bg-yellow-500 text-white px-2 py-1 rounded-full text-xs ml-1">{{ $pendingPaymentsCount }}</span>
+                </a>
+                <a href="{{ route('payments.index', ['status' => 'failed', 'zone' => request('zone')]) }}"
+                class="px-4 py-2 rounded-lg font-medium transition duration-200 {{ request('status') == 'failed' ? 'bg-red-600 text-white' : 'bg-red-100 text-red-700 hover:bg-red-200' }}">
+                    Failed
+                    <span class="bg-red-500 text-white px-2 py-1 rounded-full text-xs ml-1">{{ $failedPaymentsCount }}</span>
+                </a>
+            </div>
+
+            <div class="flex flex-col md:flex-row gap-4">
+                <!-- Zone Filter -->
+                <div class="relative">
+                    <select id="zoneFilter"
+                        class="border border-gray-300 rounded-lg px-4 py-2 pr-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 appearance-none bg-white">
+                        <option value="all" {{ !request('zone') || request('zone') == 'all' ? 'selected' : '' }}>All Zones</option>
+                        @foreach($zones as $zone)
+                            <option value="{{ $zone->id }}" {{ request('zone') == $zone->id ? 'selected' : '' }}>
+                                {{ $zone->name }}
+                            </option>
+                        @endforeach
+                    </select>
+
                 </div>
 
                 <!-- Search Box -->
@@ -139,22 +154,60 @@
                             placeholder="Search..."
                             class="w-64 border border-gray-300 rounded-lg px-4 py-2 pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
                             autocomplete="off">
-
-
-                        <button id="searchPaymentBtn"
-                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition">
-                            Search
-                        </button>
-
-                        <button id="resetPaymentBtn"
-                            class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg transition hidden">
-                            Reset
-                        </button>
+                        <div class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                            <i class="fas fa-search"></i>
+                        </div>
                     </div>
 
+                    <button id="searchPaymentBtn"
+                        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition">
+                        Search
+                    </button>
+
+                    <button id="resetPaymentBtn"
+                        class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg transition hidden">
+                        Reset
+                    </button>
                 </div>
             </div>
         </div>
+
+        <!-- Selected Filters Display -->
+        @if(request('zone') && $selectedZone)
+        <div class="mt-4 flex items-center text-sm text-gray-600">
+            <span class="mr-2">Active Filters:</span>
+
+                Zone: {{ $selectedZone->name ?? ' ' }}
+                <a href="{{ route('payments.index', ['status' => request('status')]) }}"
+                class="ml-2 text-blue-600 hover:text-blue-800">
+
+                </a>
+            </span>
+            @if(request('status'))
+            <span class="inline-flex items-center px-3 py-1 rounded-full bg-{{
+                request('status') == 'completed' ? 'green' :
+                (request('status') == 'pending' ? 'yellow' : 'red')
+            }}-100 text-{{
+                request('status') == 'completed' ? 'green' :
+                (request('status') == 'pending' ? 'yellow' : 'red')
+            }}-800 ml-2">
+
+                Status: {{ ucfirst(request('status')) }}
+                <a href="{{ route('payments.index', ['zone' => request('zone')]) }}"
+                class="ml-2 text-{{
+                    request('status') == 'completed' ? 'green' :
+                    (request('status') == 'pending' ? 'yellow' : 'red')
+                }}-600 hover:text-{{
+                    request('status') == 'completed' ? 'green' :
+                    (request('status') == 'pending' ? 'yellow' : 'red')
+                }}-800">
+
+                </a>
+            </span>
+            @endif
+        </div>
+        @endif
+    </div>
 
         <!-- Payments DataTable -->
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -191,6 +244,7 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Method</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Zone</th>
                             <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
@@ -210,7 +264,7 @@
                                         <div class="text-sm font-medium text-gray-900">
                                             {{ ($payment->customer?->first_name ?? '') . ' ' . ($payment->customer?->last_name ?? '') }}
                                         </div>
-                                        <div class="text-sm text-gray-500">{{ $payment->customer?->customer_number ?? 'N/A' }}</div>
+                                        <div class="text-sm text-gray-500">Acc. {{ $payment->customer->meter->meter_number ?? 'N/A' }}</div>
                                         <div class="text-xs text-gray-400">{{ $payment->customer?->phone ?? 'N/A' }}</div>
                                     </div>
                                 </div>
@@ -259,6 +313,13 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {{ $payment->payment_date ? \Carbon\Carbon::parse($payment->payment_date)->format('M d, Y') : '—' }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                @if($payment->meter && $payment->meter->zone)
+                                    <div class="text-sm font-medium text-gray-900">{{ $payment->meter->zone->name }}</div>
+                                @else
+                                    <span class="text-sm text-gray-400">—</span>
+                                @endif
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <div class="flex justify-end space-x-2">
@@ -924,14 +985,13 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // Update the performSearch function
     async function performSearch(searchTerm) {
         try {
-            // Show loading state
-            const originalText = searchBtn.innerHTML;
-            searchBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Searching...';
-            searchBtn.disabled = true;
+            const zoneId = document.getElementById('zoneFilter')?.value || 'all';
+            const url = `/payments/search?search=${encodeURIComponent(searchTerm)}&zone=${zoneId}`;
 
-            const response = await fetch(`/payments/search?search=${encodeURIComponent(searchTerm)}`, {
+            const response = await fetch(url, {
                 headers: {
                     'Accept': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
@@ -946,15 +1006,46 @@ document.addEventListener('DOMContentLoaded', function () {
         } catch (error) {
             console.error(error);
             alert('Error performing search. Please try again.');
-        } finally {
-            // Reset button
-            if (searchBtn) {
-                searchBtn.innerHTML = originalText;
-                searchBtn.disabled = false;
-            }
         }
     }
 
+    // Add zone filter change handler
+    document.getElementById('zoneFilter')?.addEventListener('change', function() {
+        const zoneId = this.value;
+        const currentUrl = new URL(window.location.href);
+        const currentStatus = currentUrl.searchParams.get('status');
+
+        // Build new URL with zone filter
+        let newUrl = '{{ route("payments.index") }}?';
+        if (zoneId && zoneId !== 'all') {
+            newUrl += 'zone=' + zoneId;
+        }
+        if (currentStatus) {
+            newUrl += (zoneId && zoneId !== 'all' ? '&' : '') + 'status=' + currentStatus;
+        }
+
+        // Remove trailing ? if no params
+        if (newUrl.endsWith('?')) {
+            newUrl = newUrl.slice(0, -1);
+        }
+
+        window.location.href = newUrl;
+    });
+
+    // Update status filter links to preserve zone filter
+    document.querySelectorAll('a[href*="status="]').forEach(link => {
+        const href = link.getAttribute('href');
+        const zoneSelect = document.getElementById('zoneFilter');
+        const zoneId = zoneSelect ? zoneSelect.value : 'all';
+
+        if (zoneId && zoneId !== 'all') {
+            const url = new URL(href, window.location.origin);
+            url.searchParams.set('zone', zoneId);
+            link.setAttribute('href', url.toString());
+        }
+    });
+
+    // Update the updateTableWithSearchResults function to show zone
     function updateTableWithSearchResults(payments) {
         const tbody = document.getElementById('paymentsTableBody');
 
@@ -963,7 +1054,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!payments || payments.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="7" class="px-6 py-12 text-center">
+                    <td colspan="8" class="px-6 py-12 text-center">
                         <div class="text-gray-400">
                             <i class="fas fa-search text-4xl mb-3"></i>
                             <p class="text-lg font-medium text-gray-900">No payments found</p>
@@ -1020,6 +1111,13 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
+                    ${payment.meter?.zone
+                        ? `<div class="text-sm font-medium text-gray-900">${payment.meter.zone.name}</div>
+                        <div class="text-xs text-gray-500">${payment.meter.zone.code || 'N/A'}</div>`
+                        : '<span class="text-sm text-gray-400">—</span>'
+                    }
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
                     <div class="text-sm font-semibold text-gray-900">
                         KSh ${Number(payment.amount).toLocaleString('en-US', {minimumFractionDigits: 2})}
                     </div>
@@ -1045,18 +1143,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div class="flex justify-end space-x-2">
                         <a href="/payments/${payment.id}"
-                           class="text-blue-600 hover:text-blue-900 px-2 py-1 rounded transition duration-200"
-                           title="View Payment">
+                        class="text-blue-600 hover:text-blue-900 px-2 py-1 rounded transition duration-200"
+                        title="View Payment">
                             <i class="fas fa-eye"></i>
                         </a>
                         <a href="/payments/${payment.id}/edit"
-                           class="text-yellow-600 hover:text-yellow-900 px-2 py-1 rounded transition duration-200"
-                           title="Edit Payment">
+                        class="text-yellow-600 hover:text-yellow-900 px-2 py-1 rounded transition duration-200"
+                        title="Edit Payment">
                             <i class="fas fa-edit"></i>
                         </a>
                         <form action="/payments/${payment.id}" method="POST"
-                              onsubmit="return confirm('Are you sure you want to delete this payment?')"
-                              class="inline">
+                            onsubmit="return confirm('Are you sure you want to delete this payment?')"
+                            class="inline">
                             <input type="hidden" name="_token" value="{{ csrf_token() }}">
                             <input type="hidden" name="_method" value="DELETE">
                             <button type="submit"
