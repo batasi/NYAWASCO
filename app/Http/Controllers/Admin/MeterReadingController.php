@@ -199,7 +199,29 @@ class MeterReadingController extends Controller
                     $bill = $this->generateBill($reading, $customer, $meter, $consumption, $request->reading_status);
 
                     // UPDATE METER AND CUSTOMER BALANCES
-                    $this->updateBalances($meter, $customer, $bill->total_amount);
+                    $result = $this->updateBalances($meter, $customer, $bill->total_amount);
+
+                    $billBalance = $result['bill_balance'];
+                    $amountPaid = $bill->total_amount - $billBalance;
+
+                    // Determine bill status
+                    if ($billBalance == 0) {
+                        $billStatus = 'paid';
+                    } elseif ($billBalance < $bill->total_amount) {
+                        $billStatus = 'partial';
+                    } else {
+                        $billStatus = 'unpaid';
+                    }
+
+                    // Update bill record
+                    $bill->update([
+                        'balance' => $billBalance,
+                        'bill_status' => $billStatus,
+                        'paid_amount' => $amountPaid,
+                    ]);
+
+
+
 
                     Log::info("Meter reading recorded and bill generated", [
                         'customer_id' => $customer->id,
@@ -235,7 +257,7 @@ class MeterReadingController extends Controller
     {
         // Get meter category pricing
         $category = $meter->meterCategory;
-        $baseCharge = $category->base_charge ?? 0;
+        $baseCharge = $category->base_charge ?? 100;
         $meterRent = $category->meter_rent ?? 0; // default 0 if not set
 
         // Tier pricing calculation
@@ -249,11 +271,13 @@ class MeterReadingController extends Controller
             $consumptionCharge = $consumption * $consumptionRate;
         }
 
-        // Get arrears from meter's balance_bf
-        $arrears = $meter->balance_bf ?? 0;
 
-        // Calculate total WITHOUT VAT
-        $totalAmount = $baseCharge + $meterRent + $consumptionCharge + $arrears;
+        $taxRate = 0.16;
+
+        // Compute charges before tax
+
+        $taxAmount = ($baseCharge + $consumptionCharge + $meterRent) * $taxRate;
+        $totalAmount = $baseCharge + $consumptionCharge + $meterRent;
 
         // Create bill without bill_number first
         $bill = Bill::create([
@@ -265,26 +289,17 @@ class MeterReadingController extends Controller
             'consumption' => $consumption,
             'base_charge' => $baseCharge,
             'consumption_charge' => $consumptionCharge,
-            'tax_amount' => 0, // Set to 0 since no VAT
+            'tax_amount' => $taxAmount,
             'total_amount' => $totalAmount,
             'due_date' => Carbon::parse($reading->reading_date)->addDays(30),
             'bill_status' => 'unpaid',
             'notes' => 'Auto-generated from ' . ($readingStatus === 'estimated' ? 'estimated' : '') . ' meter reading #' . $reading->id . ' for meter ' . $meter->meter_number,
             'created_by' => auth()->id(),
-
-            'balance' => $totalAmount, // This is missing!
-            'paid_amount' => 0, // Should be explicitly set
         ]);
 
         // Generate safe bill number using the bill ID
         $bill->update([
             'bill_number' => 'INV-' . str_pad($bill->id, 6, '0', STR_PAD_LEFT)
-        ]);
-
-        // Update meter balance to reflect new charges
-        $meter->update([
-            'current_balance' => $meter->current_balance + $totalAmount,
-            'balance_bf' => $meter->balance_bf + $totalAmount
         ]);
 
         // Mark reading as billed
@@ -297,50 +312,65 @@ class MeterReadingController extends Controller
         return $bill;
     }
 
-    private function calculateTieredCharge($meterCategoryId, $consumption)
+    public function calculateTieredCharge($categoryId, $consumption)
     {
-        // Fetch tiers sorted properly
-        $tiers = PricingTier::where('meter_category_id', $meterCategoryId)
-            ->orderBy('min_consumption')
-            ->get();
+        $tier = PricingTier::where('meter_category_id', $categoryId)
+            ->where('min_consumption', '<=', $consumption)
+            ->where(function($query) use ($consumption) {
+                $query->whereNull('max_consumption')
+                    ->orWhere('max_consumption', '>=', $consumption);
+            })
+            ->orderBy('sort_order')
+            ->first();
 
-        if ($tiers->isEmpty()) {
-            return null; // category has no tiers
-        }
+        if (!$tier) return 0;
 
-        $remaining = $consumption;
-        $total = 0;
-
-        foreach ($tiers as $tier) {
-            $min = $tier->min_consumption;
-            $max = $tier->max_consumption;
-
-            if ($remaining <= 0) break;
-
-            if ($max === null) {
-                // Last open tier
-                $total += $remaining * $tier->rate_per_unit;
-                break;
-            }
-
-            // Units consumed inside this tier range
-            $allowed = min($remaining, $max - $min + 1); // +1 to close ranges logically
-            $total += $allowed * $tier->rate_per_unit;
-
-            $remaining -= $allowed;
-        }
-
-        return $total;
+        return $consumption * $tier->rate_per_unit;
     }
+
 
     /**
      * Update meter and customer balances after bill generation
      */
+
     private function updateBalances(Meter $meter, Customer $customer, $billAmount)
     {
+        $previousBalance = $meter->current_balance;
 
+        // increment total billed so far
+        $meter->balance_bf += $billAmount;
 
+        // Case 1: Customer has credit (negative balance)
+        if ($previousBalance < 0) {
+
+            if (abs($previousBalance) >= $billAmount) {
+                // Invoice fully covered by credit
+                $billBalance = 0;
+                $remainingBalance = $previousBalance + $billAmount; // still ≤ 0
+
+            } else {
+                // Partially covered
+                $billBalance = $billAmount - abs($previousBalance); // small positive number
+                $remainingBalance = $billBalance; // now debt becomes new balance
+            }
+
+        } else {
+            // No credit: they owe full amount
+            $billBalance = $billAmount;
+            $remainingBalance = $previousBalance + $billAmount;
+        }
+
+        // update meter state
+        $meter->update([
+            'current_balance' => $remainingBalance
+        ]);
+
+        return [
+            'bill_balance' => $billBalance,
+            'remaining_balance' => $remainingBalance
+        ];
     }
+
 
     /**
      * Get meter readings for a specific customer and meter
