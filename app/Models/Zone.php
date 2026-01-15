@@ -14,5 +14,9 @@ class Zone extends Model
     public function walkroutes() {
         return $this->hasMany(WalkRoute::class);
     }
+     public function meters()
+    {
+        return $this->hasMany(Meter::class);
+    }
 
 }

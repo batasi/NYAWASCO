@@ -60,8 +60,8 @@
 
     <!-- Quick Actions with Active Filter Indicators -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-1 mb-3">
-        <a href="{{ route('admin.meters.index', ['filter' => 'all']) }}"
-           class="bg-blue-500 hover:bg-blue-600 text-white p-6 rounded-xl text-center transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 {{ ($filter ?? 'all') == 'all' ? 'ring-2 ring-blue-300 ring-opacity-50' : '' }}">
+        <a href="{{ route('admin.meters.index', array_merge(['filter' => 'all'], request()->only('zone'))) }}"
+            class="bg-blue-500 hover:bg-blue-600 text-white p-6 rounded-xl text-center transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 {{ ($filter ?? 'all') == 'all' ? 'ring-2 ring-blue-300 ring-opacity-50' : '' }}">
             <div class="text-xl font-semibold mb-2">All Meters</div>
             <div class="text-sm opacity-90">View all meters</div>
             <div class="mt-3 text-2xl opacity-80">
@@ -69,8 +69,8 @@
             </div>
         </a>
 
-        <a href="{{ route('admin.meters.index', ['filter' => 'available']) }}"
-           class="bg-orange-500 hover:bg-orange-600 text-white p-6 rounded-xl text-center transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 {{ ($filter ?? '') == 'available' ? 'ring-2 ring-orange-300 ring-opacity-50' : '' }}">
+        <a href="{{ route('admin.meters.index', array_merge(['filter' => 'available'], request()->only('zone'))) }}"
+            class="bg-orange-500 hover:bg-orange-600 text-white p-6 rounded-xl text-center transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 {{ ($filter ?? '') == 'available' ? 'ring-2 ring-orange-300 ring-opacity-50' : '' }}">
             <div class="text-xl font-semibold mb-2">Available Meters</div>
             <div class="text-sm opacity-90">View available meters</div>
             <div class="mt-3 text-2xl opacity-80">
@@ -78,9 +78,8 @@
             </div>
         </a>
 
-        <a href="{{ route('admin.meters.index', ['filter' => 'active']) }}"
-            class="bg-green-500 hover:bg-green-600 text-white p-6 rounded-xl text-center transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 {{ ($filter ?? '') == 'active' ? 'ring-2 ring-green-300 ring-opacity-50' : '' }}">
-                <div class="text-xl font-semibold mb-2">Active Meters</div>
+        <a href="{{ route('admin.meters.index', array_merge(['filter' => 'active'], request()->only('zone'))) }}"
+            class="bg-green-500 hover:bg-green-600 text-white p-6 rounded-xl text-center transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 {{ ($filter ?? '') == 'active' ? 'ring-2 ring-green-300 ring-opacity-50' : '' }}">            <div class="text-xl font-semibold mb-2">Active Meters</div>
                 <div class="text-sm opacity-90">View customer meters</div>
                 <div class="mt-3 text-2xl opacity-80">
                     <i class="fas fa-user-check"></i>
@@ -160,8 +159,10 @@
     <!-- Simple Search Form -->
     <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
         <form method="GET" action="{{ route('admin.meters.index') }}" class="flex gap-4">
+            <!-- Preserve all current filters -->
             <input type="hidden" name="filter" value="{{ $filter }}">
             <input type="hidden" name="category" value="{{ request('category') }}">
+            <input type="hidden" name="zone" value="{{ request('zone') }}">
 
             @if($filter === 'location' && request('location'))
                 <input type="hidden" name="location" value="{{ request('location') }}">
@@ -188,10 +189,11 @@
                 <a href="{{ route('admin.meters.index', array_filter([
                     'filter' => $filter,
                     'category' => request('category'),
+                    'zone' => request('zone'),
                     'location' => $filter === 'location' ? request('location') : null
                 ])) }}"
                 class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold transition duration-200 flex items-center">
-                    <i class="fas fa-times mr-2"></i>Clear
+                    <i class="fas fa-times mr-2"></i>Clear Search
                 </a>
             @endif
         </form>
@@ -209,13 +211,109 @@
             </div>
         @endif
     </div>
+    <!-- Active Filters Display -->
+    @if(request('zone') || request('category') || request('filter') !== 'all')
+    <div class="mb-6">
+        <div class="flex flex-wrap items-center gap-2">
+            <span class="text-sm font-medium text-gray-700">Active Filters:</span>
+
+            @if(request('zone') && $selectedZone)
+            <span class="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800">
+                <i class="fas fa-map-marker-alt mr-1"></i>
+                Zone: {{ $selectedZone->name }}
+                <a href="{{ route('admin.meters.index', array_merge(request()->except('zone'), ['zone' => null])) }}"
+                class="ml-2 text-blue-600 hover:text-blue-800">
+                    <i class="fas fa-times"></i>
+                </a>
+            </span>
+            @endif
+
+            @if(request('category') && $categories->find(request('category')))
+            <span class="inline-flex items-center px-3 py-1 rounded-full bg-purple-100 text-purple-800">
+                <i class="fas fa-tag mr-1"></i>
+                Category: {{ $categories->find(request('category'))->name }}
+                <a href="{{ route('admin.meters.index', array_merge(request()->except('category'), ['category' => null])) }}"
+                class="ml-2 text-purple-600 hover:text-purple-800">
+                    <i class="fas fa-times"></i>
+                </a>
+            </span>
+            @endif
+
+            @if(request('filter') && request('filter') !== 'all')
+            <span class="inline-flex items-center px-3 py-1 rounded-full bg-{{
+                request('filter') == 'available' ? 'orange' :
+                (request('filter') == 'active' ? 'green' : 'purple')
+            }}-100 text-{{
+                request('filter') == 'available' ? 'orange' :
+                (request('filter') == 'active' ? 'green' : 'purple')
+            }}-800">
+                <i class="fas fa-filter mr-1"></i>
+                {{ ucfirst(request('filter')) }} Meters
+                <a href="{{ route('admin.meters.index', array_merge(request()->except('filter'), ['filter' => 'all'])) }}"
+                class="ml-2 text-{{
+                    request('filter') == 'available' ? 'orange' :
+                    (request('filter') == 'active' ? 'green' : 'purple')
+                }}-600 hover:text-{{
+                    request('filter') == 'available' ? 'orange' :
+                    (request('filter') == 'active' ? 'green' : 'purple')
+                }}-800">
+                    <i class="fas fa-times"></i>
+                </a>
+            </span>
+            @endif
+
+            @if(request('q'))
+            <span class="inline-flex items-center px-3 py-1 rounded-full bg-gray-100 text-gray-800">
+                <i class="fas fa-search mr-1"></i>
+                Search: "{{ request('q') }}"
+                <a href="{{ route('admin.meters.index', request()->except('q')) }}"
+                class="ml-2 text-gray-600 hover:text-gray-800">
+                    <i class="fas fa-times"></i>
+                </a>
+            </span>
+            @endif
+
+           @if(request()->query() && count(request()->query()) > 0)
+            <a href="{{ route('admin.meters.index') }}"
+            class="inline-flex items-center px-3 py-1 rounded-full bg-red-100 text-red-800 hover:bg-red-200">
+                <i class="fas fa-times-circle mr-1"></i>
+                Clear All Filters
+            </a>
+            @endif
+        </div>
+    </div>
+    @endif
 
     <!-- Meters Table -->
+      <!-- Zone Filter -->
+            <div class="bg-white rounded-lg shadow p-6 mb-6">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <h3 class="text-lg font-semibold text-gray-800">Filter by Zone</h3>
+                    <div class="flex flex-wrap gap-2">
+                        @php
+                            $currentParams = request()->all();
+                            $baseParams = array_merge($currentParams, ['zone' => null]);
+                        @endphp
+                        <a href="{{ route('admin.meters.index', $baseParams) }}"
+                        class="px-4 py-2 rounded-lg {{ !request('zone') ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
+                            All Zones
+                        </a>
+                        @foreach($zones as $zone)
+                        @php
+                            $zoneParams = array_merge($currentParams, ['zone' => $zone->id]);
+                        @endphp
+                        <a href="{{ route('admin.meters.index', $zoneParams) }}"
+                        class="px-4 py-2 rounded-lg {{ request('zone') == $zone->id ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
+                            {{ $zone->name }} ({{ $zone->meters_count ?? $zone->meters->count() }})
+                        </a>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
     <div class="bg-white rounded-lg shadow overflow-hidden">
          <!-- Table Stats --> <br>
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 text-sm text-gray-600">
-            <div>
-            </div>
+           <div></div>
             <div class="flex items-center space-x-4 mt-2 sm:mt-0">
                 <!-- Download Button -->
 
@@ -239,7 +337,7 @@
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Zone</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Balance</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Reading</th>
@@ -276,24 +374,11 @@
                             @endif
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900">
-                                @if($meter->customer && $meter->customer->estate)
-                                    <!-- For assigned meters, use customer's estate as location -->
-                                    <i class="fas fa-map-marker-alt text-purple-500 mr-1"></i>
-                                    {{ $meter->customer->estate }}
-                                    @if($meter->customer->plot_number || $meter->customer->house_number)
-                                        <div class="text-xs text-gray-500">
-                                            @if($meter->customer->plot_number)Plot {{ $meter->customer->plot_number }}@endif
-                                            @if($meter->customer->house_number)@if($meter->customer->plot_number),@endif House {{ $meter->customer->house_number }}@endif
-                                        </div>
-                                    @endif
-                                @elseif($meter->installation_address)
-                                    <!-- For unassigned meters, use installation address -->
-                                    {{ $meter->installation_address }}
-                                @else
-                                    <span class="text-gray-500">Location not set</span>
-                                @endif
-                            </div>
+                            @if($meter->zone)
+                                <div class="text-sm font-medium text-gray-900">{{ $meter->zone->name }}</div>
+                            @else
+                                <span class="text-sm text-gray-400">—</span>
+                            @endif
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             @php

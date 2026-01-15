@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Meter;
+use App\Models\Zone;
 use App\Models\Customer;
 use App\Models\MeterCategory;
 use App\Models\MeterReading;
@@ -15,39 +16,40 @@ class MeterController extends Controller
 {
     // In App\Http\Controllers\Admin\CustomerController.php or MeterController.php
 
-/**
- * Search customers for Select2 dropdown
- */
-public function searchCustomers(Request $request)
-{
-    $search = $request->get('q');
+    /**
+     * Search customers for Select2 dropdown
+     */
+    public function searchCustomers(Request $request)
+    {
+        $search = $request->get('q');
 
-    $customers = Customer::active()
-        ->where(function($query) use ($search) {
-            $query->where('customer_number', 'like', "%{$search}%")
-                ->orWhere('first_name', 'like', "%{$search}%")
-                ->orWhere('last_name', 'like', "%{$search}%")
-                ->orWhere('phone', 'like', "%{$search}%");
-        })
-        ->select(['id', 'customer_number', 'first_name', 'last_name', 'phone'])
-        ->limit(10)
-        ->get()
-        ->map(function($customer) {
-            return [
-                'id' => $customer->id,
-                'text' => "{$customer->customer_number} - {$customer->first_name} {$customer->last_name} ({$customer->phone})"
-            ];
-        });
+        $customers = Customer::active()
+            ->where(function($query) use ($search) {
+                $query->where('customer_number', 'like', "%{$search}%")
+                    ->orWhere('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
+            })
+            ->select(['id', 'customer_number', 'first_name', 'last_name', 'phone'])
+            ->limit(10)
+            ->get()
+            ->map(function($customer) {
+                return [
+                    'id' => $customer->id,
+                    'text' => "{$customer->customer_number} - {$customer->first_name} {$customer->last_name} ({$customer->phone})"
+                ];
+            });
 
-    return response()->json(['results' => $customers]);
-}
-    public function index(Request $request)
+        return response()->json(['results' => $customers]);
+    }
+   public function index(Request $request)
     {
         $search = $request->get('q');
         $categoryId = $request->get('category');
+        $zoneId = $request->get('zone'); // Add zone filter
         $filter = $request->get('filter', 'all');
 
-        $query = Meter::with(['customer', 'meterCategory', 'meterReadings' => function($query) {
+        $query = Meter::with(['customer', 'meterCategory', 'zone', 'meterReadings' => function($query) {
             $query->latest()->limit(1);
         }]);
 
@@ -84,6 +86,11 @@ public function searchCustomers(Request $request)
                 break;
         }
 
+        // Zone filter
+        if ($zoneId && $zoneId !== 'all') {
+            $query->where('zone_id', $zoneId);
+        }
+
         // Category filter
         if ($categoryId) {
             $query->where('meter_category_id', $categoryId);
@@ -104,28 +111,43 @@ public function searchCustomers(Request $request)
 
         $meters = $query->latest()->paginate(20);
 
+        // Get all zones for filter dropdown
+        $zones = \App\Models\Zone::withCount('meters')->orderBy('name')->get();
+
+        // Get selected zone for display
+        $selectedZone = $zoneId ? \App\Models\Zone::find($zoneId) : null;
+
+        // Update stats based on current filters (including zone)
+        $statsQuery = Meter::query();
+
+        // Apply zone filter to stats if needed
+        if ($zoneId && $zoneId !== 'all') {
+            $statsQuery->where('zone_id', $zoneId);
+        }
+
         $stats = [
-            'total' => Meter::count(),
-            'assigned' => Meter::where('status', Meter::STATUS_ACTIVE)->whereNotNull('customer_id')->count(),
-            'available' => Meter::where('status', Meter::STATUS_AVAILABLE)->whereNull('customer_id')->count(),
-            'faulty' => Meter::where('status', 'faulty')->count(),
+            'total' => $statsQuery->count(),
+            'assigned' => $statsQuery->clone()->where('status', Meter::STATUS_ACTIVE)->whereNotNull('customer_id')->count(),
+            'available' => $statsQuery->clone()->where('status', Meter::STATUS_AVAILABLE)->whereNull('customer_id')->count(),
+            'faulty' => $statsQuery->clone()->where('status', 'faulty')->count(),
         ];
 
         $categories = MeterCategory::active()->ordered()->withCount('meters')->get();
 
-        return view('admin.meters.index', compact('meters', 'stats', 'categories', 'filter'));
+        return view('admin.meters.index', compact('meters', 'stats', 'categories', 'filter', 'zones', 'selectedZone', 'zoneId'));
     }
 
-    /**
- * Simple search for meters
- */
+        /**
+     * Simple search for meters
+     */
     public function search(Request $request)
     {
         $search = $request->get('q');
         $filter = $request->get('filter', 'all');
         $categoryId = $request->get('category');
+        $zoneId = $request->get('zone'); // Add zone filter
 
-        $query = Meter::with(['customer', 'meterCategory']);
+        $query = Meter::with(['customer', 'meterCategory', 'zone']);
 
         // Apply search if exists
         if (!empty($search)) {
@@ -170,6 +192,11 @@ public function searchCustomers(Request $request)
                 break;
         }
 
+        // Zone filter
+        if ($zoneId && $zoneId !== 'all') {
+            $query->where('zone_id', $zoneId);
+        }
+
         // Category filter
         if ($categoryId) {
             $query->where('meter_category_id', $categoryId);
@@ -177,16 +204,27 @@ public function searchCustomers(Request $request)
 
         $meters = $query->latest()->paginate(20);
 
+        // Get all zones
+        $zones = \App\Models\Zone::withCount('meters')->orderBy('name')->get();
+        $selectedZone = $zoneId ? \App\Models\Zone::find($zoneId) : null;
+
+        // Update stats based on current filters
+        $statsQuery = Meter::query();
+
+        if ($zoneId && $zoneId !== 'all') {
+            $statsQuery->where('zone_id', $zoneId);
+        }
+
         $stats = [
-            'total' => Meter::count(),
-            'assigned' => Meter::active()->whereNotNull('customer_id')->count(),
-            'unassigned' => Meter::available()->whereNull('customer_id')->count(),
-            'faulty' => Meter::faulty()->count(),
+            'total' => $statsQuery->count(),
+            'assigned' => $statsQuery->clone()->where('status', Meter::STATUS_ACTIVE)->whereNotNull('customer_id')->count(),
+            'available' => $statsQuery->clone()->where('status', Meter::STATUS_AVAILABLE)->whereNull('customer_id')->count(),
+            'faulty' => $statsQuery->clone()->where('status', 'faulty')->count(),
         ];
 
         $categories = MeterCategory::active()->ordered()->withCount('meters')->get();
 
-        return view('admin.meters.index', compact('meters', 'stats', 'categories', 'filter'));
+        return view('admin.meters.index', compact('meters', 'stats', 'categories', 'filter', 'zones', 'selectedZone', 'zoneId'));
     }
 
     // public function store(Request $request)
