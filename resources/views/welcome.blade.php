@@ -618,7 +618,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         affordable, and sustainable water and sanitation services to the residents of Nyamira County.
                     </p>
                     <p class="text-lg text-gray-700 mb-8 leading-relaxed">
-                        With over 15 years of experience in water service provision, we continuously strive
+                        With personel of experience in water service provision, we continuously strive
                         to improve our infrastructure and services to meet the growing demands of our community.
                     </p>
 
@@ -670,7 +670,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </p>
                         <div class="flex justify-between items-center text-sm text-gray-500">
                             <span>Ongoing</span>
-                            <span>Completion: Dec 2024</span>
+                            <span>Completion: Dec 2026</span>
                         </div>
                     </div>
                 </div>
@@ -685,7 +685,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </p>
                         <div class="flex justify-between items-center text-sm text-gray-500">
                             <span>Ongoing</span>
-                            <span>Completion: Mar 2025</span>
+                            <span>Completion: Apr 2026</span>
                         </div>
                     </div>
                 </div>
@@ -700,7 +700,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </p>
                         <div class="flex justify-between items-center text-sm text-gray-500">
                             <span>Planning Phase</span>
-                            <span>Start: Jan 2025</span>
+                            <span>Start: Apr 2026</span>
                         </div>
                     </div>
                 </div>
@@ -723,7 +723,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="news-card rounded-lg overflow-hidden">
                     <img src="/img/news-1.jpeg" alt="Water Conservation" class="w-full h-48 object-cover">
                     <div class="p-6">
-                        <div class="text-sm text-blue-600 font-semibold mb-2">November 15, 2024</div>
+                        <div class="text-sm text-blue-600 font-semibold mb-2">November 15, 2025</div>
                         <h3 class="text-xl font-semibold text-gray-900 mb-3">Water Conservation Campaign Launch</h3>
                         <p class="text-gray-600 text-sm mb-4">
                             NYAWASCO launches a new water conservation awareness campaign to promote sustainable water usage...
@@ -738,7 +738,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="news-card rounded-lg overflow-hidden">
                     <img src="/img/news-2.jpeg" alt="Infrastructure" class="w-full h-48 object-cover">
                     <div class="p-6">
-                        <div class="text-sm text-blue-600 font-semibold mb-2">October 28, 2024</div>
+                        <div class="text-sm text-blue-600 font-semibold mb-2">October 28, 2025</div>
                         <h3 class="text-xl font-semibold text-gray-900 mb-3">New Water Treatment Plant</h3>
                         <p class="text-gray-600 text-sm mb-4">
                             Construction begins on new state-of-the-art water treatment plant to increase capacity...
@@ -753,7 +753,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="news-card rounded-lg overflow-hidden">
                     <img src="/img/news-3.jpeg" alt="Community" class="w-full h-48 object-cover">
                     <div class="p-6">
-                        <div class="text-sm text-blue-600 font-semibold mb-2">October 12, 2024</div>
+                        <div class="text-sm text-blue-600 font-semibold mb-2">October 12, 2025</div>
                         <h3 class="text-xl font-semibold text-gray-900 mb-3">Community Outreach Program</h3>
                         <p class="text-gray-600 text-sm mb-4">
                             NYAWASCO engages with local communities to address water access challenges...
