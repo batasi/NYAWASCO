@@ -31,8 +31,7 @@ class ReportController extends Controller
 
     public function generate(Request $request)
     {
-           // Increase memory limit and execution time
-        ini_set('memory_limit', '512M');  // Increase to 512MB or even 1G if needed
+        ini_set('memory_limit', '512M');
         ini_set('max_execution_time', 300);
 
         $request->validate([
@@ -42,13 +41,25 @@ class ReportController extends Controller
             'format' => 'nullable|in:pdf,excel,csv,view',
             'detail_level' => 'nullable|in:summary,detailed,full',
             'customer_id' => 'required_if:report_type,statement|exists:customers,id',
+            'zone' => 'nullable|exists:zones,id',
+            'status' => 'nullable|in:completed,pending,failed',
+            'search' => 'nullable|string|max:255',
         ]);
 
         $startDate = $request->start_date ? Carbon::parse($request->start_date) : null;
         $endDate = $request->end_date ? Carbon::parse($request->end_date) : Carbon::now();
         $detailLevel = $request->detail_level ?? 'summary';
 
-        $reportData = $this->generateReportData($request->report_type, $startDate, $endDate, $detailLevel);
+        // Pass filters to generateReportData
+        $filters = $request->only(['zone', 'status', 'search']);
+
+        $reportData = $this->generateReportData(
+            $request->report_type,
+            $startDate,
+            $endDate,
+            $detailLevel,
+            $filters // Pass the filters here
+        );
 
         if ($request->format === 'pdf') {
             return $this->generatePDF($reportData, $request->report_type, $startDate, $endDate);
@@ -61,31 +72,31 @@ class ReportController extends Controller
         return view('reports.show', compact('reportData', 'startDate', 'endDate'));
     }
 
-    private function generateReportData($type, $startDate, $endDate, $detailLevel = 'summary')
+    private function generateReportData($type, $startDate, $endDate, $detailLevel = 'summary', $filters = [])
     {
         switch ($type) {
             case 'revenue':
-                return $this->generateRevenueReport($startDate, $endDate, $detailLevel);
+                return $this->generateRevenueReport($startDate, $endDate, $detailLevel, $filters);
             case 'customer':
-                return $this->generateCustomerReport($startDate, $endDate, $detailLevel);
+                return $this->generateCustomerReport($startDate, $endDate, $detailLevel, $filters);
             case 'meter':
-                return $this->generateMeterReport($startDate, $endDate, $detailLevel);
+                return $this->generateMeterReport($startDate, $endDate, $detailLevel, $filters);
             case 'consumption':
-                return $this->generateConsumptionReport($startDate, $endDate, $detailLevel);
+                return $this->generateConsumptionReport($startDate, $endDate, $detailLevel, $filters);
             case 'collection':
-                return $this->generateCollectionReport($startDate, $endDate, $detailLevel);
+                return $this->generateCollectionReport($startDate, $endDate, $detailLevel, $filters);
             case 'arrears':
-                return $this->generateArrearsReport($startDate, $endDate, $detailLevel);
+                return $this->generateArrearsReport($startDate, $endDate, $detailLevel, $filters);
             case 'statement':
-                $customerId = request()->get('customer_id');
+                $customerId = $filters['customer_id'] ?? null;
                 if (!$customerId) {
                     throw new \Exception('Customer ID is required for statement report');
                 }
-                return $this->generateCustomerStatementReport($customerId, $startDate, $endDate, $detailLevel);
+                return $this->generateCustomerStatementReport($customerId, $startDate, $endDate, $detailLevel, $filters);
             case 'category':
-                return $this->generateCategoryReport($startDate, $endDate, $detailLevel);
+                return $this->generateCategoryReport($startDate, $endDate, $detailLevel, $filters);
             case 'zone':
-                return $this->generateZoneReport($startDate, $endDate, $detailLevel);
+                return $this->generateZoneReport($startDate, $endDate, $detailLevel, $filters);
             default:
                 return [];
         }
@@ -457,28 +468,80 @@ class ReportController extends Controller
         ];
     }
 
-    private function generateCollectionReport($startDate, $endDate, $detailLevel)
+    private function generateCollectionReport($startDate, $endDate, $detailLevel, $filters = [])
     {
-        $query = Payment::with(['bill.customer', 'meter.meterCategory', 'collector']);
+        $query = Payment::with(['bill.customer', 'meter.meterCategory', 'collector', 'meter.zone']);
 
+        // Apply date filter
         if ($startDate) {
             $query->whereBetween('payment_date', [$startDate, $endDate]);
         }
 
+        // Apply zone filter
+        if (isset($filters['zone']) && $filters['zone'] != 'all') {
+            $query->whereHas('meter', function($q) use ($filters) {
+                $q->where('zone_id', $filters['zone']);
+            });
+        }
+
+        // Apply status filter
+        if (isset($filters['status']) && $filters['status'] != 'all') {
+            $query->where('payment_status', $filters['status']);
+        }
+
+        // Apply search filter
+        if (isset($filters['search']) && !empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function($q) use ($search) {
+                $q->where('payment_no', 'like', "%{$search}%")
+                    ->orWhere('transaction_reference', 'like', "%{$search}%")
+                    ->orWhere('amount', 'like', "%{$search}%")
+                    ->orWhere('payment_method', 'like', "%{$search}%")
+                    ->orWhereHas('customer', function($q) use ($search) {
+                        $q->where('first_name', 'like', "%{$search}%")
+                            ->orWhere('last_name', 'like', "%{$search}%")
+                            ->orWhere('customer_number', 'like', "%{$search}%")
+                            ->orWhere('phone', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('meter', function($q) use ($search) {
+                        $q->where('meter_number', 'like', "%{$search}%");
+                    });
+            });
+        }
+
         $payments = $query->get();
 
-        // Daily collection
-        $dailyCollection = DB::table('payments')
+        // Daily collection with filters
+        $dailyQuery = DB::table('payments')
             ->select(
                 'payment_date',
                 DB::raw('SUM(amount) as total_amount'),
                 DB::raw('COUNT(*) as payment_count'),
                 DB::raw('AVG(amount) as avg_amount')
-            )
-            ->when($startDate, function ($q) use ($startDate, $endDate) {
-                return $q->whereBetween('payment_date', [$startDate, $endDate]);
-            })
-            ->groupBy('payment_date')
+            );
+
+        // Apply date filter to daily query
+        if ($startDate) {
+            $dailyQuery->whereBetween('payment_date', [$startDate, $endDate]);
+        }
+
+        // Apply zone filter to daily query
+        if (isset($filters['zone']) && $filters['zone'] != 'all') {
+            $dailyQuery->whereExists(function ($query) use ($filters) {
+                $query->select(DB::raw(1))
+                    ->from('meters')
+                    ->whereColumn('meters.id', 'payments.meter_id')
+                    ->where('meters.zone_id', $filters['zone']);
+            });
+        }
+
+        // Apply status filter to daily query
+        if (isset($filters['status']) && $filters['status'] != 'all') {
+            $dailyQuery->where('payment_status', $filters['status']);
+        }
+
+        $dailyCollection = $dailyQuery->groupBy('payment_date')
             ->orderBy('payment_date', 'desc')
             ->get();
 
@@ -494,8 +557,8 @@ class ReportController extends Controller
             ];
         });
 
-        // Collector performance
-        $collectorPerformance = DB::table('payments')
+        // Collector performance with filters
+        $collectorQuery = DB::table('payments')
             ->join('users', 'payments.user_id', '=', 'users.id')
             ->select(
                 'users.id',
@@ -503,38 +566,40 @@ class ReportController extends Controller
                 DB::raw('SUM(payments.amount) as total_collected'),
                 DB::raw('COUNT(*) as payment_count'),
                 DB::raw('AVG(payments.amount) as avg_payment')
-            )
-            ->when($startDate, function ($q) use ($startDate, $endDate) {
-                return $q->whereBetween('payments.payment_date', [$startDate, $endDate]);
-            })
-            ->groupBy('users.id', 'users.name')
+            );
+
+        if ($startDate) {
+            $collectorQuery->whereBetween('payments.payment_date', [$startDate, $endDate]);
+        }
+
+        if (isset($filters['zone']) && $filters['zone'] != 'all') {
+            $collectorQuery->whereExists(function ($query) use ($filters) {
+                $query->select(DB::raw(1))
+                    ->from('meters')
+                    ->whereColumn('meters.id', 'payments.meter_id')
+                    ->where('meters.zone_id', $filters['zone']);
+            });
+        }
+
+        $collectorPerformance = $collectorQuery->groupBy('users.id', 'users.name')
             ->orderBy('total_collected', 'desc')
             ->get();
 
-        // Category collection
-        $categoryCollection = DB::table('payments')
-            ->join('meters', 'payments.meter_id', '=', 'meters.id')
-            ->join('meter_categories', 'meters.meter_category_id', '=', 'meter_categories.id')
-            ->select(
-                'meter_categories.name as category',
-                DB::raw('SUM(payments.amount) as total_collected'),
-                DB::raw('COUNT(*) as payment_count'),
-                DB::raw('AVG(payments.amount) as avg_payment')
-            )
-            ->when($startDate, function ($q) use ($startDate, $endDate) {
-                return $q->whereBetween('payments.payment_date', [$startDate, $endDate]);
-            })
-            ->groupBy('meter_categories.id', 'meter_categories.name')
-            ->get();
+        // Add zone information to the report
+        $zoneInfo = null;
+        if (isset($filters['zone']) && $filters['zone'] != 'all') {
+            $zoneInfo = \App\Models\Zone::find($filters['zone']);
+        }
 
         return [
             'type' => 'Collection Report',
             'detail_level' => $detailLevel,
+            'filters' => $filters,
+            'zone_info' => $zoneInfo,
             'payments' => $payments,
             'daily_collection' => $dailyCollection,
             'method_breakdown' => $methodBreakdown,
             'collector_performance' => $collectorPerformance,
-            'category_collection' => $categoryCollection,
             'summary' => [
                 'total_collected' => $payments->sum('amount'),
                 'payment_count' => $payments->count(),
@@ -551,6 +616,52 @@ class ReportController extends Controller
                     max($payments->sum('amount'), 1) * 100,
             ]
         ];
+    }
+
+    private function addReportHeaderWithFilters($sheet, $reportType, $startDate, $endDate, $filters = [])
+    {
+        // Title
+        $sheet->mergeCells('A1:D1');
+        $sheet->setCellValue('A1', 'NYAWASCO - ' . strtoupper($reportType) . ' REPORT');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+
+        // Period
+        $sheet->setCellValue('A2', 'Period:');
+        $sheet->setCellValue('B2', $startDate ?
+            $startDate->format('d/m/Y') . ' to ' . $endDate->format('d/m/Y') :
+            'All Time'
+        );
+
+        // Filters
+        $row = 3;
+        if (isset($filters['zone']) && $filters['zone'] != 'all') {
+            $sheet->setCellValue('A' . $row, 'Zone:');
+            $zone = \App\Models\Zone::find($filters['zone']);
+            $sheet->setCellValue('B' . $row, $zone ? $zone->name : 'Zone ' . $filters['zone']);
+            $row++;
+        }
+
+        if (isset($filters['status']) && $filters['status'] != 'all') {
+            $sheet->setCellValue('A' . $row, 'Status:');
+            $sheet->setCellValue('B' . $row, ucfirst($filters['status']));
+            $row++;
+        }
+
+        if (isset($filters['search']) && !empty($filters['search'])) {
+            $sheet->setCellValue('A' . $row, 'Search:');
+            $sheet->setCellValue('B' . $row, $filters['search']);
+            $row++;
+        }
+
+        // Generated date
+        $sheet->setCellValue('A' . $row, 'Generated:');
+        $sheet->setCellValue('B' . $row, now()->format('d/m/Y H:i:s'));
+
+        // Style the header
+        $sheet->getStyle('A1:D' . $row)->getFont()->setBold(true);
+        $sheet->getStyle('A2:A' . $row)->getFont()->setBold(true);
+
+        return $row + 2; // Return next row after header
     }
 
     private function generateArrearsReport($startDate, $endDate, $detailLevel)
@@ -1223,9 +1334,17 @@ class ReportController extends Controller
         // Worksheet 1: Summary
         $summarySheet = $spreadsheet->createSheet();
         $summarySheet->setTitle('Summary');
-        $this->addReportHeader($summarySheet, $reportData['type'], $startDate, $endDate);
 
-        $summaryRow = 5;
+        // Use new header method with filters
+        $startRow = $this->addReportHeaderWithFilters(
+            $summarySheet,
+            $reportData['type'],
+            $startDate,
+            $endDate,
+            $reportData['filters'] ?? []
+        );
+
+        $summaryRow = $startRow;
         foreach ($reportData['summary'] as $key => $value) {
             $summarySheet->setCellValue('A' . $summaryRow, $this->formatHeader($key));
             if (is_numeric($value)) {
@@ -1245,32 +1364,66 @@ class ReportController extends Controller
             $summaryRow++;
         }
 
+        // Auto-size summary columns
+        $summarySheet->getColumnDimension('A')->setWidth(30);
+        $summarySheet->getColumnDimension('B')->setWidth(25);
+
         // Worksheet 2: Daily Collection
         if (isset($reportData['daily_collection'])) {
             $dailySheet = $spreadsheet->createSheet();
             $dailySheet->setTitle('Daily Collection');
 
-            $headers = ['Date', 'Payment Count', 'Total Amount', 'Average Amount'];
-            $this->addSheetHeader($dailySheet, $headers);
+            // Add header with filters
+            $dailyStartRow = $this->addReportHeaderWithFilters(
+                $dailySheet,
+                'Daily Collection',
+                $startDate,
+                $endDate,
+                $reportData['filters'] ?? []
+            );
 
-            $row = 2;
+            $dailyRow = $dailyStartRow;
+
+            $headers = ['Date', 'Payment Count', 'Total Amount', 'Average Amount'];
+
+            // Add headers
+            $col = 'A';
+            foreach ($headers as $header) {
+                $dailySheet->setCellValue($col . $dailyRow, $header);
+                $dailySheet->getStyle($col . $dailyRow)->getFont()->setBold(true);
+                $dailySheet->getStyle($col . $dailyRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFE0E0E0');
+                $dailySheet->getStyle($col . $dailyRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+                $col++;
+            }
+
+            $dailyRow++;
+
             foreach ($reportData['daily_collection'] as $day) {
-                $dailySheet->setCellValue('A' . $row, $day->payment_date ? Carbon::parse($day->payment_date)->format('d/m/Y') : '');
-                $dailySheet->setCellValue('B' . $row, $day->payment_count);
-                $dailySheet->setCellValue('C' . $row, $day->total_amount);
-                $dailySheet->setCellValue('D' . $row, $day->avg_amount);
+                $dailySheet->setCellValue('A' . $dailyRow, $day->payment_date ? Carbon::parse($day->payment_date)->format('d/m/Y') : '');
+                $dailySheet->setCellValue('B' . $dailyRow, $day->payment_count);
+                $dailySheet->setCellValue('C' . $dailyRow, $day->total_amount);
+                $dailySheet->setCellValue('D' . $dailyRow, $day->avg_amount);
 
                 // Format numbers
-                $dailySheet->getStyle('C' . $row . ':D' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+                $dailySheet->getStyle('C' . $dailyRow . ':D' . $dailyRow)->getNumberFormat()->setFormatCode('#,##0.00');
 
-                $row++;
+                $dailyRow++;
             }
 
             // Add totals
-            $this->addSheetTotals($dailySheet, $row, [
-                'B' => 'count',
-                'C' => 'sum',
-            ]);
+            $dailySheet->setCellValue('A' . $dailyRow, 'TOTAL:');
+            $dailySheet->getStyle('A' . $dailyRow)->getFont()->setBold(true);
+            $dailySheet->setCellValue('B' . $dailyRow, '=SUM(B' . $dailyStartRow . ':B' . ($dailyRow - 1) . ')');
+            $dailySheet->setCellValue('C' . $dailyRow, '=SUM(C' . $dailyStartRow . ':C' . ($dailyRow - 1) . ')');
+            $dailySheet->setCellValue('D' . $dailyRow, '=AVERAGE(D' . $dailyStartRow . ':D' . ($dailyRow - 1) . ')');
+            $dailySheet->getStyle('B' . $dailyRow . ':D' . $dailyRow)->getFont()->setBold(true);
+            $dailySheet->getStyle('B' . $dailyRow . ':D' . $dailyRow)->getBorders()->getTop()->setBorderStyle(Border::BORDER_DOUBLE);
+            $dailySheet->getStyle('C' . $dailyRow . ':D' . $dailyRow)->getNumberFormat()->setFormatCode('#,##0.00');
+
+            // Auto-size columns
+            foreach (range('A', 'D') as $column) {
+                $dailySheet->getColumnDimension($column)->setAutoSize(true);
+            }
         }
 
         // Worksheet 3: Payment Details
@@ -1278,37 +1431,132 @@ class ReportController extends Controller
             $paymentsSheet = $spreadsheet->createSheet();
             $paymentsSheet->setTitle('Payment Details');
 
+            // Add header with filters
+            $paymentsStartRow = $this->addReportHeaderWithFilters(
+                $paymentsSheet,
+                'Payment Details',
+                $startDate,
+                $endDate,
+                $reportData['filters'] ?? []
+            );
+
+            $paymentsRow = $paymentsStartRow;
+
             $headers = [
                 'Payment Date', 'Payment Number', 'Receipt Number', 'Customer Acc',
-                'Customer Name', 'Meter Number', 'Amount', 'Payment Method',
+                'Customer Name', 'Meter Number', 'Zone', 'Amount', 'Payment Method',
                 'Transaction Reference', 'Payment Status', 'Collector', 'Bill Number'
             ];
-            $this->addSheetHeader($paymentsSheet, $headers);
 
-            $row = 2;
-            foreach ($reportData['payments'] as $payment) {
-                $paymentsSheet->setCellValue('A' . $row, $payment->payment_date ? $payment->payment_date->format('d/m/Y') : '');
-                $paymentsSheet->setCellValue('B' . $row, $payment->payment_no);
-                $paymentsSheet->setCellValue('C' . $row, $payment->receipt_number);
-                $paymentsSheet->setCellValue('D' . $row, $payment->meter->meter_number ?? '');
-                $paymentsSheet->setCellValue('E' . $row, $payment->customer ?
-                    trim($payment->customer->first_name . ' ' . $payment->customer->last_name) : '');
-                $paymentsSheet->setCellValue('F' . $row, $payment->meter->meter_number ?? '');
-                $paymentsSheet->setCellValue('G' . $row, $payment->amount);
-                $paymentsSheet->setCellValue('H' . $row, ucfirst($payment->payment_method));
-                $paymentsSheet->setCellValue('I' . $row, $payment->transaction_reference);
-                $paymentsSheet->setCellValue('J' . $row, ucfirst($payment->payment_status));
-                $paymentsSheet->setCellValue('K' . $row, $payment->collector->name ?? 'System');
-
-                // Format numbers
-                $paymentsSheet->getStyle('G' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
-
-                $row++;
+            // Add headers
+            $col = 'A';
+            foreach ($headers as $header) {
+                $paymentsSheet->setCellValue($col . $paymentsRow, $header);
+                $paymentsSheet->getStyle($col . $paymentsRow)->getFont()->setBold(true);
+                $paymentsSheet->getStyle($col . $paymentsRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFE0E0E0');
+                $paymentsSheet->getStyle($col . $paymentsRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+                $col++;
             }
 
+            $paymentsRow++;
+
+            foreach ($reportData['payments'] as $payment) {
+                $paymentsSheet->setCellValue('A' . $paymentsRow, $payment->payment_date ? $payment->payment_date->format('d/m/Y') : '');
+                $paymentsSheet->setCellValue('B' . $paymentsRow, $payment->payment_no);
+                $paymentsSheet->setCellValue('C' . $paymentsRow, $payment->receipt_number ?? 'N/A');
+                $paymentsSheet->setCellValue('D' . $paymentsRow, $payment->meter->meter_number ?? '');
+                $paymentsSheet->setCellValue('E' . $paymentsRow, $payment->customer ?
+                    trim($payment->customer->first_name . ' ' . $payment->customer->last_name) : 'N/A');
+                $paymentsSheet->setCellValue('F' . $paymentsRow, $payment->meter->meter_number ?? '');
+                $paymentsSheet->setCellValue('G' . $paymentsRow, $payment->meter->zone->name ?? 'N/A');
+                $paymentsSheet->setCellValue('H' . $paymentsRow, $payment->amount);
+                $paymentsSheet->setCellValue('I' . $paymentsRow, ucfirst($payment->payment_method));
+                $paymentsSheet->setCellValue('J' . $paymentsRow, $payment->transaction_reference);
+                $paymentsSheet->setCellValue('K' . $paymentsRow, ucfirst($payment->payment_status));
+                $paymentsSheet->setCellValue('L' . $paymentsRow, $payment->collector->name ?? 'System');
+                $paymentsSheet->setCellValue('M' . $paymentsRow, $payment->bill->bill_number ?? 'N/A');
+
+                // Format numbers
+                $paymentsSheet->getStyle('H' . $paymentsRow)->getNumberFormat()->setFormatCode('#,##0.00');
+
+                $paymentsRow++;
+            }
+
+            // Add totals
+            $paymentsSheet->setCellValue('A' . $paymentsRow, 'TOTAL:');
+            $paymentsSheet->getStyle('A' . $paymentsRow)->getFont()->setBold(true);
+            $paymentsSheet->setCellValue('H' . $paymentsRow, '=SUM(H' . $paymentsStartRow . ':H' . ($paymentsRow - 1) . ')');
+            $paymentsSheet->getStyle('H' . $paymentsRow)->getFont()->setBold(true);
+            $paymentsSheet->getStyle('H' . $paymentsRow)->getBorders()->getTop()->setBorderStyle(Border::BORDER_DOUBLE);
+            $paymentsSheet->getStyle('H' . $paymentsRow)->getNumberFormat()->setFormatCode('#,##0.00');
+
             // Auto-size columns
-            foreach (range('A', 'K') as $column) {
+            foreach (range('A', 'M') as $column) {
                 $paymentsSheet->getColumnDimension($column)->setAutoSize(true);
+            }
+        }
+
+        // Worksheet 4: Payment Method Breakdown
+        if (isset($reportData['method_breakdown'])) {
+            $methodSheet = $spreadsheet->createSheet();
+            $methodSheet->setTitle('Payment Methods');
+
+            // Add header with filters
+            $methodStartRow = $this->addReportHeaderWithFilters(
+                $methodSheet,
+                'Payment Methods Breakdown',
+                $startDate,
+                $endDate,
+                $reportData['filters'] ?? []
+            );
+
+            $methodRow = $methodStartRow;
+
+            $headers = ['Payment Method', 'Payment Count', 'Total Amount', 'Average Amount', 'Percentage'];
+
+            // Add headers
+            $col = 'A';
+            foreach ($headers as $header) {
+                $methodSheet->setCellValue($col . $methodRow, $header);
+                $methodSheet->getStyle($col . $methodRow)->getFont()->setBold(true);
+                $methodSheet->getStyle($col . $methodRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFE0E0E0');
+                $methodSheet->getStyle($col . $methodRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+                $col++;
+            }
+
+            $methodRow++;
+
+            $totalAmount = $reportData['payments']->sum('amount');
+
+            foreach ($reportData['method_breakdown'] as $methodData) {
+                $methodSheet->setCellValue('A' . $methodRow, ucfirst($methodData['method']));
+                $methodSheet->setCellValue('B' . $methodRow, $methodData['count']);
+                $methodSheet->setCellValue('C' . $methodRow, $methodData['total_amount']);
+                $methodSheet->setCellValue('D' . $methodRow, $methodData['avg_amount']);
+                $methodSheet->setCellValue('E' . $methodRow, $totalAmount > 0 ? ($methodData['total_amount'] / $totalAmount) : 0);
+
+                // Format numbers
+                $methodSheet->getStyle('C' . $methodRow . ':D' . $methodRow)->getNumberFormat()->setFormatCode('#,##0.00');
+                $methodSheet->getStyle('E' . $methodRow)->getNumberFormat()->setFormatCode('0.00%');
+
+                $methodRow++;
+            }
+
+            // Add totals
+            $methodSheet->setCellValue('A' . $methodRow, 'TOTAL:');
+            $methodSheet->getStyle('A' . $methodRow)->getFont()->setBold(true);
+            $methodSheet->setCellValue('B' . $methodRow, '=SUM(B' . $methodStartRow . ':B' . ($methodRow - 1) . ')');
+            $methodSheet->setCellValue('C' . $methodRow, '=SUM(C' . $methodStartRow . ':C' . ($methodRow - 1) . ')');
+            $methodSheet->setCellValue('D' . $methodRow, '=AVERAGE(D' . $methodStartRow . ':D' . ($methodRow - 1) . ')');
+            $methodSheet->setCellValue('E' . $methodRow, '=SUM(E' . $methodStartRow . ':E' . ($methodRow - 1) . ')');
+            $methodSheet->getStyle('B' . $methodRow . ':E' . $methodRow)->getFont()->setBold(true);
+            $methodSheet->getStyle('B' . $methodRow . ':E' . $methodRow)->getBorders()->getTop()->setBorderStyle(Border::BORDER_DOUBLE);
+            $methodSheet->getStyle('C' . $methodRow . ':D' . $methodRow)->getNumberFormat()->setFormatCode('#,##0.00');
+            $methodSheet->getStyle('E' . $methodRow)->getNumberFormat()->setFormatCode('0.00%');
+
+            // Auto-size columns
+            foreach (range('A', 'E') as $column) {
+                $methodSheet->getColumnDimension($column)->setAutoSize(true);
             }
         }
     }
@@ -2126,205 +2374,206 @@ class ReportController extends Controller
             'meters' => $customer->meters,
         ];
     }
-private function generateStatementExcel($spreadsheet, $reportData, $startDate, $endDate)
-{
-    $customer = $reportData['customer'];
 
-    // Worksheet 1: Customer Information
-    $infoSheet = $spreadsheet->createSheet();
-    $infoSheet->setTitle('Customer Information');
-    $this->addReportHeader($infoSheet, $reportData['type'], $startDate, $endDate);
+    private function generateStatementExcel($spreadsheet, $reportData, $startDate, $endDate)
+    {
+        $customer = $reportData['customer'];
 
-    $row = 5;
-    $infoSheet->setCellValue('A' . $row, 'CUSTOMER INFORMATION');
-    $infoSheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(12);
-    $row += 2;
+        // Worksheet 1: Customer Information
+        $infoSheet = $spreadsheet->createSheet();
+        $infoSheet->setTitle('Customer Information');
+        $this->addReportHeader($infoSheet, $reportData['type'], $startDate, $endDate);
 
-    // Customer Details
-    $details = [
-        ['Customer Number:', $customer->customer_number],
-        ['Full Name:', trim($customer->first_name . ' ' . $customer->last_name)],
-        ['Phone:', $customer->phone],
-        ['Email:', $customer->email],
-        ['ID Number:', $customer->id_number],
-        ['KRA PIN:', $customer->kra_pin ?? 'N/A'],
-        ['Physical Address:', $customer->physical_address],
-        ['Plot Number:', $customer->plot_number],
-        ['House Number:', $customer->house_number],
-        ['Estate:', $customer->estate ?? 'N/A'],
-        ['Account Status:', ucfirst($customer->status)],
-        ['Property Owner:', $customer->property_owner],
-        ['Expected Users:', $customer->expected_users ?? 'N/A'],
-        ['Created Date:', $customer->created_at->format('d/m/Y')],
-        ['Last Updated:', $customer->updated_at->format('d/m/Y')],
-    ];
+        $row = 5;
+        $infoSheet->setCellValue('A' . $row, 'CUSTOMER INFORMATION');
+        $infoSheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(12);
+        $row += 2;
 
-    foreach ($details as $detail) {
-        $infoSheet->setCellValue('A' . $row, $detail[0]);
-        $infoSheet->setCellValue('B' . $row, $detail[1]);
-        $infoSheet->getStyle('A' . $row)->getFont()->setBold(true);
-        $row++;
-    }
+        // Customer Details
+        $details = [
+            ['Customer Number:', $customer->customer_number],
+            ['Full Name:', trim($customer->first_name . ' ' . $customer->last_name)],
+            ['Phone:', $customer->phone],
+            ['Email:', $customer->email],
+            ['ID Number:', $customer->id_number],
+            ['KRA PIN:', $customer->kra_pin ?? 'N/A'],
+            ['Physical Address:', $customer->physical_address],
+            ['Plot Number:', $customer->plot_number],
+            ['House Number:', $customer->house_number],
+            ['Estate:', $customer->estate ?? 'N/A'],
+            ['Account Status:', ucfirst($customer->status)],
+            ['Property Owner:', $customer->property_owner],
+            ['Expected Users:', $customer->expected_users ?? 'N/A'],
+            ['Created Date:', $customer->created_at->format('d/m/Y')],
+            ['Last Updated:', $customer->updated_at->format('d/m/Y')],
+        ];
 
-    // Account Summary
-    $row += 2;
-    $infoSheet->setCellValue('A' . $row, 'ACCOUNT SUMMARY');
-    $infoSheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(12);
-    $row += 2;
+        foreach ($details as $detail) {
+            $infoSheet->setCellValue('A' . $row, $detail[0]);
+            $infoSheet->setCellValue('B' . $row, $detail[1]);
+            $infoSheet->getStyle('A' . $row)->getFont()->setBold(true);
+            $row++;
+        }
 
-    $summaryDetails = [
-        ['Total Billed:', 'KSh ' . number_format($reportData['summary']['total_billed'], 2)],
-        ['Total Paid:', 'KSh ' . number_format($reportData['summary']['total_paid'], 2)],
-        ['Outstanding Balance:', 'KSh ' . number_format($reportData['summary']['outstanding_balance'], 2)],
-        ['Total Consumption:', number_format($reportData['summary']['total_consumption'], 2) . ' m³'],
-        ['Average Monthly Consumption:', number_format($reportData['summary']['average_monthly_consumption'], 2) . ' m³'],
-        ['Number of Bills:', $reportData['summary']['bills_count']],
-        ['Number of Payments:', $reportData['summary']['payments_count']],
-        ['Number of Readings:', $reportData['summary']['readings_count']],
-        ['Number of Meters:', $reportData['summary']['meter_count']],
-        ['Account Age:', $reportData['summary']['account_age_days'] . ' days'],
-        ['Last Payment Date:', $reportData['summary']['last_payment_date'] ? Carbon::parse($reportData['summary']['last_payment_date'])->format('d/m/Y') : 'N/A'],
-        ['Last Payment Amount:', 'KSh ' . number_format($reportData['summary']['last_payment_amount'], 2)],
-        ['Last Reading Date:', $reportData['summary']['last_reading_date'] ? Carbon::parse($reportData['summary']['last_reading_date'])->format('d/m/Y') : 'N/A'],
-        ['Last Bill Date:', $reportData['summary']['last_bill_date'] ? Carbon::parse($reportData['summary']['last_bill_date'])->format('d/m/Y') : 'N/A'],
-    ];
+        // Account Summary
+        $row += 2;
+        $infoSheet->setCellValue('A' . $row, 'ACCOUNT SUMMARY');
+        $infoSheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(12);
+        $row += 2;
 
-    foreach ($summaryDetails as $detail) {
-        $infoSheet->setCellValue('A' . $row, $detail[0]);
-        $infoSheet->setCellValue('B' . $row, $detail[1]);
-        $infoSheet->getStyle('A' . $row)->getFont()->setBold(true);
-        $row++;
-    }
+        $summaryDetails = [
+            ['Total Billed:', 'KSh ' . number_format($reportData['summary']['total_billed'], 2)],
+            ['Total Paid:', 'KSh ' . number_format($reportData['summary']['total_paid'], 2)],
+            ['Outstanding Balance:', 'KSh ' . number_format($reportData['summary']['outstanding_balance'], 2)],
+            ['Total Consumption:', number_format($reportData['summary']['total_consumption'], 2) . ' m³'],
+            ['Average Monthly Consumption:', number_format($reportData['summary']['average_monthly_consumption'], 2) . ' m³'],
+            ['Number of Bills:', $reportData['summary']['bills_count']],
+            ['Number of Payments:', $reportData['summary']['payments_count']],
+            ['Number of Readings:', $reportData['summary']['readings_count']],
+            ['Number of Meters:', $reportData['summary']['meter_count']],
+            ['Account Age:', $reportData['summary']['account_age_days'] . ' days'],
+            ['Last Payment Date:', $reportData['summary']['last_payment_date'] ? Carbon::parse($reportData['summary']['last_payment_date'])->format('d/m/Y') : 'N/A'],
+            ['Last Payment Amount:', 'KSh ' . number_format($reportData['summary']['last_payment_amount'], 2)],
+            ['Last Reading Date:', $reportData['summary']['last_reading_date'] ? Carbon::parse($reportData['summary']['last_reading_date'])->format('d/m/Y') : 'N/A'],
+            ['Last Bill Date:', $reportData['summary']['last_bill_date'] ? Carbon::parse($reportData['summary']['last_bill_date'])->format('d/m/Y') : 'N/A'],
+        ];
 
-    // Auto-size columns
-    $infoSheet->getColumnDimension('A')->setWidth(25);
-    $infoSheet->getColumnDimension('B')->setWidth(40);
+        foreach ($summaryDetails as $detail) {
+            $infoSheet->setCellValue('A' . $row, $detail[0]);
+            $infoSheet->setCellValue('B' . $row, $detail[1]);
+            $infoSheet->getStyle('A' . $row)->getFont()->setBold(true);
+            $row++;
+        }
 
-    // Worksheet 2: Bills History (if detailed or full)
-    if ($reportData['detail_level'] === 'detailed' || $reportData['detail_level'] === 'full') {
-        if ($reportData['bills']->count() > 0) {
-            $billsSheet = $spreadsheet->createSheet();
-            $billsSheet->setTitle('Bills History');
+        // Auto-size columns
+        $infoSheet->getColumnDimension('A')->setWidth(25);
+        $infoSheet->getColumnDimension('B')->setWidth(40);
 
-            $headers = [
-                'Bill Number', 'Billing Period', 'Consumption (m³)',
-                'Total Amount', 'Paid Amount', 'Balance', 'Status', 'Due Date'
-            ];
-            $this->addSheetHeader($billsSheet, $headers);
+        // Worksheet 2: Bills History (if detailed or full)
+        if ($reportData['detail_level'] === 'detailed' || $reportData['detail_level'] === 'full') {
+            if ($reportData['bills']->count() > 0) {
+                $billsSheet = $spreadsheet->createSheet();
+                $billsSheet->setTitle('Bills History');
 
-            $row = 2;
-            foreach ($reportData['bills'] as $bill) {
-                $billsSheet->setCellValue('A' . $row, $bill->bill_number);
-                $billsSheet->setCellValue('B' . $row,
-                    ($bill->billing_period_start ? $bill->billing_period_start->format('d/m/Y') : '') . ' - ' .
-                    ($bill->billing_period_end ? $bill->billing_period_end->format('d/m/Y') : '')
-                );
-                $billsSheet->setCellValue('C' . $row, $bill->consumption);
-                $billsSheet->setCellValue('D' . $row, $bill->total_amount);
-                $billsSheet->setCellValue('E' . $row, $bill->paid_amount);
-                $billsSheet->setCellValue('F' . $row, $bill->balance);
-                $billsSheet->setCellValue('G' . $row, ucfirst($bill->bill_status));
-                $billsSheet->setCellValue('H' . $row, $bill->due_date ? $bill->due_date->format('d/m/Y') : '');
+                $headers = [
+                    'Bill Number', 'Billing Period', 'Consumption (m³)',
+                    'Total Amount', 'Paid Amount', 'Balance', 'Status', 'Due Date'
+                ];
+                $this->addSheetHeader($billsSheet, $headers);
 
-                // Format numbers
-                $billsSheet->getStyle('C' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
-                $billsSheet->getStyle('D' . $row . ':F' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+                $row = 2;
+                foreach ($reportData['bills'] as $bill) {
+                    $billsSheet->setCellValue('A' . $row, $bill->bill_number);
+                    $billsSheet->setCellValue('B' . $row,
+                        ($bill->billing_period_start ? $bill->billing_period_start->format('d/m/Y') : '') . ' - ' .
+                        ($bill->billing_period_end ? $bill->billing_period_end->format('d/m/Y') : '')
+                    );
+                    $billsSheet->setCellValue('C' . $row, $bill->consumption);
+                    $billsSheet->setCellValue('D' . $row, $bill->total_amount);
+                    $billsSheet->setCellValue('E' . $row, $bill->paid_amount);
+                    $billsSheet->setCellValue('F' . $row, $bill->balance);
+                    $billsSheet->setCellValue('G' . $row, ucfirst($bill->bill_status));
+                    $billsSheet->setCellValue('H' . $row, $bill->due_date ? $bill->due_date->format('d/m/Y') : '');
 
-                $row++;
+                    // Format numbers
+                    $billsSheet->getStyle('C' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+                    $billsSheet->getStyle('D' . $row . ':F' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+
+                    $row++;
+                }
+
+                // Add totals
+                $this->addSheetTotals($billsSheet, $row, [
+                    'C' => 'sum',
+                    'D' => 'sum',
+                    'E' => 'sum',
+                    'F' => 'sum'
+                ]);
+
+                // Auto-size columns
+                foreach (range('A', 'H') as $column) {
+                    $billsSheet->getColumnDimension($column)->setAutoSize(true);
+                }
             }
+        }
 
-            // Add totals
-            $this->addSheetTotals($billsSheet, $row, [
-                'C' => 'sum',
-                'D' => 'sum',
-                'E' => 'sum',
-                'F' => 'sum'
-            ]);
+        // Worksheet 3: Payment History (if detailed or full)
+        if ($reportData['detail_level'] === 'detailed' || $reportData['detail_level'] === 'full') {
+            if ($reportData['payments']->count() > 0) {
+                $paymentsSheet = $spreadsheet->createSheet();
+                $paymentsSheet->setTitle('Payment History');
 
-            // Auto-size columns
-            foreach (range('A', 'H') as $column) {
-                $billsSheet->getColumnDimension($column)->setAutoSize(true);
+                $headers = [
+                    'Payment Date', 'Payment Number', 'Receipt Number', 'Amount',
+                    'Payment Method', 'Transaction Reference', 'Status', 'Bill Number'
+                ];
+                $this->addSheetHeader($paymentsSheet, $headers);
+
+                $row = 2;
+                foreach ($reportData['payments'] as $payment) {
+                    $paymentsSheet->setCellValue('A' . $row, $payment->payment_date ? $payment->payment_date->format('d/m/Y') : '');
+                    $paymentsSheet->setCellValue('B' . $row, $payment->payment_no);
+                    $paymentsSheet->setCellValue('C' . $row, $payment->receipt_number);
+                    $paymentsSheet->setCellValue('D' . $row, $payment->amount);
+                    $paymentsSheet->setCellValue('E' . $row, ucfirst($payment->payment_method));
+                    $paymentsSheet->setCellValue('F' . $row, $payment->transaction_reference);
+                    $paymentsSheet->setCellValue('G' . $row, ucfirst($payment->payment_status));
+                    $paymentsSheet->setCellValue('H' . $row, $payment->bill->bill_number ?? 'N/A');
+
+                    // Format numbers
+                    $paymentsSheet->getStyle('D' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+
+                    $row++;
+                }
+
+                // Add totals
+                $this->addSheetTotals($paymentsSheet, $row, ['D' => 'sum']);
+
+                // Auto-size columns
+                foreach (range('A', 'H') as $column) {
+                    $paymentsSheet->getColumnDimension($column)->setAutoSize(true);
+                }
+            }
+        }
+
+        // Worksheet 4: Meter Details (if full)
+        if ($reportData['detail_level'] === 'full') {
+            if ($reportData['meters']->count() > 0) {
+                $metersSheet = $spreadsheet->createSheet();
+                $metersSheet->setTitle('Meter Details');
+
+                $headers = [
+                    'Meter Number', 'Meter Type', 'Category', 'Status',
+                    'Installation Address', 'Installation Date', 'Initial Reading',
+                    'Current Balance', 'Paid Amount', 'Zone', 'Walk Route'
+                ];
+                $this->addSheetHeader($metersSheet, $headers);
+
+                $row = 2;
+                foreach ($reportData['meters'] as $meter) {
+                    $metersSheet->setCellValue('A' . $row, $meter->meter_number);
+                    $metersSheet->setCellValue('B' . $row, $meter->meter_type);
+                    $metersSheet->setCellValue('C' . $row, $meter->meterCategory->name ?? '');
+                    $metersSheet->setCellValue('D' . $row, ucfirst($meter->status));
+                    $metersSheet->setCellValue('E' . $row, $meter->installation_address);
+                    $metersSheet->setCellValue('F' . $row, $meter->installation_date ? $meter->installation_date->format('d/m/Y') : '');
+                    $metersSheet->setCellValue('G' . $row, $meter->initial_reading);
+                    $metersSheet->setCellValue('H' . $row, $meter->current_balance);
+                    $metersSheet->setCellValue('I' . $row, $meter->paid_amount);
+                    $metersSheet->setCellValue('J' . $row, $meter->zone->name ?? '');
+                    $metersSheet->setCellValue('K' . $row, $meter->walkRoute->name ?? '');
+
+                    // Format numbers
+                    $metersSheet->getStyle('G' . $row . ':I' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+
+                    $row++;
+                }
+
+                // Auto-size columns
+                foreach (range('A', 'K') as $column) {
+                    $metersSheet->getColumnDimension($column)->setAutoSize(true);
+                }
             }
         }
     }
-
-    // Worksheet 3: Payment History (if detailed or full)
-    if ($reportData['detail_level'] === 'detailed' || $reportData['detail_level'] === 'full') {
-        if ($reportData['payments']->count() > 0) {
-            $paymentsSheet = $spreadsheet->createSheet();
-            $paymentsSheet->setTitle('Payment History');
-
-            $headers = [
-                'Payment Date', 'Payment Number', 'Receipt Number', 'Amount',
-                'Payment Method', 'Transaction Reference', 'Status', 'Bill Number'
-            ];
-            $this->addSheetHeader($paymentsSheet, $headers);
-
-            $row = 2;
-            foreach ($reportData['payments'] as $payment) {
-                $paymentsSheet->setCellValue('A' . $row, $payment->payment_date ? $payment->payment_date->format('d/m/Y') : '');
-                $paymentsSheet->setCellValue('B' . $row, $payment->payment_no);
-                $paymentsSheet->setCellValue('C' . $row, $payment->receipt_number);
-                $paymentsSheet->setCellValue('D' . $row, $payment->amount);
-                $paymentsSheet->setCellValue('E' . $row, ucfirst($payment->payment_method));
-                $paymentsSheet->setCellValue('F' . $row, $payment->transaction_reference);
-                $paymentsSheet->setCellValue('G' . $row, ucfirst($payment->payment_status));
-                $paymentsSheet->setCellValue('H' . $row, $payment->bill->bill_number ?? 'N/A');
-
-                // Format numbers
-                $paymentsSheet->getStyle('D' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
-
-                $row++;
-            }
-
-            // Add totals
-            $this->addSheetTotals($paymentsSheet, $row, ['D' => 'sum']);
-
-            // Auto-size columns
-            foreach (range('A', 'H') as $column) {
-                $paymentsSheet->getColumnDimension($column)->setAutoSize(true);
-            }
-        }
-    }
-
-    // Worksheet 4: Meter Details (if full)
-    if ($reportData['detail_level'] === 'full') {
-        if ($reportData['meters']->count() > 0) {
-            $metersSheet = $spreadsheet->createSheet();
-            $metersSheet->setTitle('Meter Details');
-
-            $headers = [
-                'Meter Number', 'Meter Type', 'Category', 'Status',
-                'Installation Address', 'Installation Date', 'Initial Reading',
-                'Current Balance', 'Paid Amount', 'Zone', 'Walk Route'
-            ];
-            $this->addSheetHeader($metersSheet, $headers);
-
-            $row = 2;
-            foreach ($reportData['meters'] as $meter) {
-                $metersSheet->setCellValue('A' . $row, $meter->meter_number);
-                $metersSheet->setCellValue('B' . $row, $meter->meter_type);
-                $metersSheet->setCellValue('C' . $row, $meter->meterCategory->name ?? '');
-                $metersSheet->setCellValue('D' . $row, ucfirst($meter->status));
-                $metersSheet->setCellValue('E' . $row, $meter->installation_address);
-                $metersSheet->setCellValue('F' . $row, $meter->installation_date ? $meter->installation_date->format('d/m/Y') : '');
-                $metersSheet->setCellValue('G' . $row, $meter->initial_reading);
-                $metersSheet->setCellValue('H' . $row, $meter->current_balance);
-                $metersSheet->setCellValue('I' . $row, $meter->paid_amount);
-                $metersSheet->setCellValue('J' . $row, $meter->zone->name ?? '');
-                $metersSheet->setCellValue('K' . $row, $meter->walkRoute->name ?? '');
-
-                // Format numbers
-                $metersSheet->getStyle('G' . $row . ':I' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
-
-                $row++;
-            }
-
-            // Auto-size columns
-            foreach (range('A', 'K') as $column) {
-                $metersSheet->getColumnDimension($column)->setAutoSize(true);
-            }
-        }
-    }
-}
 }
