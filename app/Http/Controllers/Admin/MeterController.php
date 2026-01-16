@@ -42,7 +42,8 @@ class MeterController extends Controller
 
         return response()->json(['results' => $customers]);
     }
-   public function index(Request $request)
+
+    public function index(Request $request)
     {
         $search = $request->get('q');
         $categoryId = $request->get('category');
