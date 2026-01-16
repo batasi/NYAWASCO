@@ -312,23 +312,59 @@
             </div>
     <div class="bg-white rounded-lg shadow overflow-hidden">
          <!-- Table Stats --> <br>
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 text-sm text-gray-600">
-           <div></div>
-            <div class="flex items-center space-x-4 mt-2 sm:mt-0">
-                <!-- Download Button -->
+       <!-- In the meters.blade.php file, around line 212 -->
+<!-- Table Stats -->
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 text-sm text-gray-600">
+    <div></div>
+    <div class="flex items-center space-x-4 mt-2 sm:mt-0">
+        @php
+            // Prepare export parameters based on current filters
+            $exportParams = [
+                'report_type' => 'meter',
+                'format' => 'excel',
+                'detail_level' => 'full'
+            ];
 
-                <a href="{{ route('reports.generate', ['report_type' => 'meter', 'format' => 'excel', 'detail_level' => 'full']) }}"
+            // Add zone filter if active
+            if(request('zone') && request('zone') != 'all') {
+                $exportParams['zone'] = request('zone');
+            }
 
-                    class="download-excel-btn flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-sm transition duration-200"
-                    >
-                    <i id="downloadIcon" class="fas fa-file-excel"></i>
-                        <span id="downloadText">Export Excel</span>
-                        <i id="downloadSpinner" class="fas fa-spinner fa-spin hidden"></i>
-                </a>
+            // Add category filter if active
+            if(request('category')) {
+                $exportParams['category'] = request('category');
+            }
 
+            // Add status filter (from the filter parameter)
+            if(request('filter') && request('filter') != 'all') {
+                // Map the filter parameter to status for the report
+                $filterMap = [
+                    'available' => 'available',
+                    'active' => 'active',
+                    'location' => 'all' // Location filter might need special handling
+                ];
 
-            </div>
-        </div>
+                if(isset($filterMap[request('filter')])) {
+                    $exportParams['status'] = $filterMap[request('filter')];
+                }
+            }
+
+            // Add search term if active
+            if(request('q')) {
+                $exportParams['search'] = request('q');
+            }
+        @endphp
+
+        <!-- Download Button -->
+        <a href="{{ route('reports.generate', $exportParams) }}"
+            class="download-excel-btn flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-sm transition duration-200"
+            onclick="showDownloadSpinner()">
+            <i id="downloadIcon" class="fas fa-file-excel"></i>
+            <span id="downloadText">Export Excel</span>
+            <i id="downloadSpinner" class="fas fa-spinner fa-spin hidden"></i>
+        </a>
+    </div>
+</div>
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">

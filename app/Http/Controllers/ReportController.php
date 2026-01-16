@@ -384,7 +384,8 @@ class ReportController extends Controller
             ]
         ];
     }
-    private function generateMeterReport($startDate, $endDate, $detailLevel)
+
+    private function generateMeterReport($startDate, $endDate, $detailLevel, $filters = [])
     {
         $query = Meter::with([
             'meterCategory',
@@ -398,6 +399,33 @@ class ReportController extends Controller
             }
         ]);
 
+        // Apply filters if provided
+        if (isset($filters['zone']) && $filters['zone'] != 'all') {
+            $query->where('zone_id', $filters['zone']);
+        }
+
+        if (isset($filters['category']) && $filters['category'] != 'all') {
+            $query->where('meter_category_id', $filters['category']);
+        }
+
+        if (isset($filters['status']) && $filters['status'] != 'all') {
+            $query->where('status', $filters['status']);
+        }
+
+        if (isset($filters['search']) && !empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function($q) use ($search) {
+                $q->where('meter_number', 'like', "%{$search}%")
+                ->orWhere('meter_model', 'like', "%{$search}%")
+                ->orWhere('installation_address', 'like', "%{$search}%")
+                ->orWhereHas('customer', function($q) use ($search) {
+                    $q->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('customer_number', 'like', "%{$search}%");
+                });
+            });
+        }
+
         $meters = $query->get()->map(function ($meter) {
             $meter->total_billed = $meter->bills->sum('total_amount');
             $meter->total_paid = $meter->bills->sum('paid_amount');
@@ -408,48 +436,82 @@ class ReportController extends Controller
             return $meter;
         });
 
-        // Category breakdown
-        $categoryStats = $meters->groupBy('meter_category_id')->map(function ($group) use ($meters) {
+        // Category breakdown with filters
+        $categoryQuery = MeterCategory::withCount(['meters' => function($q) use ($filters) {
+            if (isset($filters['zone']) && $filters['zone'] != 'all') {
+                $q->where('zone_id', $filters['zone']);
+            }
+            if (isset($filters['status']) && $filters['status'] != 'all') {
+                $q->where('status', $filters['status']);
+            }
+        }])->get();
+
+        $categoryStats = $categoryQuery->map(function ($category) {
             return [
-                'category' => $group->first()->meterCategory->name ?? 'Unknown',
-                'count' => $group->count(),
-                'total_billed' => $group->sum('total_billed'),
-                'total_consumption' => $group->sum('total_consumption'),
-                'meters_with_customers' => $group->whereNotNull('customer_id')->count(),
-                'meters_without_customers' => $group->whereNull('customer_id')->count(),
+                'category' => $category->name,
+                'count' => $category->meters_count,
+                'meters_with_customers' => $category->meters()->whereNotNull('customer_id')->count(),
+                'meters_without_customers' => $category->meters()->whereNull('customer_id')->count(),
             ];
         });
 
         // Zone breakdown
-        $zoneStats = $meters->groupBy('zone_id')->map(function ($group) use ($meters) {
+        $zoneQuery = Zone::withCount(['meters' => function($q) use ($filters) {
+            if (isset($filters['category']) && $filters['category'] != 'all') {
+                $q->where('meter_category_id', $filters['category']);
+            }
+            if (isset($filters['status']) && $filters['status'] != 'all') {
+                $q->where('status', $filters['status']);
+            }
+        }])->get();
+
+        $zoneStats = $zoneQuery->map(function ($zone) {
             return [
-                'zone' => $group->first()->zone->name ?? 'Unassigned',
-                'count' => $group->count(),
-                'total_billed' => $group->sum('total_billed'),
-                'meters_with_customers' => $group->whereNotNull('customer_id')->count(),
+                'zone' => $zone->name,
+                'count' => $zone->meters_count,
+                'meters_with_customers' => $zone->meters()->whereNotNull('customer_id')->count(),
             ];
         });
 
-        // Status breakdown - FIXED: Pass $meters to closure
-        $statusStats = $meters->groupBy('status')->map(function ($group) use ($meters) {
-            return [
-                'status' => $group->first()->status,
-                'count' => $group->count(),
-                'percentage' => ($meters->count() > 0) ? ($group->count() / $meters->count()) * 100 : 0,
-            ];
-        });
+        // Status breakdown
+        $statusStats = [
+            'active' => [
+                'status' => 'Active',
+                'count' => $meters->where('status', 'active')->count(),
+                'percentage' => $meters->count() > 0 ? ($meters->where('status', 'active')->count() / $meters->count()) * 100 : 0,
+            ],
+            'available' => [
+                'status' => 'Available',
+                'count' => $meters->where('status', 'available')->count(),
+                'percentage' => $meters->count() > 0 ? ($meters->where('status', 'available')->count() / $meters->count()) * 100 : 0,
+            ],
+            'maintenance' => [
+                'status' => 'Maintenance',
+                'count' => $meters->where('status', 'maintenance')->count(),
+                'percentage' => $meters->count() > 0 ? ($meters->where('status', 'maintenance')->count() / $meters->count()) * 100 : 0,
+            ],
+        ];
+
+        // Add zone information to the report
+        $zoneInfo = null;
+        if (isset($filters['zone']) && $filters['zone'] != 'all') {
+            $zoneInfo = \App\Models\Zone::find($filters['zone']);
+        }
 
         return [
             'type' => 'Meter Report',
             'detail_level' => $detailLevel,
+            'filters' => $filters,
+            'zone_info' => $zoneInfo,
             'meters' => $meters,
             'category_stats' => $categoryStats,
             'zone_stats' => $zoneStats,
             'status_stats' => $statusStats,
             'summary' => [
                 'total_meters' => $meters->count(),
-                'active_meters' => $meters->where('status', 'available')->count(),
-                'faulty_meters' => $meters->where('status', '!=', 'available')->count(),
+                'active_meters' => $meters->where('status', 'active')->count(),
+                'available_meters' => $meters->where('status', 'available')->count(),
+                'maintenance_meters' => $meters->where('status', 'maintenance')->count(),
                 'meters_with_customers' => $meters->whereNotNull('customer_id')->count(),
                 'meters_without_customers' => $meters->whereNull('customer_id')->count(),
                 'total_billed' => $meters->sum('total_billed'),
@@ -1463,9 +1525,17 @@ class ReportController extends Controller
         // Worksheet 1: Summary
         $summarySheet = $spreadsheet->createSheet();
         $summarySheet->setTitle('Summary');
-        $this->addReportHeader($summarySheet, $reportData['type'], $startDate, $endDate);
 
-        $summaryRow = 5;
+        // Use the new header method with filters
+        $startRow = $this->addReportHeaderWithFilters(
+            $summarySheet,
+            $reportData['type'],
+            $startDate,
+            $endDate,
+            $reportData['filters'] ?? []
+        );
+
+        $summaryRow = $startRow;
         foreach ($reportData['summary'] as $key => $value) {
             $summarySheet->setCellValue('A' . $summaryRow, $this->formatHeader($key));
             if (is_numeric($value)) {
@@ -1484,46 +1554,153 @@ class ReportController extends Controller
             $summaryRow++;
         }
 
+        // Add zone info if filtered
+        if (isset($reportData['zone_info']) && $reportData['zone_info']) {
+            $summaryRow += 2;
+            $summarySheet->setCellValue('A' . $summaryRow, 'FILTERED BY ZONE:');
+            $summarySheet->getStyle('A' . $summaryRow)->getFont()->setBold(true);
+            $summaryRow++;
+            $summarySheet->setCellValue('A' . $summaryRow, 'Zone Name:');
+            $summarySheet->setCellValue('B' . $summaryRow, $reportData['zone_info']->name);
+            $summaryRow++;
+            $summarySheet->setCellValue('A' . $summaryRow, 'Zone Code:');
+            $summarySheet->setCellValue('B' . $summaryRow, $reportData['zone_info']->code ?? 'N/A');
+        }
+
+        // Auto-size summary columns
+        $summarySheet->getColumnDimension('A')->setWidth(30);
+        $summarySheet->getColumnDimension('B')->setWidth(25);
+
         // Worksheet 2: Meter Details
         if (isset($reportData['meters']) && $reportData['meters']->count() > 0) {
             $metersSheet = $spreadsheet->createSheet();
             $metersSheet->setTitle('Meter Details');
 
+            // Add header with filters
+            $metersStartRow = $this->addReportHeaderWithFilters(
+                $metersSheet,
+                'Meter Details',
+                $startDate,
+                $endDate,
+                $reportData['filters'] ?? []
+            );
+
+            $metersRow = $metersStartRow;
+
             $headers = [
-                'Customer Acc', 'Customer Name','Meter Type', 'Meter Number',
-                'Category',
-                'Status',  'Zone', 'Walk Route',
-                'Initial Reading', 'Balance Bf.',
-                'Current Balance', 'Paid Amount'
+                'Meter Number', 'Meter Type', 'Category',
+                'Status', 'Customer Name', 'Customer Number', 'Phone',
+                'Zone', 'Walk Route', 'Installation Address',
+                'Initial Reading', 'Current Balance', 'Total Billed',
+                'Total Paid', 'Total Balance', 'Total Consumption'
             ];
-            $this->addSheetHeader($metersSheet, $headers);
 
-            $row = 2;
-            foreach ($reportData['meters'] as $meter) {
-                $metersSheet->setCellValue('A' . $row, $meter->meter_number ?? '');
-                $metersSheet->setCellValue('B' . $row, $meter->customer ?
-                    trim($meter->customer->first_name . ' ' . $meter->customer->last_name) : '');
-                $metersSheet->setCellValue('C' . $row, $meter->meter_type);
-                $metersSheet->setCellValue('D' . $row, $meter->meter_number);
-                $metersSheet->setCellValue('E' . $row, $meter->meterCategory->name ?? '');
-                $metersSheet->setCellValue('F' . $row, ucfirst($meter->status));
-                $metersSheet->setCellValue('G' . $row, $meter->zone->name ?? '');
-                $metersSheet->setCellValue('H' . $row, $meter->walkroute->name ?? '');
-                $metersSheet->setCellValue('I' . $row, $meter->initial_reading);
-                $metersSheet->setCellValue('J' . $row, $meter->balance_bf ?? 0);
-                $metersSheet->setCellValue('K' . $row, $meter->current_balance);
-                $metersSheet->setCellValue('L' . $row, $meter->paid_amount);
-
-                // Format numbers
-                $metersSheet->getStyle('I' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
-                $metersSheet->getStyle('K' . $row . ':L' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
-
-                $row++;
+            // Add headers
+            $col = 'A';
+            foreach ($headers as $header) {
+                $metersSheet->setCellValue($col . $metersRow, $header);
+                $metersSheet->getStyle($col . $metersRow)->getFont()->setBold(true);
+                $metersSheet->getStyle($col . $metersRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFE0E0E0');
+                $metersSheet->getStyle($col . $metersRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+                $col++;
             }
 
+            $metersRow++;
+
+            foreach ($reportData['meters'] as $meter) {
+                $metersSheet->setCellValue('A' . $metersRow, $meter->meter_number);
+                $metersSheet->setCellValue('B' . $metersRow, ucfirst($meter->meter_type));
+                $metersSheet->setCellValue('C' . $metersRow, $meter->meterCategory->name ?? '');
+                $metersSheet->setCellValue('D' . $metersRow, ucfirst($meter->status));
+                $metersSheet->setCellValue('E' . $metersRow, $meter->customer ?
+                    trim($meter->customer->first_name . ' ' . $meter->customer->last_name) : '');
+                $metersSheet->setCellValue('F' . $metersRow, $meter->customer->customer_number ?? '');
+                $metersSheet->setCellValue('G' . $metersRow, $meter->customer->phone ?? '');
+                $metersSheet->setCellValue('H' . $metersRow, $meter->zone->name ?? '');
+                $metersSheet->setCellValue('I' . $metersRow, $meter->walkRoute->name ?? '');
+                $metersSheet->setCellValue('J' . $metersRow, $meter->installation_address ?? '');
+                $metersSheet->setCellValue('K' . $metersRow, $meter->initial_reading);
+                $metersSheet->setCellValue('L' . $metersRow, $meter->current_balance);
+                $metersSheet->setCellValue('M' . $metersRow, $meter->total_billed);
+                $metersSheet->setCellValue('N' . $metersRow, $meter->total_paid);
+                $metersSheet->setCellValue('O' . $metersRow, $meter->total_balance);
+                $metersSheet->setCellValue('P' . $metersRow, $meter->total_consumption);
+
+                // Format numbers
+                $metersSheet->getStyle('K' . $metersRow)->getNumberFormat()->setFormatCode('#,##0.00');
+                $metersSheet->getStyle('L' . $metersRow . ':P' . $metersRow)->getNumberFormat()->setFormatCode('#,##0.00');
+
+                $metersRow++;
+            }
+
+            // Add totals
+            $metersSheet->setCellValue('A' . $metersRow, 'TOTAL:');
+            $metersSheet->getStyle('A' . $metersRow)->getFont()->setBold(true);
+            $metersSheet->setCellValue('K' . $metersRow, '=SUM(K' . $metersStartRow . ':K' . ($metersRow - 1) . ')');
+            $metersSheet->setCellValue('L' . $metersRow, '=SUM(L' . $metersStartRow . ':L' . ($metersRow - 1) . ')');
+            $metersSheet->setCellValue('M' . $metersRow, '=SUM(M' . $metersStartRow . ':M' . ($metersRow - 1) . ')');
+            $metersSheet->setCellValue('N' . $metersRow, '=SUM(N' . $metersStartRow . ':N' . ($metersRow - 1) . ')');
+            $metersSheet->setCellValue('O' . $metersRow, '=SUM(O' . $metersStartRow . ':O' . ($metersRow - 1) . ')');
+            $metersSheet->setCellValue('P' . $metersRow, '=SUM(P' . $metersStartRow . ':P' . ($metersRow - 1) . ')');
+            $metersSheet->getStyle('K' . $metersRow . ':P' . $metersRow)->getFont()->setBold(true);
+            $metersSheet->getStyle('K' . $metersRow . ':P' . $metersRow)->getBorders()->getTop()->setBorderStyle(Border::BORDER_DOUBLE);
+
             // Auto-size columns
-            foreach (range('A', 'L') as $column) {
+            foreach (range('A', 'P') as $column) {
                 $metersSheet->getColumnDimension($column)->setAutoSize(true);
+            }
+        }
+
+        // Worksheet 3: Category Breakdown
+        if (isset($reportData['category_stats'])) {
+            $categorySheet = $spreadsheet->createSheet();
+            $categorySheet->setTitle('Category Breakdown');
+
+            // Add header with filters
+            $categoryStartRow = $this->addReportHeaderWithFilters(
+                $categorySheet,
+                'Category Breakdown',
+                $startDate,
+                $endDate,
+                $reportData['filters'] ?? []
+            );
+
+            $categoryRow = $categoryStartRow;
+
+            $headers = ['Category', 'Total Meters', 'Meters with Customers', 'Meters without Customers'];
+
+            // Add headers
+            $col = 'A';
+            foreach ($headers as $header) {
+                $categorySheet->setCellValue($col . $categoryRow, $header);
+                $categorySheet->getStyle($col . $categoryRow)->getFont()->setBold(true);
+                $categorySheet->getStyle($col . $categoryRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFE0E0E0');
+                $categorySheet->getStyle($col . $categoryRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+                $col++;
+            }
+
+            $categoryRow++;
+
+            foreach ($reportData['category_stats'] as $category) {
+                $categorySheet->setCellValue('A' . $categoryRow, $category['category']);
+                $categorySheet->setCellValue('B' . $categoryRow, $category['count']);
+                $categorySheet->setCellValue('C' . $categoryRow, $category['meters_with_customers']);
+                $categorySheet->setCellValue('D' . $categoryRow, $category['meters_without_customers']);
+                $categoryRow++;
+            }
+
+            // Add totals
+            $categorySheet->setCellValue('A' . $categoryRow, 'TOTAL:');
+            $categorySheet->getStyle('A' . $categoryRow)->getFont()->setBold(true);
+            $categorySheet->setCellValue('B' . $categoryRow, '=SUM(B' . $categoryStartRow . ':B' . ($categoryRow - 1) . ')');
+            $categorySheet->setCellValue('C' . $categoryRow, '=SUM(C' . $categoryStartRow . ':C' . ($categoryRow - 1) . ')');
+            $categorySheet->setCellValue('D' . $categoryRow, '=SUM(D' . $categoryStartRow . ':D' . ($categoryRow - 1) . ')');
+            $categorySheet->getStyle('B' . $categoryRow . ':D' . $categoryRow)->getFont()->setBold(true);
+            $categorySheet->getStyle('B' . $categoryRow . ':D' . $categoryRow)->getBorders()->getTop()->setBorderStyle(Border::BORDER_DOUBLE);
+
+            // Auto-size columns
+            foreach (range('A', 'D') as $column) {
+                $categorySheet->getColumnDimension($column)->setAutoSize(true);
             }
         }
     }
