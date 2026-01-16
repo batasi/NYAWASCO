@@ -347,26 +347,48 @@
         <!-- Bills DataTable -->
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
 
-    <!-- Table Stats --> <br>
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 text-sm text-gray-600">
-            <div>
-                <h2 class="text-xl font-semibold text-gray-800">Bills Management</h2>
-            </div>
-            <div class="flex items-center space-x-4 mt-2 sm:mt-0">
-                <!-- Download Button -->
+            <!-- Table Stats --> <br>
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 text-sm text-gray-600">
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-800">Bills Management</h2>
+                </div>
+                <div class="flex items-center space-x-4 mt-2 sm:mt-0">
+                    <!-- Download Button -->
 
-                <a href="{{ route('reports.generate', ['report_type' => 'revenue', 'format' => 'excel', 'detail_level' => 'full']) }}"
+                @php
+                        $exportParams = [
+                            'report_type' => 'revenue',
+                            'format' => 'excel',
+                            'detail_level' => 'full'
+                        ];
 
-                    class="download-excel-btn flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-sm transition duration-200"
-                    >
-                    <i id="downloadIcon" class="fas fa-file-excel"></i>
+                        // Add zone filter if active
+                        if(request('zone') && request('zone') != 'all') {
+                            $exportParams['zone'] = request('zone');
+                        }
+
+                        // Add status filter if active
+                        if(request('status')) {
+                            $exportParams['status'] = request('status');
+                        }
+
+                        // Add search term if active
+                        if(request('search')) {
+                            $exportParams['search'] = request('search');
+                        }
+                    @endphp
+
+                    <a href="{{ route('reports.generate', $exportParams) }}"
+                        class="download-excel-btn flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-sm transition duration-200"
+                        >
+                        <i id="downloadIcon" class="fas fa-file-excel"></i>
                         <span id="downloadText">Export Excel</span>
                         <i id="downloadSpinner" class="fas fa-spinner fa-spin hidden"></i>
-                </a>
+                    </a>
 
 
+                </div>
             </div>
-        </div>
             <!-- Bills Table -->
             <div class="overflow-x-auto">
                 <table class="w-full">

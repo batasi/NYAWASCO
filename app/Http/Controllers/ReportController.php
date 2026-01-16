@@ -42,7 +42,7 @@ class ReportController extends Controller
             'detail_level' => 'nullable|in:summary,detailed,full',
             'customer_id' => 'required_if:report_type,statement|exists:customers,id',
             'zone' => 'nullable|exists:zones,id',
-            'status' => 'nullable|in:completed,pending,failed',
+            'status' => 'nullable|in:all,paid,unpaid,partial,overdue,completed,pending,failed',
             'search' => 'nullable|string|max:255',
         ]);
 
@@ -102,10 +102,11 @@ class ReportController extends Controller
         }
     }
 
-    private function generateRevenueReport($startDate, $endDate, $detailLevel)
+    private function generateRevenueReport($startDate, $endDate, $detailLevel, $filters = [])
     {
         $query = Bill::with(['customer', 'meter.meterCategory', 'meter.zone', 'meter.walkroute']);
 
+        // Apply date filter
         if ($startDate) {
             // Include NULL records when filtering by date
             $query->where(function($q) use ($startDate, $endDate) {
@@ -116,10 +117,51 @@ class ReportController extends Controller
             });
         }
 
+        // Apply zone filter
+        if (isset($filters['zone']) && $filters['zone'] != 'all') {
+            $query->whereHas('meter', function($q) use ($filters) {
+                $q->where('zone_id', $filters['zone']);
+            });
+        }
+
+        // Apply status filter (for bills, we need to map status)
+        if (isset($filters['status']) && $filters['status'] != 'all') {
+            // Map collection status to bill status
+            $statusMap = [
+                'completed' => 'paid', // Assuming 'completed' payments = 'paid' bills
+                'pending' => 'partial', // Assuming 'pending' payments = 'partial' bills
+                'failed' => 'unpaid' // Assuming 'failed' payments = 'unpaid' bills
+            ];
+
+            if (array_key_exists($filters['status'], $statusMap)) {
+                $query->where('bill_status', $statusMap[$filters['status']]);
+            }
+        }
+
+        // Apply search filter
+        if (isset($filters['search']) && !empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function($q) use ($search) {
+                $q->where('bill_number', 'like', "%{$search}%")
+                    ->orWhere('total_amount', 'like', "%{$search}%")
+                    ->orWhere('balance', 'like', "%{$search}%")
+                    ->orWhere('consumption', 'like', "%{$search}%")
+                    ->orWhereHas('customer', function($q) use ($search) {
+                        $q->where('first_name', 'like', "%{$search}%")
+                            ->orWhere('last_name', 'like', "%{$search}%")
+                            ->orWhere('customer_number', 'like', "%{$search}%")
+                            ->orWhere('phone', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('meter', function($q) use ($search) {
+                        $q->where('meter_number', 'like', "%{$search}%");
+                    });
+            });
+        }
+
         $bills = $query->get();
 
-        // For the breakdown queries, you need to handle NULLs specially
-        $monthlyRevenue = DB::table('bills')
+        // Monthly breakdown with filters
+        $monthlyQuery = DB::table('bills')
             ->select(
                 DB::raw('YEAR(IFNULL(billing_period_end, "1900-01-01")) as year'),
                 DB::raw('MONTH(IFNULL(billing_period_end, "1900-01-01")) as month'),
@@ -128,12 +170,31 @@ class ReportController extends Controller
                 DB::raw('COUNT(*) as bill_count'),
                 DB::raw('SUM(consumption) as total_consumption'),
                 DB::raw('SUM(CASE WHEN billing_period_end IS NULL THEN 1 ELSE 0 END) as is_legacy')
-            )
-            // ... rest of query
-            ->groupBy(DB::raw('YEAR(IFNULL(billing_period_end, "1900-01-01")), MONTH(IFNULL(billing_period_end, "1900-01-01"))'))
+            );
+
+        // Apply date filter to monthly query
+        if ($startDate) {
+            $monthlyQuery->where(function($q) use ($startDate, $endDate) {
+                $q->whereBetween('billing_period_end', [$startDate, $endDate])
+                    ->orWhereNull('billing_period_end');
+            });
+        }
+
+        // Apply zone filter to monthly query
+        if (isset($filters['zone']) && $filters['zone'] != 'all') {
+            $monthlyQuery->whereExists(function ($query) use ($filters) {
+                $query->select(DB::raw(1))
+                    ->from('meters')
+                    ->whereColumn('meters.id', 'bills.meter_id')
+                    ->where('meters.zone_id', $filters['zone']);
+            });
+        }
+
+        $monthlyRevenue = $monthlyQuery->groupBy(DB::raw('YEAR(IFNULL(billing_period_end, "1900-01-01")), MONTH(IFNULL(billing_period_end, "1900-01-01"))'))
             ->get();
-        // Category breakdown with NULL handling
-        $categoryRevenue = DB::table('bills')
+
+        // Category breakdown with filters
+        $categoryQuery = DB::table('bills')
             ->join('meters', 'bills.meter_id', '=', 'meters.id')
             ->join('meter_categories', 'meters.meter_category_id', '=', 'meter_categories.id')
             ->select(
@@ -143,20 +204,26 @@ class ReportController extends Controller
                 DB::raw('SUM(bills.paid_amount) as paid_amount'),
                 DB::raw('SUM(bills.consumption) as total_consumption'),
                 DB::raw('COUNT(*) as bill_count'),
-                // Flag for NULL billing periods
                 DB::raw('SUM(CASE WHEN bills.billing_period_end IS NULL THEN 1 ELSE 0 END) as legacy_records')
-            )
-            ->when($startDate, function ($q) use ($startDate, $endDate) {
-                return $q->where(function($subQuery) use ($startDate, $endDate) {
-                    $subQuery->whereBetween('bills.billing_period_end', [$startDate, $endDate])
-                            ->orWhereNull('bills.billing_period_end');
-                });
-            })
-            ->groupBy('meter_categories.id', 'meter_categories.name', 'meter_categories.code')
+            );
+
+        if ($startDate) {
+            $categoryQuery->where(function($subQuery) use ($startDate, $endDate) {
+                $subQuery->whereBetween('bills.billing_period_end', [$startDate, $endDate])
+                        ->orWhereNull('bills.billing_period_end');
+            });
+        }
+
+        // Apply zone filter to category query
+        if (isset($filters['zone']) && $filters['zone'] != 'all') {
+            $categoryQuery->where('meters.zone_id', $filters['zone']);
+        }
+
+        $categoryRevenue = $categoryQuery->groupBy('meter_categories.id', 'meter_categories.name', 'meter_categories.code')
             ->get();
 
-        // Zone breakdown with NULL handling
-        $zoneRevenue = DB::table('bills')
+        // Zone breakdown with filters
+        $zoneQuery = DB::table('bills')
             ->join('meters', 'bills.meter_id', '=', 'meters.id')
             ->leftJoin('zones', 'meters.zone_id', '=', 'zones.id')
             ->select(
@@ -165,19 +232,34 @@ class ReportController extends Controller
                 DB::raw('SUM(bills.paid_amount) as paid_amount'),
                 DB::raw('COUNT(*) as bill_count'),
                 DB::raw('SUM(CASE WHEN bills.billing_period_end IS NULL THEN 1 ELSE 0 END) as legacy_records')
-            )
-            ->when($startDate, function ($q) use ($startDate, $endDate) {
-                return $q->where(function($subQuery) use ($startDate, $endDate) {
-                    $subQuery->whereBetween('bills.billing_period_end', [$startDate, $endDate])
-                            ->orWhereNull('bills.billing_period_end');
-                });
-            })
-            ->groupBy('zones.id', 'zones.name')
+            );
+
+        if ($startDate) {
+            $zoneQuery->where(function($subQuery) use ($startDate, $endDate) {
+                $subQuery->whereBetween('bills.billing_period_end', [$startDate, $endDate])
+                        ->orWhereNull('bills.billing_period_end');
+            });
+        }
+
+        // Apply zone filter to zone query (if zone is selected)
+        if (isset($filters['zone']) && $filters['zone'] != 'all') {
+            $zoneQuery->where('meters.zone_id', $filters['zone']);
+        }
+
+        $zoneRevenue = $zoneQuery->groupBy('zones.id', 'zones.name')
             ->get();
+
+        // Add zone information to the report
+        $zoneInfo = null;
+        if (isset($filters['zone']) && $filters['zone'] != 'all') {
+            $zoneInfo = \App\Models\Zone::find($filters['zone']);
+        }
 
         return [
             'type' => 'Revenue Report',
             'detail_level' => $detailLevel,
+            'filters' => $filters,
+            'zone_info' => $zoneInfo,
             'bills' => $bills,
             'monthly_breakdown' => $monthlyRevenue,
             'category_breakdown' => $categoryRevenue,
@@ -191,10 +273,10 @@ class ReportController extends Controller
                 'paid_bills' => $bills->where('bill_status', 'paid')->count(),
                 'unpaid_bills' => $bills->where('bill_status', 'unpaid')->count(),
                 'partial_bills' => $bills->where('bill_status', 'partial')->count(),
+                'overdue_bills' => $bills->where('is_overdue', true)->count(),
                 'average_bill_amount' => $bills->avg('total_amount'),
                 'collection_efficiency' => $bills->sum('total_amount') > 0 ?
                     ($bills->sum('paid_amount') / $bills->sum('total_amount')) * 100 : 0,
-                // Add legacy records info
                 'legacy_records_count' => $bills->whereNull('billing_period_end')->count(),
                 'dated_records_count' => $bills->whereNotNull('billing_period_end')->count(),
             ]
@@ -1003,9 +1085,17 @@ class ReportController extends Controller
         // Worksheet 1: Summary
         $summarySheet = $spreadsheet->createSheet();
         $summarySheet->setTitle('Summary');
-        $this->addReportHeader($summarySheet, $reportData['type'], $startDate, $endDate);
 
-        $summaryRow = 5;
+        // Use new header method with filters
+        $startRow = $this->addReportHeaderWithFilters(
+            $summarySheet,
+            $reportData['type'],
+            $startDate,
+            $endDate,
+            $reportData['filters'] ?? []
+        );
+
+        $summaryRow = $startRow;
         foreach ($reportData['summary'] as $key => $value) {
             $summarySheet->setCellValue('A' . $summaryRow, $this->formatHeader($key));
             if (is_numeric($value)) {
@@ -1025,40 +1115,72 @@ class ReportController extends Controller
             $summaryRow++;
         }
 
+        // Auto-size summary columns
+        $summarySheet->getColumnDimension('A')->setWidth(30);
+        $summarySheet->getColumnDimension('B')->setWidth(25);
+
         // Worksheet 2: Monthly Breakdown
         if (isset($reportData['monthly_breakdown'])) {
             $monthlySheet = $spreadsheet->createSheet();
             $monthlySheet->setTitle('Monthly Breakdown');
 
-            $headers = ['Year', 'Month', 'Total Bills', 'Total Amount', 'Amount Paid', 'Outstanding', 'Total Consumption', 'Collection Rate'];
-            $this->addSheetHeader($monthlySheet, $headers);
+            // Add header with filters
+            $monthlyStartRow = $this->addReportHeaderWithFilters(
+                $monthlySheet,
+                'Monthly Revenue Breakdown',
+                $startDate,
+                $endDate,
+                $reportData['filters'] ?? []
+            );
 
-            $row = 2;
+            $monthlyRow = $monthlyStartRow;
+
+            $headers = ['Year', 'Month', 'Total Bills', 'Total Amount', 'Amount Paid', 'Outstanding', 'Total Consumption', 'Collection Rate'];
+
+            // Add headers
+            $col = 'A';
+            foreach ($headers as $header) {
+                $monthlySheet->setCellValue($col . $monthlyRow, $header);
+                $monthlySheet->getStyle($col . $monthlyRow)->getFont()->setBold(true);
+                $monthlySheet->getStyle($col . $monthlyRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFE0E0E0');
+                $monthlySheet->getStyle($col . $monthlyRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+                $col++;
+            }
+
+            $monthlyRow++;
+
             foreach ($reportData['monthly_breakdown'] as $month) {
-                $monthlySheet->setCellValue('A' . $row, $month->year);
-                $monthlySheet->setCellValue('B' . $row, date('F', mktime(0, 0, 0, $month->month, 1)));
-                $monthlySheet->setCellValue('C' . $row, $month->bill_count);
-                $monthlySheet->setCellValue('D' . $row, $month->total_amount);
-                $monthlySheet->setCellValue('E' . $row, $month->paid_amount);
-                $monthlySheet->setCellValue('F' . $row, $month->total_amount - $month->paid_amount);
-                $monthlySheet->setCellValue('G' . $row, $month->total_consumption);
-                $monthlySheet->setCellValue('H' . $row, $month->total_amount > 0 ? ($month->paid_amount / $month->total_amount) : 0);
+                $monthlySheet->setCellValue('A' . $monthlyRow, $month->year);
+                $monthlySheet->setCellValue('B' . $monthlyRow, date('F', mktime(0, 0, 0, $month->month, 1)));
+                $monthlySheet->setCellValue('C' . $monthlyRow, $month->bill_count);
+                $monthlySheet->setCellValue('D' . $monthlyRow, $month->total_amount);
+                $monthlySheet->setCellValue('E' . $monthlyRow, $month->paid_amount);
+                $monthlySheet->setCellValue('F' . $monthlyRow, $month->total_amount - $month->paid_amount);
+                $monthlySheet->setCellValue('G' . $monthlyRow, $month->total_consumption);
+                $monthlySheet->setCellValue('H' . $monthlyRow, $month->total_amount > 0 ? ($month->paid_amount / $month->total_amount) : 0);
 
                 // Format numbers
-                $monthlySheet->getStyle('D' . $row . ':F' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
-                $monthlySheet->getStyle('H' . $row)->getNumberFormat()->setFormatCode('0.00%');
+                $monthlySheet->getStyle('D' . $monthlyRow . ':F' . $monthlyRow)->getNumberFormat()->setFormatCode('#,##0.00');
+                $monthlySheet->getStyle('H' . $monthlyRow)->getNumberFormat()->setFormatCode('0.00%');
 
-                $row++;
+                $monthlyRow++;
             }
 
             // Add totals
-            $this->addSheetTotals($monthlySheet, $row, [
-                'C' => 'count',
-                'D' => 'sum',
-                'E' => 'sum',
-                'F' => 'sum',
-                'G' => 'sum'
-            ]);
+            $monthlySheet->setCellValue('A' . $monthlyRow, 'TOTAL:');
+            $monthlySheet->getStyle('A' . $monthlyRow)->getFont()->setBold(true);
+            $monthlySheet->setCellValue('C' . $monthlyRow, '=SUM(C' . $monthlyStartRow . ':C' . ($monthlyRow - 1) . ')');
+            $monthlySheet->setCellValue('D' . $monthlyRow, '=SUM(D' . $monthlyStartRow . ':D' . ($monthlyRow - 1) . ')');
+            $monthlySheet->setCellValue('E' . $monthlyRow, '=SUM(E' . $monthlyStartRow . ':E' . ($monthlyRow - 1) . ')');
+            $monthlySheet->setCellValue('F' . $monthlyRow, '=SUM(F' . $monthlyStartRow . ':F' . ($monthlyRow - 1) . ')');
+            $monthlySheet->setCellValue('G' . $monthlyRow, '=SUM(G' . $monthlyStartRow . ':G' . ($monthlyRow - 1) . ')');
+            $monthlySheet->getStyle('C' . $monthlyRow . ':G' . $monthlyRow)->getFont()->setBold(true);
+            $monthlySheet->getStyle('C' . $monthlyRow . ':G' . $monthlyRow)->getBorders()->getTop()->setBorderStyle(Border::BORDER_DOUBLE);
+
+            // Auto-size columns
+            foreach (range('A', 'H') as $column) {
+                $monthlySheet->getColumnDimension($column)->setAutoSize(true);
+            }
         }
 
         // Worksheet 3: Detailed Bills
@@ -1066,43 +1188,215 @@ class ReportController extends Controller
             $billsSheet = $spreadsheet->createSheet();
             $billsSheet->setTitle('Detailed Bills');
 
+            // Add header with filters
+            $billsStartRow = $this->addReportHeaderWithFilters(
+                $billsSheet,
+                'Detailed Bills',
+                $startDate,
+                $endDate,
+                $reportData['filters'] ?? []
+            );
+
+            $billsRow = $billsStartRow;
+
             $headers = [
                 'Bill Number', 'Customer Name', 'Customer Acc',
                 'Category', 'Zone', 'Billing Period', 'Consumption (m³)',
-                'Total Amount', 'Paid Amount', 'Balance', 'Status', 'Due Date'
+                'Total Amount', 'Paid Amount', 'Balance', 'Status', 'Due Date', 'Overdue'
             ];
-            $this->addSheetHeader($billsSheet, $headers);
 
-            $row = 2;
+            // Add headers
+            $col = 'A';
+            foreach ($headers as $header) {
+                $billsSheet->setCellValue($col . $billsRow, $header);
+                $billsSheet->getStyle($col . $billsRow)->getFont()->setBold(true);
+                $billsSheet->getStyle($col . $billsRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFE0E0E0');
+                $billsSheet->getStyle($col . $billsRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+                $col++;
+            }
+
+            $billsRow++;
+
             foreach ($reportData['bills'] as $bill) {
-                $billsSheet->setCellValue('A' . $row, $bill->bill_number);
-                $billsSheet->setCellValue('B' . $row, $bill->customer->first_name . ' ' . $bill->customer->last_name);
-                $billsSheet->setCellValue('C' . $row, $bill->meter->meter_number ?? '');
-                $billsSheet->setCellValue('D' . $row, $bill->meter->meterCategory->name ?? '');
-                $billsSheet->setCellValue('E' . $row, $bill->meter->zone->name ?? '');
-                $billsSheet->setCellValue('F' . $row,
+                $billsSheet->setCellValue('A' . $billsRow, $bill->bill_number);
+                $billsSheet->setCellValue('B' . $billsRow, $bill->customer->first_name . ' ' . $bill->customer->last_name);
+                $billsSheet->setCellValue('C' . $billsRow, $bill->meter->meter_number ?? '');
+                $billsSheet->setCellValue('D' . $billsRow, $bill->meter->meterCategory->name ?? '');
+                $billsSheet->setCellValue('E' . $billsRow, $bill->meter->zone->name ?? 'Unassigned');
+                $billsSheet->setCellValue('F' . $billsRow,
                     ($bill->billing_period_start ? $bill->billing_period_start->format('d/m/Y') : '') . ' - ' .
                     ($bill->billing_period_end ? $bill->billing_period_end->format('d/m/Y') : '')
                 );
-                $billsSheet->setCellValue('G' . $row, $bill->consumption);
-                $billsSheet->setCellValue('H' . $row, $bill->total_amount);
-                $billsSheet->setCellValue('I' . $row, $bill->paid_amount);
-                $billsSheet->setCellValue('J' . $row, $bill->balance);
-                $billsSheet->setCellValue('K' . $row, ucfirst($bill->bill_status));
-                $billsSheet->setCellValue('L' . $row, $bill->due_date ? $bill->due_date->format('d/m/Y') : '');
+                $billsSheet->setCellValue('G' . $billsRow, $bill->consumption);
+                $billsSheet->setCellValue('H' . $billsRow, $bill->total_amount);
+                $billsSheet->setCellValue('I' . $billsRow, $bill->paid_amount);
+                $billsSheet->setCellValue('J' . $billsRow, $bill->balance);
+                $billsSheet->setCellValue('K' . $billsRow, ucfirst($bill->bill_status));
+                $billsSheet->setCellValue('L' . $billsRow, $bill->due_date ? $bill->due_date->format('d/m/Y') : '');
+                $billsSheet->setCellValue('M' . $billsRow, $bill->is_overdue ? 'Yes' : 'No');
 
                 // Format numbers
-                $billsSheet->getStyle('G' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
-                $billsSheet->getStyle('H' . $row . ':I' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+                $billsSheet->getStyle('G' . $billsRow)->getNumberFormat()->setFormatCode('#,##0.00');
+                $billsSheet->getStyle('H' . $billsRow . ':J' . $billsRow)->getNumberFormat()->setFormatCode('#,##0.00');
 
-                $row++;
+                $billsRow++;
             }
 
+            // Add totals
+            $billsSheet->setCellValue('A' . $billsRow, 'TOTAL:');
+            $billsSheet->getStyle('A' . $billsRow)->getFont()->setBold(true);
+            $billsSheet->setCellValue('G' . $billsRow, '=SUM(G' . $billsStartRow . ':G' . ($billsRow - 1) . ')');
+            $billsSheet->setCellValue('H' . $billsRow, '=SUM(H' . $billsStartRow . ':H' . ($billsRow - 1) . ')');
+            $billsSheet->setCellValue('I' . $billsRow, '=SUM(I' . $billsStartRow . ':I' . ($billsRow - 1) . ')');
+            $billsSheet->setCellValue('J' . $billsRow, '=SUM(J' . $billsStartRow . ':J' . ($billsRow - 1) . ')');
+            $billsSheet->getStyle('G' . $billsRow . ':J' . $billsRow)->getFont()->setBold(true);
+            $billsSheet->getStyle('G' . $billsRow . ':J' . $billsRow)->getBorders()->getTop()->setBorderStyle(Border::BORDER_DOUBLE);
+            $billsSheet->getStyle('G' . $billsRow . ':J' . $billsRow)->getNumberFormat()->setFormatCode('#,##0.00');
+
             // Auto-size columns
-            foreach (range('A', 'L') as $column) {
+            foreach (range('A', 'M') as $column) {
                 $billsSheet->getColumnDimension($column)->setAutoSize(true);
             }
         }
+
+        // Worksheet 4: Category Breakdown
+        if (isset($reportData['category_breakdown'])) {
+            $categorySheet = $spreadsheet->createSheet();
+            $categorySheet->setTitle('Category Breakdown');
+
+            // Add header with filters
+            $categoryStartRow = $this->addReportHeaderWithFilters(
+                $categorySheet,
+                'Category Breakdown',
+                $startDate,
+                $endDate,
+                $reportData['filters'] ?? []
+            );
+
+            $categoryRow = $categoryStartRow;
+
+            $headers = ['Category', 'Code', 'Bill Count', 'Total Amount', 'Amount Paid', 'Outstanding', 'Total Consumption'];
+
+            // Add headers
+            $col = 'A';
+            foreach ($headers as $header) {
+                $categorySheet->setCellValue($col . $categoryRow, $header);
+                $categorySheet->getStyle($col . $categoryRow)->getFont()->setBold(true);
+                $categorySheet->getStyle($col . $categoryRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFE0E0E0');
+                $categorySheet->getStyle($col . $categoryRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+                $col++;
+            }
+
+            $categoryRow++;
+
+            foreach ($reportData['category_breakdown'] as $category) {
+                $categorySheet->setCellValue('A' . $categoryRow, $category->category);
+                $categorySheet->setCellValue('B' . $categoryRow, $category->code);
+                $categorySheet->setCellValue('C' . $categoryRow, $category->bill_count);
+                $categorySheet->setCellValue('D' . $categoryRow, $category->total_amount);
+                $categorySheet->setCellValue('E' . $categoryRow, $category->paid_amount);
+                $categorySheet->setCellValue('F' . $categoryRow, $category->total_amount - $category->paid_amount);
+                $categorySheet->setCellValue('G' . $categoryRow, $category->total_consumption);
+
+                // Format numbers
+                $categorySheet->getStyle('D' . $categoryRow . ':F' . $categoryRow)->getNumberFormat()->setFormatCode('#,##0.00');
+                $categorySheet->getStyle('G' . $categoryRow)->getNumberFormat()->setFormatCode('#,##0.00');
+
+                $categoryRow++;
+            }
+
+            // Add totals
+            $categorySheet->setCellValue('A' . $categoryRow, 'TOTAL:');
+            $categorySheet->getStyle('A' . $categoryRow)->getFont()->setBold(true);
+            $categorySheet->setCellValue('C' . $categoryRow, '=SUM(C' . $categoryStartRow . ':C' . ($categoryRow - 1) . ')');
+            $categorySheet->setCellValue('D' . $categoryRow, '=SUM(D' . $categoryStartRow . ':D' . ($categoryRow - 1) . ')');
+            $categorySheet->setCellValue('E' . $categoryRow, '=SUM(E' . $categoryStartRow . ':E' . ($categoryRow - 1) . ')');
+            $categorySheet->setCellValue('F' . $categoryRow, '=SUM(F' . $categoryStartRow . ':F' . ($categoryRow - 1) . ')');
+            $categorySheet->setCellValue('G' . $categoryRow, '=SUM(G' . $categoryStartRow . ':G' . ($categoryRow - 1) . ')');
+            $categorySheet->getStyle('C' . $categoryRow . ':G' . $categoryRow)->getFont()->setBold(true);
+            $categorySheet->getStyle('C' . $categoryRow . ':G' . $categoryRow)->getBorders()->getTop()->setBorderStyle(Border::BORDER_DOUBLE);
+            $categorySheet->getStyle('D' . $categoryRow . ':G' . $categoryRow)->getNumberFormat()->setFormatCode('#,##0.00');
+
+            // Auto-size columns
+            foreach (range('A', 'G') as $column) {
+                $categorySheet->getColumnDimension($column)->setAutoSize(true);
+            }
+        }
+
+        // Worksheet 5: Zone Breakdown
+        if (isset($reportData['zone_breakdown'])) {
+            $zoneSheet = $spreadsheet->createSheet();
+            $zoneSheet->setTitle('Zone Breakdown');
+
+            // Add header with filters
+            $zoneStartRow = $this->addReportHeaderWithFilters(
+                $zoneSheet,
+                'Zone Breakdown',
+                $startDate,
+                $endDate,
+                $reportData['filters'] ?? []
+            );
+
+            $zoneRow = $zoneStartRow;
+
+            $headers = ['Zone', 'Bill Count', 'Total Amount', 'Amount Paid', 'Outstanding', 'Collection Rate'];
+
+            // Add headers
+            $col = 'A';
+            foreach ($headers as $header) {
+                $zoneSheet->setCellValue($col . $zoneRow, $header);
+                $zoneSheet->getStyle($col . $zoneRow)->getFont()->setBold(true);
+                $zoneSheet->getStyle($col . $zoneRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFE0E0E0');
+                $zoneSheet->getStyle($col . $zoneRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+                $col++;
+            }
+
+            $zoneRow++;
+
+            foreach ($reportData['zone_breakdown'] as $zone) {
+                $zoneSheet->setCellValue('A' . $zoneRow, $zone->zone_name);
+                $zoneSheet->setCellValue('B' . $zoneRow, $zone->bill_count);
+                $zoneSheet->setCellValue('C' . $zoneRow, $zone->total_amount);
+                $zoneSheet->setCellValue('D' . $zoneRow, $zone->paid_amount);
+                $zoneSheet->setCellValue('E' . $zoneRow, $zone->total_amount - $zone->paid_amount);
+                $zoneSheet->setCellValue('F' . $zoneRow, $zone->total_amount > 0 ? ($zone->paid_amount / $zone->total_amount) : 0);
+
+                // Format numbers
+                $zoneSheet->getStyle('C' . $zoneRow . ':E' . $zoneRow)->getNumberFormat()->setFormatCode('#,##0.00');
+                $zoneSheet->getStyle('F' . $zoneRow)->getNumberFormat()->setFormatCode('0.00%');
+
+                $zoneRow++;
+            }
+
+            // Add totals
+            $zoneSheet->setCellValue('A' . $zoneRow, 'TOTAL:');
+            $zoneSheet->getStyle('A' . $zoneRow)->getFont()->setBold(true);
+            $zoneSheet->setCellValue('B' . $zoneRow, '=SUM(B' . $zoneStartRow . ':B' . ($zoneRow - 1) . ')');
+            $zoneSheet->setCellValue('C' . $zoneRow, '=SUM(C' . $zoneStartRow . ':C' . ($zoneRow - 1) . ')');
+            $zoneSheet->setCellValue('D' . $zoneRow, '=SUM(D' . $zoneStartRow . ':D' . ($zoneRow - 1) . ')');
+            $zoneSheet->setCellValue('E' . $zoneRow, '=SUM(E' . $zoneStartRow . ':E' . ($zoneRow - 1) . ')');
+            $zoneSheet->getStyle('B' . $zoneRow . ':E' . $zoneRow)->getFont()->setBold(true);
+            $zoneSheet->getStyle('B' . $zoneRow . ':E' . $zoneRow)->getBorders()->getTop()->setBorderStyle(Border::BORDER_DOUBLE);
+            $zoneSheet->getStyle('C' . $zoneRow . ':E' . $zoneRow)->getNumberFormat()->setFormatCode('#,##0.00');
+
+            // Auto-size columns
+            foreach (range('A', 'F') as $column) {
+                $zoneSheet->getColumnDimension($column)->setAutoSize(true);
+            }
+        }
+    }
+    //  handles bill status mapping
+    private function mapBillStatus($status)
+    {
+        $statusMap = [
+            'all' => null,
+            'paid' => 'paid',
+            'unpaid' => 'unpaid',
+            'partial' => 'partial',
+            'overdue' => 'overdue',
+        ];
+
+        return $statusMap[$status] ?? null;
     }
 
     private function generateCustomerExcel($spreadsheet, $reportData, $startDate, $endDate)
