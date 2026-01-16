@@ -213,45 +213,42 @@
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
             <!-- Table Header --> <br>
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 text-sm text-gray-600">
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-800">Payments Management</h2>
+                </div>
+                <div class="flex items-center space-x-4 mt-2 sm:mt-0">
+                    <!-- Download Button -->
+                    @php
+                        $exportParams = [
+                            'report_type' => 'collection',
+                            'format' => 'excel',
+                            'detail_level' => 'full'
+                        ];
 
-            <div>
-                <h2 class="text-xl font-semibold text-gray-800"> Payments Management</h2>
-            </div>
-            <div class="flex items-center space-x-4 mt-2 sm:mt-0">
-                <!-- Download Button -->
+                        // Add zone filter if active
+                        if(request('zone') && request('zone') != 'all') {
+                            $exportParams['zone'] = request('zone');
+                        }
 
-              @php
-                $exportParams = [
-                    'report_type' => 'collection',
-                    'format' => 'excel',
-                    'detail_level' => 'full'
-                ];
+                        // Add status filter if active
+                        if(request('status')) {
+                            $exportParams['status'] = request('status');
+                        }
 
-                // Add zone filter if active
-                if(request('zone') && request('zone') != 'all') {
-                    $exportParams['zone'] = request('zone');
-                }
+                        // Add search term if active
+                        if(request('search')) {
+                            $exportParams['search'] = request('search');
+                        }
+                    @endphp
 
-                // Add status filter if active
-                if(request('status')) {
-                    $exportParams['status'] = request('status');
-                }
-
-                // Add search term if active
-                if(request('search')) {
-                    $exportParams['search'] = request('search');
-                }
-            @endphp
-
-            <a href="{{ route('reports.generate', $exportParams) }}"
-                class="download-excel-btn flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-sm transition duration-200"
-                >
-                <i id="downloadIcon" class="fas fa-file-excel"></i>
-                <span id="downloadText">Export Excel</span>
-                <i id="downloadSpinner" class="fas fa-spinner fa-spin hidden"></i>
-            </a>
-
-            </div>
+                    <a href="{{ route('reports.generate', $exportParams) }}"
+                        class="download-excel-btn flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-sm transition duration-200"
+                        onclick="showPaymentsDownloadSpinner()">
+                        <i id="paymentsDownloadIcon" class="fas fa-file-excel"></i>
+                        <span id="paymentsDownloadText">Export Excel</span>
+                        <i id="paymentsDownloadSpinner" class="fas fa-spinner fa-spin hidden"></i>
+                    </a>
+                </div>
             </div>
 
             <!-- Payments Table -->
@@ -682,6 +679,35 @@
 <!-- jQuery CDN -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script>
+    // Payments download spinner function
+function showPaymentsDownloadSpinner() {
+    const downloadIcon = document.getElementById('paymentsDownloadIcon');
+    const downloadText = document.getElementById('paymentsDownloadText');
+    const downloadSpinner = document.getElementById('paymentsDownloadSpinner');
+
+    if (downloadIcon && downloadText && downloadSpinner) {
+        downloadIcon.classList.add('hidden');
+        downloadText.textContent = 'Exporting...';
+        downloadSpinner.classList.remove('hidden');
+
+        // Reset after 5 seconds (in case something goes wrong)
+        setTimeout(() => {
+            downloadIcon.classList.remove('hidden');
+            downloadText.textContent = 'Export Excel';
+            downloadSpinner.classList.add('hidden');
+        }, 5000);
+    }
+}
+
+// Handle the download button click for payments
+document.querySelectorAll('.download-excel-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        // Check if this is the payments export button
+        if (this.querySelector('#paymentsDownloadIcon')) {
+            showPaymentsDownloadSpinner();
+        }
+    });
+});
     // Add this after your existing script
 document.addEventListener('DOMContentLoaded', function() {
     const importForm = document.querySelector('form[action*="import"]');

@@ -348,14 +348,14 @@
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
 
             <!-- Table Stats --> <br>
+
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 text-sm text-gray-600">
                 <div>
                     <h2 class="text-xl font-semibold text-gray-800">Bills Management</h2>
                 </div>
                 <div class="flex items-center space-x-4 mt-2 sm:mt-0">
                     <!-- Download Button -->
-
-                @php
+                    @php
                         $exportParams = [
                             'report_type' => 'revenue',
                             'format' => 'excel',
@@ -380,13 +380,11 @@
 
                     <a href="{{ route('reports.generate', $exportParams) }}"
                         class="download-excel-btn flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-sm transition duration-200"
-                        >
-                        <i id="downloadIcon" class="fas fa-file-excel"></i>
-                        <span id="downloadText">Export Excel</span>
-                        <i id="downloadSpinner" class="fas fa-spinner fa-spin hidden"></i>
+                        onclick="showBillsDownloadSpinner()">
+                        <i id="billsDownloadIcon" class="fas fa-file-excel"></i>
+                        <span id="billsDownloadText">Export Excel</span>
+                        <i id="billsDownloadSpinner" class="fas fa-spinner fa-spin hidden"></i>
                     </a>
-
-
                 </div>
             </div>
             <!-- Bills Table -->
@@ -600,6 +598,37 @@
 
 <!-- Simple Search JavaScript -->
 <script>
+    // Add this to your existing JavaScript in bills.blade.php
+
+// Bills download spinner function
+function showBillsDownloadSpinner() {
+    const downloadIcon = document.getElementById('billsDownloadIcon');
+    const downloadText = document.getElementById('billsDownloadText');
+    const downloadSpinner = document.getElementById('billsDownloadSpinner');
+
+    if (downloadIcon && downloadText && downloadSpinner) {
+        downloadIcon.classList.add('hidden');
+        downloadText.textContent = 'Exporting...';
+        downloadSpinner.classList.remove('hidden');
+
+        // Reset after 5 seconds (in case something goes wrong)
+        setTimeout(() => {
+            downloadIcon.classList.remove('hidden');
+            downloadText.textContent = 'Export Excel';
+            downloadSpinner.classList.add('hidden');
+        }, 5000);
+    }
+}
+
+// Handle the download button click for bills
+document.querySelectorAll('.download-excel-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        // Check if this is the bills export button
+        if (this.querySelector('#billsDownloadIcon')) {
+            showBillsDownloadSpinner();
+        }
+    });
+});
 document.addEventListener('DOMContentLoaded', function() {
     // Handle print receipt button clicks
     document.querySelectorAll('.print-receipt-btn').forEach(button => {

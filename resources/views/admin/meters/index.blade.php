@@ -284,87 +284,86 @@
     </div>
     @endif
 
-    <!-- Meters Table -->
-      <!-- Zone Filter -->
-            <div class="bg-white rounded-lg shadow p-6 mb-6">
-                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <h3 class="text-lg font-semibold text-gray-800">Filter by Zone</h3>
-                    <div class="flex flex-wrap gap-2">
-                        @php
-                            $currentParams = request()->all();
-                            $baseParams = array_merge($currentParams, ['zone' => null]);
-                        @endphp
-                        <a href="{{ route('admin.meters.index', $baseParams) }}"
-                        class="px-4 py-2 rounded-lg {{ !request('zone') ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
-                            All Zones
-                        </a>
-                        @foreach($zones as $zone)
-                        @php
-                            $zoneParams = array_merge($currentParams, ['zone' => $zone->id]);
-                        @endphp
-                        <a href="{{ route('admin.meters.index', $zoneParams) }}"
-                        class="px-4 py-2 rounded-lg {{ request('zone') == $zone->id ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
-                            {{ $zone->name }} ({{ $zone->meters_count ?? $zone->meters->count() }})
-                        </a>
-                        @endforeach
-                    </div>
-                </div>
+    <!-- Zone Filter -->
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <h3 class="text-lg font-semibold text-gray-800">Filter by Zone</h3>
+            <div class="flex flex-wrap gap-2">
+                @php
+                    $currentParams = request()->all();
+                    $baseParams = array_merge($currentParams, ['zone' => null]);
+                @endphp
+                <a href="{{ route('admin.meters.index', $baseParams) }}"
+                class="px-4 py-2 rounded-lg {{ !request('zone') ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
+                    All Zones
+                </a>
+                @foreach($zones as $zone)
+                @php
+                    $zoneParams = array_merge($currentParams, ['zone' => $zone->id]);
+                @endphp
+                <a href="{{ route('admin.meters.index', $zoneParams) }}"
+                class="px-4 py-2 rounded-lg {{ request('zone') == $zone->id ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
+                    {{ $zone->name }} ({{ $zone->meters_count ?? $zone->meters->count() }})
+                </a>
+                @endforeach
             </div>
-    <div class="bg-white rounded-lg shadow overflow-hidden">
-         <!-- Table Stats --> <br>
-       <!-- In the meters.blade.php file, around line 212 -->
-<!-- Table Stats -->
-<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 text-sm text-gray-600">
-    <div></div>
-    <div class="flex items-center space-x-4 mt-2 sm:mt-0">
-        @php
-            // Prepare export parameters based on current filters
-            $exportParams = [
-                'report_type' => 'meter',
-                'format' => 'excel',
-                'detail_level' => 'full'
-            ];
-
-            // Add zone filter if active
-            if(request('zone') && request('zone') != 'all') {
-                $exportParams['zone'] = request('zone');
-            }
-
-            // Add category filter if active
-            if(request('category')) {
-                $exportParams['category'] = request('category');
-            }
-
-            // Add status filter (from the filter parameter)
-            if(request('filter') && request('filter') != 'all') {
-                // Map the filter parameter to status for the report
-                $filterMap = [
-                    'available' => 'available',
-                    'active' => 'active',
-                    'location' => 'all' // Location filter might need special handling
-                ];
-
-                if(isset($filterMap[request('filter')])) {
-                    $exportParams['status'] = $filterMap[request('filter')];
-                }
-            }
-
-            // Add search term if active
-            if(request('q')) {
-                $exportParams['search'] = request('q');
-            }
-        @endphp
-
-        <!-- Download Button -->
-        <a href="{{ route('reports.generate', $exportParams) }}"
-            class="download-excel-btn flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-sm transition duration-200"
-            onclick="showDownloadSpinner()">
-            <i id="downloadIcon" class="fas fa-file-excel"></i>
-            <span id="downloadText">Export Excel</span>
-            <i id="downloadSpinner" class="fas fa-spinner fa-spin hidden"></i>
-        </a>
+        </div>
     </div>
-</div>
+
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+          <br>
+        <!-- Table Stats -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 text-sm text-gray-600">
+            <div></div>
+            <div class="flex items-center space-x-4 mt-2 sm:mt-0">
+                @php
+                    // Prepare export parameters based on current filters
+                    $exportParams = [
+                        'report_type' => 'meter',
+                        'format' => 'excel',
+                        'detail_level' => 'full'
+                    ];
+
+                    // Add zone filter if active
+                    if(request('zone') && request('zone') != 'all') {
+                        $exportParams['zone'] = request('zone');
+                    }
+
+                    // Add category filter if active
+                    if(request('category')) {
+                        $exportParams['category'] = request('category');
+                    }
+
+                    // Add status filter (from the filter parameter)
+                    if(request('filter') && request('filter') != 'all') {
+                        // Map the filter parameter to status for the report
+                        $filterMap = [
+                            'available' => 'available',
+                            'active' => 'active',
+                            'location' => 'all' // Location filter might need special handling
+                        ];
+
+                        if(isset($filterMap[request('filter')])) {
+                            $exportParams['status'] = $filterMap[request('filter')];
+                        }
+                    }
+
+                    // Add search term if active
+                    if(request('q')) {
+                        $exportParams['search'] = request('q');
+                    }
+                @endphp
+
+                <!-- Download Button -->
+                <a href="{{ route('reports.generate', $exportParams) }}"
+                    class="download-excel-btn flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-sm transition duration-200"
+                    onclick="showDownloadSpinner()">
+                    <i id="downloadIcon" class="fas fa-file-excel"></i>
+                    <span id="downloadText">Export Excel</span>
+                    <i id="downloadSpinner" class="fas fa-spinner fa-spin hidden"></i>
+                </a>
+            </div>
+        </div>
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
@@ -862,33 +861,59 @@
 </div>
 
 <script>
-   // Update the openMeterModal function
-function openMeterModal() {
-    document.getElementById('registerMeterModal').classList.remove('hidden');
-    document.body.classList.add('overflow-hidden');
+    // spin
+    function showDownloadSpinner() {
+        const downloadIcon = document.getElementById('downloadIcon');
+        const downloadText = document.getElementById('downloadText');
+        const downloadSpinner = document.getElementById('downloadSpinner');
 
-    // Fetch the next meter number from server
-    fetch('/admin/meters/next-meter-number')
-        .then(response => response.json())
-        .then(data => {
-            if (data.next_meter_number) {
-                document.getElementById('modal_meter_number').value = data.next_meter_number;
-            }
-        })
-        .catch(error => {
-            console.error('Error fetching next meter number:', error);
-            // Fallback to client-side generation
-            generateNextMeterNumberClientSide();
+        if (downloadIcon && downloadText && downloadSpinner) {
+            downloadIcon.classList.add('hidden');
+            downloadText.textContent = 'Exporting...';
+            downloadSpinner.classList.remove('hidden');
+
+            // Reset after 5 seconds (in case something goes wrong)
+            setTimeout(() => {
+                downloadIcon.classList.remove('hidden');
+                downloadText.textContent = 'Export Excel';
+                downloadSpinner.classList.add('hidden');
+            }, 5000);
+        }
+    }
+
+    // handles the download button click
+    document.querySelectorAll('.download-excel-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            showDownloadSpinner();
         });
-}
+    });
+    // Update the openMeterModal function
+    function openMeterModal() {
+        document.getElementById('registerMeterModal').classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
 
-// Client-side fallback generation
-function generateNextMeterNumberClientSide() {
-    const now = new Date();
-    const dateStr = now.toISOString().slice(0,10).replace(/-/g, '');
-    const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    document.getElementById('modal_meter_number').value = 'MTR' + dateStr + randomNum;
-}
+        // Fetch the next meter number from server
+        fetch('/admin/meters/next-meter-number')
+            .then(response => response.json())
+            .then(data => {
+                if (data.next_meter_number) {
+                    document.getElementById('modal_meter_number').value = data.next_meter_number;
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching next meter number:', error);
+                // Fallback to client-side generation
+                generateNextMeterNumberClientSide();
+            });
+    }
+
+    // Client-side fallback generation
+    function generateNextMeterNumberClientSide() {
+        const now = new Date();
+        const dateStr = now.toISOString().slice(0,10).replace(/-/g, '');
+        const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        document.getElementById('modal_meter_number').value = 'MTR' + dateStr + randomNum;
+    }
 
     function closeMeterModal() {
         document.getElementById('registerMeterModal').classList.add('hidden');
