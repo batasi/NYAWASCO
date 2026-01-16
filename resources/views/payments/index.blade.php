@@ -221,35 +221,35 @@
                 <!-- Download Button -->
 
               @php
-    $exportParams = [
-        'report_type' => 'collection',
-        'format' => 'excel',
-        'detail_level' => 'full'
-    ];
+                $exportParams = [
+                    'report_type' => 'collection',
+                    'format' => 'excel',
+                    'detail_level' => 'full'
+                ];
 
-    // Add zone filter if active
-    if(request('zone') && request('zone') != 'all') {
-        $exportParams['zone'] = request('zone');
-    }
+                // Add zone filter if active
+                if(request('zone') && request('zone') != 'all') {
+                    $exportParams['zone'] = request('zone');
+                }
 
-    // Add status filter if active
-    if(request('status')) {
-        $exportParams['status'] = request('status');
-    }
+                // Add status filter if active
+                if(request('status')) {
+                    $exportParams['status'] = request('status');
+                }
 
-    // Add search term if active
-    if(request('search')) {
-        $exportParams['search'] = request('search');
-    }
-@endphp
+                // Add search term if active
+                if(request('search')) {
+                    $exportParams['search'] = request('search');
+                }
+            @endphp
 
-<a href="{{ route('reports.generate', $exportParams) }}"
-    class="download-excel-btn flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-sm transition duration-200"
-    >
-    <i id="downloadIcon" class="fas fa-file-excel"></i>
-    <span id="downloadText">Export Excel</span>
-    <i id="downloadSpinner" class="fas fa-spinner fa-spin hidden"></i>
-</a>
+            <a href="{{ route('reports.generate', $exportParams) }}"
+                class="download-excel-btn flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded text-sm transition duration-200"
+                >
+                <i id="downloadIcon" class="fas fa-file-excel"></i>
+                <span id="downloadText">Export Excel</span>
+                <i id="downloadSpinner" class="fas fa-spinner fa-spin hidden"></i>
+            </a>
 
             </div>
             </div>
