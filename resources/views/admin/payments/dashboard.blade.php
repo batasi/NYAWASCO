@@ -14,6 +14,14 @@
 
 @section('content')
 @can('add payments')
+
+<style>
+
+.flatpickr-prev-month,
+.flatpickr-next-month {
+    display: none !important;
+}
+</style>
 <!-- Background Image -->
 <div class="fixed inset-0 -z-10">
     <div class="absolute inset-0 bg-gradient-to-br from-blue-50/80 to-white/90"></div>
@@ -430,12 +438,50 @@
                 </div>
             </div>
         </div>
+
+        <!-- Recent Payments Table -->
+        <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/20">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900">Recent Payments</h3>
+                    <p class="text-sm text-gray-600">Latest payment transactions</p>
+                </div>
+                <div class="flex items-center">
+                    <span class="text-sm text-gray-500 mr-3" id="lastUpdated">
+                        Updated: {{ now()->format('H:i:s') }}
+                    </span>
+                    <button onclick="loadRecentPayments()" class="text-gray-600 hover:text-blue-600 transition duration-200" title="Refresh">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200" id="recentPaymentsTable">
+                    <thead class="bg-gray-50/80">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment #</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Meter</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Method</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white/50 divide-y divide-gray-200">
+                        <!-- Will be populated by AJAX -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </div>
 
 @push('scripts')
-
-
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js"></script>
 
 <script>
     // Chart colors - using Tailwind-like colors
@@ -782,6 +828,7 @@
         };
     }
 
+    // Load recent payments via AJAX
     function loadRecentPayments() {
         $.ajax({
             url: '{{ route("admin.payments.dashboard.realtime") }}',
@@ -796,15 +843,15 @@
                     maximumFractionDigits: 2
                 }));
 
-                // Update recent payments table - target the specific tbody
-                const tbody = $('#recentPaymentsBody');
+                // Update recent payments table
+                const tbody = $('#recentPaymentsTable tbody');
                 tbody.empty();
 
                 if (response.recent_payments.length === 0) {
                     tbody.append(`
                         <tr>
                             <td colspan="7" class="px-4 py-8 text-center text-gray-500">
-                                <i class="fas fa-inbox text-2xl mb-2 block"></i>
+                                <i class="fas fa-inbox text-2xl mb-2"></i>
                                 <p>No recent payments found</p>
                             </td>
                         </tr>
@@ -812,14 +859,13 @@
                 } else {
                     response.recent_payments.forEach(function(payment) {
                         const statusColors = {
-                            'completed': 'bg-green-100 text-green-800',
-                            'pending': 'bg-yellow-100 text-yellow-800',
-                            'failed': 'bg-red-100 text-red-800',
-                            'allocated': 'bg-blue-100 text-blue-800',
-                            'voided': 'bg-gray-100 text-gray-800'
+                            'completed': 'green',
+                            'pending': 'yellow',
+                            'failed': 'red',
+                            'allocated': 'blue',
+                            'voided': 'gray'
                         };
-
-                        const statusClass = statusColors[payment.payment_status] || 'bg-gray-100 text-gray-800';
+                        const statusColor = statusColors[payment.payment_status] || 'gray';
 
                         const row = `
                             <tr class="hover:bg-gray-50/50 transition duration-150">
@@ -860,7 +906,7 @@
                                     </div>
                                 </td>
                                 <td class="px-4 py-4 whitespace-nowrap">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass}">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-${statusColor}-100 text-${statusColor}-800">
                                         ${payment.payment_status}
                                     </span>
                                 </td>
@@ -875,16 +921,6 @@
             },
             error: function(xhr) {
                 console.error('Failed to load recent payments');
-                const tbody = $('#recentPaymentsBody');
-                tbody.empty();
-                tbody.append(`
-                    <tr>
-                        <td colspan="7" class="px-4 py-8 text-center text-red-500">
-                            <i class="fas fa-exclamation-triangle text-2xl mb-2 block"></i>
-                            <p>Failed to load recent payments</p>
-                        </td>
-                    </tr>
-                `);
             }
         });
     }
