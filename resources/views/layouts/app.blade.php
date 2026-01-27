@@ -1367,7 +1367,7 @@ use Illuminate\Support\Facades\Route;
                         </div>
                     </a>
                     @can('view customers')
-                    <a href="{{ route('customers.index') }}" onclick="handleSidebarLink(this); if (window.innerWidth < 768) toggleSidebar()" class="sidebar-link group flex items-center py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-blue-300/30 hover:shadow-lg {{ request()->routeIs('customers.*') ? 'bg-blue-300/50 shadow-lg border-l-4 border-green-600' : '' }}" data-route="customers">
+                     <a href="{{ route('customers.index') }}" onclick="handleSidebarLink(this); if (window.innerWidth < 768) toggleSidebar()" class="sidebar-link group flex items-center py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-blue-300/30 hover:shadow-lg {{ request()->routeIs('customers.*') ? 'bg-blue-300/50 shadow-lg border-l-4 border-green-600' : '' }}" data-route="customers">
                         <svg class="w-4 h-4 md:w-5 md:h-5 mr-3 {{ request()->routeIs('customers.*') ? 'text-green-600' : 'text-blue-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                         </svg>
@@ -1379,6 +1379,7 @@ use Illuminate\Support\Facades\Route;
                             </svg>
                         </div>
                     </a>
+
                     @endcan
                     @can('view meters')
                     <a href="{{ route('meters.index') }}" onclick="handleSidebarLink(this); if (window.innerWidth < 768) toggleSidebar()" class="sidebar-link group flex items-center py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-blue-300/30 hover:shadow-lg {{ request()->routeIs('meters.*') ? 'bg-blue-300/50 shadow-lg border-l-4 border-green-600' : '' }}" data-route="meters">
@@ -1437,7 +1438,98 @@ use Illuminate\Support\Facades\Route;
                     </a>
                     @endcan
 
-                    <!-- System Administration -->
+
+                        <a href="#" onclick="toggleSubmenu('accounts-receivable')" class="sidebar-link group flex items-center justify-between py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-blue-300/30 hover:shadow-lg">
+                            <div class="flex items-center">
+                                <svg class="w-4 h-4 md:w-5 md:h-5 mr-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                </svg>
+                                <span class="font-medium">Accounts Receivable</span>
+                            </div>
+                            <svg id="accounts-receivable-arrow" class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </a>
+
+                        {{-- Accounts Receivable Submenu --}}
+                        <ul id="accounts-receivable-submenu" class="ml-8 mt-1 space-y-1 hidden">
+                            <li>
+                                <a href="{{ route('admin.accounts-receivable.dashboard') }}" onclick="handleSidebarLink(this); if (window.innerWidth < 768) toggleSidebar()" class="sidebar-link group flex items-center py-2 px-4 rounded-lg transition-all duration-200 hover:bg-blue-200/30 text-sm {{ request()->routeIs('admin.accounts-receivable.dashboard') ? 'bg-blue-200/50' : '' }}" data-route="accounts-receivable.dashboard">
+                                    <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                                    </svg>
+                                    Dashboard
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('admin.accounts-receivable.aging-report') }}" onclick="handleSidebarLink(this); if (window.innerWidth < 768) toggleSidebar()" class="sidebar-link group flex items-center py-2 px-4 rounded-lg transition-all duration-200 hover:bg-blue-200/30 text-sm {{ request()->routeIs('admin.accounts-receivable.aging-report') ? 'bg-blue-200/50' : '' }}" data-route="accounts-receivable.aging-report">
+                                    <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                                    </svg>
+                                    Aging Report
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('admin.accounts-receivable.collections-tracking') }}" onclick="handleSidebarLink(this); if (window.innerWidth < 768) toggleSidebar()" class="sidebar-link group flex items-center py-2 px-4 rounded-lg transition-all duration-200 hover:bg-blue-200/30 text-sm {{ request()->routeIs('admin.accounts-receivable.collections-tracking') ? 'bg-blue-200/50' : '' }}" data-route="accounts-receivable.collections-tracking">
+                                    <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                                    </svg>
+                                    Collections Tracking
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('admin.accounts-receivable.write-offs.index') }}" onclick="handleSidebarLink(this); if (window.innerWidth < 768) toggleSidebar()" class="sidebar-link group flex items-center py-2 px-4 rounded-lg transition-all duration-200 hover:bg-blue-200/30 text-sm {{ request()->routeIs('admin.accounts-receivable.write-offs.*') ? 'bg-blue-200/50' : '' }}" data-route="accounts-receivable.write-offs">
+                                    <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
+                                    Write-offs
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('admin.accounts-receivable.customer-balances') }}" onclick="handleSidebarLink(this); if (window.innerWidth < 768) toggleSidebar()" class="sidebar-link group flex items-center py-2 px-4 rounded-lg transition-all duration-200 hover:bg-blue-200/30 text-sm {{ request()->routeIs('admin.accounts-receivable.customer-balances') ? 'bg-blue-200/50' : '' }}" data-route="accounts-receivable.customer-balances">
+                                    <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    Customer Balances
+                                </a>
+                            </li>
+                        </ul>
+
+
+
+                        <a href="#" onclick="toggleSubmenu('payments')" class="sidebar-link group flex items-center justify-between py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-blue-300/30 hover:shadow-lg">
+                            <div class="flex items-center">
+                                <svg class="w-4 h-4 md:w-5 md:h-5 mr-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                </svg>
+                                <span class="font-medium">Payment Allocation</span>
+                            </div>
+                            <svg id="payments-arrow" class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </a>
+
+                        {{-- Payments Submenu --}}
+                        <ul id="payments-submenu" class="ml-8 mt-1 space-y-1 hidden">
+                            <li>
+                                <a href="{{ route('admin.payments.unallocated') }}" onclick="handleSidebarLink(this); if (window.innerWidth < 768) toggleSidebar()" class="sidebar-link group flex items-center py-2 px-4 rounded-lg transition-all duration-200 hover:bg-blue-200/30 text-sm {{ request()->routeIs('admin.payments.unallocated') ? 'bg-blue-200/50' : '' }}" data-route="payments.unallocated">
+                                    <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    Unallocated Payments
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('admin.payments.methods-report') }}" onclick="handleSidebarLink(this); if (window.innerWidth < 768) toggleSidebar()" class="sidebar-link group flex items-center py-2 px-4 rounded-lg transition-all duration-200 hover:bg-blue-200/30 text-sm {{ request()->routeIs('admin.payments.methods-report') ? 'bg-blue-200/50' : '' }}" data-route="payments.methods-report">
+                                    <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                    </svg>
+                                    Payment Methods Report
+                                </a>
+                            </li>
+                        </ul>
+
+
                     <div class="px-3 md:px-4 py-2">
                         <h3 class="text-xs md:text-sm font-bold text-gray-700 uppercase tracking-wider">System Administration</h3>
                     </div>
@@ -1587,6 +1679,32 @@ use Illuminate\Support\Facades\Route;
         </div>
 
         <script>
+            function toggleSubmenu(menuId) {
+    const submenu = document.getElementById(`${menuId}-submenu`);
+    const arrow = document.getElementById(`${menuId}-arrow`);
+
+    if (submenu && arrow) {
+        submenu.classList.toggle('hidden');
+        arrow.classList.toggle('rotate-180');
+    }
+}
+
+// Keep submenus open based on current route
+document.addEventListener('DOMContentLoaded', function() {
+    // Check which submenu should be open
+    const currentPath = window.location.pathname;
+
+    // Accounts Receivable submenu
+    if (currentPath.includes('accounts-receivable')) {
+        toggleSubmenu('accounts-receivable');
+    }
+
+    // Payments submenu
+    if (currentPath.includes('payments') &&
+        (currentPath.includes('unallocated') || currentPath.includes('methods-report'))) {
+        toggleSubmenu('payments');
+    }
+});
         // Global variable to track loading state
         let isNavigating = false;
 

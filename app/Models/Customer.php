@@ -102,6 +102,11 @@ class Customer extends Model
         return $this->hasMany(Bill::class)->orderBy('created_at', 'desc');
     }
 
+    public function latestBill()
+    {
+        return $this->hasMany(Bill::class)->orderBy('created_at', 'desc');
+    }
+
     public function payments()
     {
         return $this->hasMany(Payment::class)->orderBy('payment_date', 'desc');

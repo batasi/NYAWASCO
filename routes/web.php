@@ -35,6 +35,9 @@ use App\Http\Controllers\Admin\MeterReadingController;
 use App\Http\Controllers\Admin\WaterConnectionController;
 use App\Http\Controllers\Admin\MeterCategoryController;
 use App\Http\Controllers\Admin\SystemManagementController;
+use App\Http\Controllers\Admin\PaymentAllocationController;
+use App\Http\Controllers\Admin\AccountsReceivableController;
+use App\Models\Customer;
 
 /*
 |--------------------------------------------------------------------------
@@ -416,6 +419,114 @@ Route::get('/bills/{bill}/info', [BillController::class, 'info']);
 Route::get('/bills/info/customer/{customer}', [BillController::class, 'infoByCustomer']);
 Route::get('/bills/info/meter/{meter}', [BillController::class, 'infoByMeter']);
 
+// Accounts Receivable Routes
+// Add these routes after your existing accounts receivable routes
+   Route::post('/admin/accounts-receivable/search-customer',
+    [AccountsReceivableController::class, 'searchCustomer'])
+    ->name('admin.accounts-receivable.search-customer');
+Route::prefix('admin/accounts-receivable')->name('admin.accounts-receivable.')->group(function () {
+    // Existing routes...
+    Route::get('/dashboard', [AccountsReceivableController::class, 'dashboard'])->name('dashboard');
+
+    Route::get('/aging-report', [AccountsReceivableController::class, 'agingReport'])->name('aging-report');
+    Route::get('/collections-tracking', [AccountsReceivableController::class, 'collectionsTracking'])->name('collections-tracking');
+    Route::get('/write-offs', [AccountsReceivableController::class, 'writeOffs'])->name('write-offs.index');
+    Route::get('/write-offs/create/{customer}', [AccountsReceivableController::class, 'createWriteOff'])->name('write-offs.create');
+    Route::post('/write-offs', [AccountsReceivableController::class, 'storeWriteOff'])->name('write-offs.store');
+    Route::post('/write-offs/{writeOff}/approve', [AccountsReceivableController::class, 'approveWriteOff'])->name('write-offs.approve');
+
+    // Add these new routes
+    Route::post('/collection-activities', [AccountsReceivableController::class, 'storeCollectionActivity'])->name('collection-activities.store');
+    Route::get('/refresh-dashboard', [AccountsReceivableController::class, 'refreshDashboard'])->name('refresh-dashboard');
+    Route::post('/quick-log-activity', [AccountsReceivableController::class, 'quickLogActivity'])->name('quick-log-activity');
+    Route::get('/export-dashboard', [AccountsReceivableController::class, 'exportDashboard'])->name('export-dashboard');
+    Route::get('/aging-chart-data', [AccountsReceivableController::class, 'getAgingChartData'])->name('aging-chart-data');
+    Route::get('/performance-metrics', [AccountsReceivableController::class, 'getPerformanceMetrics'])->name('performance-metrics');
+
+    // Other existing routes...
+    Route::get('/customer-balances', [AccountsReceivableController::class, 'customerBalances'])->name('customer-balances');
+    Route::get('/collection-performance', [AccountsReceivableController::class, 'collectionPerformance'])->name('collection-performance');
+});
+// Payment Allocation Routes
+Route::prefix('admin/payments')->name('admin.payments.')->group(function () {
+    Route::get('/unallocated', [PaymentAllocationController::class, 'unallocatedPayments'])->name('unallocated');
+    Route::get('/{payment}/allocate', [PaymentAllocationController::class, 'showAllocationForm'])->name('allocate.form');
+    Route::post('/{payment}/allocate', [PaymentAllocationController::class, 'allocatePayment'])->name('allocate');
+    Route::post('/{payment}/auto-allocate', [PaymentAllocationController::class, 'autoAllocate'])->name('auto-allocate');
+    Route::get('/methods-report', [PaymentAllocationController::class, 'paymentMethodsReport'])->name('methods-report');
+});
+// API Routes for AJAX calls
+Route::prefix('admin/api')->name('admin.api.')->group(function () {
+    // For write-offs
+    Route::get('/customers-with-balance', function() {
+        $customers = Customer::withSum('bills', 'balance')
+            ->whereHas('bills', function($query) {
+                $query->where('bill_status', '!=', 'paid');
+            })
+            ->orderByDesc('bills_sum_balance')
+            ->limit(50)
+            ->get()
+            ->map(function($customer) {
+                return [
+                    'id' => $customer->id,
+                    'customer_number' => $customer->customer_number,
+                    'first_name' => $customer->first_name,
+                    'last_name' => $customer->last_name,
+                    'balance' => $customer->bills_sum_balance
+                ];
+            });
+
+        return response()->json($customers);
+    });
+
+    Route::get('/customers/{customer}/bills', function(Customer $customer) {
+        $bills = $customer->bills()
+            ->where('bill_status', '!=', 'paid')
+            ->orderBy('due_date')
+            ->get()
+            ->map(function($bill) {
+                return [
+                    'id' => $bill->id,
+                    'bill_number' => $bill->bill_number,
+                    'due_date' => $bill->due_date,
+                    'balance' => $bill->balance,
+                    'late_fee' => $bill->late_fee
+                ];
+            });
+
+        return response()->json($bills);
+    });
+
+    // For collection activities
+    Route::get('/delinquent-customers', function() {
+        $customers = Customer::with(['bills' => function($query) {
+                $query->where('due_date', '<', now())
+                      ->where('bill_status', '!=', 'paid');
+            }])
+            ->whereHas('bills', function($query) {
+                $query->where('due_date', '<', now())
+                      ->where('bill_status', '!=', 'paid');
+            })
+            ->withSum(['bills as total_due' => function($query) {
+                $query->where('due_date', '<', now())
+                      ->where('bill_status', '!=', 'paid');
+            }], 'balance')
+            ->orderByDesc('total_due')
+            ->limit(50)
+            ->get()
+            ->map(function($customer) {
+                return [
+                    'id' => $customer->id,
+                    'customer_number' => $customer->customer_number,
+                    'first_name' => $customer->first_name,
+                    'last_name' => $customer->last_name,
+                    'total_due' => $customer->total_due
+                ];
+            });
+
+        return response()->json($customers);
+    });
+});
 /*
 |--------------------------------------------------------------------------
 | ORGANIZER ROUTES (ROLE-BASED)
