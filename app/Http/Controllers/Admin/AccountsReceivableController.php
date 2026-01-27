@@ -545,27 +545,66 @@ class AccountsReceivableController extends Controller
 
     public function collectionsTracking(Request $request)
     {
-        $activities = CollectionActivity::with(['customer', 'agent'])
-            ->when($request->get('agent_id'), function($query, $agentId) {
-                $query->where('collection_agent_id', $agentId);
+        $query = CollectionActivity::with(['customer', 'agent'])
+            ->when($request->filled('agent_id'), function($query) use ($request) {
+                $query->where('collection_agent_id', $request->agent_id);
             })
-            ->when($request->get('outcome'), function($query, $outcome) {
-                $query->where('outcome', $outcome);
+            ->when($request->filled('activity_type'), function($query) use ($request) {
+                $query->where('activity_type', $request->activity_type);
             })
-            ->when($request->get('date_from'), function($query, $date) {
-                $query->where('activity_date', '>=', $date);
+            ->when($request->filled('outcome'), function($query) use ($request) {
+                $query->where('outcome', $request->outcome);
             })
-            ->when($request->get('date_to'), function($query, $date) {
-                $query->where('activity_date', '<=', $date);
+            ->when($request->filled('date_from'), function($query) use ($request) {
+                $query->where('activity_date', '>=', $request->date_from);
             })
-            ->orderBy('activity_date', 'desc')
-            ->paginate(20);
+            ->when($request->filled('date_to'), function($query) use ($request) {
+                $query->where('activity_date', '<=', $request->date_to . ' 23:59:59');
+            })
+            ->when($request->filled('follow_up'), function($query) use ($request) {
+                if ($request->follow_up === 'pending') {
+                    $query->whereNotNull('follow_up_date')
+                        ->where('follow_up_date', '>=', now());
+                } elseif ($request->follow_up === 'completed') {
+                    $query->whereNotNull('follow_up_date')
+                        ->where('follow_up_date', '<', now());
+                }
+            })
+            ->orderBy('activity_date', 'desc');
+
+        $activities = $query->paginate(20);
 
         $agents = User::whereHas('roles', function($query) {
-            $query->whereIn('name', ['collector', 'supervisor']);
-        })->get();
+            $query->whereIn('name', ['collector', 'supervisor', 'admin']);
+        })->orderBy('name')->get();
 
         return view('admin.accounts-receivable.collections-tracking', compact('activities', 'agents'));
+    }
+
+    public function createCollectionActivity(Request $request)
+    {
+        $customers = Customer::where('status', 'active')
+            ->whereHas('bills', function($query) {
+                $query->where('bill_status', '!=', 'paid');
+            })
+            ->with(['bills' => function($query) {
+                $query->where('bill_status', '!=', 'paid');
+            }])
+            ->orderBy('customer_number')
+            ->limit(50)
+            ->get()
+            ->map(function($customer) {
+                $totalBalance = $customer->bills->sum('balance');
+                return [
+                    'id' => $customer->id,
+                    'text' => $customer->customer_number . ' - ' .
+                            $customer->first_name . ' ' . $customer->last_name .
+                            ' (KSh ' . number_format($totalBalance, 2) . ')',
+                    'balance' => $totalBalance
+                ];
+            });
+
+        return view('admin.accounts-receivable.partials.activity-modal', compact('customers'));
     }
 
     public function writeOffs(Request $request)

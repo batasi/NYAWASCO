@@ -40,14 +40,14 @@ class CollectionActivity extends Model
     public function getActivityIconAttribute()
     {
         return match($this->activity_type) {
-            'call' => 'phone',
-            'visit' => 'home',
+            'call' => 'phone-alt',
+            'visit' => 'map-marker-alt',
             'email' => 'envelope',
-            'sms' => 'chat',
-            'letter' => 'mail',
+            'sms' => 'comment-alt',
+            'letter' => 'file-alt',
             'promise_to_pay' => 'handshake',
             'payment_arrangement' => 'file-contract',
-            default => 'circle'
+            default => 'sticky-note'
         };
     }
 }

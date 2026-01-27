@@ -424,6 +424,13 @@ Route::get('/bills/info/meter/{meter}', [BillController::class, 'infoByMeter']);
    Route::post('/admin/accounts-receivable/search-customer',
     [AccountsReceivableController::class, 'searchCustomer'])
     ->name('admin.accounts-receivable.search-customer');
+    // Collections Tracking Routes
+Route::prefix('collections')->name('collections.')->group(function () {
+    Route::get('/tracking', [AccountsReceivableController::class, 'collectionsTracking'])->name('tracking');
+    Route::post('/activities', [AccountsReceivableController::class, 'storeCollectionActivity'])->name('activities.store');
+    Route::get('/activities/create', [AccountsReceivableController::class, 'createCollectionActivity'])->name('activities.create');
+    Route::get('/customers/search', [AccountsReceivableController::class, 'searchCustomer'])->name('customers.search');
+});
 Route::prefix('admin/accounts-receivable')->name('admin.accounts-receivable.')->group(function () {
     // Existing routes...
     Route::get('/dashboard', [AccountsReceivableController::class, 'dashboard'])->name('dashboard');
