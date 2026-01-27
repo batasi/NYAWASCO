@@ -16,9 +16,29 @@
 @can('add payments')
 
 <style>
+/* Hide the entire calendar popup */
+.flatpickr-calendar {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
 
-.flatpickr-prev-month,
-.flatpickr-next-month {
+/* If you want to hide only when opened but keep input functional */
+.flatpickr-calendar.open {
+    display: none !important;
+}
+
+/* Alternative: Hide the inner calendar wrapper */
+.flatpickr-calendar .dayContainer {
+    display: none !important;
+}
+
+/* Hide days/dates specifically */
+.flatpickr-calendar .dayContainer,
+.flatpickr-calendar .flatpickr-days,
+.flatpickr-calendar .flatpickr-innerContainer,
+.flatpickr-calendar .flatpickr-rContainer {
     display: none !important;
 }
 </style>
