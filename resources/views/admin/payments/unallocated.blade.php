@@ -1,7 +1,10 @@
 @extends('layouts.app')
 
 @section('title', 'Unallocated Payments - NYAWASCO')
-
+@php
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
+@endphp
 @section('content')
 @can('add payments')
 <!-- Background Image -->
