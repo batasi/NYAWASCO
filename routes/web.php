@@ -412,6 +412,51 @@ Route::middleware(['auth'])->group(function () {
             return view('system.backups');
         })->name('backups');
     });
+
+    Route::post('/admin/accounts-receivable/search-customer',
+        [AccountsReceivableController::class, 'searchCustomer'])
+        ->name('admin.accounts-receivable.search-customer');
+        // Collections Tracking Routes
+        Route::prefix('collections')->name('collections.')->group(function () {
+            Route::get('/tracking', [AccountsReceivableController::class, 'collectionsTracking'])->name('tracking');
+            Route::post('/activities', [AccountsReceivableController::class, 'storeCollectionActivity'])->name('activities.store');
+            Route::get('/activities/create', [AccountsReceivableController::class, 'createCollectionActivity'])->name('activities.create');
+            Route::get('/customers/search', [AccountsReceivableController::class, 'searchCustomer'])->name('customers.search');
+        });
+        // Aging Report Export
+        Route::get('/accounts-receivable/aging-report/export', [AccountsReceivableController::class, 'exportAgingReport'])->name('admin.accounts-receivable.aging-report.export');
+        Route::prefix('admin/accounts-receivable')->name('admin.accounts-receivable.')->group(function () {
+        // Existing routes...
+        Route::get('/dashboard', [AccountsReceivableController::class, 'dashboard'])->name('dashboard');
+
+        Route::get('/aging-report', [AccountsReceivableController::class, 'agingReport'])->name('aging-report');
+        Route::get('/collections-tracking', [AccountsReceivableController::class, 'collectionsTracking'])->name('collections-tracking');
+        Route::get('/write-offs', [AccountsReceivableController::class, 'writeOffs'])->name('write-offs.index');
+        Route::get('/write-offs/create/{customer}', [AccountsReceivableController::class, 'createWriteOff'])->name('write-offs.create');
+        Route::post('/write-offs', [AccountsReceivableController::class, 'storeWriteOff'])->name('write-offs.store');
+        Route::post('/write-offs/{writeOff}/approve', [AccountsReceivableController::class, 'approveWriteOff'])->name('write-offs.approve');
+
+        // Add these new routes
+        Route::post('/collection-activities', [AccountsReceivableController::class, 'storeCollectionActivity'])->name('collection-activities.store');
+        Route::get('/refresh-dashboard', [AccountsReceivableController::class, 'refreshDashboard'])->name('refresh-dashboard');
+        Route::post('/quick-log-activity', [AccountsReceivableController::class, 'quickLogActivity'])->name('quick-log-activity');
+        Route::get('/export-dashboard', [AccountsReceivableController::class, 'exportDashboard'])->name('export-dashboard');
+        Route::get('/aging-chart-data', [AccountsReceivableController::class, 'getAgingChartData'])->name('aging-chart-data');
+        Route::get('/performance-metrics', [AccountsReceivableController::class, 'getPerformanceMetrics'])->name('performance-metrics');
+
+        // Other existing routes...
+        Route::get('/customer-balances', [AccountsReceivableController::class, 'customerBalances'])->name('customer-balances');
+        Route::get('/collection-performance', [AccountsReceivableController::class, 'collectionPerformance'])->name('collection-performance');
+    });
+    // Payment Allocation Routes
+    Route::prefix('admin/payments')->name('admin.payments.')->group(function () {
+        Route::get('/unallocated', [PaymentAllocationController::class, 'unallocatedPayments'])->name('unallocated');
+        Route::get('/{payment}/allocate', [PaymentAllocationController::class, 'showAllocationForm'])->name('allocate.form');
+        Route::post('/{payment}/allocate', [PaymentAllocationController::class, 'allocatePayment'])->name('allocate');
+        Route::post('/{payment}/auto-allocate', [PaymentAllocationController::class, 'autoAllocate'])->name('auto-allocate');
+        Route::get('/methods-report', [PaymentAllocationController::class, 'paymentMethodsReport'])->name('methods-report');
+    });
+
 });
 
 // Bill Information Routes (Public)
@@ -420,50 +465,8 @@ Route::get('/bills/info/customer/{customer}', [BillController::class, 'infoByCus
 Route::get('/bills/info/meter/{meter}', [BillController::class, 'infoByMeter']);
 
 // Accounts Receivable Routes
-// Add these routes after your existing accounts receivable routes
-   Route::post('/admin/accounts-receivable/search-customer',
-    [AccountsReceivableController::class, 'searchCustomer'])
-    ->name('admin.accounts-receivable.search-customer');
-    // Collections Tracking Routes
-Route::prefix('collections')->name('collections.')->group(function () {
-    Route::get('/tracking', [AccountsReceivableController::class, 'collectionsTracking'])->name('tracking');
-    Route::post('/activities', [AccountsReceivableController::class, 'storeCollectionActivity'])->name('activities.store');
-    Route::get('/activities/create', [AccountsReceivableController::class, 'createCollectionActivity'])->name('activities.create');
-    Route::get('/customers/search', [AccountsReceivableController::class, 'searchCustomer'])->name('customers.search');
-});
-// Aging Report Export
-Route::get('/accounts-receivable/aging-report/export', [AccountsReceivableController::class, 'exportAgingReport'])->name('admin.accounts-receivable.aging-report.export');
-Route::prefix('admin/accounts-receivable')->name('admin.accounts-receivable.')->group(function () {
-    // Existing routes...
-    Route::get('/dashboard', [AccountsReceivableController::class, 'dashboard'])->name('dashboard');
 
-    Route::get('/aging-report', [AccountsReceivableController::class, 'agingReport'])->name('aging-report');
-    Route::get('/collections-tracking', [AccountsReceivableController::class, 'collectionsTracking'])->name('collections-tracking');
-    Route::get('/write-offs', [AccountsReceivableController::class, 'writeOffs'])->name('write-offs.index');
-    Route::get('/write-offs/create/{customer}', [AccountsReceivableController::class, 'createWriteOff'])->name('write-offs.create');
-    Route::post('/write-offs', [AccountsReceivableController::class, 'storeWriteOff'])->name('write-offs.store');
-    Route::post('/write-offs/{writeOff}/approve', [AccountsReceivableController::class, 'approveWriteOff'])->name('write-offs.approve');
 
-    // Add these new routes
-    Route::post('/collection-activities', [AccountsReceivableController::class, 'storeCollectionActivity'])->name('collection-activities.store');
-    Route::get('/refresh-dashboard', [AccountsReceivableController::class, 'refreshDashboard'])->name('refresh-dashboard');
-    Route::post('/quick-log-activity', [AccountsReceivableController::class, 'quickLogActivity'])->name('quick-log-activity');
-    Route::get('/export-dashboard', [AccountsReceivableController::class, 'exportDashboard'])->name('export-dashboard');
-    Route::get('/aging-chart-data', [AccountsReceivableController::class, 'getAgingChartData'])->name('aging-chart-data');
-    Route::get('/performance-metrics', [AccountsReceivableController::class, 'getPerformanceMetrics'])->name('performance-metrics');
-
-    // Other existing routes...
-    Route::get('/customer-balances', [AccountsReceivableController::class, 'customerBalances'])->name('customer-balances');
-    Route::get('/collection-performance', [AccountsReceivableController::class, 'collectionPerformance'])->name('collection-performance');
-});
-// Payment Allocation Routes
-Route::prefix('admin/payments')->name('admin.payments.')->group(function () {
-    Route::get('/unallocated', [PaymentAllocationController::class, 'unallocatedPayments'])->name('unallocated');
-    Route::get('/{payment}/allocate', [PaymentAllocationController::class, 'showAllocationForm'])->name('allocate.form');
-    Route::post('/{payment}/allocate', [PaymentAllocationController::class, 'allocatePayment'])->name('allocate');
-    Route::post('/{payment}/auto-allocate', [PaymentAllocationController::class, 'autoAllocate'])->name('auto-allocate');
-    Route::get('/methods-report', [PaymentAllocationController::class, 'paymentMethodsReport'])->name('methods-report');
-});
 // API Routes for AJAX calls
 Route::prefix('admin/api')->name('admin.api.')->group(function () {
     // For write-offs
