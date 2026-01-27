@@ -431,6 +431,8 @@ Route::prefix('collections')->name('collections.')->group(function () {
     Route::get('/activities/create', [AccountsReceivableController::class, 'createCollectionActivity'])->name('activities.create');
     Route::get('/customers/search', [AccountsReceivableController::class, 'searchCustomer'])->name('customers.search');
 });
+// Aging Report Export
+Route::get('/accounts-receivable/aging-report/export', [AccountsReceivableController::class, 'exportAgingReport'])->name('admin.accounts-receivable.aging-report.export');
 Route::prefix('admin/accounts-receivable')->name('admin.accounts-receivable.')->group(function () {
     // Existing routes...
     Route::get('/dashboard', [AccountsReceivableController::class, 'dashboard'])->name('dashboard');

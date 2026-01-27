@@ -8,6 +8,7 @@ use App\Models\Bill;
 use App\Models\User;
 use App\Models\Zone;
 use App\Models\WriteOff;
+use App\Models\MeterCategory;
 use App\Models\CollectionActivity;
 use App\Models\AgingBucket;
 use App\Models\Meter;
@@ -17,6 +18,14 @@ use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Writer\Csv;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+use PDF;
 
 class AccountsReceivableController extends Controller
 {
@@ -419,24 +428,7 @@ class AccountsReceivableController extends Controller
         ]);
     }
 
-    // Additional dashboard endpoints
 
-    public function getAgingChartData(Request $request)
-    {
-        $filter = $request->get('filter', 'all');
-        $agingReport = $this->getAgingAnalysis();
-
-        // Apply filters if needed
-        if ($filter !== 'all') {
-            // Filter logic based on meter type, zone, etc.
-        }
-
-        return response()->json([
-            'labels' => $agingReport->pluck('bucket.name'),
-            'data' => $agingReport->pluck('total_amount'),
-            'colors' => $agingReport->pluck('bucket.color')
-        ]);
-    }
 
     public function getPerformanceMetrics(Request $request)
     {
@@ -525,23 +517,7 @@ class AccountsReceivableController extends Controller
         return $count > 0 ? round($totalDays / $count, 1) : 0;
     }
 
-    public function agingReport(Request $request)
-    {
-        $date = $request->get('as_of_date', now()->toDateString());
-        $zoneId = $request->get('zone_id');
-        $categoryId = $request->get('category_id');
 
-        $agingData = $this->getDetailedAgingReport($date, $zoneId, $categoryId);
-        $agingBuckets = AgingBucket::active()->ordered()->get();
-        $summary = $this->getAgingSummary($agingData);
-
-        return view('admin.accounts-receivable.aging-report', compact(
-            'agingData',
-            'agingBuckets',
-            'summary',
-            'date'
-        ));
-    }
 
     public function collectionsTracking(Request $request)
     {
@@ -1022,7 +998,7 @@ class AccountsReceivableController extends Controller
                 ->with('error', 'Failed to log activity: ' . $e->getMessage());
         }
     }
-    // Add this method to your AccountsReceivableController
+
     public function searchCustomer(Request $request)
     {
         // Log the request for debugging
@@ -1107,5 +1083,612 @@ class AccountsReceivableController extends Controller
                 'message' => 'Search failed: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    public function agingReport(Request $request)
+    {
+        $date = $request->get('as_of_date', now()->toDateString());
+        $zoneId = $request->get('zone_id');
+        $categoryId = $request->get('category_id');
+
+        $filters = [
+            'zone_id' => $zoneId,
+            'category_id' => $categoryId,
+            'as_of_date' => $date
+        ];
+
+        // Get aging analysis
+        $agingBuckets = AgingBucket::active()->ordered()->get();
+
+        // Get detailed aging data
+        $agingData = $this->getDetailedAgingData($date, $zoneId, $categoryId);
+
+        // Get summary data
+        $summary = $this->getAgingSummary($agingData, $agingBuckets);
+
+        // Get zones and categories for filters
+        $zones = Zone::orderBy('name')->get();
+        $categories = MeterCategory::orderBy('name')->get();
+
+        return view('admin.accounts-receivable.aging-report', compact(
+            'agingData',
+            'agingBuckets',
+            'summary',
+            'date',
+            'zones',
+            'categories',
+            'filters'
+        ));
+    }
+
+    private function getDetailedAgingData($date, $zoneId = null, $categoryId = null)
+    {
+        $query = Customer::with(['bills' => function($query) use ($date) {
+                $query->where('bill_status', '!=', 'paid')
+                    ->where('balance', '>', 0);
+            }, 'meters.meterCategory', 'meters.zone'])
+            ->whereHas('bills', function($query) use ($date) {
+                $query->where('bill_status', '!=', 'paid')
+                    ->where('balance', '>', 0);
+            });
+
+        // Apply filters
+        if ($zoneId) {
+            $query->whereHas('meters', function($meterQuery) use ($zoneId) {
+                $meterQuery->where('zone_id', $zoneId);
+            });
+        }
+
+        if ($categoryId) {
+            $query->whereHas('meters.meterCategory', function($catQuery) use ($categoryId) {
+                $catQuery->where('id', $categoryId);
+            });
+        }
+
+        $customers = $query->orderBy('customer_number')->paginate(50);
+
+        // Add aging bucket breakdown for each customer
+        $customers->transform(function($customer) use ($date) {
+            $customer->total_due = $customer->bills->sum('balance');
+            $customer->bill_count = $customer->bills->count();
+
+            // Get aging buckets
+            $agingBuckets = AgingBucket::active()->ordered()->get();
+            $customer->buckets = collect();
+
+            foreach ($agingBuckets as $bucket) {
+                $bucketAmount = $customer->bills->filter(function($bill) use ($bucket, $date) {
+                    $daysOverdue = Carbon::parse($date)->diffInDays($bill->due_date);
+
+                    if ($bucket->to_days !== null) {
+                        return $daysOverdue >= $bucket->from_days && $daysOverdue < $bucket->to_days;
+                    } else {
+                        return $daysOverdue >= $bucket->from_days;
+                    }
+                })->sum('balance');
+
+                $bucketBillCount = $customer->bills->filter(function($bill) use ($bucket, $date) {
+                    $daysOverdue = Carbon::parse($date)->diffInDays($bill->due_date);
+
+                    if ($bucket->to_days !== null) {
+                        return $daysOverdue >= $bucket->from_days && $daysOverdue < $bucket->to_days;
+                    } else {
+                        return $daysOverdue >= $bucket->from_days;
+                    }
+                })->count();
+
+                if ($bucketAmount > 0) {
+                    $customer->buckets->push([
+                        'bucket_id' => $bucket->id,
+                        'bucket_name' => $bucket->name,
+                        'color' => $bucket->color,
+                        'amount' => $bucketAmount,
+                        'bill_count' => $bucketBillCount
+                    ]);
+                }
+            }
+
+            return $customer;
+        });
+
+        return $customers;
+    }
+
+    private function getAgingSummary($agingData, $agingBuckets)
+    {
+        $summary = [];
+        $totalAmount = 0;
+        $totalCustomers = $agingData->total();
+
+        foreach ($agingBuckets as $bucket) {
+            $bucketAmount = 0;
+            $bucketCustomers = 0;
+
+            foreach ($agingData as $customer) {
+                $customerBucket = $customer->buckets->where('bucket_id', $bucket->id)->first();
+                if ($customerBucket) {
+                    $bucketAmount += $customerBucket['amount'];
+                    $bucketCustomers++;
+                }
+            }
+
+            $percentage = $totalAmount > 0 ? ($bucketAmount / $totalAmount) * 100 : 0;
+
+            $summary[$bucket->name] = [
+                'total_amount' => $bucketAmount,
+                'customer_count' => $bucketCustomers,
+                'percentage' => $percentage,
+                'color' => $bucket->color,
+                'range' => $bucket->from_days . '+' . ($bucket->to_days ?? '') . ' days'
+            ];
+
+            $totalAmount += $bucketAmount;
+        }
+
+        // Add "Current" bucket (0-30 days)
+        $summary['Current'] = [
+            'total_amount' => $totalAmount,
+            'customer_count' => $totalCustomers,
+            'percentage' => 100,
+            'color' => '#10b981',
+            'range' => '0-30 days'
+        ];
+
+        return $summary;
+    }
+
+    public function exportAgingReport(Request $request)
+    {
+        $date = $request->get('as_of_date', now()->toDateString());
+        $zoneId = $request->get('zone_id');
+        $categoryId = $request->get('category_id');
+        $format = $request->get('format', 'excel');
+
+        $filters = [
+            'zone_id' => $zoneId,
+            'category_id' => $categoryId,
+            'as_of_date' => $date
+        ];
+
+        // Get aging data
+        $agingBuckets = AgingBucket::active()->ordered()->get();
+        $agingData = $this->getDetailedAgingData($date, $zoneId, $categoryId);
+        $summary = $this->getAgingSummary($agingData, $agingBuckets);
+
+        // Get zones and categories for display
+        $zones = Zone::orderBy('name')->get();
+        $categories = MeterCategory::orderBy('name')->get();
+
+        $zoneName = $zoneId ? Zone::find($zoneId)?->name : 'All Zones';
+        $categoryName = $categoryId ? MeterCategory::find($categoryId)?->name : 'All Categories';
+
+        $reportData = [
+            'type' => 'Aging Report',
+            'detail_level' => 'detailed',
+            'date' => $date,
+            'zone_name' => $zoneName,
+            'category_name' => $categoryName,
+            'agingBuckets' => $agingBuckets,
+            'agingData' => $agingData,
+            'summary' => $summary,
+            'total_customers' => $agingData->total(),
+            'total_amount' => collect($summary)->sum('total_amount'),
+            'filters' => $filters
+        ];
+
+        if ($format === 'pdf') {
+            return $this->exportAgingPDF($reportData, $date);
+        } elseif ($format === 'csv') {
+            return $this->exportAgingCSV($reportData, $date);
+        } else {
+            return $this->exportAgingExcel($reportData, $date);
+        }
+    }
+
+    private function exportAgingExcel($reportData, $date)
+    {
+        $spreadsheet = new Spreadsheet();
+        $spreadsheet->getDefaultStyle()->getFont()->setName('Arial')->setSize(10);
+
+        // Remove default sheet
+        $spreadsheet->removeSheetByIndex(0);
+
+        // Worksheet 1: Summary
+        $summarySheet = $spreadsheet->createSheet();
+        $summarySheet->setTitle('Summary');
+
+        // Add report header with filters
+        $this->addAgingReportHeader($summarySheet, $reportData, $date);
+
+        $summaryRow = 6;
+        $summarySheet->setCellValue('A' . $summaryRow, 'AGING SUMMARY');
+        $summarySheet->getStyle('A' . $summaryRow)->getFont()->setBold(true)->setSize(12);
+        $summaryRow += 2;
+
+        // Summary table headers
+        $summaryHeaders = ['Aging Category', 'Total Amount', 'Customer Count', 'Percentage', 'Days Range'];
+        $col = 'A';
+        foreach ($summaryHeaders as $header) {
+            $summarySheet->setCellValue($col . $summaryRow, $header);
+            $summarySheet->getStyle($col . $summaryRow)->getFont()->setBold(true);
+            $summarySheet->getStyle($col . $summaryRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFE0E0E0');
+            $summarySheet->getStyle($col . $summaryRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+            $col++;
+        }
+        $summaryRow++;
+
+        // Summary data
+        foreach ($reportData['summary'] as $bucketName => $data) {
+            $summarySheet->setCellValue('A' . $summaryRow, $bucketName);
+            $summarySheet->setCellValue('B' . $summaryRow, $data['total_amount']);
+            $summarySheet->setCellValue('C' . $summaryRow, $data['customer_count']);
+            $summarySheet->setCellValue('D' . $summaryRow, $data['percentage'] / 100);
+            $summarySheet->setCellValue('E' . $summaryRow, $data['range']);
+
+            // Format numbers
+            $summarySheet->getStyle('B' . $summaryRow)->getNumberFormat()->setFormatCode('#,##0.00');
+            $summarySheet->getStyle('D' . $summaryRow)->getNumberFormat()->setFormatCode('0.00%');
+
+            // Add bucket color
+            $summarySheet->getStyle('A' . $summaryRow)->getFont()->getColor()->setARGB(str_replace('#', 'FF', $data['color']));
+
+            $summaryRow++;
+        }
+
+        // Add totals
+        $summarySheet->setCellValue('A' . $summaryRow, 'TOTAL:');
+        $summarySheet->getStyle('A' . $summaryRow)->getFont()->setBold(true);
+        $summarySheet->setCellValue('B' . $summaryRow, '=SUM(B7:B' . ($summaryRow - 1) . ')');
+        $summarySheet->setCellValue('C' . $summaryRow, '=SUM(C7:C' . ($summaryRow - 1) . ')');
+        $summarySheet->setCellValue('D' . $summaryRow, '=SUM(D7:D' . ($summaryRow - 1) . ')');
+        $summarySheet->getStyle('B' . $summaryRow . ':D' . $summaryRow)->getFont()->setBold(true);
+        $summarySheet->getStyle('B' . $summaryRow . ':D' . $summaryRow)->getBorders()->getTop()->setBorderStyle(Border::BORDER_DOUBLE);
+        $summarySheet->getStyle('B' . $summaryRow)->getNumberFormat()->setFormatCode('#,##0.00');
+        $summarySheet->getStyle('D' . $summaryRow)->getNumberFormat()->setFormatCode('0.00%');
+
+        // Auto-size columns
+        foreach (range('A', 'E') as $column) {
+            $summarySheet->getColumnDimension($column)->setAutoSize(true);
+        }
+
+        // Worksheet 2: Detailed Aging
+        if ($reportData['agingData']->count() > 0) {
+            $detailsSheet = $spreadsheet->createSheet();
+            $detailsSheet->setTitle('Detailed Aging');
+
+            // Add header with filters
+            $this->addAgingReportHeader($detailsSheet, $reportData, $date, 'Detailed Aging Report');
+
+            $detailsRow = 6;
+            $detailsSheet->setCellValue('A' . $detailsRow, 'DETAILED AGING REPORT');
+            $detailsSheet->getStyle('A' . $detailsRow)->getFont()->setBold(true)->setSize(12);
+            $detailsRow += 2;
+
+            // Create headers
+            $headers = ['Customer Number', 'Customer Name', 'Phone', 'Total Due', 'Bill Count'];
+            $colOffset = count($headers);
+
+            foreach ($reportData['agingBuckets'] as $bucket) {
+                $headers[] = $bucket->name;
+            }
+            $headers[] = 'Actions';
+
+            // Add headers
+            $col = 'A';
+            foreach ($headers as $header) {
+                $detailsSheet->setCellValue($col . $detailsRow, $header);
+                $detailsSheet->getStyle($col . $detailsRow)->getFont()->setBold(true);
+                $detailsSheet->getStyle($col . $detailsRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFE0E0E0');
+                $detailsSheet->getStyle($col . $detailsRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+                $col++;
+            }
+            $detailsRow++;
+
+            // Add customer data
+            foreach ($reportData['agingData'] as $customer) {
+                $detailsSheet->setCellValue('A' . $detailsRow, $customer->customer_number);
+                $detailsSheet->setCellValue('B' . $detailsRow, $customer->first_name . ' ' . $customer->last_name);
+                $detailsSheet->setCellValue('C' . $detailsRow, $customer->phone ?? 'N/A');
+                $detailsSheet->setCellValue('D' . $detailsRow, $customer->total_due);
+                $detailsSheet->setCellValue('E' . $detailsRow, $customer->bill_count);
+
+                // Format numbers
+                $detailsSheet->getStyle('D' . $detailsRow)->getNumberFormat()->setFormatCode('#,##0.00');
+
+                // Add bucket amounts
+                $bucketCol = 'F';
+                foreach ($reportData['agingBuckets'] as $bucket) {
+                    $bucketData = $customer->buckets->where('bucket_id', $bucket->id)->first();
+                    $amount = $bucketData['amount'] ?? 0;
+                    $detailsSheet->setCellValue($bucketCol . $detailsRow, $amount);
+
+                    if ($amount > 0) {
+                        $detailsSheet->getStyle($bucketCol . $detailsRow)->getFont()->getColor()->setARGB(str_replace('#', 'FF', $bucket->color));
+                    }
+
+                    $detailsSheet->getStyle($bucketCol . $detailsRow)->getNumberFormat()->setFormatCode('#,##0.00');
+                    $bucketCol++;
+                }
+
+                // Actions column
+                $detailsSheet->setCellValue($bucketCol . $detailsRow, 'View Details');
+                $detailsSheet->getStyle($bucketCol . $detailsRow)->getFont()->getColor()->setARGB('FF0000FF');
+
+                $detailsRow++;
+            }
+
+            // Add totals row
+            $detailsSheet->setCellValue('A' . $detailsRow, 'TOTALS:');
+            $detailsSheet->getStyle('A' . $detailsRow)->getFont()->setBold(true);
+
+            // Total Due
+            $detailsSheet->setCellValue('D' . $detailsRow, '=SUM(D8:D' . ($detailsRow - 1) . ')');
+            $detailsSheet->getStyle('D' . $detailsRow)->getFont()->setBold(true);
+            $detailsSheet->getStyle('D' . $detailsRow)->getBorders()->getTop()->setBorderStyle(Border::BORDER_DOUBLE);
+            $detailsSheet->getStyle('D' . $detailsRow)->getNumberFormat()->setFormatCode('#,##0.00');
+
+            // Bucket totals
+            $bucketCol = 'F';
+            foreach ($reportData['agingBuckets'] as $bucket) {
+                $detailsSheet->setCellValue($bucketCol . $detailsRow, '=SUM(' . $bucketCol . '8:' . $bucketCol . ($detailsRow - 1) . ')');
+                $detailsSheet->getStyle($bucketCol . $detailsRow)->getFont()->setBold(true);
+                $detailsSheet->getStyle($bucketCol . $detailsRow)->getBorders()->getTop()->setBorderStyle(Border::BORDER_DOUBLE);
+                $detailsSheet->getStyle($bucketCol . $detailsRow)->getNumberFormat()->setFormatCode('#,##0.00');
+                $bucketCol++;
+            }
+
+            // Auto-size columns
+            foreach (range('A', $bucketCol) as $column) {
+                $detailsSheet->getColumnDimension($column)->setAutoSize(true);
+            }
+        }
+
+        // Worksheet 3: Top Debtors
+        if ($reportData['agingData']->count() > 0) {
+            $topDebtorsSheet = $spreadsheet->createSheet();
+            $topDebtorsSheet->setTitle('Top Debtors');
+
+            // Add header with filters
+            $this->addAgingReportHeader($topDebtorsSheet, $reportData, $date, 'Top 20 Debtors');
+
+            $debtorsRow = 6;
+            $topDebtorsSheet->setCellValue('A' . $debtorsRow, 'TOP 20 DEBTORS');
+            $topDebtorsSheet->getStyle('A' . $debtorsRow)->getFont()->setBold(true)->setSize(12);
+            $debtorsRow += 2;
+
+            // Headers
+            $headers = ['Rank', 'Customer Number', 'Customer Name', 'Phone', 'Total Due',
+                    'Bill Count', 'Oldest Bill', 'Latest Bill', 'Average Days Overdue'];
+
+            $col = 'A';
+            foreach ($headers as $header) {
+                $topDebtorsSheet->setCellValue($col . $debtorsRow, $header);
+                $topDebtorsSheet->getStyle($col . $debtorsRow)->getFont()->setBold(true);
+                $topDebtorsSheet->getStyle($col . $debtorsRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFE0E0E0');
+                $topDebtorsSheet->getStyle($col . $debtorsRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+                $col++;
+            }
+            $debtorsRow++;
+
+            // Get top 20 debtors
+            $topDebtors = $reportData['agingData']->sortByDesc('total_due')->take(20);
+            $rank = 1;
+
+            foreach ($topDebtors as $customer) {
+                $oldestBill = $customer->bills->sortBy('due_date')->first();
+                $latestBill = $customer->bills->sortByDesc('due_date')->first();
+
+                $avgDaysOverdue = $customer->bills->avg(function($bill) use ($date) {
+                    return Carbon::parse($date)->diffInDays($bill->due_date);
+                });
+
+                $topDebtorsSheet->setCellValue('A' . $debtorsRow, $rank);
+                $topDebtorsSheet->setCellValue('B' . $debtorsRow, $customer->customer_number);
+                $topDebtorsSheet->setCellValue('C' . $debtorsRow, $customer->first_name . ' ' . $customer->last_name);
+                $topDebtorsSheet->setCellValue('D' . $debtorsRow, $customer->phone ?? 'N/A');
+                $topDebtorsSheet->setCellValue('E' . $debtorsRow, $customer->total_due);
+                $topDebtorsSheet->setCellValue('F' . $debtorsRow, $customer->bill_count);
+                $topDebtorsSheet->setCellValue('G' . $debtorsRow, $oldestBill ? $oldestBill->due_date->format('d/m/Y') : 'N/A');
+                $topDebtorsSheet->setCellValue('H' . $debtorsRow, $latestBill ? $latestBill->due_date->format('d/m/Y') : 'N/A');
+                $topDebtorsSheet->setCellValue('I' . $debtorsRow, round($avgDaysOverdue));
+
+                // Format numbers
+                $topDebtorsSheet->getStyle('E' . $debtorsRow)->getNumberFormat()->setFormatCode('#,##0.00');
+
+                // Color code by rank
+                if ($rank <= 3) {
+                    $topDebtorsSheet->getStyle('A' . $debtorsRow . ':I' . $debtorsRow)->getFill()
+                        ->setFillType(Fill::FILL_SOLID)
+                        ->getStartColor()->setARGB($rank == 1 ? 'FFFFE0E0' : ($rank == 2 ? 'FFFFF0E0' : 'FFFFF8E0'));
+                }
+
+                $debtorsRow++;
+                $rank++;
+            }
+
+            // Auto-size columns
+            foreach (range('A', 'I') as $column) {
+                $topDebtorsSheet->getColumnDimension($column)->setAutoSize(true);
+            }
+        }
+
+        // Set active sheet
+        $spreadsheet->setActiveSheetIndex(0);
+
+        // Generate filename
+        $filename = 'NYAWASCO_Aging_Report_' . $date . '_' . now()->format('Y_m_d_H_i_s') . '.xlsx';
+
+        // Output
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+
+        $writer = new Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
+    }
+
+    private function addAgingReportHeader($sheet, $reportData, $date, $title = 'Aging Report')
+    {
+        // Title
+        $sheet->mergeCells('A1:F1');
+        $sheet->setCellValue('A1', 'NYAWASCO - ' . strtoupper($title));
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+        // Report Date
+        $sheet->setCellValue('A2', 'As of Date:');
+        $sheet->setCellValue('B2', Carbon::parse($date)->format('d F Y'));
+        $sheet->getStyle('A2')->getFont()->setBold(true);
+
+        // Filters
+        $row = 3;
+        if (isset($reportData['zone_name']) && $reportData['zone_name'] != 'All Zones') {
+            $sheet->setCellValue('A' . $row, 'Zone:');
+            $sheet->setCellValue('B' . $row, $reportData['zone_name']);
+            $row++;
+        }
+
+        if (isset($reportData['category_name']) && $reportData['category_name'] != 'All Categories') {
+            $sheet->setCellValue('A' . $row, 'Category:');
+            $sheet->setCellValue('B' . $row, $reportData['category_name']);
+            $row++;
+        }
+
+        // Generated date
+        $sheet->setCellValue('A' . $row, 'Generated:');
+        $sheet->setCellValue('B' . $row, now()->format('d/m/Y H:i:s'));
+        $sheet->getStyle('A' . $row)->getFont()->setBold(true);
+
+        // Totals summary
+        $row++;
+        $sheet->setCellValue('A' . $row, 'Total Customers:');
+        $sheet->setCellValue('B' . $row, $reportData['total_customers']);
+        $sheet->getStyle('A' . $row)->getFont()->setBold(true);
+
+        $row++;
+        $sheet->setCellValue('A' . $row, 'Total Amount Due:');
+        $sheet->setCellValue('B' . $row, $reportData['total_amount']);
+        $sheet->getStyle('A' . $row)->getFont()->setBold(true);
+        $sheet->getStyle('B' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+    }
+
+    private function exportAgingPDF($reportData, $date)
+    {
+        $pdf = \PDF::loadView('admin.accounts-receivable.exports.aging-pdf', compact('reportData', 'date'));
+
+        $pdf->setPaper('A4', 'landscape');
+        $pdf->setOptions([
+            'isHtml5ParserEnabled' => true,
+            'isRemoteEnabled' => true,
+            'defaultFont' => 'sans-serif',
+            'dpi' => 150,
+            'margin_top' => 20,
+            'margin_bottom' => 25,
+            'margin_left' => 15,
+            'margin_right' => 15,
+        ]);
+
+        $filename = 'NYAWASCO_Aging_Report_' . $date . '_' . now()->format('Y_m_d') . '.pdf';
+
+        return $pdf->download($filename);
+    }
+
+    private function exportAgingCSV($reportData, $date)
+    {
+        $filename = 'NYAWASCO_Aging_Report_' . $date . '_' . now()->format('Y_m_d_H_i_s') . '.csv';
+
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+
+        $output = fopen('php://output', 'w');
+
+        // Add BOM for UTF-8
+        fwrite($output, "\xEF\xBB\xBF");
+
+        // Header section
+        fputcsv($output, ['NYAWASCO - AGING REPORT']);
+        fputcsv($output, ['As of Date:', Carbon::parse($date)->format('d F Y')]);
+        if (isset($reportData['zone_name']) && $reportData['zone_name'] != 'All Zones') {
+            fputcsv($output, ['Zone:', $reportData['zone_name']]);
+        }
+        if (isset($reportData['category_name']) && $reportData['category_name'] != 'All Categories') {
+            fputcsv($output, ['Category:', $reportData['category_name']]);
+        }
+        fputcsv($output, ['Generated:', now()->format('d/m/Y H:i:s')]);
+        fputcsv($output, ['Total Customers:', $reportData['total_customers']]);
+        fputcsv($output, ['Total Amount Due:', 'KSh ' . number_format($reportData['total_amount'], 2)]);
+        fputcsv($output, []);
+
+        // Summary section
+        fputcsv($output, ['AGING SUMMARY']);
+        fputcsv($output, ['Aging Category', 'Total Amount', 'Customer Count', 'Percentage', 'Days Range']);
+
+        foreach ($reportData['summary'] as $bucketName => $data) {
+            fputcsv($output, [
+                $bucketName,
+                'KSh ' . number_format($data['total_amount'], 2),
+                $data['customer_count'],
+                number_format($data['percentage'], 2) . '%',
+                $data['range']
+            ]);
+        }
+
+        fputcsv($output, []);
+
+        // Detailed aging section
+        if ($reportData['agingData']->count() > 0) {
+            fputcsv($output, ['DETAILED AGING REPORT']);
+
+            // Create headers
+            $headers = ['Customer Number', 'Customer Name', 'Phone', 'Total Due', 'Bill Count'];
+            foreach ($reportData['agingBuckets'] as $bucket) {
+                $headers[] = $bucket->name;
+            }
+
+            fputcsv($output, $headers);
+
+            // Add customer data
+            foreach ($reportData['agingData'] as $customer) {
+                $row = [
+                    $customer->customer_number,
+                    $customer->first_name . ' ' . $customer->last_name,
+                    $customer->phone ?? 'N/A',
+                    'KSh ' . number_format($customer->total_due, 2),
+                    $customer->bill_count
+                ];
+
+                foreach ($reportData['agingBuckets'] as $bucket) {
+                    $bucketData = $customer->buckets->where('bucket_id', $bucket->id)->first();
+                    $row[] = 'KSh ' . number_format($bucketData['amount'] ?? 0, 2);
+                }
+
+                fputcsv($output, $row);
+            }
+        }
+
+        fclose($output);
+        exit;
+    }
+
+    // API endpoint for getting aging chart data
+    public function getAgingChartData(Request $request)
+    {
+        $date = $request->get('as_of_date', now()->toDateString());
+        $zoneId = $request->get('zone_id');
+        $categoryId = $request->get('category_id');
+
+        $agingBuckets = AgingBucket::active()->ordered()->get();
+        $agingData = $this->getDetailedAgingData($date, $zoneId, $categoryId);
+        $summary = $this->getAgingSummary($agingData, $agingBuckets);
+
+        return response()->json([
+            'success' => true,
+            'labels' => array_keys($summary),
+            'data' => array_column($summary, 'total_amount'),
+            'colors' => array_column($summary, 'color'),
+            'summary' => $summary
+        ]);
     }
 }
