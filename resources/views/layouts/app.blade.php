@@ -1512,6 +1512,18 @@ use Illuminate\Support\Facades\Route;
                         {{-- Payments Submenu --}}
                         <ul id="payments-submenu" class="ml-8 mt-1 space-y-1 hidden">
                             <li>
+                                <a href="{{ route('payments.dashboard') }}"
+                                onclick="handleSidebarLink(this); if (window.innerWidth < 768) toggleSidebar()"
+                                class="sidebar-link group flex items-center py-2 px-4 rounded-lg transition-all duration-200 hover:bg-blue-200/30 text-sm {{ request()->routeIs('payments.dashboard') ? 'bg-blue-200/50' : '' }}"
+                                data-route="payments.dashboard">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                    </svg>
+                                    Payments Dashboard
+                                </a>
+                            </li>
+                            <li>
                                 <a href="{{ route('admin.payments.unallocated') }}" onclick="handleSidebarLink(this); if (window.innerWidth < 768) toggleSidebar()" class="sidebar-link group flex items-center py-2 px-4 rounded-lg transition-all duration-200 hover:bg-blue-200/30 text-sm {{ request()->routeIs('admin.payments.unallocated') ? 'bg-blue-200/50' : '' }}" data-route="payments.unallocated">
                                     <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
