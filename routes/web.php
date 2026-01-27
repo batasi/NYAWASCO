@@ -37,7 +37,7 @@ use App\Http\Controllers\Admin\MeterCategoryController;
 use App\Http\Controllers\Admin\SystemManagementController;
 use App\Http\Controllers\Admin\PaymentAllocationController;
 use App\Http\Controllers\Admin\AccountsReceivableController;
-use App\Http\Controllers\PaymentDashboardController;
+use App\Http\Controllers\Admin\PaymentDashboardController;
 use App\Models\Customer;
 
 /*
@@ -457,8 +457,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{payment}/auto-allocate', [PaymentAllocationController::class, 'autoAllocate'])->name('auto-allocate');
         Route::get('/methods-report', [PaymentAllocationController::class, 'paymentMethodsReport'])->name('methods-report');
     });
-    Route::get('/payments/dashboard', [PaymentDashboardController::class, 'index'])
-        ->name('payments.dashboard');
+    Route::get('admin/payments/dashboard', [PaymentDashboardController::class, 'index'])
+        ->name('admin.payments.dashboard');
 
     Route::get('/payments/dashboard/realtime', [PaymentDashboardController::class, 'realtimeData'])
         ->name('payments.dashboard.realtime');

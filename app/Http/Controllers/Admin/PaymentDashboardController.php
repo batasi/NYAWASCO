@@ -1,6 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
 
 use App\Models\Payment;
 use App\Models\Bill;
@@ -58,6 +60,7 @@ class PaymentDashboardController extends Controller
                 ->where('balance', '>', 0)
                 ->sum('balance'),
 
+
             // Collection Efficiency (Payments vs Arrears)
             'collection_efficiency' => 0,
 
@@ -106,7 +109,7 @@ class PaymentDashboardController extends Controller
         // Get all zones for filter
         $zones = Zone::orderBy('name')->get();
 
-        return view('payments.dashboard', compact(
+        return view('admin.payments.dashboard', compact(
             'cardStats',
             'chartsData',
             'zoneComparison',
@@ -250,16 +253,15 @@ class PaymentDashboardController extends Controller
             // Arrears as of this day (unpaid bills with due date <= this day)
             $arrears = Bill::query()
                 ->where('due_date', '<=', $currentDate)
-                ->where(function($query) {
-                    $query->where('bill_status', '!=', 'paid')
-                        ->orWhereColumn('balance', '>', 0);
-                })
-                ->when($zoneId && $zoneId !== 'all', function($query) use ($zoneId) {
-                    return $query->whereHas('meter', function($q) use ($zoneId) {
+                ->where('bill_status', '!=', 'paid')
+                ->where('balance', '>', 0)
+                ->when($zoneId && $zoneId !== 'all', function ($query) use ($zoneId) {
+                    $query->whereHas('meter', function ($q) use ($zoneId) {
                         $q->where('zone_id', $zoneId);
                     });
                 })
                 ->sum('balance');
+
 
             $data[] = [
                 'date' => $currentDate->format('M d'),
@@ -295,16 +297,15 @@ class PaymentDashboardController extends Controller
                 })
                 ->sum('amount');
 
-            // Arrears for this zone
+           // Arrears for this zone
             $arrears = Bill::query()
-                ->where(function($query) {
-                    $query->where('bill_status', '!=', 'paid')
-                        ->orWhereColumn('balance', '>', 0);
-                })
-                ->whereHas('meter', function($query) use ($zone) {
+                ->where('bill_status', '!=', 'paid')
+                ->where('balance', '>', 0)
+                ->whereHas('meter', function ($query) use ($zone) {
                     $query->where('zone_id', $zone->id);
                 })
                 ->sum('balance');
+
 
             // Number of paying customers
             $payingCustomers = Payment::query()

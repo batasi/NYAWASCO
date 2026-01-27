@@ -1,5 +1,14 @@
 @extends('layouts.app')
-
+@php
+    // Define method colors in PHP
+    $methodColors = [
+        'mpesa' => '#00A300',
+        'bank' => '#4e73df',
+        'cash' => '#f6c23e',
+        'card' => '#e74a3b',
+        'mobile_money' => '#36b9cc'
+    ];
+@endphp
 @section('title', 'Payments Dashboard')
 
 @push('styles')
@@ -643,8 +652,8 @@
                 })) !!},
                 datasets: [{
                     data: {!! json_encode($paymentMethods->pluck('total_amount')) !!},
-                    backgroundColor: {!! json_encode($paymentMethods->map(function($method) {
-                        return methodColors[$method->payment_method] || chartColors.secondary;
+                    backgroundColor: {!! json_encode($paymentMethods->map(function($method) use ($methodColors) {
+                        return $methodColors[$method->payment_method] ?? '#6c757d';
                     })) !!},
                     borderWidth: 1
                 }]
