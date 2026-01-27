@@ -3,7 +3,7 @@
 @section('title', 'Payment Methods Report - NYAWASCO')
 
 @section('content')
-@can('view payment reports')
+
 <!-- Background Image -->
 <div class="fixed inset-0 -z-10">
     <div class="absolute inset-0 bg-gradient-to-br from-blue-50/80 to-white/90"></div>
@@ -16,7 +16,7 @@
             'icon' => 'fas fa-arrow-left',
             'label' => 'Unallocated',
             'color' => 'bg-blue-600'
-        }
+        ]
     ];
     @endphp
 
@@ -355,15 +355,7 @@
                     Export to Excel
                 </button>
 
-                <button onclick="exportToPDF()" class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg transition duration-200 flex items-center">
-                    <i class="fas fa-file-pdf mr-2"></i>
-                    Export to PDF
-                </button>
 
-                <button onclick="printReport()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition duration-200 flex items-center">
-                    <i class="fas fa-print mr-2"></i>
-                    Print Report
-                </button>
             </div>
         </div>
     </div>
@@ -418,5 +410,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 }
 </style>
-@endcan
 @endsection
