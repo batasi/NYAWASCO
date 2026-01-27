@@ -23,10 +23,12 @@ class WriteOff extends Model
     ];
 
     protected $casts = [
-        'amount' => 'decimal:2',
+        'affected_bills' => 'array',
         'write_off_date' => 'date',
         'approved_at' => 'datetime',
-        'affected_bills' => 'array'
+        'rejected_at' => 'datetime',
+        'reversed_at' => 'datetime',
+        'amount' => 'decimal:2'
     ];
 
     public function customer()

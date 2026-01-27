@@ -10,23 +10,8 @@
 <div class="min-h-screen bg-gray-50">
     @php
     $actionButtons = [
-        [
-            'route' => 'admin.accounts-receivable.dashboard',
-            'icon' => 'fas fa-tachometer-alt',
-            'label' => 'Dashboard',
-            'color' => 'bg-blue-600'
-        ]
+
     ];
-
-
-        $actionButtons[] = [
-            'route' => '#',
-            'onclick' => 'showCreateWriteOffModal()',
-            'icon' => 'fas fa-plus',
-            'label' => 'New Write-off',
-            'color' => 'bg-red-600'
-        ];
-
     @endphp
 
     @include('components.dashboard-header',[
@@ -36,8 +21,21 @@
     ])
 
     <div class="w-full px-2.5 py-8 relative z-10">
+        <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/20">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Buttons</h3>
+
+            <div class="flex flex-wrap gap-3">
+                <button onclick="showCreateWriteOffModal()"
+                        class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg transition duration-200 inline-flex items-center mt-4">
+                    <i class="fas fa-plus mr-2"></i>
+                   Create Write off
+                </button>
+
+
+            </div>
+        </div>
         <!-- Filters -->
-        <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 mb-8 border border-white/20">
+        <div class="bg-white/80 mt-2 backdrop-blur-sm rounded-2xl shadow-lg p-6 mb-8 border border-white/20">
             <form method="GET" action="{{ route('admin.accounts-receivable.write-offs.index') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
@@ -116,7 +114,7 @@
                     <p class="text-sm font-medium text-gray-600">Bad Debt Ratio</p>
                     <p class="text-2xl font-bold text-purple-600">
                         @php
-                            $totalReceivables = 1000000; // This should come from controller
+                            $totalReceivables = App\Models\Bill::where('bill_status', '!=', 'paid')->sum('balance');
                             $badDebt = $writeOffs->where('type', 'bad_debt')->where('status', 'approved')->sum('amount');
                             $ratio = $totalReceivables > 0 ? round(($badDebt / $totalReceivables) * 100, 2) : 0;
                         @endphp
@@ -131,7 +129,7 @@
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
                 <div>
                     <h3 class="text-lg font-semibold text-gray-900">Write-offs</h3>
-                    <p class="text-sm text-gray-600">Showing {{ $writeOffs->count() }} records</p>
+                    <p class="text-sm text-gray-600">Showing {{ $writeOffs->count() }} of {{ $writeOffs->total() }} records</p>
                 </div>
 
                 <div class="flex space-x-3 mt-2 sm:mt-0">
@@ -229,10 +227,10 @@
 
                             <td class="px-4 py-4">
                                 <div class="flex space-x-2">
-                                    <button onclick="viewWriteOff({{ $writeOff->id }})"
+                                    <!-- <button onclick="viewWriteOff({{ $writeOff->id }})"
                                             class="text-blue-600 hover:text-blue-800" title="View Details">
                                         <i class="fas fa-eye"></i>
-                                    </button>
+                                    </button> -->
 
                                     @if($writeOff->status == 'pending')
                                     <button onclick="approveWriteOff({{ $writeOff->id }})"
@@ -302,12 +300,66 @@
         <form id="createWriteOffForm" method="POST" action="{{ route('admin.accounts-receivable.write-offs.store') }}">
             @csrf
             <div class="space-y-4">
+                <!-- Customer Search -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Customer *</label>
-                    <select name="customer_id" id="writeOffCustomer" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-                        <option value="">Select Customer</option>
-                        <!-- Will be populated via AJAX -->
-                    </select>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Search Customer *</label>
+                    <div class="relative">
+                        <input type="text"
+                            id="customerSearch"
+                            name="customer_search"
+                            class="w-full border border-gray-300 rounded-lg px-4 py-3 pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Search by Meter No, Phone, ID, or Name..."
+                            autocomplete="off">
+                        <div class="absolute left-3 top-3.5 text-gray-400">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <div class="absolute right-3 top-3.5">
+                            <span id="searchSpinner" class="hidden">
+                                <i class="fas fa-spinner fa-spin text-blue-600"></i>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Search Results Container -->
+                    <div id="searchResults"
+                        class="hidden mt-2 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        <!-- Results will be populated here -->
+                    </div>
+
+                    <!-- Hidden field for selected customer -->
+                    <input type="hidden" name="customer_id" id="selectedCustomerId" required>
+                </div>
+
+                <!-- Selected Customer Info Display -->
+                <div id="selectedCustomerInfo" class="hidden mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h4 class="font-medium text-blue-900" id="selectedCustomerName"></h4>
+                            <div class="grid grid-cols-2 gap-x-4 gap-y-1 mt-2 text-sm">
+                                <div class="flex items-center">
+                                    <span class="text-gray-600 w-24">Account No:</span>
+                                    <span class="font-medium" id="selectedCustomerNumber"></span>
+                                </div>
+                                <div class="flex items-center">
+                                    <span class="text-gray-600 w-24">Phone:</span>
+                                    <span class="font-medium" id="selectedCustomerPhone"></span>
+                                </div>
+                                <div class="flex items-center">
+                                    <span class="text-gray-600 w-24">ID No:</span>
+                                    <span class="font-medium" id="selectedCustomerIdNumber"></span>
+                                </div>
+                                <div class="flex items-center">
+                                    <span class="text-gray-600 w-24">Balance Due:</span>
+                                    <span class="font-medium text-red-600" id="selectedCustomerBalance"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button"
+                                onclick="clearCustomerSelection()"
+                                class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
@@ -324,7 +376,7 @@
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Amount *</label>
-                        <input type="number" step="0.01" name="amount" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="0.00" required>
+                        <input type="number" step="0.01" name="amount" id="writeOffAmount" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="0.00" required>
                     </div>
                 </div>
 
@@ -345,7 +397,7 @@
                     </div>
                 </div>
 
-                <!-- Bills Selection (Optional) -->
+                <!-- Bills Selection -->
                 <div id="billsSection" class="hidden">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Select Bills to Write-off (Optional)</label>
                     <div id="customerBills" class="space-y-2 max-h-60 overflow-y-auto border border-gray-200 rounded-lg p-3">
@@ -374,53 +426,206 @@
 </div>
 
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+    setupEventListeners();
+});
+
+function setupEventListeners() {
+    // Customer search functionality
+    const customerSearch = document.getElementById('customerSearch');
+    if (customerSearch) {
+        let searchTimeout;
+        customerSearch.addEventListener('input', function(e) {
+            clearTimeout(searchTimeout);
+            const searchTerm = e.target.value.trim();
+
+            if (searchTerm.length < 2) {
+                document.getElementById('searchResults').classList.add('hidden');
+                return;
+            }
+
+            searchTimeout = setTimeout(() => {
+                performCustomerSearch(searchTerm);
+            }, 300);
+        });
+    }
+
+    // Form submission
+    const createWriteOffForm = document.getElementById('createWriteOffForm');
+    if (createWriteOffForm) {
+        createWriteOffForm.addEventListener('submit', function(e) {
+            if (!document.getElementById('selectedCustomerId').value) {
+                e.preventDefault();
+                showToast('Please select a customer first', 'error');
+                return false;
+            }
+
+            // Validate amount
+            const amount = parseFloat(document.getElementById('writeOffAmount').value);
+            const customerBalance = parseFloat(document.getElementById('selectedCustomerBalance')?.textContent?.replace(/[^0-9.-]+/g,"") || 0);
+
+            if (amount > customerBalance) {
+                e.preventDefault();
+                showToast('Write-off amount cannot exceed customer balance', 'error');
+                return false;
+            }
+
+            // Show loading state
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Submitting...';
+
+            return true;
+        });
+    }
+}
+
 function showCreateWriteOffModal() {
     const modal = document.getElementById('createWriteOffModal');
     modal.classList.remove('hidden');
     document.body.classList.add('overflow-hidden');
-    loadCustomersForWriteOff();
 }
 
 function closeCreateWriteOffModal() {
     const modal = document.getElementById('createWriteOffModal');
     modal.classList.add('hidden');
     document.body.classList.remove('overflow-hidden');
+    resetWriteOffForm();
 }
 
-function loadCustomersForWriteOff() {
-    const select = document.getElementById('writeOffCustomer');
-    if (select.options.length > 1) return;
+function resetWriteOffForm() {
+    document.getElementById('createWriteOffForm').reset();
+    document.getElementById('selectedCustomerInfo').classList.add('hidden');
+    document.getElementById('searchResults').classList.add('hidden');
+    document.getElementById('selectedCustomerId').value = '';
+    document.getElementById('billsSection').classList.add('hidden');
+    document.getElementById('customerBills').innerHTML = '<p class="text-gray-500 text-sm">Select a customer to view their bills</p>';
+}
 
-    fetch('/admin/api/customers-with-balance')
-        .then(response => response.json())
-        .then(customers => {
-            select.innerHTML = '<option value="">Select Customer</option>';
-            customers.forEach(customer => {
-                const option = document.createElement('option');
-                option.value = customer.id;
-                option.textContent = `${customer.customer_number} - ${customer.first_name} ${customer.last_name} (Balance: KSh ${customer.balance})`;
-                option.dataset.balance = customer.balance;
-                select.appendChild(option);
-            });
+async function performCustomerSearch(searchTerm) {
+    const spinner = document.getElementById('searchSpinner');
+    const resultsContainer = document.getElementById('searchResults');
+
+    spinner.classList.remove('hidden');
+
+    try {
+        const response = await fetch('{{ route("admin.accounts-receivable.search-customer") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ search: searchTerm })
         });
+
+        const data = await response.json();
+
+        if (data.success && data.customers.length > 0) {
+            displaySearchResults(data.customers);
+        } else {
+            resultsContainer.innerHTML = `
+                <div class="p-4 text-center text-gray-500">
+                    <i class="fas fa-search fa-lg mb-2"></i>
+                    <p>No customers found</p>
+                </div>
+            `;
+            resultsContainer.classList.remove('hidden');
+        }
+    } catch (error) {
+        console.error('Search error:', error);
+        resultsContainer.innerHTML = `
+            <div class="p-4 text-center text-red-500">
+                <i class="fas fa-exclamation-triangle fa-lg mb-2"></i>
+                <p>Search failed. Please try again.</p>
+            </div>
+        `;
+        resultsContainer.classList.remove('hidden');
+    } finally {
+        spinner.classList.add('hidden');
+    }
 }
 
-// Load customer bills when customer is selected
-document.getElementById('writeOffCustomer')?.addEventListener('change', function() {
-    const customerId = this.value;
-    const billsSection = document.getElementById('billsSection');
-    const billsContainer = document.getElementById('customerBills');
+function displaySearchResults(customers) {
+    const resultsContainer = document.getElementById('searchResults');
+    let html = '';
 
-    if (!customerId) {
-        billsSection.classList.add('hidden');
-        billsContainer.innerHTML = '<p class="text-gray-500 text-sm">Select a customer to view their bills</p>';
-        return;
-    }
+    customers.forEach(customer => {
+        const balance = parseFloat(customer.balance);
+        const balanceClass = balance > 10000 ? 'bg-red-100 text-red-800' :
+                            balance > 5000 ? 'bg-orange-100 text-orange-800' :
+                            'bg-yellow-100 text-yellow-800';
+
+        html += `
+            <div class="p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
+                 onclick="selectCustomerForWriteOff(${JSON.stringify(customer).replace(/"/g, '&quot;')})">
+                <div class="flex justify-between items-start">
+                    <div class="flex-1">
+                        <div class="flex items-center">
+                            <span class="font-medium text-gray-900">${customer.name}</span>
+                            <span class="ml-2 text-xs px-2 py-0.5 ${balanceClass} rounded-full">
+                                KSh ${balance.toLocaleString('en-US', {minimumFractionDigits: 2})}
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-x-4 text-xs text-gray-600 mt-1">
+                            <div class="truncate">
+                                <i class="fas fa-hashtag mr-1"></i>
+                                ${customer.customer_number}
+                            </div>
+                            <div class="truncate">
+                                <i class="fas fa-phone mr-1"></i>
+                                ${customer.phone || 'N/A'}
+                            </div>
+                            <div class="truncate">
+                                <i class="fas fa-id-card mr-1"></i>
+                                ${customer.id_number || 'N/A'}
+                            </div>
+                            <div class="truncate">
+                                <i class="fas fa-tachometer-alt mr-1"></i>
+                                ${customer.meter_numbers || 'N/A'}
+                            </div>
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-right text-gray-400 mt-1"></i>
+                </div>
+            </div>
+        `;
+    });
+
+    resultsContainer.innerHTML = html;
+    resultsContainer.classList.remove('hidden');
+}
+
+function selectCustomerForWriteOff(customer) {
+    // Set hidden field
+    document.getElementById('selectedCustomerId').value = customer.id;
+
+    // Update display
+    document.getElementById('selectedCustomerName').textContent = customer.name;
+    document.getElementById('selectedCustomerNumber').textContent = customer.customer_number;
+    document.getElementById('selectedCustomerPhone').textContent = customer.phone || 'N/A';
+    document.getElementById('selectedCustomerIdNumber').textContent = customer.id_number || 'N/A';
+    document.getElementById('selectedCustomerBalance').textContent =
+        'KSh ' + parseFloat(customer.balance).toLocaleString('en-US', {minimumFractionDigits: 2});
+
+    // Show selected customer info, hide search results
+    document.getElementById('selectedCustomerInfo').classList.remove('hidden');
+    document.getElementById('searchResults').classList.add('hidden');
+    document.getElementById('customerSearch').value = '';
+
+    // Load customer bills
+    loadCustomerBills(customer.id);
+}
+
+function loadCustomerBills(customerId) {
+    const billsContainer = document.getElementById('customerBills');
+    const billsSection = document.getElementById('billsSection');
 
     billsSection.classList.remove('hidden');
     billsContainer.innerHTML = '<div class="flex items-center justify-center space-x-2 text-gray-500 py-8"><i class="fas fa-spinner fa-spin"></i><span>Loading bills...</span></div>';
 
-    fetch(`/admin/api/customers/${customerId}/bills`)
+    fetch(`/admin/accounts-receivable/write-offs/customers/${customerId}/bills`)
         .then(response => response.json())
         .then(bills => {
             if (bills.length === 0) {
@@ -431,22 +636,33 @@ document.getElementById('writeOffCustomer')?.addEventListener('change', function
             billsContainer.innerHTML = bills.map(bill => `
                 <div class="border border-gray-200 rounded-lg p-3 hover:border-blue-300 transition">
                     <div class="flex items-center">
-                        <input type="checkbox" name="bill_ids[]" value="${bill.id}" class="mr-3">
+                        <input type="checkbox" name="bill_ids[]" value="${bill.id}" class="mr-3 h-4 w-4 text-blue-600">
                         <div class="flex-1">
                             <div class="font-medium text-gray-900">${bill.bill_number}</div>
                             <div class="text-sm text-gray-500">
-                                Due: ${bill.due_date} • Amount: KSh ${bill.balance}
+                                Due: ${bill.due_date} • Balance: KSh ${bill.balance}
                             </div>
                         </div>
                     </div>
                 </div>
             `).join('');
+        })
+        .catch(error => {
+            console.error('Error loading bills:', error);
+            billsContainer.innerHTML = '<p class="text-red-500 text-sm">Error loading bills</p>';
         });
-});
+}
+
+function clearCustomerSelection() {
+    document.getElementById('selectedCustomerId').value = '';
+    document.getElementById('selectedCustomerInfo').classList.add('hidden');
+    document.getElementById('customerSearch').value = '';
+    document.getElementById('billsSection').classList.add('hidden');
+    document.getElementById('customerBills').innerHTML = '<p class="text-gray-500 text-sm">Select a customer to view their bills</p>';
+}
 
 function viewWriteOff(writeOffId) {
-    // Implement view write-off details
-    alert('View write-off: ' + writeOffId);
+    window.location.href = `/admin/accounts-receivable/write-offs/${writeOffId}`;
 }
 
 function approveWriteOff(writeOffId) {
@@ -461,10 +677,15 @@ function approveWriteOff(writeOffId) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                location.reload();
+                showToast('Write-off approved successfully!', 'success');
+                setTimeout(() => location.reload(), 1500);
             } else {
-                alert('Error: ' + data.message);
+                showToast('Error: ' + data.message, 'error');
             }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Failed to approve write-off', 'error');
         });
     }
 }
@@ -472,22 +693,97 @@ function approveWriteOff(writeOffId) {
 function rejectWriteOff(writeOffId) {
     const reason = prompt('Please enter reason for rejection:');
     if (reason) {
-        // Implement rejection logic
-        alert('Reject write-off: ' + writeOffId + ' with reason: ' + reason);
+        fetch(`/admin/accounts-receivable/write-offs/${writeOffId}/reject`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({ reason: reason })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Write-off rejected successfully!', 'success');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showToast('Error: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Failed to reject write-off', 'error');
+        });
     }
 }
 
 function reverseWriteOff(writeOffId) {
     if (confirm('Are you sure you want to reverse this write-off? This action cannot be undone.')) {
-        // Implement reversal logic
-        alert('Reverse write-off: ' + writeOffId);
+        fetch(`/admin/accounts-receivable/write-offs/${writeOffId}/reverse`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Write-off reversed successfully!', 'success');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showToast('Error: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Failed to reverse write-off', 'error');
+        });
     }
 }
 
 function exportWriteOffs() {
-    // Implement export to Excel/PDF
-    alert('Export feature will be implemented');
+    const params = new URLSearchParams(window.location.search);
+    window.location.href = `/admin/accounts-receivable/write-offs/export?${params.toString()}`;
 }
+
+// Toast notification function
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white font-medium z-50 animate-slide-in ${
+        type === 'success' ? 'bg-green-600' :
+        type === 'error' ? 'bg-red-600' :
+        'bg-blue-600'
+    }`;
+    toast.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas ${
+                type === 'success' ? 'fa-check-circle' :
+                type === 'error' ? 'fa-exclamation-circle' :
+                'fa-info-circle'
+            } mr-2"></i>
+            <span>${message}</span>
+        </div>
+    `;
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.classList.add('animate-slide-out');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeCreateWriteOffModal();
+    }
+    if (e.ctrlKey && e.key === 'n') {
+        e.preventDefault();
+        showCreateWriteOffModal();
+    }
+});
 
 // Close modal when clicking outside
 document.getElementById('createWriteOffModal')?.addEventListener('click', function(e) {
@@ -495,5 +791,55 @@ document.getElementById('createWriteOffModal')?.addEventListener('click', functi
         closeCreateWriteOffModal();
     }
 });
+
+// Add animation styles
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slide-in {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes slide-out {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+    }
+
+    .animate-slide-in {
+        animation: slide-in 0.3s ease-out;
+    }
+
+    .animate-slide-out {
+        animation: slide-out 0.3s ease-out;
+    }
+`;
+document.head.appendChild(style);
 </script>
+
+<style>
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.transition-all {
+    transition-property: all;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 300ms;
+}
+</style>
 @endsection

@@ -651,53 +651,255 @@ class AccountsReceivableController extends Controller
             'bill_ids.*' => 'exists:bills,id'
         ]);
 
-        DB::transaction(function () use ($validated) {
-            $writeOff = WriteOff::create([
-                'customer_id' => $validated['customer_id'],
-                'amount' => $validated['amount'],
-                'type' => $validated['type'],
-                'reason' => $validated['reason'],
-                'description' => $validated['description'],
-                'write_off_date' => $validated['write_off_date'],
-                'affected_bills' => $validated['bill_ids'] ?? [],
-                'status' => 'pending'
+        try {
+            DB::transaction(function () use ($validated) {
+                // Check if customer has sufficient balance
+                $customer = Customer::find($validated['customer_id']);
+                $customerBalance = $customer->bills()->where('bill_status', '!=', 'paid')->sum('balance');
+
+                if ($validated['amount'] > $customerBalance) {
+                    throw new \Exception('Write-off amount exceeds customer balance');
+                }
+
+                $writeOff = WriteOff::create([
+                    'customer_id' => $validated['customer_id'],
+                    'amount' => $validated['amount'],
+                    'type' => $validated['type'],
+                    'reason' => $validated['reason'],
+                    'description' => $validated['description'],
+                    'write_off_date' => $validated['write_off_date'],
+                    'affected_bills' => $validated['bill_ids'] ?? [],
+                    'status' => 'pending',
+                    'created_by' => auth()->id()
+                ]);
+
+                // If write-off is for specific bills, mark them as written off
+                if (!empty($validated['bill_ids'])) {
+                    Bill::whereIn('id', $validated['bill_ids'])
+                        ->update([
+                            'bill_status' => 'written_off',
+                            'write_off_id' => $writeOff->id,
+                            'notes' => DB::raw("CONCAT(COALESCE(notes, ''), '\nMarked for write-off on " . now()->format('Y-m-d') . "')")
+                        ]);
+                }
+
+                // Don't update customer balance yet - wait for approval
+                // $customer->decrement('credit_balance', $validated['amount']);
+
+                // Log the write-off creation
+                Log::info('Write-off created', [
+                    'write_off_id' => $writeOff->id,
+                    'customer_id' => $validated['customer_id'],
+                    'amount' => $validated['amount'],
+                    'type' => $validated['type'],
+                    'created_by' => auth()->id()
+                ]);
+            });
+
+            return redirect()->route('admin.accounts-receivable.write-offs.index')
+                ->with('success', 'Write-off request submitted successfully for approval.');
+
+        } catch (\Exception $e) {
+            Log::error('Error creating write-off: ' . $e->getMessage(), [
+                'request' => $request->all(),
+                'user_id' => auth()->id()
             ]);
 
-            // If write-off is for specific bills, mark them
-            if (!empty($validated['bill_ids'])) {
-                Bill::whereIn('id', $validated['bill_ids'])
-                    ->update([
-                        'bill_status' => 'written_off',
-                        'notes' => DB::raw("CONCAT(COALESCE(notes, ''), '\nWritten off on " . now()->format('Y-m-d') . "')")
-                    ]);
-            }
-
-            // Update customer balance
-            $customer = Customer::find($validated['customer_id']);
-            $customer->decrement('credit_balance', $validated['amount']);
-        });
-
-        return redirect()->route('admin.accounts-receivable.write-offs')
-            ->with('success', 'Write-off request submitted successfully.');
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Failed to create write-off: ' . $e->getMessage());
+        }
     }
 
     public function approveWriteOff(WriteOff $writeOff)
     {
-        DB::transaction(function () use ($writeOff) {
-            $writeOff->update([
-                'status' => 'approved',
-                'approved_by' => auth()->id(),
-                'approved_at' => now()
+        try {
+            DB::transaction(function () use ($writeOff) {
+                $writeOff->update([
+                    'status' => 'approved',
+                    'approved_by' => auth()->id(),
+                    'approved_at' => now()
+                ]);
+
+                // Update customer balance
+                $customer = $writeOff->customer;
+                $customer->decrement('credit_balance', $writeOff->amount);
+
+                // Update bill status if applicable
+                if (!empty($writeOff->affected_bills)) {
+                    Bill::whereIn('id', $writeOff->affected_bills)
+                        ->update([
+                            'bill_status' => 'written_off',
+                            'notes' => DB::raw("CONCAT(COALESCE(notes, ''), '\nWrite-off approved on " . now()->format('Y-m-d') . "')")
+                        ]);
+                }
+
+                // Log the approval
+                Log::info('Write-off approved', [
+                    'write_off_id' => $writeOff->id,
+                    'amount' => $writeOff->amount,
+                    'approved_by' => auth()->id()
+                ]);
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Write-off approved successfully.'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error approving write-off: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to approve write-off: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getCustomersWithBalance(Request $request)
+    {
+        try {
+            $customers = Customer::where('status', 'active')
+                ->with(['bills' => function($query) {
+                    $query->where('bill_status', '!=', 'paid');
+                }])
+                ->whereHas('bills', function($query) {
+                    $query->where('bill_status', '!=', 'paid');
+                })
+                ->orderBy('customer_number')
+                ->limit(100)
+                ->get()
+                ->map(function($customer) {
+                    $totalBalance = $customer->bills->sum('balance');
+                    return [
+                        'id' => $customer->id,
+                        'customer_number' => $customer->customer_number,
+                        'first_name' => $customer->first_name,
+                        'last_name' => $customer->last_name,
+                        'balance' => $totalBalance,
+                        'phone' => $customer->phone,
+                        'display' => $customer->customer_number . ' - ' .
+                                $customer->first_name . ' ' . $customer->last_name .
+                                ' (Balance: KSh ' . number_format($totalBalance, 2) . ')'
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'customers' => $customers
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error loading customers for write-off: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load customers'
+            ], 500);
+        }
+    }
+
+    public function getCustomerBills(Request $request, $customerId)
+    {
+        try {
+            $bills = Bill::where('customer_id', $customerId)
+                ->where('bill_status', '!=', 'paid')
+                ->where('balance', '>', 0)
+                ->orderBy('due_date', 'asc')
+                ->get()
+                ->map(function($bill) {
+                    return [
+                        'id' => $bill->id,
+                        'bill_number' => $bill->bill_number,
+                        'due_date' => $bill->due_date->format('Y-m-d'),
+                        'balance' => number_format($bill->balance, 2),
+                        'total_amount' => number_format($bill->total_amount, 2),
+                        'created_at' => $bill->created_at->format('Y-m-d')
+                    ];
+                });
+
+            return response()->json($bills);
+        } catch (\Exception $e) {
+            Log::error('Error loading customer bills: ' . $e->getMessage());
+            return response()->json([], 500);
+        }
+    }
+
+    public function rejectWriteOff(Request $request, WriteOff $writeOff)
+    {
+        try {
+            $validated = $request->validate([
+                'reason' => 'required|string|max:255'
             ]);
 
-            // Log the approval in customer notes
-            $customer = $writeOff->customer;
-            $customer->update([
-                'notes' => $customer->notes . "\nWrite-off of KSh " . number_format($writeOff->amount, 2) . " approved on " . now()->format('Y-m-d') . " for reason: " . $writeOff->reason
-            ]);
-        });
+            DB::transaction(function () use ($writeOff, $validated) {
+                $writeOff->update([
+                    'status' => 'rejected',
+                    'rejected_by' => auth()->id(),
+                    'rejected_at' => now(),
+                    'rejection_reason' => $validated['reason']
+                ]);
 
-        return back()->with('success', 'Write-off approved successfully.');
+                // Log the rejection
+                Log::info('Write-off rejected', [
+                    'write_off_id' => $writeOff->id,
+                    'reason' => $validated['reason'],
+                    'rejected_by' => auth()->id()
+                ]);
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Write-off rejected successfully'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error rejecting write-off: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to reject write-off'
+            ], 500);
+        }
+    }
+
+    public function reverseWriteOff(Request $request, WriteOff $writeOff)
+    {
+        try {
+            DB::transaction(function () use ($writeOff) {
+                $writeOff->update([
+                    'status' => 'reversed',
+                    'reversed_by' => auth()->id(),
+                    'reversed_at' => now()
+                ]);
+
+                // Reverse customer balance adjustment
+                $customer = $writeOff->customer;
+                $customer->increment('credit_balance', $writeOff->amount);
+
+                // Reverse bill status if applicable
+                if (!empty($writeOff->affected_bills)) {
+                    Bill::whereIn('id', $writeOff->affected_bills)
+                        ->update([
+                            'bill_status' => 'unpaid',
+                            'notes' => DB::raw("CONCAT(COALESCE(notes, ''), '\nWrite-off reversed on " . now()->format('Y-m-d') . "')")
+                        ]);
+                }
+
+                // Log the reversal
+                Log::info('Write-off reversed', [
+                    'write_off_id' => $writeOff->id,
+                    'amount' => $writeOff->amount,
+                    'reversed_by' => auth()->id()
+                ]);
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Write-off reversed successfully'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error reversing write-off: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to reverse write-off'
+            ], 500);
+        }
     }
 
     public function customerBalances(Request $request)
