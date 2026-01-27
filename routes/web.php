@@ -460,11 +460,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('admin/payments/dashboard', [PaymentDashboardController::class, 'index'])
         ->name('admin.payments.dashboard');
 
-    Route::get('/payments/dashboard/realtime', [PaymentDashboardController::class, 'realtimeData'])
-        ->name('payments.dashboard.realtime');
+    Route::get('admin/payments/dashboard/realtime', [PaymentDashboardController::class, 'realtimeData'])
+        ->name('admin.payments.dashboard.realtime');
 
-    Route::post('/payments/dashboard/export', [PaymentDashboardController::class, 'exportDashboard'])
-        ->name('payments.dashboard.export');
+    Route::post('admin/payments/dashboard/export', [PaymentDashboardController::class, 'exportDashboard'])
+        ->name('admin.payments.dashboard.export');
 
 });
 

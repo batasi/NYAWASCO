@@ -441,7 +441,7 @@ class PaymentDashboardController extends Controller
                     });
                 })
                 ->orderByDesc('payment_date')
-                ->limit(10)
+                ->limit(5)
                 ->get(),
 
             'updated_at' => now()->toDateTimeString()

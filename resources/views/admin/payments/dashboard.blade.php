@@ -1,4 +1,6 @@
 @extends('layouts.app')
+
+@section('title', 'Payments Dashboard - NYAWASCO')
 @php
     // Define method colors in PHP
     $methodColors = [
@@ -9,562 +11,451 @@
         'mobile_money' => '#36b9cc'
     ];
 @endphp
-@section('title', 'Payments Dashboard')
-
-@push('styles')
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
-<style>
-    .card-stat {
-        border-radius: 10px;
-        transition: transform 0.2s;
-    }
-    .card-stat:hover {
-        transform: translateY(-2px);
-    }
-    .stat-icon {
-        font-size: 2.5rem;
-        opacity: 0.8;
-    }
-    .trend-up {
-        color: #10b981;
-    }
-    .trend-down {
-        color: #ef4444;
-    }
-    .chart-container {
-        height: 300px;
-        position: relative;
-    }
-    .performance-card {
-        border-left: 4px solid;
-        transition: all 0.3s;
-    }
-    .performance-card:hover {
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    }
-    .zone-progress {
-        height: 8px;
-        border-radius: 4px;
-    }
-    .realtime-badge {
-        animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-        0% { opacity: 1; }
-        50% { opacity: 0.7; }
-        100% { opacity: 1; }
-    }
-</style>
-@endpush
 
 @section('content')
-<div class="container-fluid px-4">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center py-3 mb-4 border-bottom">
-        <h1 class="h2 mb-0">
-            <i class="fas fa-chart-line text-primary me-2"></i>Payments Dashboard
-        </h1>
-        <div class="d-flex align-items-center gap-2">
-            <span class="realtime-badge badge bg-success">
-                <i class="fas fa-circle me-1"></i>Live
-            </span>
-            <button onclick="refreshDashboard()" class="btn btn-outline-primary btn-sm">
-                <i class="fas fa-sync-alt"></i> Refresh
-            </button>
-        </div>
-    </div>
+@can('add payments')
+<!-- Background Image -->
+<div class="fixed inset-0 -z-10">
+    <div class="absolute inset-0 bg-gradient-to-br from-blue-50/80 to-white/90"></div>
+</div>
+<div class="min-h-screen bg-gray-50">
+    @php
+    $actionButtons = [
+        [
+            'route' => 'payments.index',
+            'icon' => 'fas fa-list',
+            'label' => 'All Payments',
+            'color' => 'bg-blue-600'
+        ],
+        [
+            'route' => 'admin.payments.unallocated',
+            'icon' => 'fas fa-clock',
+            'label' => 'Unallocated',
+            'color' => 'bg-yellow-600'
+        ],
+        [
+            'route' => 'admin.payments.methods-report',
+            'icon' => 'fas fa-chart-bar',
+            'label' => 'Methods Report',
+            'color' => 'bg-purple-600'
+        ]
+    ];
+    @endphp
 
-    <!-- Filters -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <form id="dashboardFilter" method="GET" class="row g-3">
-                        <div class="col-md-3">
-                            <label class="form-label">Date Range</label>
-                            <input type="text" name="date_range" class="form-control flatpickr-range"
-                                   value="{{ $startDate }} to {{ $endDate }}"
-                                   data-date-format="Y-m-d">
-                            <input type="hidden" name="start_date" value="{{ $startDate }}">
-                            <input type="hidden" name="end_date" value="{{ $endDate }}">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Zone</label>
-                            <select name="zone" class="form-control select2">
-                                <option value="all">All Zones</option>
-                                @foreach($zones as $zone)
-                                    <option value="{{ $zone->id }}" {{ $zoneId == $zone->id ? 'selected' : '' }}>
-                                        {{ $zone->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">&nbsp;</label>
-                            <button type="submit" class="btn btn-primary w-100">
-                                <i class="fas fa-filter me-1"></i> Apply Filters
-                            </button>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">&nbsp;</label>
-                            <button type="button" onclick="resetFilters()" class="btn btn-outline-secondary w-100">
-                                <i class="fas fa-redo me-1"></i> Reset
-                            </button>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">&nbsp;</label>
-                            <button type="button" onclick="exportDashboard()" class="btn btn-success w-100">
-                                <i class="fas fa-file-export me-1"></i> Export
-                            </button>
-                        </div>
-                    </form>
+    @include('components.dashboard-header',[
+        'title' => 'Payments Analytics Dashboard',
+        'subtitle' => 'Real-time insights and performance metrics',
+        'actionButtons' => $actionButtons
+    ])
+
+    <div class="w-full px-2.5 py-8 relative z-10">
+        <!-- Filters -->
+        <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 mb-8 border border-white/20">
+            <form id="dashboardFilter" method="GET" action="{{ route('admin.payments.dashboard') }}" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
+                    <input type="text" name="date_range" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 flatpickr-range"
+                           value="{{ $startDate }} to {{ $endDate }}"
+                           data-date-format="Y-m-d">
+                    <input type="hidden" name="start_date" value="{{ $startDate }}">
+                    <input type="hidden" name="end_date" value="{{ $endDate }}">
                 </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Statistics Cards -->
-    <div class="row mb-4">
-        <!-- Total Collections -->
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card card-stat border-left-primary shadow h-100">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                Total Collections
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                KSh {{ number_format($cardStats['total_collections'], 2) }}
-                            </div>
-                            <div class="mt-2">
-                                @php
-                                    $trend = $cardStats['total_collections'] - $cardStats['previous_total_collections'];
-                                    $trendPercent = $cardStats['previous_total_collections'] > 0
-                                        ? ($trend / $cardStats['previous_total_collections']) * 100
-                                        : 100;
-                                @endphp
-                                <span class="{{ $trend >= 0 ? 'trend-up' : 'trend-down' }}">
-                                    <i class="fas fa-arrow-{{ $trend >= 0 ? 'up' : 'down' }} me-1"></i>
-                                    {{ number_format(abs($trendPercent), 1) }}%
-                                </span>
-                                <span class="text-muted text-xs">from previous period</span>
-                            </div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-money-bill-wave stat-icon text-primary"></i>
-                        </div>
-                    </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Zone</label>
+                    <select name="zone" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 select2">
+                        <option value="all">All Zones</option>
+                        @foreach($zones as $zone)
+                            <option value="{{ $zone->id }}" {{ $zoneId == $zone->id ? 'selected' : '' }}>
+                                {{ $zone->name }}
+                            </option>
+                        @endforeach
+                    </select>
                 </div>
-            </div>
-        </div>
 
-        <!-- Today's Collection -->
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card card-stat border-left-success shadow h-100">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                Today's Collection
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="todayCollection">
-                                KSh {{ number_format($cardStats['today_collection'], 2) }}
-                            </div>
-                            <div class="mt-2 text-xs text-muted">
-                                <i class="fas fa-calendar-day me-1"></i>
-                                {{ now()->format('F j, Y') }}
-                            </div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-calendar-check stat-icon text-success"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+                <div class="flex items-end space-x-3 md:col-span-3">
+                    <button type="button" onclick="resetFilters()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition duration-200 flex items-center justify-center">
+                        <i class="fas fa-redo mr-2"></i>
+                        Reset
+                    </button>
 
-        <!-- Total Arrears -->
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card card-stat border-left-warning shadow h-100">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                Total Arrears
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                KSh {{ number_format($cardStats['total_arrears'], 2) }}
-                            </div>
-                            <div class="mt-2">
-                                <span class="text-warning">
-                                    <i class="fas fa-exclamation-triangle me-1"></i>
-                                    {{ $cardStats['customers_with_arrears'] }} customers
-                                </span>
-                            </div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-exclamation-circle stat-icon text-warning"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200 flex items-center justify-center">
+                        <i class="fas fa-filter mr-2"></i>
+                        Apply Filters
+                    </button>
 
-        <!-- Collection Efficiency -->
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card card-stat border-left-info shadow h-100">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                Collection Efficiency
-                            </div>
-                            <div class="row no-gutters align-items-center">
-                                <div class="col-auto">
-                                    <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">
-                                        {{ $cardStats['collection_efficiency'] }}%
-                                    </div>
-                                </div>
-                                <div class="col">
-                                    <div class="progress">
-                                        <div class="progress-bar bg-info"
-                                             role="progressbar"
-                                             style="width: {{ min($cardStats['collection_efficiency'], 100) }}%"
-                                             aria-valuenow="{{ $cardStats['collection_efficiency'] }}"
-                                             aria-valuemin="0"
-                                             aria-valuemax="100">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="mt-2 text-xs text-muted">
-                                {{ $cardStats['payment_count'] }} payments
-                                @if($cardStats['previous_payment_count'])
-                                    <span class="{{ $cardStats['payment_count'] >= $cardStats['previous_payment_count'] ? 'trend-up' : 'trend-down' }}">
-                                        ({{ $cardStats['payment_count'] >= $cardStats['previous_payment_count'] ? '+' : '' }}{{ $cardStats['payment_count'] - $cardStats['previous_payment_count'] }})
-                                    </span>
-                                @endif
-                            </div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-chart-pie stat-icon text-info"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+                    <button type="button" onclick="exportDashboard()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition duration-200 flex items-center justify-center">
+                        <i class="fas fa-file-export mr-2"></i>
+                        Export
+                    </button>
 
-    <!-- Charts Row 1 -->
-    <div class="row mb-4">
-        <!-- Daily Collections Line Chart -->
-        <div class="col-xl-8 col-lg-7 mb-4">
-            <div class="card shadow h-100">
-                <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-chart-line me-1"></i> Daily Collections Trend
-                    </h6>
-                    <div class="dropdown">
-                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
-                                data-bs-toggle="dropdown">
-                            <i class="fas fa-cog"></i>
+                    <div class="flex items-center ml-auto">
+                        <span class="realtime-badge bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full flex items-center">
+                            <span class="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></span>
+                            Live
+                        </span>
+                        <button onclick="refreshDashboard()" class="ml-3 text-gray-600 hover:text-blue-600 transition duration-200" title="Refresh">
+                            <i class="fas fa-sync-alt"></i>
                         </button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#" onclick="changeChartType('daily', 'line')">Line Chart</a></li>
-                            <li><a class="dropdown-item" href="#" onclick="changeChartType('daily', 'bar')">Bar Chart</a></li>
-                        </ul>
                     </div>
                 </div>
-                <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="dailyCollectionsChart"></canvas>
+            </form>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Total Collections -->
+            <div class="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-6 border-l-4 border-blue-500 hover:shadow-xl transition-all duration-300">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Total Collections</p>
+                        <p class="text-2xl font-bold text-gray-900 mt-2">
+                            KSh {{ number_format($cardStats['total_collections'], 2) }}
+                        </p>
+                        <div class="mt-3">
+                            @php
+                                $trend = $cardStats['total_collections'] - $cardStats['previous_total_collections'];
+                                $trendPercent = $cardStats['previous_total_collections'] > 0
+                                    ? ($trend / $cardStats['previous_total_collections']) * 100
+                                    : ($trend > 0 ? 100 : 0);
+                            @endphp
+                            <span class="inline-flex items-center text-sm {{ $trend >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                                <i class="fas fa-arrow-{{ $trend >= 0 ? 'up' : 'down' }} mr-1"></i>
+                                {{ number_format(abs($trendPercent), 1) }}%
+                                <span class="text-gray-500 ml-1">from last month</span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="bg-blue-100 p-3 rounded-lg">
+                        <i class="fas fa-money-bill-wave text-blue-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Today's Collection -->
+            <div class="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-6 border-l-4 border-green-500 hover:shadow-xl transition-all duration-300">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Today's Collection</p>
+                        <p class="text-2xl font-bold text-gray-900 mt-2" id="todayCollection">
+                            KSh {{ number_format($cardStats['today_collection'], 2) }}
+                        </p>
+                        <div class="mt-3">
+                            <span class="inline-flex items-center text-sm text-gray-500">
+                                <i class="fas fa-calendar-day mr-1"></i>
+                                {{ now()->format('F j, Y') }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="bg-green-100 p-3 rounded-lg">
+                        <i class="fas fa-calendar-check text-green-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Arrears -->
+            <div class="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-6 border-l-4 border-yellow-500 hover:shadow-xl transition-all duration-300">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Total Arrears</p>
+                        <p class="text-2xl font-bold text-gray-900 mt-2">
+                            KSh {{ number_format($cardStats['total_arrears'], 2) }}
+                        </p>
+                        <div class="mt-3">
+                            <span class="inline-flex items-center text-sm text-yellow-600">
+                                <i class="fas fa-exclamation-triangle mr-1"></i>
+                                {{ $cardStats['customers_with_arrears'] }} customers
+                            </span>
+                        </div>
+                    </div>
+                    <div class="bg-yellow-100 p-3 rounded-lg">
+                        <i class="fas fa-exclamation-circle text-yellow-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Collection Efficiency -->
+            <div class="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-6 border-l-4 border-purple-500 hover:shadow-xl transition-all duration-300">
+                <div class="flex justify-between items-start">
+                    <div class="w-full">
+                        <p class="text-sm font-medium text-gray-600">Collection Efficiency</p>
+                        <div class="flex items-center justify-between mt-2">
+                            <p class="text-2xl font-bold text-gray-900">
+                                {{ $cardStats['collection_efficiency'] }}%
+                            </p>
+                            <span class="text-sm text-gray-500">
+                                {{ $cardStats['payment_count'] }} payments
+                            </span>
+                        </div>
+                        <div class="mt-4">
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-purple-600 h-2 rounded-full"
+                                     style="width: {{ min($cardStats['collection_efficiency'], 100) }}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-purple-100 p-3 rounded-lg ml-4">
+                        <i class="fas fa-chart-pie text-purple-600 text-xl"></i>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Payment Methods Pie Chart -->
-        <div class="col-xl-4 col-lg-5 mb-4">
-            <div class="card shadow h-100">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-credit-card me-1"></i> Payment Methods Distribution
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="paymentMethodsChart"></canvas>
+        <!-- Charts Row 1 -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Daily Collections Line Chart -->
+            <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/20 lg:col-span-2">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">Daily Collections Trend</h3>
+                        <p class="text-sm text-gray-600">Amount collected per day</p>
                     </div>
-                    <div class="mt-3">
-                        @foreach($paymentMethods as $method)
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="text-xs">
-                                <i class="fas fa-circle me-1" style="color: {{ $methodColors[$method->payment_method] ?? '#6c757d' }}"></i>
-                                {{ ucfirst($method->payment_method) }}
-                            </span>
-                            <span class="text-xs font-weight-bold">
+                    <div class="flex space-x-2">
+                        <button onclick="changeChartType('daily', 'line')" class="text-gray-600 hover:text-blue-600 p-2 rounded-lg hover:bg-gray-100">
+                            <i class="fas fa-chart-line"></i>
+                        </button>
+                        <button onclick="changeChartType('daily', 'bar')" class="text-gray-600 hover:text-blue-600 p-2 rounded-lg hover:bg-gray-100">
+                            <i class="fas fa-chart-bar"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="h-80">
+                    <canvas id="dailyCollectionsChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Payment Methods Pie Chart -->
+            <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/20">
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900">Payment Methods</h3>
+                    <p class="text-sm text-gray-600">Distribution by method</p>
+                </div>
+                <div class="h-64 mb-4">
+                    <canvas id="paymentMethodsChart"></canvas>
+                </div>
+                <div class="space-y-3">
+                    @foreach($paymentMethods as $method)
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 rounded-full mr-2" style="background-color: {{ $methodColors[$method->payment_method] ?? '#6c757d' }}"></div>
+                            <span class="text-sm font-medium text-gray-700">{{ ucfirst($method->payment_method) }}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-sm font-bold text-gray-900">
                                 KSh {{ number_format($method->total_amount, 2) }}
                             </span>
+                            <span class="text-xs text-gray-500 block">
+                                {{ $method->count }} payments
+                            </span>
                         </div>
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row 2 -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Arrears vs Collections -->
+            <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/20 lg:col-span-2">
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900">Arrears vs Collections</h3>
+                    <p class="text-sm text-gray-600">Daily comparison and collection ratio</p>
+                </div>
+                <div class="h-80">
+                    <canvas id="arrearsVsCollectionsChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Monthly Trend -->
+            <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/20">
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900">6-Month Trend</h3>
+                    <p class="text-sm text-gray-600">Monthly collection pattern</p>
+                </div>
+                <div class="h-80">
+                    <canvas id="monthlyTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Zone Comparison -->
+        <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/20 mb-8">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900">Zone Performance Comparison</h3>
+                    <p class="text-sm text-gray-600">Collections, arrears, and efficiency by zone</p>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50/80">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Zone</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Collections</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Arrears</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Collection Rate</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Active Meters</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Payment</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Performance</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white/50 divide-y divide-gray-200">
+                        @foreach($zoneComparison as $zone)
+                        @php
+                            $maxCollection = max(array_column($zoneComparison, 'collections'));
+                            $collectionPercent = $maxCollection > 0 ? ($zone['collections'] / $maxCollection) * 100 : 0;
+                        @endphp
+                        <tr class="hover:bg-gray-50/50 transition duration-150">
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                <div class="font-medium text-gray-900">{{ $zone['zone'] }}</div>
+                            </td>
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                <div class="text-lg font-bold text-gray-900">
+                                    KSh {{ number_format($zone['collections'], 2) }}
+                                </div>
+                            </td>
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                <div class="text-lg font-bold {{ $zone['arrears'] > 0 ? 'text-yellow-600' : 'text-green-600' }}">
+                                    KSh {{ number_format($zone['arrears'], 2) }}
+                                </div>
+                            </td>
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="w-full bg-gray-200 rounded-full h-2 mr-3">
+                                        <div class="bg-green-600 h-2 rounded-full"
+                                             style="width: {{ $zone['collection_rate'] }}%"></div>
+                                    </div>
+                                    <span class="text-sm font-medium text-gray-700">
+                                        {{ number_format($zone['collection_rate'], 1) }}%
+                                    </span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">{{ number_format($zone['active_meters']) }}</div>
+                            </td>
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">
+                                    KSh {{ number_format($zone['average_payment'], 2) }}
+                                </div>
+                            </td>
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                <div class="w-32 bg-gray-200 rounded-full h-2">
+                                    <div class="bg-blue-600 h-2 rounded-full"
+                                         style="width: {{ $collectionPercent }}%"></div>
+                                </div>
+                            </td>
+                        </tr>
                         @endforeach
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Charts Row 2 -->
-    <div class="row mb-4">
-        <!-- Arrears vs Collections -->
-        <div class="col-xl-8 col-lg-7 mb-4">
-            <div class="card shadow h-100">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-balance-scale me-1"></i> Arrears vs Collections
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="arrearsVsCollectionsChart"></canvas>
-                    </div>
-                </div>
+                    </tbody>
+                </table>
             </div>
         </div>
 
-        <!-- Monthly Trend -->
-        <div class="col-xl-4 col-lg-5 mb-4">
-            <div class="card shadow h-100">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-chart-bar me-1"></i> 6-Month Trend
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="monthlyTrendChart"></canvas>
+        <!-- Performance Cards -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <!-- Top Collectors -->
+            <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/20">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">Top 5 Collectors</h3>
+                        <p class="text-sm text-gray-600">Customers with highest payments</p>
                     </div>
+                    <span class="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                        High Performance
+                    </span>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Zone Comparison -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card shadow">
-                <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-globe-africa me-1"></i> Zone Performance Comparison
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Zone</th>
-                                    <th>Collections</th>
-                                    <th>Arrears</th>
-                                    <th>Collection Rate</th>
-                                    <th>Active Meters</th>
-                                    <th>Avg Payment</th>
-                                    <th>Performance</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($zoneComparison as $zone)
-                                @php
-                                    $maxCollection = max(array_column($zoneComparison, 'collections'));
-                                    $collectionPercent = $maxCollection > 0 ? ($zone['collections'] / $maxCollection) * 100 : 0;
-                                @endphp
-                                <tr>
-                                    <td class="font-weight-bold">{{ $zone['zone'] }}</td>
-                                    <td>KSh {{ number_format($zone['collections'], 2) }}</td>
-                                    <td class="{{ $zone['arrears'] > 0 ? 'text-warning' : 'text-success' }}">
-                                        KSh {{ number_format($zone['arrears'], 2) }}
-                                    </td>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="progress zone-progress flex-grow-1 me-2">
-                                                <div class="progress-bar bg-success"
-                                                     style="width: {{ $zone['collection_rate'] }}%">
-                                                </div>
-                                            </div>
-                                            <span>{{ number_format($zone['collection_rate'], 1) }}%</span>
-                                        </div>
-                                    </td>
-                                    <td>{{ number_format($zone['active_meters']) }}</td>
-                                    <td>KSh {{ number_format($zone['average_payment'], 2) }}</td>
-                                    <td>
-                                        <div class="progress zone-progress" style="width: 100px;">
-                                            <div class="progress-bar bg-primary"
-                                                 style="width: {{ $collectionPercent }}%">
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Performance Cards -->
-    <div class="row">
-        <!-- Top Collectors -->
-        <div class="col-xl-6 mb-4">
-            <div class="card border-left-success shadow h-100">
-                <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                    <h6 class="m-0 font-weight-bold text-success">
-                        <i class="fas fa-trophy me-1"></i> Top 5 Collectors
-                    </h6>
-                    <span class="badge bg-success">High Performance</span>
-                </div>
-                <div class="card-body">
+                <div class="space-y-4">
                     @foreach($performanceData['top_collectors'] as $index => $collector)
-                    <div class="performance-card card border-0 mb-3 border-left-success">
-                        <div class="card-body py-2">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <div class="d-flex align-items-center">
-                                        <div class="rank-circle bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-3"
-                                             style="width: 30px; height: 30px; font-weight: bold;">
-                                            {{ $index + 1 }}
-                                        </div>
-                                        <div>
-                                            <h6 class="mb-0">{{ $collector->first_name }} {{ $collector->last_name }}</h6>
-                                            <small class="text-muted">{{ $collector->payment_count }} payments</small>
-                                        </div>
-                                    </div>
+                    <div class="flex items-center justify-between p-3 bg-gradient-to-r from-green-50/50 to-transparent rounded-lg border-l-4 border-green-500">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 bg-green-100 text-green-800 rounded-full flex items-center justify-center font-bold mr-3">
+                                {{ $index + 1 }}
+                            </div>
+                            <div>
+                                <div class="font-medium text-gray-900">
+                                    {{ $collector->first_name }} {{ $collector->last_name }}
                                 </div>
-                                <div class="text-end">
-                                    <div class="h5 mb-0 font-weight-bold text-success">
-                                        KSh {{ number_format($collector->total_collected, 2) }}
-                                    </div>
-                                    <small class="text-muted">Total Collected</small>
+                                <div class="text-xs text-gray-500">
+                                    {{ $collector->payment_count }} payments
                                 </div>
                             </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-lg font-bold text-green-600">
+                                KSh {{ number_format($collector->total_collected, 2) }}
+                            </div>
+                            <div class="text-xs text-gray-500">Total Collected</div>
                         </div>
                     </div>
                     @endforeach
                 </div>
             </div>
-        </div>
 
-        <!-- Top Arrears -->
-        <div class="col-xl-6 mb-4">
-            <div class="card border-left-warning shadow h-100">
-                <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                    <h6 class="m-0 font-weight-bold text-warning">
-                        <i class="fas fa-exclamation-triangle me-1"></i> Top 5 Arrears
-                    </h6>
-                    <span class="badge bg-warning">Require Attention</span>
+            <!-- Top Arrears -->
+            <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/20">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">Top 5 Arrears</h3>
+                        <p class="text-sm text-gray-600">Customers with highest outstanding balances</p>
+                    </div>
+                    <span class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                        Require Attention
+                    </span>
                 </div>
-                <div class="card-body">
+                <div class="space-y-4">
                     @foreach($performanceData['top_arrears'] as $index => $arrear)
-                    <div class="performance-card card border-0 mb-3 border-left-warning">
-                        <div class="card-body py-2">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <div class="d-flex align-items-center">
-                                        <div class="rank-circle bg-warning text-white rounded-circle d-flex align-items-center justify-content-center me-3"
-                                             style="width: 30px; height: 30px; font-weight: bold;">
-                                            {{ $index + 1 }}
-                                        </div>
-                                        <div>
-                                            <h6 class="mb-0">{{ $arrear->first_name }} {{ $arrear->last_name }}</h6>
-                                            <small class="text-muted">{{ $arrear->overdue_bills }} overdue bills</small>
-                                        </div>
-                                    </div>
+                    <div class="flex items-center justify-between p-3 bg-gradient-to-r from-yellow-50/50 to-transparent rounded-lg border-l-4 border-yellow-500">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 bg-yellow-100 text-yellow-800 rounded-full flex items-center justify-center font-bold mr-3">
+                                {{ $index + 1 }}
+                            </div>
+                            <div>
+                                <div class="font-medium text-gray-900">
+                                    {{ $arrear->first_name }} {{ $arrear->last_name }}
                                 </div>
-                                <div class="text-end">
-                                    <div class="h5 mb-0 font-weight-bold text-warning">
-                                        KSh {{ number_format($arrear->total_arrears, 2) }}
-                                    </div>
-                                    <small class="text-muted">Outstanding Balance</small>
+                                <div class="text-xs text-gray-500">
+                                    {{ $arrear->overdue_bills }} overdue bills
                                 </div>
                             </div>
                         </div>
+                        <div class="text-right">
+                            <div class="text-lg font-bold text-yellow-600">
+                                KSh {{ number_format($arrear->total_arrears, 2) }}
+                            </div>
+                            <div class="text-xs text-gray-500">Outstanding Balance</div>
+                        </div>
                     </div>
                     @endforeach
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Recent Payments Table -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow">
-                <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-history me-1"></i> Recent Payments
-                    </h6>
-                    <small class="text-muted" id="lastUpdated">Updated: {{ now()->format('H:i:s') }}</small>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover" id="recentPaymentsTable">
-                            <thead>
-                                <tr>
-                                    <th>Payment #</th>
-                                    <th>Customer</th>
-                                    <th>Meter</th>
-                                    <th>Amount</th>
-                                    <th>Method</th>
-                                    <th>Date</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- Will be populated by AJAX -->
-                            </tbody>
-                        </table>
-                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
-@endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js"></script>
+
+
 
 <script>
-    // Chart colors
+    // Chart colors - using Tailwind-like colors
     const chartColors = {
-        primary: '#4e73df',
-        success: '#1cc88a',
-        info: '#36b9cc',
-        warning: '#f6c23e',
-        danger: '#e74a3b',
-        secondary: '#858796',
-        light: '#f8f9fc',
-        dark: '#5a5c69'
-    };
-
-    const methodColors = {
-        mpesa: '#00A300',
-        bank: '#4e73df',
-        cash: '#f6c23e',
-        card: '#e74a3b',
-        mobile_money: '#36b9cc'
+        primary: '#3b82f6',    // blue-500
+        success: '#10b981',    // green-500
+        info: '#06b6d4',       // cyan-500
+        warning: '#f59e0b',    // yellow-500
+        danger: '#ef4444',     // red-500
+        secondary: '#6b7280',  // gray-500
+        purple: '#8b5cf6',     // violet-500
+        pink: '#ec4899'        // pink-500
     };
 
     // Initialize date picker
     $(document).ready(function() {
         // Select2
         $('.select2').select2({
-            width: '100%'
+            width: '100%',
+            placeholder: 'Select zone...'
         });
 
         // Date range picker
@@ -602,10 +493,15 @@
                     label: 'Daily Collections',
                     data: {!! json_encode(array_values($chartsData['daily_collections']->toArray())) !!},
                     borderColor: chartColors.primary,
-                    backgroundColor: 'rgba(78, 115, 223, 0.1)',
-                    borderWidth: 2,
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 3,
                     fill: true,
-                    tension: 0.4
+                    tension: 0.4,
+                    pointBackgroundColor: chartColors.primary,
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
                 }]
             },
             options: {
@@ -613,9 +509,16 @@
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
-                        display: true
+                        display: false
                     },
                     tooltip: {
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        titleColor: '#1f2937',
+                        bodyColor: '#4b5563',
+                        borderColor: '#e5e7eb',
+                        borderWidth: 1,
+                        padding: 12,
+                        displayColors: false,
                         callbacks: {
                             label: function(context) {
                                 return 'KSh ' + context.parsed.y.toLocaleString('en-US', {
@@ -627,9 +530,21 @@
                     }
                 },
                 scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: '#6b7280'
+                        }
+                    },
                     y: {
                         beginAtZero: true,
+                        grid: {
+                            borderDash: [2, 2]
+                        },
                         ticks: {
+                            color: '#6b7280',
                             callback: function(value) {
                                 return 'KSh ' + value.toLocaleString('en-US', {
                                     minimumFractionDigits: 0,
@@ -653,28 +568,40 @@
                 datasets: [{
                     data: {!! json_encode($paymentMethods->pluck('total_amount')) !!},
                     backgroundColor: {!! json_encode($paymentMethods->map(function($method) use ($methodColors) {
-                        return $methodColors[$method->payment_method] ?? '#6c757d';
+                        return $methodColors[$method->payment_method] ?? '#6b7280';
                     })) !!},
-                    borderWidth: 1
+                    borderWidth: 0,
+                    hoverOffset: 15
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                cutout: '70%',
                 plugins: {
                     legend: {
-                        position: 'bottom'
+                        display: false
                     },
                     tooltip: {
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        titleColor: '#1f2937',
+                        bodyColor: '#4b5563',
+                        borderColor: '#e5e7eb',
+                        borderWidth: 1,
+                        padding: 12,
                         callbacks: {
                             label: function(context) {
                                 const value = context.parsed;
                                 const total = context.dataset.data.reduce((a, b) => a + b, 0);
                                 const percentage = Math.round((value / total) * 100);
-                                return context.label + ': KSh ' + value.toLocaleString('en-US', {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2
-                                }) + ' (' + percentage + '%)';
+                                return [
+                                    context.label,
+                                    'KSh ' + value.toLocaleString('en-US', {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2
+                                    }),
+                                    percentage + '% of total'
+                                ];
                             }
                         }
                     }
@@ -695,24 +622,30 @@
                         backgroundColor: chartColors.success,
                         borderColor: chartColors.success,
                         borderWidth: 1,
+                        borderRadius: 4,
                         yAxisID: 'y'
                     },
                     {
                         label: 'Arrears',
                         data: {!! json_encode(array_column($chartsData['arrears_vs_collections'], 'arrears')) !!},
-                        backgroundColor: chartColors.warning,
+                        backgroundColor: chartColors.warning + '80',
                         borderColor: chartColors.warning,
                         borderWidth: 1,
+                        borderRadius: 4,
                         yAxisID: 'y'
                     },
                     {
                         label: 'Collection Ratio (%)',
                         data: {!! json_encode(array_column($chartsData['arrears_vs_collections'], 'collection_ratio')) !!},
                         type: 'line',
-                        borderColor: chartColors.info,
+                        borderColor: chartColors.purple,
                         backgroundColor: 'transparent',
-                        borderWidth: 2,
+                        borderWidth: 3,
                         fill: false,
+                        tension: 0.4,
+                        pointStyle: 'circle',
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
                         yAxisID: 'y1'
                     }
                 ]
@@ -726,19 +659,34 @@
                 },
                 plugins: {
                     legend: {
-                        display: true
+                        position: 'top',
+                        labels: {
+                            color: '#6b7280',
+                            usePointStyle: true,
+                            padding: 20
+                        }
                     }
                 },
                 scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: '#6b7280'
+                        }
+                    },
                     y: {
                         type: 'linear',
                         display: true,
                         position: 'left',
                         title: {
                             display: true,
-                            text: 'Amount (KSh)'
+                            text: 'Amount (KSh)',
+                            color: '#6b7280'
                         },
                         ticks: {
+                            color: '#6b7280',
                             callback: function(value) {
                                 return 'KSh ' + value.toLocaleString('en-US', {
                                     minimumFractionDigits: 0,
@@ -753,12 +701,19 @@
                         position: 'right',
                         title: {
                             display: true,
-                            text: 'Collection Ratio (%)'
+                            text: 'Collection Ratio (%)',
+                            color: '#6b7280'
                         },
                         min: 0,
                         max: 100,
                         grid: {
                             drawOnChartArea: false
+                        },
+                        ticks: {
+                            color: '#6b7280',
+                            callback: function(value) {
+                                return value + '%';
+                            }
                         }
                     }
                 }
@@ -774,9 +729,12 @@
                 datasets: [{
                     label: 'Monthly Collections',
                     data: {!! json_encode(array_values($chartsData['monthly_trend']->toArray())) !!},
-                    backgroundColor: chartColors.primary,
+                    backgroundColor: Array.from({length: {!! $chartsData['monthly_trend']->count() !!}}, (_, i) =>
+                        i === {!! $chartsData['monthly_trend']->count() - 1 !!} ? chartColors.primary : chartColors.primary + '80'
+                    ),
                     borderColor: chartColors.primary,
-                    borderWidth: 1
+                    borderWidth: 1,
+                    borderRadius: 4
                 }]
             },
             options: {
@@ -788,9 +746,21 @@
                     }
                 },
                 scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: '#6b7280'
+                        }
+                    },
                     y: {
                         beginAtZero: true,
+                        grid: {
+                            borderDash: [2, 2]
+                        },
                         ticks: {
+                            color: '#6b7280',
                             callback: function(value) {
                                 return 'KSh ' + value.toLocaleString('en-US', {
                                     minimumFractionDigits: 0,
@@ -812,10 +782,9 @@
         };
     }
 
-    // Load recent payments via AJAX
     function loadRecentPayments() {
         $.ajax({
-            url: '{{ route("payments.dashboard.realtime") }}',
+            url: '{{ route("admin.payments.dashboard.realtime") }}',
             method: 'GET',
             data: {
                 zone: '{{ $zoneId }}'
@@ -827,51 +796,95 @@
                     maximumFractionDigits: 2
                 }));
 
-                // Update recent payments table
-                const tbody = $('#recentPaymentsTable tbody');
+                // Update recent payments table - target the specific tbody
+                const tbody = $('#recentPaymentsBody');
                 tbody.empty();
 
-                response.recent_payments.forEach(function(payment) {
-                    const row = `
+                if (response.recent_payments.length === 0) {
+                    tbody.append(`
                         <tr>
-                            <td>
-                                <a href="/payments/${payment.id}" class="text-primary">
-                                    ${payment.payment_no}
-                                </a>
-                            </td>
-                            <td>
-                                ${payment.customer?.first_name} ${payment.customer?.last_name}
-                                <br>
-                                <small class="text-muted">${payment.customer?.customer_number}</small>
-                            </td>
-                            <td>${payment.meter?.meter_number || 'N/A'}</td>
-                            <td class="font-weight-bold">
-                                KSh ${parseFloat(payment.amount).toLocaleString('en-US', {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2
-                                })}
-                            </td>
-                            <td>
-                                <span class="badge bg-light text-dark">
-                                    ${payment.payment_method}
-                                </span>
-                            </td>
-                            <td>${moment(payment.payment_date).format('MMM D, YYYY')}</td>
-                            <td>
-                                <span class="badge bg-${getStatusColor(payment.payment_status)}">
-                                    ${payment.payment_status}
-                                </span>
+                            <td colspan="7" class="px-4 py-8 text-center text-gray-500">
+                                <i class="fas fa-inbox text-2xl mb-2 block"></i>
+                                <p>No recent payments found</p>
                             </td>
                         </tr>
-                    `;
-                    tbody.append(row);
-                });
+                    `);
+                } else {
+                    response.recent_payments.forEach(function(payment) {
+                        const statusColors = {
+                            'completed': 'bg-green-100 text-green-800',
+                            'pending': 'bg-yellow-100 text-yellow-800',
+                            'failed': 'bg-red-100 text-red-800',
+                            'allocated': 'bg-blue-100 text-blue-800',
+                            'voided': 'bg-gray-100 text-gray-800'
+                        };
+
+                        const statusClass = statusColors[payment.payment_status] || 'bg-gray-100 text-gray-800';
+
+                        const row = `
+                            <tr class="hover:bg-gray-50/50 transition duration-150">
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    <div class="font-medium text-blue-600">
+                                        ${payment.payment_no}
+                                    </div>
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    <div class="font-medium text-gray-900">
+                                        ${payment.customer?.first_name} ${payment.customer?.last_name}
+                                    </div>
+                                    <div class="text-sm text-gray-500">
+                                        ${payment.customer?.customer_number || 'N/A'}
+                                    </div>
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    <div class="text-sm text-gray-900">
+                                        ${payment.meter?.meter_number || 'N/A'}
+                                    </div>
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    <div class="text-lg font-bold text-green-600">
+                                        KSh ${parseFloat(payment.amount).toLocaleString('en-US', {
+                                            minimumFractionDigits: 2,
+                                            maximumFractionDigits: 2
+                                        })}
+                                    </div>
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                        ${payment.payment_method}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    <div class="text-sm text-gray-900">
+                                        ${moment(payment.payment_date).format('MMM D, YYYY')}
+                                    </div>
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass}">
+                                        ${payment.payment_status}
+                                    </span>
+                                </td>
+                            </tr>
+                        `;
+                        tbody.append(row);
+                    });
+                }
 
                 // Update timestamp
                 $('#lastUpdated').text('Updated: ' + moment(response.updated_at).format('HH:mm:ss'));
             },
             error: function(xhr) {
                 console.error('Failed to load recent payments');
+                const tbody = $('#recentPaymentsBody');
+                tbody.empty();
+                tbody.append(`
+                    <tr>
+                        <td colspan="7" class="px-4 py-8 text-center text-red-500">
+                            <i class="fas fa-exclamation-triangle text-2xl mb-2 block"></i>
+                            <p>Failed to load recent payments</p>
+                        </td>
+                    </tr>
+                `);
             }
         });
     }
@@ -902,10 +915,8 @@
 
     // Export dashboard data
     function exportDashboard() {
-        // You can implement export to Excel, PDF, or CSV
-        // For now, just redirect to export route
         const form = $('#dashboardFilter').clone();
-        form.attr('action', '{{ route("payments.dashboard.export") }}');
+        form.attr('action', '{{ route("admin.payments.dashboard.export") }}');
         form.attr('target', '_blank');
         form.attr('method', 'POST');
         form.append('@csrf');
@@ -922,21 +933,11 @@
         }
     }
 
-    // Helper function to get status color
-    function getStatusColor(status) {
-        const colors = {
-            'completed': 'success',
-            'pending': 'warning',
-            'failed': 'danger',
-            'allocated': 'info',
-            'voided': 'secondary'
-        };
-        return colors[status] || 'secondary';
-    }
-
     // Helper to capitalize first letter
     function ucfirst(string) {
         return string.charAt(0).toUpperCase() + string.slice(1);
     }
 </script>
 @endpush
+@endcan
+@endsection
