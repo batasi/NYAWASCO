@@ -548,7 +548,7 @@ class AccountsReceivableController extends Controller
             })
             ->orderBy('activity_date', 'desc');
 
-        $activities = $query->paginate(20);
+        $activities = $query->paginate(10);
 
         $agents = User::whereHas('roles', function($query) {
             $query->whereIn('name', ['collector', 'supervisor', 'admin']);
@@ -599,7 +599,7 @@ class AccountsReceivableController extends Controller
                 $query->where('write_off_date', '<=', $date);
             })
             ->orderBy('created_at', 'desc')
-            ->paginate(20);
+            ->paginate(10);
 
         return view('admin.accounts-receivable.write-offs', compact('writeOffs'));
     }
@@ -898,7 +898,7 @@ class AccountsReceivableController extends Controller
             });
         })
         ->orderByDesc('total_balance')
-        ->paginate(50);
+        ->paginate(10);
 
         $zones = Zone::all();
         $totalBalance = $customers->sum('total_balance');
@@ -1145,7 +1145,7 @@ class AccountsReceivableController extends Controller
             });
         }
 
-        $customers = $query->orderBy('customer_number')->paginate(50);
+        $customers = $query->orderBy('customer_number')->paginate(10);
 
         // Add aging bucket breakdown for each customer
         $customers->transform(function($customer) use ($date) {
