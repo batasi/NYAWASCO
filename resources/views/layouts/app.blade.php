@@ -1354,6 +1354,9 @@ use Illuminate\Support\Facades\Route;
 
                 <!-- Menu -->
                 <nav class="space-y-2">
+                    <div class="px-3 md:px-4 py-2">
+                        <h3 class="text-xs md:text-sm font-bold text-gray-700 uppercase tracking-wider">Bills & Customers</h3>
+                    </div>
                     <a href="{{ route('dashboard') }}" onclick="handleSidebarLink(this); if (window.innerWidth < 768) toggleSidebar()" class="sidebar-link group flex items-center py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-blue-300/30 hover:shadow-lg {{ request()->routeIs('dashboard') ? 'bg-blue-300/50 shadow-lg border-l-4 border-green-600' : '' }}" data-route="dashboard">
                         <svg class="w-4 h-4 md:w-5 md:h-5 mr-3 {{ request()->routeIs('dashboard') ? 'text-green-600' : 'text-blue-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
@@ -1438,7 +1441,9 @@ use Illuminate\Support\Facades\Route;
                     </a>
                     @endcan
                     @can('view payments')
-
+                    <div class="px-3 md:px-4 py-2">
+                        <h3 class="text-xs md:text-sm font-bold text-gray-700 uppercase tracking-wider">FINANCIAL MANAGEMENT</h3>
+                    </div>
 
                     <a href="#" onclick="toggleSubmenu('accounts-receivable')" class="sidebar-link group flex items-center justify-between py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-blue-300/30 hover:shadow-lg">
                         <div class="flex items-center">
