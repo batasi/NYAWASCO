@@ -420,7 +420,7 @@
                                         </a>
                                     @endif
                                     @if($reading->reading_image)
-                                        <a href="{{ Storage::url($reading->reading_image) }}"
+                                        <a href="#"
                                            target="_blank"
                                            class="text-green-600 hover:text-green-900"
                                            title="View Reading Image">
