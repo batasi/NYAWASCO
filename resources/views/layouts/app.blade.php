@@ -1125,55 +1125,55 @@ use Illuminate\Support\Facades\Route;
             <a href="{{ route('publications') }}" class="mobile-nav-link" @click="mobileMenuOpen = false">Publications</a>
         </div>
 
-       <!-- Replace the existing mobile-auth section with this: -->
-@guest
-<div class="mobile-auth">
-    <button @click="loginOpen = true; mobileMenuOpen = false" class="btn-primary w-full">Log in</button>
-</div>
-@else
-<!-- Add this for logged-in users in mobile menu -->
-<div class="mobile-auth">
-    <div class="mb-4">
-        <div class="flex items-center space-x-3 p-2 bg-blue-900/30 rounded-lg">
-            @if(auth()->user()->avatar)
-                <img src="{{ Storage::url(auth()->user()->avatar) }}" alt="{{ auth()->user()->name }}"
-                     class="h-8 w-8 rounded-full object-cover border border-white/50">
-            @else
-                <div class="h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 to-green-500 flex items-center justify-center">
-                    <span class="text-white text-xs font-bold">
-                        {{ strtoupper(substr(auth()->user()->name ?? 'U', 0, 1)) }}
-                    </span>
-                </div>
-            @endif
-            <div>
-                <p class="text-sm font-medium text-white">{{ auth()->user()->name ?? 'User' }}</p>
-                <p class="text-xs text-blue-200">Administrator</p>
-            </div>
+        <!-- Replace the existing mobile-auth section with this: -->
+        @guest
+        <div class="mobile-auth">
+            <button @click="loginOpen = true; mobileMenuOpen = false" class="btn-primary w-full">Log in</button>
         </div>
-    </div>
+        @else
+        <!-- Add this for logged-in users in mobile menu -->
+        <div class="mobile-auth">
+            <div class="mb-4">
+                <div class="flex items-center space-x-3 p-2 bg-blue-900/30 rounded-lg">
+                    @if(auth()->user()->avatar)
+                        <img src="{{ Storage::url(auth()->user()->avatar) }}" alt="{{ auth()->user()->name }}"
+                            class="h-8 w-8 rounded-full object-cover border border-white/50">
+                    @else
+                        <div class="h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 to-green-500 flex items-center justify-center">
+                            <span class="text-white text-xs font-bold">
+                                {{ strtoupper(substr(auth()->user()->name ?? 'U', 0, 1)) }}
+                            </span>
+                        </div>
+                    @endif
+                    <div>
+                        <p class="text-sm font-medium text-white">{{ auth()->user()->name ?? 'User' }}</p>
+                        <p class="text-xs text-blue-200">Administrator</p>
+                    </div>
+                </div>
+            </div>
 
-    <a href="{{ route('dashboard') }}"
-       @click="mobileMenuOpen = false"
-       class="block w-full text-center py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors mb-2">
-        Dashboard
-    </a>
+            <a href="{{ route('dashboard') }}"
+            @click="mobileMenuOpen = false"
+            class="block w-full text-center py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors mb-2">
+                Dashboard
+            </a>
 
-    <a href="{{ route('profile.edit') }}"
-       @click="mobileMenuOpen = false"
-       class="block w-full text-center py-2 bg-blue-900/50 hover:bg-blue-800/70 text-white rounded-lg transition-colors mb-2">
-        Profile Settings
-    </a>
+            <a href="{{ route('profile.edit') }}"
+            @click="mobileMenuOpen = false"
+            class="block w-full text-center py-2 bg-blue-900/50 hover:bg-blue-800/70 text-white rounded-lg transition-colors mb-2">
+                Profile Settings
+            </a>
 
-    <form method="POST" action="{{ route('logout') }}" class="w-full">
-        @csrf
-        <button type="submit"
-                @click="mobileMenuOpen = false"
-                class="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
-            Logout
-        </button>
-    </form>
-</div>
-@endguest
+            <form method="POST" action="{{ route('logout') }}" class="w-full">
+                @csrf
+                <button type="submit"
+                        @click="mobileMenuOpen = false"
+                        class="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
+                    Logout
+                </button>
+            </form>
+        </div>
+        @endguest
     </div>
     @endif
     <!-- Sign Up Modal -->
