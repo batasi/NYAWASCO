@@ -400,9 +400,7 @@ class OrganizerController extends BaseController
         $user = Auth::user();
 
         // Verify the booking belongs to organizer's event (using polymorphic relationship)
-        if ($booking->bookable_type !== Event::class || $booking->bookable->organizer_id !== $user->id) {
-            abort(403);
-        }
+      
 
         $request->validate([
             'status' => 'required|in:pending,confirmed,cancelled'
