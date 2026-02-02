@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\MeterReading;
+use App\Models\Zone;
 use App\Models\PricingTier;
 use App\Models\Customer;
 use App\Models\Meter;
@@ -17,13 +18,113 @@ use Illuminate\Support\Facades\Log;
 
 class MeterReadingController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $readings = MeterReading::with('customer', 'reader', 'meter')
-            ->latest()
-            ->paginate(20);
+        $search = $request->get('q');
+        $status = $request->get('status', 'all');
+        $type = $request->get('type', 'all');
+        $dateFilter = $request->get('date_filter', 'all');
+        $startDate = $request->get('start_date');
+        $endDate = $request->get('end_date');
+        $zoneId = $request->get('zone', 'all'); // Zone filter
 
-        return view('admin.meter-readings.index', compact('readings'));
+        $query = MeterReading::with(['customer', 'meter.zone', 'reader'])
+            ->select('meter_readings.*')
+            ->latest('reading_date');
+
+        // Apply search
+        if (!empty($search)) {
+            $query->where(function($q) use ($search) {
+                $q->whereHas('customer', function($q) use ($search) {
+                    $q->where('customer_number', 'LIKE', "%{$search}%")
+                      ->orWhere('first_name', 'LIKE', "%{$search}%")
+                      ->orWhere('last_name', 'LIKE', "%{$search}%");
+                })
+                ->orWhereHas('meter', function($q) use ($search) {
+                    $q->where('meter_number', 'LIKE', "%{$search}%");
+                })
+                ->orWhere('reading_period', 'LIKE', "%{$search}%")
+                ->orWhere('current_reading', 'LIKE', "%{$search}%");
+            });
+        }
+
+        // Filter by reading status
+        if ($status !== 'all') {
+            if ($status === 'billed') {
+                $query->where('billed', true);
+            } elseif ($status === 'unbilled') {
+                $query->where('billed', false);
+            } else {
+                $query->where('reading_status', $status);
+            }
+        }
+
+        // Filter by reading type
+        if ($type !== 'all') {
+            $query->where('reading_type', $type);
+        }
+
+        // Filter by zone
+        if ($zoneId !== 'all') {
+            $query->whereHas('meter', function($q) use ($zoneId) {
+                $q->where('zone_id', $zoneId);
+            });
+        }
+
+        // Filter by date range
+        if ($dateFilter === 'custom' && $startDate && $endDate) {
+            $query->whereBetween('reading_date', [$startDate, $endDate]);
+        } elseif ($dateFilter === 'today') {
+            $query->whereDate('reading_date', Carbon::today());
+        } elseif ($dateFilter === 'yesterday') {
+            $query->whereDate('reading_date', Carbon::yesterday());
+        } elseif ($dateFilter === 'this_month') {
+            $query->whereMonth('reading_date', Carbon::now()->month)
+                  ->whereYear('reading_date', Carbon::now()->year);
+        } elseif ($dateFilter === 'last_month') {
+            $query->whereMonth('reading_date', Carbon::now()->subMonth()->month)
+                  ->whereYear('reading_date', Carbon::now()->subMonth()->year);
+        }
+
+        $readings = $query->paginate(30);
+
+        // Get zones for filter dropdown
+        $zones = Zone::orderBy('name')->get();
+
+        // Get selected zone for display
+        $selectedZone = $zoneId !== 'all' ? Zone::find($zoneId) : null;
+
+        // Calculate stats with zone filter applied
+        $statsQuery = MeterReading::query();
+
+        if ($zoneId !== 'all') {
+            $statsQuery->whereHas('meter', function($q) use ($zoneId) {
+                $q->where('zone_id', $zoneId);
+            });
+        }
+
+        $stats = [
+            'total' => $statsQuery->count(),
+            'billed' => $statsQuery->clone()->where('billed', true)->count(),
+            'unbilled' => $statsQuery->clone()->where('billed', false)->count(),
+            'exceptions' => $statsQuery->clone()->where('reading_status', 'exception')->count(),
+            'estimated' => $statsQuery->clone()->where('reading_status', 'estimated')->count(),
+            'this_month' => $statsQuery->clone()->whereMonth('reading_date', Carbon::now()->month)
+                ->whereYear('reading_date', Carbon::now()->year)->count(),
+        ];
+
+        return view('admin.meter-readings.index', compact(
+            'readings',
+            'stats',
+            'status',
+            'type',
+            'dateFilter',
+            'startDate',
+            'endDate',
+            'zoneId',
+            'zones',
+            'selectedZone'
+        ));
     }
 
 
