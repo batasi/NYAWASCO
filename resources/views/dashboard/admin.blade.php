@@ -672,7 +672,7 @@
 
 
         <!-- Users Table Section -->
-        @can('view users')
+        @can('view customers')
         <div class="professional-card rounded-lg overflow-hidden mb-12 mt-12">
             <div class="px-8 py-6 table-header">
                 <div class="flex items-center justify-between">
