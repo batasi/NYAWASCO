@@ -30,7 +30,7 @@
 
                 <!-- CTA Buttons -->
                 <div class="flex flex-col sm:flex-row gap-4 justify-center mb-16 animate-fade-in-up animation-delay-400">
-                    <button wire:click="$set('showUserModal', true)"
+                    <button wire:click="openUserModal"
                             class="group relative px-8 py-4 bg-gradient-to-r from-white/95 to-white/90 backdrop-blur-xl text-indigo-700 font-bold rounded-2xl shadow-2xl hover:shadow-white/25 transform hover:scale-105 transition-all duration-300">
                         <span class="relative z-10 flex items-center">
                             <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -41,7 +41,7 @@
                         <div class="absolute inset-0 bg-gradient-to-r from-yellow-400/20 to-pink-400/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     </button>
 
-                    <button wire:click="$set('showRoleModal', true)"
+                    <button wire:click="openRoleModal"
                             class="group px-8 py-4 bg-white/10 backdrop-blur-xl text-white font-bold rounded-2xl border-2 border-white/30 hover:bg-white/20 transform hover:scale-105 transition-all duration-300">
                         <span class="flex items-center">
                             <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -346,7 +346,7 @@
                                 <div class="text-sm text-gray-900">{{ $user->phone ?? 'N/A' }}</div>
                             </td>
                             <td class="px-8 py-6 whitespace-nowrap">
-                                <div class="text-sm text-gray-900">{{ $user->ward->name ?? 'N/A' }}</div>
+                                <div class="text-sm text-gray-900">{{ $user->ward ? $user->ward->name : 'N/A' }}</div>
                             </td>
                             <td class="px-8 py-6 whitespace-nowrap">
                                 <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-800">
@@ -354,7 +354,7 @@
                                 </span>
                             </td>
                             <td class="px-8 py-6 whitespace-nowrap">
-                                @if($user->last_activity_at && $user->last_activity_at->diffInMinutes(now()) <= 15)
+                                @if($user->last_activity && $user->last_activity->diffInMinutes(now()) <= 15)
                                 <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                     <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
@@ -415,7 +415,7 @@
                                 </div>
                                 <h3 class="text-3xl font-bold text-gray-900 mb-4">No Users Found</h3>
                                 <p class="text-xl text-gray-600 mb-6">Start by creating your first user account</p>
-                                <button wire:click="$set('showUserModal', true)"
+                                <button wire:click="openUserModal"
                                         class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white px-8 py-4 rounded-2xl hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 font-semibold text-lg flex items-center mx-auto">
                                     <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
@@ -484,7 +484,7 @@
                             <p class="text-gray-600 mt-1">Manage system roles and their associated permissions</p>
                         </div>
                         <div class="flex items-center space-x-4">
-                            <button wire:click="$set('showRoleModal', true)"
+                            <button wire:click="openRoleModal"
                                     class="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-semibold flex items-center">
                                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -596,7 +596,7 @@
                                     </div>
                                     <h3 class="text-3xl font-bold text-gray-900 mb-4">No Roles Found</h3>
                                     <p class="text-xl text-gray-600 mb-6">Start by creating your first role</p>
-                                    <button wire:click="$set('showRoleModal', true)"
+                                    <button wire:click="openRoleModal"
                                             class="bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 text-white px-8 py-4 rounded-2xl hover:from-purple-700 hover:via-pink-700 hover:to-red-700 transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 font-semibold text-lg flex items-center mx-auto">
                                         <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
@@ -708,7 +708,7 @@
                                     </div>
                                     <h3 class="text-3xl font-bold text-gray-900 mb-4">No Permissions Found</h3>
                                     <p class="text-xl text-gray-600 mb-6">Start by creating your first permission</p>
-                                    <button wire:click="$set('showPermissionModal', true)"
+                                    <button wire:click="openCreatePermissionModal"
                                             class="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 text-white px-8 py-4 rounded-2xl hover:from-green-700 hover:via-emerald-700 hover:to-teal-700 transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 font-semibold text-lg flex items-center mx-auto">
                                         <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -1040,6 +1040,15 @@
                                     {{ $message }}
                                 </p>
                             @enderror
+                        <div class="space-y-3">
+                            <label class="block text-sm font-semibold text-gray-700">Additional Permissions</label>
+                            <select wire:model="userForm.permissions" multiple
+                                    class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-4 focus:ring-green-200 transition-all duration-300 bg-gray-50 focus:bg-white text-gray-900 shadow-sm">
+                                @foreach($permissions as $permission)
+                                <option value="{{ $permission->id }}">{{ $permission->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                         </div>
 
                         <div class="space-y-3">
@@ -1159,7 +1168,7 @@
                         </div>
 
                         <div class="space-y-3">
-                            <label class="block text-sm font-semibold text-gray-700">Ward *</label>
+                            <label class="block text-sm font-semibold text-gray-700">Ward</label>
                             <select wire:model="userForm.ward_id"
                                     class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-200 transition-all duration-300 bg-gray-50 focus:bg-white text-gray-900 shadow-sm @error('userForm.ward_id') border-red-300 @enderror">
                                 <option value="">Select Ward</option>
@@ -1187,6 +1196,48 @@
                                 @endforeach
                             </select>
                         </div>
+
+                        @if(!$editingUserId)
+                        <!-- Account Security -->
+                        <div class="md:col-span-2 mt-8">
+                            <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                <svg class="w-5 h-5 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                </svg>
+                                Account Security
+                            </h4>
+                        </div>
+
+                        <div class="space-y-3">
+                            <label class="block text-sm font-semibold text-gray-700">Password *</label>
+                            <input type="password" wire:model="userForm.password"
+                                    class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-red-500 focus:ring-4 focus:ring-red-200 transition-all duration-300 bg-gray-50 focus:bg-white text-gray-900 shadow-sm @error('userForm.password') border-red-300 @enderror"
+                                    placeholder="Enter password">
+                            @error('userForm.password')
+                                <p class="text-red-600 text-sm flex items-center">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    {{ $message }}
+                                </p>
+                            @enderror
+                        </div>
+
+                        <div class="space-y-3">
+                            <label class="block text-sm font-semibold text-gray-700">Confirm Password *</label>
+                            <input type="password" wire:model="userForm.password_confirmation"
+                                    class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-red-500 focus:ring-4 focus:ring-red-200 transition-all duration-300 bg-gray-50 focus:bg-white text-gray-900 shadow-sm @error('userForm.password_confirmation') border-red-300 @enderror"
+                                    placeholder="Confirm password">
+                            @error('userForm.password_confirmation')
+                                <p class="text-red-600 text-sm flex items-center">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    {{ $message }}
+                                </p>
+                            @enderror
+                        </div>
+                        @endif
 
                         <!-- Role Assignment -->
                         <div class="md:col-span-2 mt-8">

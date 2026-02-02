@@ -17,6 +17,9 @@ class User extends Authenticatable implements MustVerifyEmail
 
     protected $fillable = [
         'name',
+        'first_name',
+        'last_name',
+        'other_names',
         'email',
         'password',
         'role',
@@ -29,6 +32,14 @@ class User extends Authenticatable implements MustVerifyEmail
         'last_login_at',
         'email_verified_at',
         'preferences',
+        // New user fields
+        'national_id',
+        'employee_id',
+        'staff_no',
+        'ward_id',
+        'department_id',
+        'address',
+        'po_box',
         // Organizer fields
         'company_name',
         'company_logo',
