@@ -713,6 +713,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(
 
     });
 
+
     // Meter reading estimation
     Route::get('/customers/{customer}/meters/{meter}/estimate-consumption',
         [MeterReadingController::class, 'estimateConsption'])
