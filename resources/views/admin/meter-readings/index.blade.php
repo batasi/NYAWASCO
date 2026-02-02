@@ -1,7 +1,9 @@
 @extends('layouts.app')
 
 @section('title', 'Meter Readings')
-@php use Illuminate\Support\Storage; @endphp
+@php
+    use Illuminate\Support\Facades\Storage;
+@endphp
 @section('content')
 <div class="p-6">
     <!-- Header Section -->
@@ -420,7 +422,7 @@
                                         </a>
                                     @endif
                                     @if($reading->reading_image)
-                                        <a href="#"
+                                        <a href="{{ Storage::url($reading->reading_image) }}"
                                            target="_blank"
                                            class="text-green-600 hover:text-green-900"
                                            title="View Reading Image">
