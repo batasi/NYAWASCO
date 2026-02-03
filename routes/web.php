@@ -608,7 +608,17 @@ Route::middleware(['auth', 'verified', 'role:vendor'])->prefix('vendor')->name('
 | ADMIN ROUTES (ROLE-BASED)
 |--------------------------------------------------------------------------
 */
+// User management routes
+Route::prefix('admin')->middleware(['auth', 'role:admin'])->group(function () {
+    // User management
+    Route::resource('users', \App\Http\Controllers\Admin\UserController::class);
+    Route::get('users/{user}/permissions', [\App\Http\Controllers\Admin\UserController::class, 'getPermissions'])->name('admin.users.permissions');
+    Route::post('users/{user}/permissions', [\App\Http\Controllers\Admin\UserController::class, 'updatePermissions'])->name('admin.users.permissions.update');
+    Route::get('permissions', [\App\Http\Controllers\Admin\UserController::class, 'getAllPermissions'])->name('admin.permissions.index');
 
+    // Role management
+    Route::resource('roles', \App\Http\Controllers\Admin\RoleController::class);
+});
 Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(function () {
     // Dashboard
     Route::get('/dashboard', [UserController::class, 'index'])->name('dashboard');

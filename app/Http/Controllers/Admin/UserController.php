@@ -239,4 +239,23 @@ class UserController extends Controller
             ], 500);
         }
     }
+    /**
+ * Get all available permissions
+ */
+public function getAllPermissions()
+{
+    try {
+        $permissions = Permission::all()->pluck('name');
+
+        return response()->json([
+            'success' => true,
+            'permissions' => $permissions
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to load permissions: ' . $e->getMessage()
+        ], 500);
+    }
+}
 }
