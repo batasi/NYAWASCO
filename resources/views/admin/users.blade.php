@@ -653,57 +653,120 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Render permissions checkboxes
-    function renderPermissions(permissions, container) {
+    function renderPermissions(permissionsData, container) {
+        // Extract permissions from the response object if needed
+        let permissions = permissionsData;
+
+        // Check if it's a response object with a permissions property
+        if (permissionsData && permissionsData.permissions) {
+            permissions = permissionsData.permissions;
+        }
+
+        // Check if permissions is an array
+        if (!Array.isArray(permissions)) {
+            console.error('Permissions is not an array:', permissionsData);
+            container.innerHTML = `
+                <div class="col-span-full text-center py-8">
+                    <div class="text-red-600 mb-2">
+                        <svg class="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.974-.833-2.744 0L4.242 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                        </svg>
+                    </div>
+                    <p class="text-gray-700">Error loading permissions. Invalid data format.</p>
+                    <p class="text-sm text-gray-500 mt-1">Expected array, got: ${typeof permissionsData}</p>
+                </div>
+            `;
+            return;
+        }
+
         const groupedPermissions = {};
 
         // Group permissions by module/feature
-        permissions.forEach(permission => {
-            const parts = permission.name.split('.');
-            const module = parts[0];
-            const action = parts[1];
+        permissions.forEach(permissionItem => {
+            // Handle both string permissions and object permissions
+            const permissionName = typeof permissionItem === 'string' ? permissionItem : permissionItem.name;
+
+            if (!permissionName || typeof permissionName !== 'string') {
+                console.warn('Invalid permission item:', permissionItem);
+                return;
+            }
+
+            // Handle both "view users" and "users.view" formats
+            const parts = permissionName.split(' ');
+            let module, action;
+
+            if (parts.length === 2) {
+                // Format: "view users" - reverse to get "users.view"
+                action = parts[0];
+                module = parts[1];
+            } else {
+                // Try splitting by dot as fallback
+                const dotParts = permissionName.split('.');
+                if (dotParts.length >= 2) {
+                    module = dotParts[0];
+                    action = dotParts[1];
+                } else {
+                    console.warn('Permission name format incorrect:', permissionName);
+                    return;
+                }
+            }
 
             if (!groupedPermissions[module]) {
                 groupedPermissions[module] = [];
             }
 
             groupedPermissions[module].push({
-                name: permission.name,
+                name: permissionName,
                 action: action,
-                id: permission.name.replace(/\./g, '-')
+                id: permissionName.replace(/[\.\s]/g, '-') // Replace both dots and spaces
             });
         });
 
         // Generate HTML for grouped permissions
         let html = '';
-        Object.keys(groupedPermissions).forEach(module => {
-            html += `
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <h4 class="font-medium text-gray-900 mb-3 capitalize">${module.replace(/_/g, ' ')}</h4>
-                    <div class="space-y-2">
-            `;
 
-            groupedPermissions[module].forEach(permission => {
-                const isChecked = currentUserPermissions.includes(permission.name);
+        if (Object.keys(groupedPermissions).length === 0) {
+            html = `
+                <div class="col-span-full text-center py-8">
+                    <div class="text-gray-400 mb-2">
+                        <svg class="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                        </svg>
+                    </div>
+                    <p class="text-gray-500">No permissions found.</p>
+                </div>
+            `;
+        } else {
+            Object.keys(groupedPermissions).sort().forEach(module => {
                 html += `
-                    <div class="flex items-center">
-                        <input type="checkbox"
-                               id="${permission.id}"
-                               name="permissions[]"
-                               value="${permission.name}"
-                               ${isChecked ? 'checked' : ''}
-                               class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
-                        <label for="${permission.id}" class="ml-2 text-sm text-gray-700 capitalize">
-                            ${permission.action.replace(/_/g, ' ')}
-                        </label>
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <h4 class="font-medium text-gray-900 mb-3 capitalize">${module.replace(/_/g, ' ')}</h4>
+                        <div class="space-y-2">
+                `;
+
+                groupedPermissions[module].forEach(permission => {
+                    const isChecked = currentUserPermissions.includes(permission.name);
+                    html += `
+                        <div class="flex items-center">
+                            <input type="checkbox"
+                                id="${permission.id}"
+                                name="permissions[]"
+                                value="${permission.name}"
+                                ${isChecked ? 'checked' : ''}
+                                class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                            <label for="${permission.id}" class="ml-2 text-sm text-gray-700 capitalize">
+                                ${permission.action.replace(/_/g, ' ')}
+                            </label>
+                        </div>
+                    `;
+                });
+
+                html += `
+                        </div>
                     </div>
                 `;
             });
-
-            html += `
-                    </div>
-                </div>
-            `;
-        });
+        }
 
         container.innerHTML = html;
     }

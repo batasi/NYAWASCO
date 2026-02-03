@@ -245,7 +245,9 @@ class UserController extends Controller
 public function getAllPermissions()
 {
     try {
-        $permissions = Permission::all()->pluck('name');
+        $permissions = Permission::all()->map(function($permission) {
+            return $permission->name; // Just return the name as string
+        });
 
         return response()->json([
             'success' => true,
