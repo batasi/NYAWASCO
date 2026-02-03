@@ -47,6 +47,10 @@ use Illuminate\Support\Facades\Route;
     <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
 
     <style>
+    #sidebar {
+        width: 220px !important; /* Even more compact */
+        padding: 0.75rem !important;
+    }
     [x-cloak] {
         display: none !important;
     }
@@ -1689,68 +1693,59 @@ use Illuminate\Support\Facades\Route;
             <!-- Main content -->
             <div class="flex-1 flex flex-col overflow-hidden">
                 <!-- Header -->
-                <header class="bg-white/90 backdrop-blur-xl shadow-2xl border-b border-gray-200/30 px-6 md:px-8 py-4 md:py-6 relative overflow-hidden">
+                <header class="bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-200/30 px-4 py-3 relative">
                     <!-- Background gradient overlay -->
-                    <div class="absolute inset-0 bg-gradient-to-r from-blue-50/50 via-white/50 to-green-50/50"></div>
+                    <div class="absolute inset-0 bg-gradient-to-r from-blue-50/30 via-white/30 to-green-50/30"></div>
 
                     <div class="relative flex items-center justify-between">
-                        <div class="flex items-center space-x-4">
-                            <!-- Modernized Sidebar Toggle -->
-                            <button onclick="toggleSidebar()" class="group relative p-3 rounded-xl text-gray-600 hover:text-white hover:bg-gradient-to-r hover:from-blue-500 hover:to-green-500 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 mr-2">
-                                <svg class="w-6 h-6 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="flex items-center space-x-3">
+                            <!-- Compact Sidebar Toggle -->
+                            <button onclick="toggleSidebar()" class="group relative p-2 rounded-lg text-gray-600 hover:text-white hover:bg-gradient-to-r hover:from-blue-500 hover:to-green-500 transition-all duration-200 shadow hover:shadow-md transform hover:scale-105 mr-1">
+                                <svg class="w-5 h-5 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
                                 </svg>
-                                <div class="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/20 to-green-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                             </button>
 
-                            <!-- Company Branding -->
-                            <div class="flex items-center space-x-3">
-                                <div class="w-10 h-10 rounded-xl bg-white p-1 shadow-lg border border-gray-200/50">
-                                    <img src="{{ asset('img/Logo.png') }}" alt="NYAWASCO Logo" class="w-full h-full object-contain rounded-lg">
-                                </div>
+                            <!-- Compact Company Branding -->
+                            <div class="flex items-center space-x-2">
+
                                 <div>
-                                    <h1 class="text-xl md:text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">Nyamira Water</h1>
-                                    <p class="text-xs md:text-sm text-blue-500 font-medium">and Sanitation Company</p>
+                                    <h1 class="text-lg font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">Nyamira Water</h1>
+                                    <p class="text-xs text-blue-500 font-medium">Sanitation Co.</p>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="flex items-center space-x-4">
-                            <!-- Modernized User Profile -->
-                            <a href="{{ route('profile.edit') }}" class="group flex items-center space-x-3 bg-white/70 backdrop-blur-sm rounded-xl px-4 py-3 hover:bg-white/90 transition-all duration-300 shadow-md hover:shadow-xl border border-gray-200/50 hover:border-blue-300/50 transform hover:scale-105">
+                        <div class="flex items-center space-x-3">
+                            <!-- Compact User Profile -->
+                            <a href="{{ route('profile.edit') }}" class="group flex items-center space-x-2 bg-white/80 backdrop-blur-sm rounded-lg px-3 py-2 hover:bg-white transition-all duration-200 shadow hover:shadow-md border border-gray-200/50">
                                 <div class="relative">
                                     @if(auth()->user()->avatar)
-                                        <img src="{{ Storage::url(auth()->user()->avatar) }}" alt="{{ auth()->user()->name }}" class="h-10 w-10 rounded-full object-cover border-2 border-white shadow-lg ring-2 ring-blue-100">
+                                        <img src="{{ Storage::url(auth()->user()->avatar) }}" alt="{{ auth()->user()->name }}" class="h-8 w-8 rounded-full object-cover border border-white shadow-sm">
                                     @else
-                                        <div class="h-10 w-10 rounded-full bg-gradient-to-br from-blue-400 via-blue-500 to-green-500 flex items-center justify-center border-2 border-white shadow-lg ring-2 ring-blue-100">
-                                            <span class="text-white font-bold text-lg">
+                                        <div class="h-8 w-8 rounded-full bg-gradient-to-br from-blue-400 via-blue-500 to-green-500 flex items-center justify-center border border-white shadow-sm">
+                                            <span class="text-white font-bold text-sm">
                                                 {{ strtoupper(substr(auth()->user()->name ?? 'U', 0, 1)) }}
                                             </span>
                                         </div>
                                     @endif
-                                    <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white shadow-sm"></div>
                                 </div>
                                 <div class="hidden md:block">
-                                    <p class="text-sm font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">{{ auth()->user()->name ?? 'User' }}</p>
-                                    <p class="text-xs text-gray-500">Administrator</p>
+                                    <p class="text-xs font-semibold text-gray-800">{{ auth()->user()->name ?? 'User' }}</p>
+                                    <p class="text-xxs text-gray-500">Admin</p>
                                 </div>
-                                <svg class="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                                </svg>
                             </a>
 
-                            <!-- Modernized Logout Button -->
+                            <!-- Compact Logout Button -->
                             <form method="POST" action="{{ route('logout') }}" class="inline">
                                 @csrf
-                                <button type="submit" class="group relative bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-6 py-3 rounded-xl font-medium transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:scale-105 hover:-translate-y-1 overflow-hidden">
-                                    <span class="relative z-10 flex items-center space-x-2">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <button type="submit" class="group bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow hover:shadow-md transform hover:scale-105">
+                                    <span class="flex items-center space-x-1">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
                                         </svg>
-                                        <span>Logout</span>
+                                        <span class="text-sm">Logout</span>
                                     </span>
-                                    <div class="absolute inset-0 bg-gradient-to-r from-red-400 to-red-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                    <div class="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl"></div>
                                 </button>
                             </form>
                         </div>
