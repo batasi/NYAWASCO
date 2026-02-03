@@ -1,7 +1,11 @@
 @extends('layouts.app')
 
 @section('title', 'Edit Meter Reading')
-
+@php
+    use Illuminate\Support\Str;
+    use Illuminate\Support\Facades\Storage;
+    use Illuminate\Support\Facades\Auth;
+@endphp
 @section('content')
 <div class="p-6">
     <div class="mb-6">
