@@ -240,24 +240,24 @@ class UserController extends Controller
         }
     }
     /**
- * Get all available permissions
- */
-public function getAllPermissions()
-{
-    try {
-        $permissions = Permission::all()->map(function($permission) {
-            return $permission->name; // Just return the name as string
-        });
+     * Get all available permissions
+     */
+    public function getAllPermissions()
+    {
+        try {
+            $permissions = Permission::all()->map(function($permission) {
+                return $permission->name; // Just return the name as string
+            });
 
-        return response()->json([
-            'success' => true,
-            'permissions' => $permissions
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to load permissions: ' . $e->getMessage()
-        ], 500);
+            return response()->json([
+                'success' => true,
+                'permissions' => $permissions
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load permissions: ' . $e->getMessage()
+            ], 500);
+        }
     }
-}
 }
