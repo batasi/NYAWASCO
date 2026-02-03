@@ -29,12 +29,12 @@
                     <p class="text-gray-600 mt-1">Detailed view of water consumption bill</p>
                 </div>
                 <div class="flex space-x-3">
-                    <a href="{{ route('bills.edit', $bill) }}" 
+                    <a href="{{ route('bills.edit', $bill) }}"
                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200 flex items-center">
                         <i class="fas fa-edit mr-2"></i>
                         Edit Bill
                     </a>
-                    <button onclick="window.print()" 
+                    <button onclick="window.print()"
                             class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition duration-200 flex items-center">
                         <i class="fas fa-print mr-2"></i>
                         Print
@@ -52,7 +52,7 @@
                 <!-- Bill Summary Card -->
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                     <h2 class="text-xl font-semibold text-gray-800 mb-4">Bill Summary</h2>
-                    
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <!-- Customer Information -->
                         <div>
@@ -61,7 +61,7 @@
                                 <div>
                                     <label class="text-sm text-gray-500">Customer Name</label>
                                     <p class="font-medium text-gray-900">
-                                        <a href="{{ route('admin.customers.show', $bill->customer) }}" 
+                                        <a href="{{ route('admin.customers.show', $bill->customer) }}"
                                            class="text-blue-600 hover:text-blue-800">
                                             {{ $bill->customer->first_name }} {{ $bill->customer->last_name }}
                                         </a>
@@ -129,7 +129,7 @@
                 <!-- Consumption & Charges Card -->
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                     <h2 class="text-xl font-semibold text-gray-800 mb-4">Consumption & Charges</h2>
-                    
+
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
@@ -225,7 +225,7 @@
                 @if($bill->payments->count() > 0)
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                     <h2 class="text-xl font-semibold text-gray-800 mb-4">Payment History</h2>
-                    
+
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
@@ -271,7 +271,7 @@
                 <!-- Payment Summary Card -->
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                     <h2 class="text-xl font-semibold text-gray-800 mb-4">Payment Summary</h2>
-                    
+
                     <div class="space-y-4">
                         <!-- Progress Bar -->
                         <div>
@@ -305,12 +305,12 @@
                         <!-- Payment Actions -->
                         @if($dueAmount > 0)
                         <div class="mt-4 space-y-2">
-                            <a href="{{ route('payments.create', ['bill_id' => $bill->id]) }}" 
+                            <a href="{{ route('payments.create', ['bill_id' => $bill->id]) }}"
                                class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center font-medium">
                                 <i class="fas fa-credit-card mr-2"></i>
                                 Record Payment
                             </a>
-                            <button onclick="showPaymentOptions()" 
+                            <button onclick="showPaymentOptions()"
                                     class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200 flex items-center justify-center text-sm">
                                 <i class="fas fa-mobile-alt mr-2"></i>
                                 Pay Online
@@ -330,42 +330,42 @@
                 <!-- Bill Actions Card -->
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                     <h2 class="text-xl font-semibold text-gray-800 mb-4">Bill Actions</h2>
-                    
+
                     <div class="space-y-3">
-                        <a href="{{ route('bills.edit', $bill) }}" 
+                        <a href="{{ route('bills.edit', $bill) }}"
                            class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
                             <i class="fas fa-edit mr-2"></i>
                             Edit Bill Details
                         </a>
-                        
-                        <a href="{{ route('admin.customers.show', $bill->customer) }}" 
+
+                        <a href="{{ route('admin.customers.show', $bill->customer) }}"
                            class="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
                             <i class="fas fa-user mr-2"></i>
                             View Customer Profile
                         </a>
 
-                        <button onclick="window.print()" 
+                        <button onclick="window.print()"
                                 class="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
                             <i class="fas fa-print mr-2"></i>
                             Print Bill
                         </button>
 
-                        <form action="{{ route('bills.destroy', $bill) }}" method="POST" class="mt-2" onsubmit="return confirm('Are you sure you want to delete this bill? This action cannot be undone.')">
+                        <!-- <form action="{{ route('bills.destroy', $bill) }}" method="POST" class="mt-2" onsubmit="return confirm('Are you sure you want to delete this bill? This action cannot be undone.')">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" 
+                            <button type="submit"
                                     class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
                                 <i class="fas fa-trash mr-2"></i>
                                 Delete Bill
                             </button>
-                        </form>
+                        </form> -->
                     </div>
                 </div>
 
                 <!-- Bill Information -->
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                     <h2 class="text-xl font-semibold text-gray-800 mb-4">Bill Information</h2>
-                    
+
                     <div class="space-y-3 text-sm">
                         <div>
                             <label class="text-gray-500">Created By</label>
@@ -397,24 +397,24 @@
     <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
         <div class="mt-3">
             <h3 class="text-lg font-medium text-gray-900 mb-4">Choose Payment Method</h3>
-            
+
             <div class="space-y-3">
                 <button class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
                     <i class="fas fa-mobile-alt mr-2"></i>
                     M-Pesa
                 </button>
-                
+
                 <button class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
                     <i class="fas fa-credit-card mr-2"></i>
                     Credit/Debit Card
                 </button>
-                
+
                 <button class="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg transition duration-200 flex items-center justify-center">
                     <i class="fas fa-university mr-2"></i>
                     Bank Transfer
                 </button>
             </div>
-            
+
             <div class="flex justify-end space-x-3 mt-6">
                 <button onclick="closePaymentModal()" class="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition duration-200">
                     Cancel
