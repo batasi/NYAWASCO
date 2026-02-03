@@ -1631,7 +1631,7 @@ use Illuminate\Support\Facades\Route;
                             </svg>
                         </div>
                     </a>
-                    <a href="{{ route('system.user.management') }}" onclick="handleSidebarLink(this); if (window.innerWidth < 768) toggleSidebar()" class="sidebar-link group flex items-center py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-blue-300/30 hover:shadow-lg {{ request()->routeIs('system.user.management') ? 'bg-blue-300/50 shadow-lg border-l-4 border-green-600' : '' }}" data-route="user-management">
+                    <a href="{{ route('admin.users.index') }}" onclick="handleSidebarLink(this); if (window.innerWidth < 768) toggleSidebar()" class="sidebar-link group flex items-center py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-blue-300/30 hover:shadow-lg {{ request()->routeIs('system.user.management') ? 'bg-blue-300/50 shadow-lg border-l-4 border-green-600' : '' }}" data-route="user-management">
                         <svg class="w-4 h-4 md:w-5 md:h-5 mr-3 {{ request()->routeIs('system.user.management') ? 'text-green-600' : 'text-blue-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
                         </svg>

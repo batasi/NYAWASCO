@@ -614,21 +614,12 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(
     Route::get('/dashboard', [UserController::class, 'index'])->name('dashboard');
 
     // User Management
-    Route::prefix('users')->name('users.')->group(function () {
-        Route::get('/', [UserController::class, 'usersIndex'])->name('index');
-        Route::get('/data', [UserController::class, 'getUsersData'])->name('data');
-        Route::get('/create', [UserController::class, 'create'])->name('create');
-        Route::post('/', [UserController::class, 'store'])->name('store');
-        Route::get('/{user}', [UserController::class, 'show'])->name('show');
-        Route::get('/{user}/edit', [UserController::class, 'edit'])->name('edit');
-        Route::put('/{user}', [UserController::class, 'update'])->name('update');
-        Route::delete('/{user}', [UserController::class, 'destroy'])->name('destroy');
-        Route::get('/{user}/permissions', [UserController::class, 'getPermissions'])->name('permissions');
-        Route::post('/{user}/permissions', [UserController::class, 'updatePermissions'])->name('permissions.update');
-        Route::post('/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('toggle-status');
-        Route::post('/{user}/toggle-verification', [UserController::class, 'toggleVerification'])->name('toggle-verification');
-        Route::get('/{user}/stats', [UserController::class, 'getUserStats'])->name('stats');
-    });
+    Route::get('/users', [UserController::class, 'index'])->name('users.index');
+    Route::post('/users',[UserController::class, 'store'])->name('users.store');
+    Route::post('/users/{user}',[UserController::class, 'update'])->name('users.update');
+    Route::delete('/users/{user}',[UserController::class, 'destroy'])->name('users.destroy');
+    Route::get('/users/{user}/permissions',[UserController::class, 'getPermissions'])->name('users.permissions');
+    Route::post('/users/{user}/permissions',[UserController::class, 'updatePermissions'])->name('users.updatePermissions');
 
     // Role Management
     Route::prefix('roles')->name('roles.')->group(function () {
