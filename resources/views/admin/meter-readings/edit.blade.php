@@ -57,7 +57,7 @@
         </div>
     @else
         <div class="bg-white rounded-lg shadow overflow-hidden">
-            <form method="POST" action="{{ route('admin.meter-readings.update', $meterReading) }}" enctype="multipart/form-data" id="updateForm">
+            <form method="POST" action="#" enctype="multipart/form-data" id="updateForm">
                 @csrf
                 @method('PUT')
 
@@ -67,7 +67,7 @@
                         <h3 class="text-lg font-medium text-gray-900 mb-3">Meter Information</h3>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
-                                <p class="text-sm text-gray-500">Meter Number</p>
+                                <p class="text-sm text-gray-500">Meter Number (Customer Number)</p>
                                 <p class="font-medium">{{ $meter->meter_number ?? 'N/A' }}</p>
                                 <p class="text-sm text-gray-600">{{ optional($meter->meterCategory)->name ?? 'No Category' }}</p>
                             </div>
@@ -122,8 +122,189 @@
                         </div>
                     </div>
 
-                    <!-- Rest of your form remains the same... -->
-                    <!-- ... -->
+                    <!-- Reading Details -->
+                    <div class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Reading Date -->
+                            <div>
+                                <label for="reading_date" class="block text-sm font-medium text-gray-700">Reading Date</label>
+                                <input type="date"
+                                    name="reading_date"
+                                    id="reading_date"
+                                    value="{{ old('reading_date', $meterReading->reading_date->format('Y-m-d')) }}"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                    required>
+                                @error('reading_date')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <!-- Reading Status -->
+                            <div>
+                                <label for="reading_status" class="block text-sm font-medium text-gray-700">Reading Status</label>
+                                <select name="reading_status"
+                                        id="reading_status"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                    <option value="recorded" {{ old('reading_status', $meterReading->reading_status) == 'recorded' ? 'selected' : '' }}>Recorded</option>
+                                    <option value="estimated" {{ old('reading_status', $meterReading->reading_status) == 'estimated' ? 'selected' : '' }}>Estimated</option>
+                                    <option value="exception" {{ old('reading_status', $meterReading->reading_status) == 'exception' ? 'selected' : '' }}>Exception</option>
+                                </select>
+                                @error('reading_status')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <!-- Current Reading Field (for recorded readings) -->
+                        <div id="current_reading_field" style="{{ $meterReading->reading_status == 'recorded' ? '' : 'display: none;' }}">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label for="current_reading" class="block text-sm font-medium text-gray-700">
+                                        Current Reading (m³)
+                                        @if($previousReading)
+                                            <span class="text-xs text-gray-500">
+                                                Previous: {{ number_format($previousReading->current_reading, 2) }} m³
+                                            </span>
+                                        @endif
+                                    </label>
+                                    <input type="number"
+                                        name="current_reading"
+                                        id="current_reading"
+                                        step="0.01"
+                                        min="{{ $previousReading ? $previousReading->current_reading + 0.01 : 0 }}"
+                                        value="{{ old('current_reading', $meterReading->current_reading) }}"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                        placeholder="Enter current reading">
+                                    @error('current_reading')
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <!-- Initial Meter Reading (Editable) -->
+                                <div>
+                                    <label for="initial_reading" class="block text-sm font-medium text-gray-700">
+                                        Meter Initial Reading (m³)
+                                        <span class="text-xs text-gray-500">(Can be updated if needed)</span>
+                                    </label>
+                                    <input type="number"
+                                        name="initial_reading"
+                                        id="initial_reading"
+                                        step="0.01"
+                                        min="0"
+                                        value="{{ old('initial_reading', $meter->initial_reading ?? 0) }}"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                        placeholder="Enter initial reading">
+                                    <p class="mt-1 text-xs text-gray-500">
+                                        Note: Updating initial reading will affect historical consumption calculations.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Estimated Consumption Field (for estimated readings) -->
+                        <div id="estimated_consumption_field" style="{{ $meterReading->reading_status == 'estimated' ? '' : 'display: none;' }}">
+                            <label for="estimated_consumption" class="block text-sm font-medium text-gray-700">
+                                Estimated Consumption (m³)
+                            </label>
+                            <input type="number"
+                                name="estimated_consumption"
+                                id="estimated_consumption"
+                                step="0.01"
+                                min="0"
+                                value="{{ old('estimated_consumption', $meterReading->estimated_consumption) }}"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                placeholder="Enter estimated consumption">
+                            @error('estimated_consumption')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <!-- Exception Fields (for exception readings) -->
+                        <div id="exception_fields" style="{{ $meterReading->reading_status == 'exception' ? '' : 'display: none;' }}">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label for="exception_type" class="block text-sm font-medium text-gray-700">Exception Type</label>
+                                    <select name="exception_type"
+                                            id="exception_type"
+                                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                        <option value="">Select type...</option>
+                                        <option value="inaccessible" {{ old('exception_type', $meterReading->exception_type) == 'inaccessible' ? 'selected' : '' }}>Inaccessible</option>
+                                        <option value="faulty" {{ old('exception_type', $meterReading->exception_type) == 'faulty' ? 'selected' : '' }}>Faulty Meter</option>
+                                        <option value="stuck" {{ old('exception_type', $meterReading->exception_type) == 'stuck' ? 'selected' : '' }}>Stuck Meter</option>
+                                        <option value="damaged" {{ old('exception_type', $meterReading->exception_type) == 'damaged' ? 'selected' : '' }}>Damaged</option>
+                                        <option value="vandalized" {{ old('exception_type', $meterReading->exception_type) == 'vandalized' ? 'selected' : '' }}>Vandalized</option>
+                                        <option value="other" {{ old('exception_type', $meterReading->exception_type) == 'other' ? 'selected' : '' }}>Other</option>
+                                    </select>
+                                    @error('exception_type')
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <div>
+                                    <label for="exception_evidence" class="block text-sm font-medium text-gray-700">
+                                        Exception Evidence (Image)
+                                        @if($meterReading->exception_evidence)
+                                            <span class="text-xs text-green-600">(Existing file: {{ basename($meterReading->exception_evidence) }})</span>
+                                        @endif
+                                    </label>
+                                    <input type="file"
+                                        name="exception_evidence"
+                                        id="exception_evidence"
+                                        accept="image/*"
+                                        class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                                </div>
+                            </div>
+
+                            <div class="mt-4">
+                                <label for="exception_reason" class="block text-sm font-medium text-gray-700">Exception Reason</label>
+                                <textarea name="exception_reason"
+                                        id="exception_reason"
+                                        rows="3"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                        placeholder="Describe the reason for the exception...">{{ old('exception_reason', $meterReading->exception_reason) }}</textarea>
+                                @error('exception_reason')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <!-- Additional Fields -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Reading Image -->
+                            <div>
+                                <label for="reading_image" class="block text-sm font-medium text-gray-700">
+                                    Reading Image
+                                    @if($meterReading->reading_image)
+                                        <span class="text-xs text-green-600">(Existing file: {{ basename($meterReading->reading_image) }})</span>
+                                    @endif
+                                </label>
+                                <input type="file"
+                                    name="reading_image"
+                                    id="reading_image"
+                                    accept="image/*"
+                                    class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                                @if($meterReading->reading_image)
+                                    <div class="mt-2">
+                                        <a href="{{ Storage::url($meterReading->reading_image) }}"
+                                        target="_blank"
+                                        class="text-sm text-blue-600 hover:text-blue-900">
+                                            View Current Image
+                                        </a>
+                                    </div>
+                                @endif
+                            </div>
+
+                            <!-- Notes -->
+                            <div>
+                                <label for="notes" class="block text-sm font-medium text-gray-700">Notes</label>
+                                <textarea name="notes"
+                                        id="notes"
+                                        rows="3"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                        placeholder="Any additional notes...">{{ old('notes', $meterReading->notes) }}</textarea>
+                            </div>
+                        </div>
+                    </div>
 
                 </div>
 
@@ -150,7 +331,7 @@
             </form>
 
             <!-- Delete Form -->
-            <form id="deleteForm" action="{{ route('admin.meter-readings.destroy', $meterReading) }}" method="POST" class="hidden">
+            <form id="deleteForm" action="#" method="POST" class="hidden">
                 @csrf
                 @method('DELETE')
             </form>

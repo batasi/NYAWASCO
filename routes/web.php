@@ -360,7 +360,9 @@ Route::middleware(['auth'])->group(function () {
         [MeterReadingController::class, 'estimateConsption'])
         ->name('admin.meter-readings.estimate');
     Route::get('/meter-readings/exceptions', [MeterReadingController::class, 'exceptions'])->name('meter-readings.exceptions');
-    Route::get('/edit', [MeterReadingController::class, 'edit'])->name('admin.meter-readings.edit');
+    Route::get('/meter-readings/{meter_reading}/edit', [MeterReadingController::class, 'edit'])
+        ->name('admin.meter-readings.edit');
+
     // Meter Categories Management
     Route::prefix('meter-categories')->name('meter-categories.')->group(function () {
         Route::get('/', [MeterCategoryController::class, 'index'])->name('index');
