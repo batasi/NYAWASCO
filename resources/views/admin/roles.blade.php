@@ -384,5 +384,239 @@
         <!-- Toast content will be inserted here -->
     </div>
 </div>
-@endsection
 
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    let currentRoleId = null;
+
+    // Modal elements
+    const roleModal = document.getElementById('roleModal');
+    const confirmationModal = document.getElementById('confirmationModal');
+    const toast = document.getElementById('toast');
+    const toastContent = document.getElementById('toastContent');
+
+    // Toast function
+    function showToast(message, type = 'success') {
+        const colors = {
+            success: 'bg-green-50 border-green-200 text-green-800',
+            error: 'bg-red-50 border-red-200 text-red-800',
+            warning: 'bg-yellow-50 border-yellow-200 text-yellow-800'
+        };
+
+        toastContent.innerHTML = `
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    ${type === 'success' ? `
+                        <svg class="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    ` : type === 'error' ? `
+                        <svg class="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    ` : `
+                        <svg class="h-5 w-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.974-.833-2.744 0L4.242 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                        </svg>
+                    `}
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium">${message}</p>
+                </div>
+            </div>
+        `;
+        toastContent.className = `rounded-lg shadow-lg p-4 max-w-sm border ${colors[type]}`;
+        toast.classList.remove('hidden');
+
+        setTimeout(() => {
+            toast.classList.add('hidden');
+        }, 5000);
+    }
+
+    // Add Role Button
+    document.getElementById('addRoleBtn').addEventListener('click', () => {
+        document.getElementById('modalTitle').textContent = 'Add New Role';
+        document.getElementById('submitButtonText').textContent = 'Create Role';
+        document.getElementById('roleForm').reset();
+        document.getElementById('roleId').value = '';
+        document.getElementById('guard_name').value = 'web';
+
+        // Uncheck all permissions
+        document.querySelectorAll('#roleForm input[type="checkbox"]').forEach(cb => {
+            cb.checked = false;
+        });
+
+        roleModal.classList.remove('hidden');
+    });
+
+    // Edit Role Buttons
+    document.querySelectorAll('.edit-role-btn').forEach(button => {
+        button.addEventListener('click', async () => {
+            const roleId = button.dataset.roleId;
+            currentRoleId = roleId;
+
+            document.getElementById('modalTitle').textContent = 'Edit Role';
+            document.getElementById('submitButtonText').textContent = 'Update Role';
+            document.getElementById('roleForm').reset();
+            document.getElementById('roleId').value = roleId;
+
+            // Populate form data
+            document.getElementById('name').value = button.dataset.roleName;
+            document.getElementById('guard_name').value = button.dataset.roleGuard;
+
+            // Uncheck all permissions first
+            document.querySelectorAll('#roleForm input[type="checkbox"]').forEach(cb => {
+                cb.checked = false;
+            });
+
+            try {
+                // Load role permissions
+                const response = await fetch(`/admin/roles/${roleId}/permissions`, {
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Check the role's permissions
+                    data.permissions.forEach(permissionName => {
+                        const checkbox = document.getElementById(`perm_${permissionName}`);
+                        if (checkbox) {
+                            checkbox.checked = true;
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading permissions:', error);
+            }
+
+            roleModal.classList.remove('hidden');
+        });
+    });
+
+    // Delete Role Buttons
+    document.querySelectorAll('.delete-role-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            const roleId = button.dataset.roleId;
+            const roleName = button.dataset.roleName;
+            const userCount = button.dataset.roleUsers;
+
+            currentRoleId = roleId;
+
+            if (parseInt(userCount) > 0) {
+                document.getElementById('confirmTitle').textContent = `Cannot Delete ${roleName}`;
+                document.getElementById('confirmMessage').textContent =
+                    `This role has ${userCount} user(s) assigned. Please reassign users before deleting the role.`;
+                document.getElementById('confirmDelete').disabled = true;
+                document.getElementById('confirmDelete').classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                document.getElementById('confirmTitle').textContent = `Delete ${roleName}`;
+                document.getElementById('confirmMessage').textContent =
+                    `Are you sure you want to delete the "${roleName}" role? This action cannot be undone.`;
+                document.getElementById('confirmDelete').disabled = false;
+                document.getElementById('confirmDelete').classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+
+            confirmationModal.classList.remove('hidden');
+        });
+    });
+
+    // Close modal buttons
+    document.getElementById('closeModal').addEventListener('click', () => roleModal.classList.add('hidden'));
+    document.getElementById('cancelModal').addEventListener('click', () => roleModal.classList.add('hidden'));
+    document.getElementById('cancelDelete').addEventListener('click', () => {
+        confirmationModal.classList.add('hidden');
+        document.getElementById('confirmDelete').disabled = false;
+        document.getElementById('confirmDelete').classList.remove('opacity-50', 'cursor-not-allowed');
+    });
+
+    // Close modals on outside click
+    [roleModal, confirmationModal].forEach(modal => {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.add('hidden');
+            }
+        });
+    });
+
+    // Role form submission
+    document.getElementById('roleForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const roleId = document.getElementById('roleId').value;
+        const isEdit = !!roleId;
+        const url = isEdit ? `/admin/roles/${roleId}` : '/admin/roles';
+        const method = isEdit ? 'PUT' : 'POST';
+
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData);
+
+        // Handle permissions array
+        const permissions = formData.getAll('permissions[]');
+        data.permissions = permissions;
+
+        try {
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showToast(result.message, 'success');
+                roleModal.classList.add('hidden');
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                showToast(result.message, 'error');
+            }
+        } catch (error) {
+            showToast('Error: ' + error.message, 'error');
+        }
+    });
+
+    // Confirm delete
+    document.getElementById('confirmDelete').addEventListener('click', async () => {
+        if (document.getElementById('confirmDelete').disabled) return;
+
+        try {
+            const response = await fetch(`/admin/roles/${currentRoleId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showToast(data.message, 'success');
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                showToast(data.message, 'error');
+            }
+        } catch (error) {
+            showToast('Error deleting role: ' + error.message, 'error');
+        }
+
+        confirmationModal.classList.add('hidden');
+    });
+});
+</script>
+@endpush
+@endsection

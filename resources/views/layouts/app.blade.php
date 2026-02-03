@@ -1614,7 +1614,7 @@ use Illuminate\Support\Facades\Route;
                         </li>
                     </ul>
                     @endcan
-
+                    @can('view users')
                     <div class="px-3 md:px-4 py-2">
                         <h3 class="text-xs md:text-sm font-bold text-gray-700 uppercase tracking-wider">System Administration</h3>
                     </div>
@@ -1679,6 +1679,7 @@ use Illuminate\Support\Facades\Route;
                             </svg>
                         </div>
                     </a>
+                    @endcan
                 </nav>
             </div>
 
