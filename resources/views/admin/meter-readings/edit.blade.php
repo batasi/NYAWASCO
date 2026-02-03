@@ -57,7 +57,7 @@
         </div>
     @else
         <div class="bg-white rounded-lg shadow overflow-hidden">
-            <form method="POST" action="#" enctype="multipart/form-data" id="updateForm">
+            <form method="POST" action="{{ route('admin.meter-readings.update', $meterReading) }}" enctype="multipart/form-data" id="updateForm">
                 @csrf
                 @method('PUT')
 
@@ -331,7 +331,7 @@
             </form>
 
             <!-- Delete Form -->
-            <form id="deleteForm" action="#" method="POST" class="hidden">
+            <form id="deleteForm" action="{{ route('admin.meter-readings.destroy', $meterReading) }}" method="POST" class="hidden">
                 @csrf
                 @method('DELETE')
             </form>

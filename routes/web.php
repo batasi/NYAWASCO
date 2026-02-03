@@ -362,7 +362,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/meter-readings/exceptions', [MeterReadingController::class, 'exceptions'])->name('meter-readings.exceptions');
     Route::get('/meter-readings/{meter_reading}/edit', [MeterReadingController::class, 'edit'])
         ->name('admin.meter-readings.edit');
+    Route::put('/meter-readings/{meter_reading}', [MeterReadingController::class, 'update'])
+    ->name('admin.meter-readings.update');
 
+    Route::delete('/meter-readings/{meter_reading}', [MeterReadingController::class, 'destroy'])
+        ->name('admin.meter-readings.destroy');
     // Meter Categories Management
     Route::prefix('meter-categories')->name('meter-categories.')->group(function () {
         Route::get('/', [MeterCategoryController::class, 'index'])->name('index');
