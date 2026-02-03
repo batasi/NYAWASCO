@@ -1151,7 +1151,6 @@ use Illuminate\Support\Facades\Route;
                     @endif
                     <div>
                         <p class="text-sm font-medium text-white">{{ auth()->user()->name ?? 'User' }}</p>
-                        <p class="text-xs text-blue-200">Administrator</p>
                     </div>
                 </div>
             </div>
