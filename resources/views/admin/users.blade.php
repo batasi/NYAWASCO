@@ -620,6 +620,10 @@
 document.addEventListener('DOMContentLoaded', function() {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
+    // Variables to track current user
+    let currentUserId = null;
+    let currentUserPermissions = [];
+
     // Get modal elements
     const addUserModal = document.getElementById('addUserModal');
     const editUserModal = document.getElementById('editUserModal');
@@ -674,7 +678,7 @@ document.addEventListener('DOMContentLoaded', function() {
         addUserModal.classList.remove('hidden');
     });
 
-    // Edit User Buttons - SIMPLE AND DIRECT
+    // Edit User Buttons
     document.querySelectorAll('.edit-user-btn').forEach(button => {
         button.addEventListener('click', () => {
             // Get user data from button
@@ -697,18 +701,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Show edit modal
             editUserModal.classList.remove('hidden');
-
-            // Debug: Check values are set
-            console.log('Edit form values set:', {
-                name: document.getElementById('edit_name').value,
-                email: document.getElementById('edit_email').value,
-                username: document.getElementById('edit_username').value,
-                role: document.getElementById('edit_role').value
-            });
         });
     });
 
-    // Permissions Buttons
+    // Permissions Buttons - Fixed and Complete
     document.querySelectorAll('.permissions-btn').forEach(button => {
         button.addEventListener('click', async () => {
             const userId = button.dataset.userId;
@@ -733,51 +729,64 @@ document.addEventListener('DOMContentLoaded', function() {
             permissionsModal.classList.remove('hidden');
 
             try {
-                // Load user permissions
-                const response = await fetch(`/admin/users/${userId}/permissions`, {
+                // Load user's current permissions
+                const userPermissionsResponse = await fetch(`/admin/users/${userId}/permissions`, {
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
                         'Accept': 'application/json'
                     }
                 });
 
-                const data = await response.json();
+                const userPermissionsData = await userPermissionsResponse.json();
 
-                if (data.success) {
-                    currentUserPermissions = data.permissions;
+                if (userPermissionsData.success) {
+                    currentUserPermissions = userPermissionsData.permissions;
 
                     // Load all available permissions
-                    const permissionsResponse = await fetch(`/admin/permissions`, {
+                    const allPermissionsResponse = await fetch(`/admin/permissions`, {
                         headers: {
                             'X-CSRF-TOKEN': csrfToken,
                             'Accept': 'application/json'
                         }
                     });
 
-                    const permissionsData = await permissionsResponse.json();
-                    renderPermissions(permissionsData, container);
+                    const allPermissionsData = await allPermissionsResponse.json();
+
+                    if (allPermissionsData.success) {
+                        renderPermissions(allPermissionsData.permissions, container);
+                    } else {
+                        showToast(allPermissionsData.message || 'Failed to load available permissions', 'error');
+                        container.innerHTML = `
+                            <div class="col-span-full text-center py-8">
+                                <p class="text-red-600">Error loading permissions</p>
+                            </div>
+                        `;
+                    }
                 } else {
-                    showToast(data.message || 'Failed to load permissions', 'error');
+                    showToast(userPermissionsData.message || 'Failed to load user permissions', 'error');
+                    container.innerHTML = `
+                        <div class="col-span-full text-center py-8">
+                            <p class="text-red-600">Error loading user permissions</p>
+                        </div>
+                    `;
                 }
             } catch (error) {
+                console.error('Permissions error:', error);
                 showToast('Error loading permissions: ' + error.message, 'error');
+                container.innerHTML = `
+                    <div class="col-span-full text-center py-8">
+                        <p class="text-red-600">Network error loading permissions</p>
+                    </div>
+                `;
             }
         });
     });
 
-     // Render permissions checkboxes
-    function renderPermissions(permissionsData, container) {
-        // Extract permissions from the response object if needed
-        let permissions = permissionsData;
-
-        // Check if it's a response object with a permissions property
-        if (permissionsData && permissionsData.permissions) {
-            permissions = permissionsData.permissions;
-        }
-
+    // Render permissions checkboxes - Fixed
+    function renderPermissions(permissionsArray, container) {
         // Check if permissions is an array
-        if (!Array.isArray(permissions)) {
-            console.error('Permissions is not an array:', permissionsData);
+        if (!Array.isArray(permissionsArray)) {
+            console.error('Permissions is not an array:', permissionsArray);
             container.innerHTML = `
                 <div class="col-span-full text-center py-8">
                     <div class="text-red-600 mb-2">
@@ -786,7 +795,20 @@ document.addEventListener('DOMContentLoaded', function() {
                         </svg>
                     </div>
                     <p class="text-gray-700">Error loading permissions. Invalid data format.</p>
-                    <p class="text-sm text-gray-500 mt-1">Expected array, got: ${typeof permissionsData}</p>
+                </div>
+            `;
+            return;
+        }
+
+        if (permissionsArray.length === 0) {
+            container.innerHTML = `
+                <div class="col-span-full text-center py-8">
+                    <div class="text-gray-400 mb-2">
+                        <svg class="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                        </svg>
+                    </div>
+                    <p class="text-gray-500">No permissions found in the system.</p>
                 </div>
             `;
             return;
@@ -795,12 +817,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const groupedPermissions = {};
 
         // Group permissions by module/feature
-        permissions.forEach(permissionItem => {
-            // Handle both string permissions and object permissions
-            const permissionName = typeof permissionItem === 'string' ? permissionItem : permissionItem.name;
-
+        permissionsArray.forEach(permissionName => {
             if (!permissionName || typeof permissionName !== 'string') {
-                console.warn('Invalid permission item:', permissionItem);
+                console.warn('Invalid permission name:', permissionName);
                 return;
             }
 
@@ -809,7 +828,7 @@ document.addEventListener('DOMContentLoaded', function() {
             let module, action;
 
             if (parts.length === 2) {
-                // Format: "view users" - reverse to get "users.view"
+                // Format: "view users"
                 action = parts[0];
                 module = parts[1];
             } else {
@@ -819,70 +838,107 @@ document.addEventListener('DOMContentLoaded', function() {
                     module = dotParts[0];
                     action = dotParts[1];
                 } else {
-                    console.warn('Permission name format incorrect:', permissionName);
-                    return;
+                    // If format is unexpected, use the whole string as module
+                    module = permissionName;
+                    action = 'access';
                 }
             }
 
-            if (!groupedPermissions[module]) {
-                groupedPermissions[module] = [];
+            // Create a safe module name for grouping
+            const moduleKey = module.toLowerCase().replace(/[^a-z0-9]/g, '_');
+
+            if (!groupedPermissions[moduleKey]) {
+                groupedPermissions[moduleKey] = {
+                    displayName: module,
+                    permissions: []
+                };
             }
 
-            groupedPermissions[module].push({
+            groupedPermissions[moduleKey].permissions.push({
                 name: permissionName,
                 action: action,
-                id: permissionName.replace(/[\.\s]/g, '-') // Replace both dots and spaces
+                id: permissionName.replace(/[^a-zA-Z0-9]/g, '-')
             });
         });
 
         // Generate HTML for grouped permissions
         let html = '';
 
-        if (Object.keys(groupedPermissions).length === 0) {
-            html = `
-                <div class="col-span-full text-center py-8">
-                    <div class="text-gray-400 mb-2">
-                        <svg class="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-                        </svg>
-                    </div>
-                    <p class="text-gray-500">No permissions found.</p>
-                </div>
+        Object.keys(groupedPermissions).sort().forEach(moduleKey => {
+            const module = groupedPermissions[moduleKey];
+            html += `
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h4 class="font-medium text-gray-900 mb-3 capitalize">${module.displayName.replace(/_/g, ' ')}</h4>
+                    <div class="space-y-2">
             `;
-        } else {
-            Object.keys(groupedPermissions).sort().forEach(module => {
-                html += `
-                    <div class="bg-gray-50 rounded-lg p-4">
-                        <h4 class="font-medium text-gray-900 mb-3 capitalize">${module.replace(/_/g, ' ')}</h4>
-                        <div class="space-y-2">
-                `;
 
-                groupedPermissions[module].forEach(permission => {
-                    const isChecked = currentUserPermissions.includes(permission.name);
-                    html += `
-                        <div class="flex items-center">
-                            <input type="checkbox"
-                                id="${permission.id}"
-                                name="permissions[]"
-                                value="${permission.name}"
-                                ${isChecked ? 'checked' : ''}
-                                class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
-                            <label for="${permission.id}" class="ml-2 text-sm text-gray-700 capitalize">
-                                ${permission.action.replace(/_/g, ' ')}
-                            </label>
-                        </div>
-                    `;
-                });
-
+            module.permissions.sort((a, b) => a.action.localeCompare(b.action)).forEach(permission => {
+                const isChecked = currentUserPermissions.includes(permission.name);
                 html += `
-                        </div>
+                    <div class="flex items-center">
+                        <input type="checkbox"
+                            id="${permission.id}"
+                            name="permissions[]"
+                            value="${permission.name}"
+                            ${isChecked ? 'checked' : ''}
+                            class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                        <label for="${permission.id}" class="ml-2 text-sm text-gray-700 capitalize">
+                            ${permission.action.replace(/_/g, ' ')}
+                        </label>
                     </div>
                 `;
             });
-        }
+
+            html += `
+                    </div>
+                </div>
+            `;
+        });
 
         container.innerHTML = html;
     }
+
+    // Save permissions - Fixed to actually send data
+    document.getElementById('savePermissions').addEventListener('click', async () => {
+        if (!currentUserId) {
+            showToast('No user selected', 'error');
+            return;
+        }
+
+        // Get all checked checkboxes
+        const checkboxes = document.querySelectorAll('#permissionsContainer input[type="checkbox"]:checked');
+        const permissions = Array.from(checkboxes).map(cb => cb.value);
+
+        console.log('Saving permissions for user:', currentUserId, permissions);
+
+        try {
+            const response = await fetch(`/admin/users/${currentUserId}/permissions`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ permissions: permissions })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showToast(data.message || 'Permissions saved successfully!', 'success');
+                permissionsModal.classList.add('hidden');
+                // Optionally reload the page after a delay
+                setTimeout(() => {
+                    // location.reload(); // Uncomment if you want to reload the page
+                }, 1500);
+            } else {
+                showToast(data.message || 'Failed to save permissions', 'error');
+            }
+        } catch (error) {
+            console.error('Save permissions error:', error);
+            showToast('Error saving permissions: ' + error.message, 'error');
+        }
+    });
 
     // Delete User Buttons
     document.querySelectorAll('.delete-user-btn').forEach(button => {
@@ -953,8 +1009,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const formData = new FormData(e.target);
         const data = Object.fromEntries(formData);
 
-        console.log('Adding user:', data);
-
         try {
             const response = await fetch('/admin/users', {
                 method: 'POST',
@@ -990,8 +1044,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const formData = new FormData(e.target);
         const data = Object.fromEntries(formData);
 
-        console.log('Updating user:', userId, data);
-
         try {
             const response = await fetch(`/admin/users/${userId}`, {
                 method: 'PUT',
@@ -1017,12 +1069,6 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             showToast('Error: ' + error.message, 'error');
         }
-    });
-
-    // Save permissions
-    document.getElementById('savePermissions').addEventListener('click', function() {
-        showToast('Permissions saved successfully!', 'success');
-        permissionsModal.classList.add('hidden');
     });
 });
 </script>
