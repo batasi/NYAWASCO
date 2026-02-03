@@ -1,10 +1,11 @@
-@extends('layouts.app')
-
-@section('title', 'User Management')
 @php
     use Illuminate\Support\Facades\Storage;
-      use Illuminate\Support\Facades\Auth;
+    use Illuminate\Support\Facades\Auth;
 @endphp
+@can('view users')
+@extends('layouts.app')
+@section('title', 'User Management')
+
 @section('content')
 <div class="p-6">
     <!-- Header Section -->
@@ -18,6 +19,7 @@
 
             <!-- Action Buttons -->
             <div class="flex flex-wrap gap-2">
+                @can('add users')
                 <button id="addUserBtn"
                        class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 active:bg-blue-900 focus:outline-none focus:border-blue-900 focus:ring ring-blue-300 disabled:opacity-25 transition ease-in-out duration-150">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -25,7 +27,8 @@
                     </svg>
                     Add User
                 </button>
-
+                @endcan
+                @can('manage roles')
                 <a href="{{ route('admin.roles.index') }}"
                    class="inline-flex items-center px-4 py-2 bg-purple-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-purple-700 active:bg-purple-900 focus:outline-none focus:border-purple-900 focus:ring ring-purple-300 disabled:opacity-25 transition ease-in-out duration-150">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -33,6 +36,7 @@
                     </svg>
                     Manage Roles
                 </a>
+                @endcan
             </div>
         </div>
 
@@ -311,6 +315,7 @@
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex space-x-2">
+                                    @can('edit users')
                                     <button class="edit-user-btn inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
                                             data-user-id="{{ $user->id }}"
                                             data-user-name="{{ $user->name }}"
@@ -323,6 +328,8 @@
                                         </svg>
                                         Edit
                                     </button>
+                                    @endcan
+                                    @can('view permissions')
                                     <button class="permissions-btn inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors duration-200"
                                             data-user-id="{{ $user->id }}"
                                             data-user-name="{{ $user->name }}"
@@ -332,7 +339,9 @@
                                         </svg>
                                         Permissions
                                     </button>
+                                    @endcan
                                     @if($user->id !== Auth::id())
+                                    @can('delete users')
                                     <button class="delete-user-btn inline-flex items-center px-3 py-1.5 border border-transparent rounded-lg text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200"
                                             data-user-id="{{ $user->id }}"
                                             data-user-name="{{ $user->name }}">
@@ -341,6 +350,7 @@
                                         </svg>
                                         Delete
                                     </button>
+                                    @endcan
                                     @endif
                                 </div>
                             </td>
@@ -899,3 +909,4 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 @endpush
 @endsection
+@endcan
