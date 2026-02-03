@@ -257,7 +257,10 @@
                             Zone
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Readings
+                            Current Readings
+                        </th>
+                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Previous Readings
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Date & Period
@@ -332,16 +335,42 @@
                                             <div class="text-xs text-gray-500">Current</div>
                                             <div class="font-medium">{{ number_format($reading->current_reading, 2) }} m³</div>
                                         </div>
-                                        <div>
-                                            <div class="text-xs text-gray-500">Previous</div>
-                                            <div class="font-medium">{{ number_format($reading->previous_reading, 2) }} m³</div>
-                                        </div>
+
                                         <div class="col-span-2">
                                             <div class="text-xs text-gray-500">Consumption</div>
                                             <div class="font-medium text-blue-600">
                                                 {{ number_format($reading->consumption, 2) }} m³
                                             </div>
                                         </div>
+                                    </div>
+                                @elseif($reading->reading_status === 'estimated')
+                                    <div>
+                                        <div class="text-xs text-gray-500">Estimated Consumption</div>
+                                        <div class="font-medium text-yellow-600">
+                                            {{ number_format($reading->estimated_consumption, 2) }} m³
+                                        </div>
+                                    </div>
+                                @else
+                                    <div>
+                                        <div class="text-xs text-gray-500">Exception</div>
+                                        <div class="font-medium text-red-600">
+                                            {{ $reading->exception_type ?? 'Exception' }}
+                                        </div>
+                                        <div class="text-xs text-gray-600 truncate">
+                                            {{ Str::limit($reading->exception_reason, 50) }}
+                                        </div>
+                                    </div>
+                                @endif
+                            </td>
+                              <td class="px-6 py-4">
+                                @if($reading->reading_status === 'recorded')
+                                    <div class="grid grid-cols-2 gap-2">
+
+                                        <div>
+                                            <div class="text-xs text-gray-500">Previous</div>
+                                            <div class="font-medium">{{ number_format($reading->previous_reading, 2) }} m³</div>
+                                        </div>
+
                                     </div>
                                 @elseif($reading->reading_status === 'estimated')
                                     <div>
@@ -412,6 +441,16 @@
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex space-x-2">
+                                    <!-- Add Edit Button -->
+
+                                    <a href="{{ route('admin.meter-readings.edit', $reading) }}"
+                                        class="text-yellow-600 hover:text-yellow-900"
+                                        title="Edit Reading">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                            </svg>Edit
+                                    </a>
+
                                     @if($reading->customer)
                                         <a href="{{ route('admin.customers.show', $reading->customer_id) }}"
                                            class="text-blue-600 hover:text-blue-900"

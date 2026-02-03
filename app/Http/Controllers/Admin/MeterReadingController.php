@@ -620,5 +620,392 @@ class MeterReadingController extends Controller
         return view('admin.meter-readings.exceptions', compact('exceptions', 'stats'));
     }
 
+// Update the edit method in MeterReadingController.php
 
+/**
+ * Show the form for editing a meter reading
+ */
+public function edit(MeterReading $meterReading)
+{
+    // Prevent editing of billed readings to maintain data integrity
+
+    try {
+        // Get meter from the reading first
+        $meter = Meter::with(['customer', 'zone', 'meterCategory'])->find($meterReading->meter_id);
+
+        if (!$meter) {
+            // Try to get meter from database
+            $meter = Meter::find($meterReading->meter_id);
+
+            if (!$meter) {
+                Log::error('Meter not found for reading', [
+                    'reading_id' => $meterReading->id,
+                    'meter_id' => $meterReading->meter_id
+                ]);
+
+                return redirect()->route('admin.meter-readings.index')
+                    ->with('error', 'Meter not found for this reading. Please check meter records.');
+            }
+        }
+
+        // Get customer from the meter
+        $customer = $meter->customer;
+
+        if (!$customer) {
+            // Try to find customer by customer_id in meter
+            if ($meter->customer_id) {
+                $customer = Customer::find($meter->customer_id);
+            }
+
+            if (!$customer) {
+                Log::warning('Customer not found for meter', [
+                    'reading_id' => $meterReading->id,
+                    'meter_id' => $meter->id,
+                    'meter_customer_id' => $meter->customer_id
+                ]);
+
+                // We can still show the form but with warnings
+                $customer = new Customer();
+                session()->flash('warning', 'Customer not found for this meter. You may need to assign a customer to this meter first.');
+            }
+        }
+
+        // Get all meters for this customer if customer exists
+        $meters = collect();
+        if ($customer && $customer->id) {
+            $meters = $customer->meters()->get();
+        }
+
+        // Get all readings for this meter to show context
+        $allReadings = MeterReading::where('meter_id', $meter->id)
+            ->orderBy('reading_date', 'desc')
+            ->get();
+
+        // Get the previous reading for reference
+        $previousReading = MeterReading::where('meter_id', $meter->id)
+            ->where('id', '!=', $meterReading->id)
+            ->where('reading_date', '<', $meterReading->reading_date)
+            ->where('reading_status', 'recorded')
+            ->latest('reading_date')
+            ->first();
+
+        // Get the next reading to ensure we don't break the sequence
+        $nextReading = MeterReading::where('meter_id', $meter->id)
+            ->where('id', '!=', $meterReading->id)
+            ->where('reading_date', '>', $meterReading->reading_date)
+            ->where('reading_status', 'recorded')
+            ->oldest('reading_date')
+            ->first();
+
+        return view('admin.meter-readings.edit', compact(
+            'meterReading',
+            'customer',
+            'meter',
+            'meters',
+            'allReadings',
+            'previousReading',
+            'nextReading'
+        ));
+
+    } catch (\Exception $e) {
+        Log::error('Error loading edit form for meter reading: ' . $e->getMessage(), [
+            'reading_id' => $meterReading->id,
+            'error' => $e->getTraceAsString()
+        ]);
+
+        return redirect()->route('admin.meter-readings.index')
+            ->with('error', 'Error loading reading for editing: ' . $e->getMessage());
+    }
+}
+public function repairOrphanedReadings()
+{
+    try {
+        // Find meter readings where meter doesn't exist
+        $orphanedReadings = DB::table('meter_readings as mr')
+            ->leftJoin('meters as m', 'mr.meter_id', '=', 'm.id')
+            ->whereNull('m.id')
+            ->select('mr.id', 'mr.meter_id', 'mr.reading_date', 'mr.current_reading')
+            ->get();
+
+        if ($orphanedReadings->isEmpty()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'No orphaned readings found.'
+            ]);
+        }
+
+        // Try to find matching meters by reading data
+        $repairCount = 0;
+        foreach ($orphanedReadings as $reading) {
+            // Try to find a meter that might match
+            $possibleMeter = Meter::whereHas('meterReadings', function($q) use ($reading) {
+                $q->where('reading_date', '<', $reading->reading_date)
+                  ->where('current_reading', $reading->current_reading);
+            })->first();
+
+            if ($possibleMeter) {
+                // Update the reading with the found meter
+                MeterReading::where('id', $reading->id)->update(['meter_id' => $possibleMeter->id]);
+                $repairCount++;
+            }
+        }
+
+        Log::info("Repaired orphaned meter readings", [
+            'total_orphaned' => $orphanedReadings->count(),
+            'repaired' => $repairCount,
+            'still_orphaned' => $orphanedReadings->count() - $repairCount
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Found {$orphanedReadings->count()} orphaned readings. Repaired {$repairCount}.",
+            'data' => [
+                'total' => $orphanedReadings->count(),
+                'repaired' => $repairCount,
+                'remaining' => $orphanedReadings->count() - $repairCount
+            ]
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error('Error repairing orphaned readings: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Error repairing orphaned readings: ' . $e->getMessage()
+        ], 500);
+    }
+}
+// Also update the update method to handle missing meter/customer better
+public function update(Request $request, MeterReading $meterReading)
+{
+    // Prevent updating billed readings
+    if ($meterReading->billed) {
+        return redirect()->back()
+            ->with('error', 'Cannot update a billed reading. Please delete the associated bill first.');
+    }
+
+    // Load meter with customer relationship
+    $meterReading->load(['meter.customer']);
+
+    $meter = $meterReading->meter;
+
+    if (!$meter) {
+        return redirect()->back()
+            ->with('error', 'Meter not found for this reading.');
+    }
+
+    // Get customer from the meter
+    $customer = $meter->customer;
+
+    if (!$customer) {
+        // Try to get customer from meter's customer_id
+        if ($meter->customer_id) {
+            $customer = Customer::find($meter->customer_id);
+        }
+
+        if (!$customer) {
+            return redirect()->back()
+                ->with('error', 'Customer not found for this meter.');
+        }
+    }
+
+    $request->validate([
+        'current_reading' => 'required_if:reading_status,recorded|nullable|numeric|min:0',
+        'reading_date' => 'required|date',
+        'reading_status' => 'required|in:recorded,exception,estimated',
+        'exception_type' => 'required_if:reading_status,exception|nullable|in:inaccessible,faulty,stuck,damaged,vandalized,other',
+        'exception_reason' => 'required_if:reading_status,exception|nullable|string|max:500',
+        'estimated_consumption' => 'required_if:reading_status,estimated|nullable|numeric|min:0',
+        'reading_image' => 'nullable|image|max:2048',
+        'notes' => 'nullable|string|max:500',
+    ]);
+
+    try {
+        DB::transaction(function () use ($request, $meterReading, $meter, $customer) {
+            // Get previous and next readings for validation
+            $previousReading = MeterReading::where('meter_id', $meter->id)
+                ->where('id', '!=', $meterReading->id)
+                ->where('reading_date', '<', $request->reading_date)
+                ->where('reading_status', 'recorded')
+                ->latest('reading_date')
+                ->first();
+
+            $nextReading = MeterReading::where('meter_id', $meter->id)
+                ->where('id', '!=', $meterReading->id)
+                ->where('reading_date', '>', $request->reading_date)
+                ->where('reading_status', 'recorded')
+                ->oldest('reading_date')
+                ->first();
+
+            // Validate reading sequence for recorded readings
+            if ($request->reading_status === 'recorded') {
+                $previousReadingValue = $previousReading ? $previousReading->current_reading : ($meter->initial_reading ?? 0);
+
+                if ($request->current_reading < $previousReadingValue) {
+                    throw new \Exception('Current reading cannot be less than previous reading (' . number_format($previousReadingValue, 2) . ' m³).');
+                }
+
+                if ($nextReading && $request->current_reading > $nextReading->current_reading) {
+                    throw new \Exception('Current reading cannot be greater than next reading (' . number_format($nextReading->current_reading, 2) . ' m³).');
+                }
+            }
+
+            // Calculate consumption based on reading status
+            $consumption = 0;
+            $estimatedConsumption = null;
+
+            if ($request->reading_status === 'recorded') {
+                $previousReadingValue = $previousReading ? $previousReading->current_reading : ($meter->initial_reading ?? 0);
+                $consumption = $request->current_reading - $previousReadingValue;
+            } elseif ($request->reading_status === 'estimated') {
+                $estimatedConsumption = $request->estimated_consumption;
+                $consumption = $estimatedConsumption;
+            }
+
+            // Handle image upload
+            $imagePath = $meterReading->reading_image;
+            if ($request->hasFile('reading_image')) {
+                // Delete old image if exists
+                if ($imagePath && Storage::disk('public')->exists($imagePath)) {
+                    Storage::disk('public')->delete($imagePath);
+                }
+                $imagePath = $request->file('reading_image')->store('meter-readings', 'public');
+            }
+
+            // Handle exception evidence
+            $exceptionEvidence = $meterReading->exception_evidence;
+            if ($request->hasFile('exception_evidence')) {
+                if ($exceptionEvidence && Storage::disk('public')->exists($exceptionEvidence)) {
+                    Storage::disk('public')->delete($exceptionEvidence);
+                }
+                $exceptionEvidence = $request->file('exception_evidence')->store('exception-evidence', 'public');
+            }
+
+            // Update the reading
+            $meterReading->update([
+                'current_reading' => $request->current_reading,
+                'previous_reading' => $previousReading ? $previousReading->current_reading : ($meter->initial_reading ?? 0),
+                'consumption' => $consumption,
+                'reading_date' => $request->reading_date,
+                'reading_status' => $request->reading_status,
+                'exception_type' => $request->exception_type,
+                'exception_reason' => $request->exception_reason,
+                'estimated' => $request->reading_status === 'estimated',
+                'estimated_consumption' => $estimatedConsumption,
+                'exception_evidence' => $exceptionEvidence,
+                'reading_image' => $imagePath,
+                'notes' => $request->notes,
+                'updated_by' => auth()->id(),
+                'customer_id' => $customer->id, // Always update customer_id from the meter
+            ]);
+
+            // Update meter's current reading if this is the latest recorded reading
+            if ($request->reading_status === 'recorded') {
+                $latestReading = MeterReading::where('meter_id', $meter->id)
+                    ->where('reading_status', 'recorded')
+                    ->latest('reading_date')
+                    ->first();
+
+                if ($latestReading && $latestReading->id === $meterReading->id) {
+                    $meter->update([
+                        'current_reading' => $request->current_reading
+                    ]);
+                }
+            }
+
+            // Update subsequent readings if this reading was recorded
+            if ($request->reading_status === 'recorded' && $nextReading) {
+                $this->updateSubsequentReadings($meterReading, $request->current_reading);
+            }
+
+            Log::info("Meter reading updated", [
+                'reading_id' => $meterReading->id,
+                'customer_id' => $customer->id,
+                'meter_id' => $meter->id,
+                'updated_by' => auth()->id()
+            ]);
+        });
+
+        return redirect()->route('admin.meter-readings.index')
+            ->with('success', 'Meter reading updated successfully!');
+
+    } catch (\Exception $e) {
+        Log::error('Meter reading update error: ' . $e->getMessage());
+        return back()->withInput()->with('error', $e->getMessage());
+    }
+}
+
+// Also update the destroy method for consistency
+public function destroy(MeterReading $meterReading)
+{
+    try {
+        // Check if reading is billed
+        if ($meterReading->billed) {
+            return redirect()->back()
+                ->with('error', 'Cannot delete a billed reading. Please delete the associated bill first.');
+        }
+
+        DB::transaction(function () use ($meterReading) {
+            // Load meter with customer
+            $meterReading->load(['meter.customer']);
+
+            $meter = $meterReading->meter;
+
+            if (!$meter) {
+                throw new \Exception('Meter not found for this reading.');
+            }
+
+            // Get customer from meter
+            $customer = $meter->customer;
+            if (!$customer && $meter->customer_id) {
+                $customer = Customer::find($meter->customer_id);
+            }
+
+            // Delete associated image files
+            if ($meterReading->reading_image && Storage::disk('public')->exists($meterReading->reading_image)) {
+                Storage::disk('public')->delete($meterReading->reading_image);
+            }
+
+            if ($meterReading->exception_evidence && Storage::disk('public')->exists($meterReading->exception_evidence)) {
+                Storage::disk('public')->delete($meterReading->exception_evidence);
+            }
+
+            // If this was the latest recorded reading, update meter's current reading
+            if ($meterReading->reading_status === 'recorded') {
+                $latestReading = MeterReading::where('meter_id', $meter->id)
+                    ->where('id', '!=', $meterReading->id)
+                    ->where('reading_status', 'recorded')
+                    ->latest('reading_date')
+                    ->first();
+
+                if ($latestReading) {
+                    $meter->update([
+                        'current_reading' => $latestReading->current_reading
+                    ]);
+                } else {
+                    // No readings left, revert to initial reading
+                    $meter->update([
+                        'current_reading' => $meter->initial_reading
+                    ]);
+                }
+            }
+
+            // Delete the reading
+            $meterReading->delete();
+
+            Log::info("Meter reading deleted", [
+                'reading_id' => $meterReading->id,
+                'meter_id' => $meter->id,
+                'customer_id' => $customer ? $customer->id : null,
+                'deleted_by' => auth()->id()
+            ]);
+        });
+
+        return redirect()->route('admin.meter-readings.index')
+            ->with('success', 'Meter reading deleted successfully!');
+
+    } catch (\Exception $e) {
+        Log::error('Meter reading deletion error: ' . $e->getMessage());
+        return back()->with('error', 'Error deleting meter reading: ' . $e->getMessage());
+    }
+}
 }
