@@ -954,7 +954,7 @@ class MeterReadingController extends Controller
                 }
 
                 // STEP 8: REGENERATE BILL FOR NORMAL AND ESTIMATED READINGS
-                if ($request->reading_status !== 'exception' && $consumption > 0) {
+                if ($request->reading_status !== 'exception' && $consumption >= 0) {
                     $bill = $this->generateBill($meterReading, $customer, $meter, $consumption, $request->reading_status);
 
                     // UPDATE METER AND CUSTOMER BALANCES
