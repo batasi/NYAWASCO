@@ -250,27 +250,34 @@
             <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
                 <!-- Status Quick Filters -->
                 <div class="flex flex-wrap gap-2">
-                    <a href="{{ route('bills.index') }}"
-                    class="px-4 py-2 rounded-lg font-medium transition duration-200 {{ !request('status') && !request('zone') ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700 hover:bg-blue-200' }}">
+                    @php
+                        $buildUrl = function($params = []) {
+                            $current = request()->all();
+                            $merged = array_merge($current, $params);
+                            return route('bills.index', $merged);
+                        };
+                    @endphp
+                    <a href="{{ $buildUrl(['status' => null]) }}"
+                    class="px-4 py-2 rounded-lg font-medium transition duration-200 {{ !request('status') ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700 hover:bg-blue-200' }}">
                         All Bills
                         <span class="bg-blue-500 text-white px-2 py-1 rounded-full text-xs ml-1">{{ $totalBillsCount }}</span>
                     </a>
-                    <a href="{{ route('bills.index', ['status' => 'unpaid', 'zone' => request('zone')]) }}"
+                    <a href="{{ $buildUrl(['status' => 'unpaid']) }}"
                     class="px-4 py-2 rounded-lg font-medium transition duration-200 {{ request('status') == 'unpaid' ? 'bg-red-600 text-white' : 'bg-red-100 text-red-700 hover:bg-red-200' }}">
                         Unpaid
                         <span class="bg-red-500 text-white px-2 py-1 rounded-full text-xs ml-1">{{ $unpaidBillsCount }}</span>
                     </a>
-                    <a href="{{ route('bills.index', ['status' => 'paid', 'zone' => request('zone')]) }}"
+                    <a href="{{ $buildUrl(['status' => 'paid']) }}"
                     class="px-4 py-2 rounded-lg font-medium transition duration-200 {{ request('status') == 'paid' ? 'bg-green-600 text-white' : 'bg-green-100 text-green-700 hover:bg-green-200' }}">
                         Paid
                         <span class="bg-green-500 text-white px-2 py-1 rounded-full text-xs ml-1">{{ $paidBillsCount }}</span>
                     </a>
-                    <a href="{{ route('bills.index', ['status' => 'partial', 'zone' => request('zone')]) }}"
+                    <a href="{{ $buildUrl(['status' => 'partial']) }}"
                     class="px-4 py-2 rounded-lg font-medium transition duration-200 {{ request('status') == 'partial' ? 'bg-yellow-600 text-white' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' }}">
                         Partial
                         <span class="bg-yellow-500 text-white px-2 py-1 rounded-full text-xs ml-1">{{ $partialBillsCount }}</span>
                     </a>
-                    <a href="{{ route('bills.index', ['status' => 'overdue', 'zone' => request('zone')]) }}"
+                    <a href="{{ $buildUrl(['status' => 'overdue']) }}"
                     class="px-4 py-2 rounded-lg font-medium transition duration-200 {{ request('status') == 'overdue' ? 'bg-orange-600 text-white' : 'bg-orange-100 text-orange-700 hover:bg-orange-200' }}">
                         Overdue
                         <span class="bg-orange-500 text-white px-2 py-1 rounded-full text-xs ml-1">{{ $overdueBillsCount }}</span>
@@ -289,7 +296,19 @@
                                 </option>
                             @endforeach
                         </select>
+                    </div>
 
+                    <!-- Date Filter -->
+                    <div class="relative">
+                        <select name="date_filter" id="date_filter"
+                                class="border border-gray-300 rounded-lg px-4 py-2 pr-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 appearance-none bg-white">
+                            <option value="all" {{ request('date_filter') == 'all' ? 'selected' : '' }}>All Time</option>
+                            <option value="today" {{ request('date_filter') == 'today' ? 'selected' : '' }}>Today</option>
+                            <option value="yesterday" {{ request('date_filter') == 'yesterday' ? 'selected' : '' }}>Yesterday</option>
+                            <option value="this_month" {{ request('date_filter') == 'this_month' ? 'selected' : '' }}>This Month</option>
+                            <option value="last_month" {{ request('date_filter') == 'last_month' ? 'selected' : '' }}>Last Month</option>
+                            <option value="custom" {{ request('date_filter') == 'custom' ? 'selected' : '' }}>Custom Range</option>
+                        </select>
                     </div>
 
                     <!-- Search Box -->
@@ -318,24 +337,72 @@
                 </div>
             </div>
 
+            <!-- Custom Date Range (hidden by default) -->
+            <div id="custom_date_range" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4"
+                 style="{{ request('date_filter') == 'custom' ? '' : 'display: none;' }}">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                    <input type="date"
+                           name="start_date"
+                           id="start_date"
+                           value="{{ request('start_date') }}"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                    <input type="date"
+                           name="end_date"
+                           id="end_date"
+                           value="{{ request('end_date') }}"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200">
+                </div>
+            </div>
+
             <!-- Selected Filters Display -->
-            @if(request('zone') && $selectedZone)
-            <div class="mt-4 flex items-center text-sm text-gray-600">
+            @if(request('zone') || request('date_filter') || request('status'))
+            <div class="mt-4 flex items-center text-sm text-gray-600 flex-wrap gap-2">
                 <span class="mr-2">Active Filters:</span>
+
+                @if(request('zone') && $selectedZone)
                 <span class="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800">
                     <i class="fas fa-map-marker-alt mr-1"></i>
                     Zone: {{ $selectedZone->name }}
-                    <a href="{{ route('bills.index', ['status' => request('status')]) }}"
+                    <a href="{{ route('bills.index', array_merge(request()->except('zone'), ['status' => request('status'), 'date_filter' => request('date_filter'), 'start_date' => request('start_date'), 'end_date' => request('end_date')])) }}"
                     class="ml-2 text-blue-600 hover:text-blue-800">
                         <i class="fas fa-times"></i>
                     </a>
                 </span>
+                @endif
+
                 @if(request('status'))
-                <span class="inline-flex items-center px-3 py-1 rounded-full bg-{{ request('status') == 'unpaid' ? 'red' : (request('status') == 'paid' ? 'green' : (request('status') == 'partial' ? 'yellow' : 'orange')) }}-100 text-{{ request('status') == 'unpaid' ? 'red' : (request('status') == 'paid' ? 'green' : (request('status') == 'partial' ? 'yellow' : 'orange')) }}-800 ml-2">
+                @php
+                    $statusColors = [
+                        'unpaid' => 'red',
+                        'paid' => 'green',
+                        'partial' => 'yellow',
+                        'overdue' => 'orange'
+                    ];
+                    $currentStatusColor = $statusColors[request('status')] ?? 'gray';
+                @endphp
+                <span class="inline-flex items-center px-3 py-1 rounded-full bg-{{ $currentStatusColor }}-100 text-{{ $currentStatusColor }}-800">
                     <i class="fas fa-filter mr-1"></i>
                     Status: {{ ucfirst(request('status')) }}
-                    <a href="{{ route('bills.index', ['zone' => request('zone')]) }}"
-                    class="ml-2 text-{{ request('status') == 'unpaid' ? 'red' : (request('status') == 'paid' ? 'green' : (request('status') == 'partial' ? 'yellow' : 'orange')) }}-600 hover:text-{{ request('status') == 'unpaid' ? 'red' : (request('status') == 'paid' ? 'green' : (request('status') == 'partial' ? 'yellow' : 'orange')) }}-800">
+                    <a href="{{ route('bills.index', array_merge(request()->except('status'), ['zone' => request('zone'), 'date_filter' => request('date_filter'), 'start_date' => request('start_date'), 'end_date' => request('end_date')])) }}"
+                    class="ml-2 text-{{ $currentStatusColor }}-600 hover:text-{{ $currentStatusColor }}-800">
+                        <i class="fas fa-times"></i>
+                    </a>
+                </span>
+                @endif
+
+                @if(request('date_filter') && request('date_filter') != 'all')
+                <span class="inline-flex items-center px-3 py-1 rounded-full bg-purple-100 text-purple-800">
+                    <i class="fas fa-calendar-alt mr-1"></i>
+                    Date: {{ ucfirst(str_replace('_', ' ', request('date_filter'))) }}
+                    @if(request('date_filter') == 'custom' && request('start_date') && request('end_date'))
+                        ({{ \Carbon\Carbon::parse(request('start_date'))->format('M d') }} - {{ \Carbon\Carbon::parse(request('end_date'))->format('M d, Y') }})
+                    @endif
+                    <a href="{{ route('bills.index', array_merge(request()->except(['date_filter', 'start_date', 'end_date']), ['zone' => request('zone'), 'status' => request('status')])) }}"
+                    class="ml-2 text-purple-600 hover:text-purple-800">
                         <i class="fas fa-times"></i>
                     </a>
                 </span>
@@ -370,6 +437,15 @@
                         // Add status filter if active
                         if(request('status')) {
                             $exportParams['status'] = request('status');
+                        }
+
+                        // Add date filter if active
+                        if(request('date_filter') && request('date_filter') != 'all') {
+                            $exportParams['date_filter'] = request('date_filter');
+                            if(request('date_filter') == 'custom' && request('start_date') && request('end_date')) {
+                                $exportParams['start_date'] = request('start_date');
+                                $exportParams['end_date'] = request('end_date');
+                            }
                         }
 
                         // Add search term if active
@@ -493,17 +569,6 @@
                                         title="Print Receipt">
                                         <i class="fas fa-print"></i>
                                     </a>
-
-                                    <!-- <form action="{{ route('bills.destroy', $bill->id) }}" method="POST" class="inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit"
-                                                onclick="return confirm('Are you sure you want to delete this bill?')"
-                                                class="text-red-600 hover:text-red-900 px-2 py-1 rounded transition duration-200"
-                                                title="Delete Bill">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </form> -->
                                 </div>
                             </td>
                         </tr>
@@ -593,7 +658,7 @@
             </div>
         </div>
     </div>
-       @include('components.modal-quick-bill')
+    @include('components.modal-quick-bill')
 </div>
 
 <!-- Simple Search JavaScript -->
@@ -629,8 +694,9 @@ document.querySelectorAll('.download-excel-btn').forEach(btn => {
         }
     });
 });
+
+// Handle print receipt button clicks
 document.addEventListener('DOMContentLoaded', function() {
-    // Handle print receipt button clicks
     document.querySelectorAll('.print-receipt-btn').forEach(button => {
         button.addEventListener('click', function(e) {
             e.preventDefault();
@@ -684,6 +750,86 @@ document.addEventListener('DOMContentLoaded', function () {
     const searchInput = document.getElementById('billSearch');
     const searchBtn = document.getElementById('searchBtn');
     const resetBtn = document.getElementById('resetBtn');
+    const dateFilter = document.getElementById('date_filter');
+    const customDateRange = document.getElementById('custom_date_range');
+    const zoneFilter = document.getElementById('zoneFilter');
+    const startDateInput = document.getElementById('start_date');
+    const endDateInput = document.getElementById('end_date');
+
+    // Show/hide custom date range
+    if (dateFilter) {
+        dateFilter.addEventListener('change', function() {
+            if (this.value === 'custom') {
+                customDateRange.style.display = 'grid';
+            } else {
+                customDateRange.style.display = 'none';
+            }
+        });
+
+        // Initialize on page load
+        if (dateFilter.value === 'custom') {
+            customDateRange.style.display = 'grid';
+        }
+    }
+
+    // Handle zone filter change
+    if (zoneFilter) {
+        zoneFilter.addEventListener('change', applyFilters);
+    }
+
+    // Handle date filter change
+    if (dateFilter) {
+        dateFilter.addEventListener('change', applyFilters);
+    }
+
+    // Handle custom date inputs change
+    if (startDateInput) {
+        startDateInput.addEventListener('change', function() {
+            if (dateFilter.value === 'custom') {
+                applyFilters();
+            }
+        });
+    }
+
+    if (endDateInput) {
+        endDateInput.addEventListener('change', function() {
+            if (dateFilter.value === 'custom') {
+                applyFilters();
+            }
+        });
+    }
+
+    function applyFilters() {
+        const zoneId = zoneFilter?.value || 'all';
+        const dateFilterValue = dateFilter?.value || 'all';
+        const startDate = startDateInput?.value;
+        const endDate = endDateInput?.value;
+
+        let url = '{{ route("bills.index") }}?';
+
+        const params = [];
+
+        // Get current status
+        const currentStatus = new URLSearchParams(window.location.search).get('status');
+        if (currentStatus) {
+            params.push(`status=${currentStatus}`);
+        }
+
+        if (zoneId && zoneId !== 'all') {
+            params.push(`zone=${zoneId}`);
+        }
+
+        if (dateFilterValue && dateFilterValue !== 'all') {
+            params.push(`date_filter=${dateFilterValue}`);
+        }
+
+        if (dateFilterValue === 'custom' && startDate && endDate) {
+            params.push(`start_date=${startDate}`);
+            params.push(`end_date=${endDate}`);
+        }
+
+        window.location.href = url + params.join('&');
+    }
 
     if (searchBtn) {
         searchBtn.addEventListener('click', function () {
@@ -701,67 +847,68 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-   async function performSearch(searchTerm) {
-    try {
-        const zoneId = document.getElementById('zoneFilter')?.value || 'all';
-        const url = `/api/bills/search?search=${encodeURIComponent(searchTerm)}&zone=${zoneId}`;
+    async function performSearch(searchTerm) {
+        try {
+            const zoneId = zoneFilter?.value || 'all';
+            const dateFilterValue = dateFilter?.value || 'all';
+            const startDate = startDateInput?.value;
+            const endDate = endDateInput?.value;
 
-        const response = await fetch(url, {
-            headers: {
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
+            let url = `/api/bills/search?search=${encodeURIComponent(searchTerm)}&zone=${zoneId}&date_filter=${dateFilterValue}`;
+
+            if (dateFilterValue === 'custom' && startDate && endDate) {
+                url += `&start_date=${startDate}&end_date=${endDate}`;
             }
-        });
 
-        if (!response.ok) throw new Error('Search failed');
+            const response = await fetch(url, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
 
-        const bills = await response.json();
-        updateTableWithSearchResults(bills);
-    } catch (error) {
-        console.error(error);
-        showNotification('Search failed. Please try again.', 'error');
-    }
-}
+            if (!response.ok) throw new Error('Search failed');
 
-// Add zone filter change handler
-document.getElementById('zoneFilter')?.addEventListener('change', function() {
-    const zoneId = this.value;
-    const currentUrl = new URL(window.location.href);
-    const currentStatus = currentUrl.searchParams.get('status');
-
-    // Build new URL with zone filter
-    let newUrl = '{{ route("bills.index") }}?';
-    if (zoneId && zoneId !== 'all') {
-        newUrl += 'zone=' + zoneId;
-    }
-    if (currentStatus) {
-        newUrl += (zoneId && zoneId !== 'all' ? '&' : '') + 'status=' + currentStatus;
+            const bills = await response.json();
+            updateTableWithSearchResults(bills);
+        } catch (error) {
+            console.error(error);
+            showNotification('Search failed. Please try again.', 'error');
+        }
     }
 
-    // Remove trailing ? if no params
-    if (newUrl.endsWith('?')) {
-        newUrl = newUrl.slice(0, -1);
-    }
+    // Update the status filter links to preserve all filters
+    document.querySelectorAll('a[href*="status="]').forEach(link => {
+        const href = link.getAttribute('href');
+        const zoneId = zoneFilter?.value;
+        const dateFilterValue = dateFilter?.value;
+        const startDate = startDateInput?.value;
+        const endDate = endDateInput?.value;
 
-    window.location.href = newUrl;
-});
+        if (zoneId || dateFilterValue || startDate || endDate) {
+            const url = new URL(href, window.location.origin);
 
-// Also update the status filter links to preserve zone filter
-document.querySelectorAll('a[href*="status="]').forEach(link => {
-    const href = link.getAttribute('href');
-    const zoneId = document.getElementById('zoneFilter')?.value;
+            if (zoneId && zoneId !== 'all') {
+                url.searchParams.set('zone', zoneId);
+            }
 
-    if (zoneId && zoneId !== 'all') {
-        const url = new URL(href, window.location.origin);
-        url.searchParams.set('zone', zoneId);
-        link.setAttribute('href', url.toString());
-    }
-});
+            if (dateFilterValue && dateFilterValue !== 'all') {
+                url.searchParams.set('date_filter', dateFilterValue);
+            }
+
+            if (dateFilterValue === 'custom' && startDate && endDate) {
+                url.searchParams.set('start_date', startDate);
+                url.searchParams.set('end_date', endDate);
+            }
+
+            link.setAttribute('href', url.toString());
+        }
+    });
 
     function updateTableWithSearchResults(bills) {
         const tbody = document.getElementById('billsTableBody');
 
-        if (!tbody) return;  // extra safeguard
+        if (!tbody) return;
 
         if (!bills || bills.length === 0) {
             tbody.innerHTML = `
@@ -897,11 +1044,33 @@ document.querySelectorAll('a[href*="status="]').forEach(link => {
             </tr>
             `;
         }).join('');
-
-
     }
 });
 
+// Helper function to show notifications
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${type === 'error' ? 'bg-red-100 text-red-800 border border-red-300' : 'bg-blue-100 text-blue-800 border border-blue-300'}`;
+    notification.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas ${type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'} mr-2"></i>
+            <span>${message}</span>
+            <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+
+    document.body.appendChild(notification);
+
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.remove();
+        }
+    }, 5000);
+}
 </script>
 @endsection
 @endcan

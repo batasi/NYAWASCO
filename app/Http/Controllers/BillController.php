@@ -10,6 +10,7 @@ use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 use PDF;
 
@@ -21,11 +22,14 @@ class BillController extends Controller
         $zoneId = $request->get('zone');
         $sort = $request->get('sort', 'newest');
         $user = Auth::user();
+        $dateFilter = $request->get('date_filter', 'all');
+        $startDate = $request->get('start_date');
+        $endDate = $request->get('end_date');
 
         $billsQuery = Bill::with([
             'customer',
             'meter.meterCategory',
-            'meter.zone', // Add zone relationship
+            'meter.zone',
             'payments',
             'meterReading'
         ])
@@ -43,6 +47,23 @@ class BillController extends Controller
             return $query->whereHas('meter', function($q) use ($zoneId) {
                 $q->where('zone_id', $zoneId);
             });
+        })
+        ->when($dateFilter === 'custom' && $startDate && $endDate, function ($query) use ($startDate, $endDate) {
+            return $query->whereBetween('created_at', [$startDate, $endDate]);
+        })
+        ->when($dateFilter === 'today', function ($query) {
+            return $query->whereDate('created_at', Carbon::today());
+        })
+        ->when($dateFilter === 'yesterday', function ($query) {
+            return $query->whereDate('created_at', Carbon::yesterday());
+        })
+        ->when($dateFilter === 'this_month', function ($query) {
+            return $query->whereMonth('created_at', Carbon::now()->month)
+                        ->whereYear('created_at', Carbon::now()->year);
+        })
+        ->when($dateFilter === 'last_month', function ($query) {
+            return $query->whereMonth('created_at', Carbon::now()->subMonth()->month)
+                        ->whereYear('created_at', Carbon::now()->subMonth()->year);
         })
         ->when($sort, function ($query) use ($sort) {
             switch ($sort) {
@@ -72,28 +93,45 @@ class BillController extends Controller
         // Get selected zone for display
         $selectedZone = $zoneId ? \App\Models\Zone::find($zoneId) : null;
 
-        // COUNTS FOR FILTER BUTTONS (using base query with zone filter if applied)
-        $zoneFilterQuery = clone $baseQuery;
+        // COUNTS FOR FILTER BUTTONS (using base query with zone and date filters applied)
+        $filteredQuery = clone $baseQuery;
+
+        // Apply zone filter
         if ($zoneId && $zoneId !== 'all') {
-            $zoneFilterQuery->whereHas('meter', function($q) use ($zoneId) {
+            $filteredQuery->whereHas('meter', function($q) use ($zoneId) {
                 $q->where('zone_id', $zoneId);
             });
         }
 
-        $totalBillsCount = $zoneFilterQuery->count();
-        $unpaidBillsCount = $zoneFilterQuery->clone()->where('bill_status', 'unpaid')->count();
-        $paidBillsCount = $zoneFilterQuery->clone()->where('bill_status', 'paid')->count();
-        $partialBillsCount = $zoneFilterQuery->clone()->where('bill_status', 'partial')->count();
-        $overdueBillsCount = $zoneFilterQuery->clone()
+        // Apply date filters
+        if ($dateFilter === 'custom' && $startDate && $endDate) {
+            $filteredQuery->whereBetween('created_at', [$startDate, $endDate]);
+        } elseif ($dateFilter === 'today') {
+            $filteredQuery->whereDate('created_at', Carbon::today());
+        } elseif ($dateFilter === 'yesterday') {
+            $filteredQuery->whereDate('created_at', Carbon::yesterday());
+        } elseif ($dateFilter === 'this_month') {
+            $filteredQuery->whereMonth('created_at', Carbon::now()->month)
+                         ->whereYear('created_at', Carbon::now()->year);
+        } elseif ($dateFilter === 'last_month') {
+            $filteredQuery->whereMonth('created_at', Carbon::now()->subMonth()->month)
+                         ->whereYear('created_at', Carbon::now()->subMonth()->year);
+        }
+
+        $totalBillsCount = $filteredQuery->count();
+        $unpaidBillsCount = $filteredQuery->clone()->where('bill_status', 'unpaid')->count();
+        $paidBillsCount = $filteredQuery->clone()->where('bill_status', 'paid')->count();
+        $partialBillsCount = $filteredQuery->clone()->where('bill_status', 'partial')->count();
+        $overdueBillsCount = $filteredQuery->clone()
             ->where('due_date', '<', now())
             ->where('bill_status', 'unpaid')
             ->count();
 
         // DASHBOARD STATISTICS (using same filtered base query)
-        $totalRevenue = $zoneFilterQuery->clone()->sum('total_amount');
+        $totalRevenue = $filteredQuery->clone()->sum('total_amount');
 
         // Outstanding Balance: sum of balances for unpaid + partial bills
-        $outstandingBalance = $zoneFilterQuery->clone()
+        $outstandingBalance = $filteredQuery->clone()
             ->whereIn('bill_status', ['unpaid', 'partial'])
             ->sum('balance');
 
@@ -101,7 +139,7 @@ class BillController extends Controller
         $totalBills = $totalBillsCount;
 
         // Calculate total paid amount from filtered bills
-        $totalPaidAmount = $zoneFilterQuery->clone()
+        $totalPaidAmount = $filteredQuery->clone()
             ->withSum('payments', 'amount')
             ->get()
             ->sum('payments_sum_amount');
@@ -124,9 +162,13 @@ class BillController extends Controller
             'unpaidBillsCount',
             'paidBillsCount',
             'partialBillsCount',
-            'overdueBillsCount'
+            'overdueBillsCount',
+            'dateFilter',
+            'startDate',
+            'endDate'
         ));
     }
+
     /**
      * Store a newly created bill in storage.
      */
