@@ -175,7 +175,7 @@
                                         name="current_reading"
                                         id="current_reading"
                                         step="0.01"
-                                        min="{{ $previousReading ? $previousReading->current_reading + 0.01 : 0 }}"
+                                        min="{{ $previousReading ? $previousReading->current_reading : 0 }}"
                                         value="{{ old('current_reading', $meterReading->current_reading) }}"
                                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                                         placeholder="Enter current reading">
