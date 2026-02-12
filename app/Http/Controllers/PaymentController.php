@@ -382,11 +382,39 @@ class PaymentController extends Controller
             'import_summary' => $summary
         ]);
     }
+    /**
+     * Parse amount from string
+     */
+    private function parseAmount($amountValue)
+    {
+        if (empty($amountValue) && $amountValue !== 0 && $amountValue !== '0') {
+            return 0;
+        }
 
+        // If it's already numeric, return as float
+        if (is_numeric($amountValue)) {
+            return (float) $amountValue; // This will keep 500.00 as 500.00
+        }
+
+        // Remove commas (thousand separators)
+        $cleaned = str_replace(',', '', $amountValue);
+
+        // If it's numeric after removing commas, return as float
+        if (is_numeric($cleaned)) {
+            return (float) $cleaned; // This preserves decimal places
+        }
+
+        // Try to extract amount using regex
+        if (preg_match('/[\d,]+\.?\d*/', $cleaned, $matches)) {
+            return (float) $matches[0];
+        }
+
+        return 0;
+    }
     /**
      * Process a complete payment transaction
      */
-    private function processPaymentTransaction($date, $meterNumber, $description, $transactionRows, &$results, $sheet, $headerMap)
+    private function processPaymentTransaction($date, $meterNumber, $description, $transactionRows, &$results)
     {
         try {
             // Find the payment amount in this transaction
@@ -415,18 +443,37 @@ class PaymentController extends Controller
             }
 
             // ========== DATE PARSING ==========
-            $paymentDate = null;
-            try {
-                $paymentDate = Carbon::parse($date);
-            } catch (\Exception $e) {
-                // Try alternative formats
-                if (preg_match('/(\d{2})-(\d{2})-(\d{4})/', $date, $matches)) {
-                    $paymentDate = Carbon::create($matches[3], $matches[2], $matches[1]);
-                } else {
-                    throw new \Exception("Could not parse date: {$date}");
-                }
-            }
-
+$paymentDate = null;
+try {
+    // Force interpretation as DD-MM-YYYY (this is your bank statement format)
+    $paymentDate = Carbon::createFromFormat('d-m-Y', $date);
+} catch (\Exception $e) {
+    try {
+        // Try DD/MM/YYYY format
+        $paymentDate = Carbon::createFromFormat('d/m/Y', $date);
+    } catch (\Exception $e2) {
+        // Try other formats as fallback
+        // Format: dd-mm-yyyy with single digits (6-2-2026)
+        if (preg_match('/(\d{1,2})-(\d{1,2})-(\d{4})/', $date, $matches)) {
+            $paymentDate = Carbon::create($matches[3], $matches[2], $matches[1]);
+        }
+        // Format: dd/mm/yyyy with single digits (6/2/2026)
+        elseif (preg_match('/(\d{1,2})\/(\d{1,2})\/(\d{4})/', $date, $matches)) {
+            $paymentDate = Carbon::create($matches[3], $matches[2], $matches[1]);
+        }
+        // Format: yyyy-mm-dd (2026-01-26)
+        elseif (preg_match('/(\d{4})-(\d{1,2})-(\d{1,2})/', $date, $matches)) {
+            $paymentDate = Carbon::create($matches[1], $matches[2], $matches[3]);
+        }
+        // Format: yyyy/mm/dd (2026/01/26)
+        elseif (preg_match('/(\d{4})\/(\d{1,2})\/(\d{1,2})/', $date, $matches)) {
+            $paymentDate = Carbon::create($matches[1], $matches[2], $matches[3]);
+        }
+        else {
+            throw new \Exception("Could not parse date: {$date}. Expected format: DD-MM-YYYY");
+        }
+    }
+}
             Log::info("Processing payment - Meter: {$meterNumber}, Amount: {$amount}, Date: {$paymentDate->format('Y-m-d')}");
 
             // ========== FIND METER ==========
@@ -461,22 +508,79 @@ class PaymentController extends Controller
             // ========== EXTRACT TRANSACTION REFERENCE ==========
             $transactionRef = null;
 
-            // Try to extract MPS reference
-            if (preg_match('/MPS\s+(\d{12})/', $description, $matches)) {
-                $transactionRef = $matches[1];
-            } elseif (preg_match('/UB\d?[A-Z0-9]+/', $description, $matches)) {
-                $transactionRef = $matches[0];
+            // First, find the row that contains the meter number (the one with #)
+            foreach ($transactionRows as $row) {
+                $particularsToCheck = $row['particulars'] ?? '';
+
+                // This row contains the meter number (has #)
+                if (strpos($particularsToCheck, '#') !== false) {
+                    // Pattern: Any alphanumeric code (5-20 chars) followed by spaces and then numbers#
+                    if (preg_match('/([A-Z0-9]{5,20})\s+\d{3,}#/', $particularsToCheck, $matches)) {
+                        $transactionRef = $matches[1];
+                        Log::info("Found transaction reference from meter row: {$transactionRef}");
+                        break;
+                    }
+                    // Pattern: Any alphanumeric code at the beginning of the string
+                    elseif (preg_match('/^([A-Z0-9]{5,20})\s+\d{3,}#/', $particularsToCheck, $matches)) {
+                        $transactionRef = $matches[1];
+                        Log::info("Found transaction reference at start: {$transactionRef}");
+                        break;
+                    }
+                }
             }
 
-            // Check for duplicate
-            if ($transactionRef) {
+            // If not found in meter row, check the first row (MPS row)
+            if (!$transactionRef && !empty($transactionRows[0]['particulars'])) {
+                $firstRowParticulars = $transactionRows[0]['particulars'];
+
+                // Pattern: MPS followed by a code (UB, UAN, TL1, etc.)
+                if (preg_match('/MPS\s+([A-Z0-9]{5,20})/', $firstRowParticulars, $matches)) {
+                    // Make sure it's not all digits (skip MPS numbers)
+                    if (!preg_match('/^\d+$/', $matches[1])) {
+                        $transactionRef = $matches[1];
+                        Log::info("Found transaction reference from MPS row: {$transactionRef}");
+                    }
+                }
+            }
+
+            // If still not found, check all rows for any alphanumeric code that's not all digits
+            if (!$transactionRef) {
+                foreach ($transactionRows as $row) {
+                    $particularsToCheck = $row['particulars'] ?? '';
+
+                    // Look for alphanumeric codes 5-20 chars that are not all digits
+                    if (preg_match_all('/\b([A-Z0-9]{5,20})\b/', $particularsToCheck, $matches)) {
+                        foreach ($matches[1] as $code) {
+                            // Skip if it's all digits (likely an MPS number or meter number)
+                            if (!preg_match('/^\d+$/', $code)) {
+                                $transactionRef = $code;
+                                Log::info("Found transaction reference from row {$row['row']}: {$transactionRef}");
+                                break 2;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Last resort: generate a unique reference
+            if (!$transactionRef) {
+                $datePart = Carbon::parse($date)->format('Ymd');
+                $randomPart = strtoupper(substr(uniqid(), -6));
+                $transactionRef = "IMP-{$datePart}-{$meterNumber}-{$randomPart}";
+                Log::info("Generated transaction reference: {$transactionRef}");
+            }
+
+            // Check for duplicate - only for non-generated references
+            if ($transactionRef && !str_starts_with($transactionRef, 'IMP-')) {
                 $existingPayment = Payment::where('transaction_reference', $transactionRef)
                     ->where('payment_method', 'mpesa')
                     ->where('payment_status', 'completed')
                     ->first();
 
                 if ($existingPayment) {
-                    throw new \Exception("Transaction reference {$transactionRef} has already been used");
+                    // If duplicate found, append timestamp to make it unique
+                    $transactionRef = $transactionRef . '-' . Carbon::now()->format('His');
+                    Log::info("Duplicate reference found, modified to: {$transactionRef}");
                 }
             }
 
