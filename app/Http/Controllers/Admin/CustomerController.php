@@ -1485,6 +1485,82 @@ class CustomerController extends Controller
                 ->with('error', 'Error reassigning meter: ' . $e->getMessage());
         }
     }
+       /**
+     * Show quick customer creation form (AJAX)
+     */
+    public function quickCreateForm()
+    {
+        return view('admin.customers.quick-create-modal');
+    }
+
+    /**
+     * Quick create customer for meter assignment
+     */
+    public function quickCreate(Request $request)
+    {
+
+        $validated = $request->validate([
+            'first_name' => 'required|string|max:50',
+            'last_name' => 'nullable|string|max:50',
+            'email' => 'nullable|email|unique:customers,email',
+            'phone' => 'required|string|max:20|unique:customers,phone',
+            'id_number' => 'required|string|max:20|unique:customers,id_number',
+            'physical_address' => 'required|string|max:500',
+            'plot_number' => 'required|string|max:50',
+            'house_number' => 'nullable|string|max:50',
+            'estate' => 'nullable|string|max:100',
+            'kra_pin' => 'nullable|string|max:20|unique:customers,kra_pin',
+            'property_owner' => 'nullable|string|max:100',
+            'expected_users' => 'nullable|integer|min:1|max:1000',
+        ]);
+
+        try {
+            DB::transaction(function () use ($validated) {
+                $customer = Customer::create([
+                    'customer_number' => $this->generateCustomerNumber(),
+                    'first_name' => $validated['first_name'],
+                    'last_name' => $validated['last_name'] ?? null,
+                    'email' => $validated['email'],
+                    'phone' => $validated['phone'],
+                    'id_number' => $validated['id_number'],
+                    'physical_address' => $validated['physical_address'],
+                    'plot_number' => $validated['plot_number'],
+                    'house_number' => $validated['house_number'],
+                    'estate' => $validated['estate'] ?? null,
+                    'kra_pin' => $validated['kra_pin'] ?? null,
+                    'property_owner' => $validated['property_owner'],
+                    'expected_users' => $validated['expected_users'] ?? null,
+                    'status' => 'active',
+                    'status_updated_at' => now(),
+                    'status_reason' => 'Quick created for meter assignment',
+                    'notes' => "Customer created via quick create on " . now()->format('Y-m-d H:i:s'),
+                    'credit_balance' => 0,
+                    'total_payments' => 0,
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'customer' => [
+                        'id' => $customer->id,
+                        'text' => "{$customer->customer_number} - {$customer->first_name} {$customer->last_name} ({$customer->phone})",
+                        'customer_number' => $customer->customer_number,
+                        'name' => $customer->first_name . ' ' . $customer->last_name,
+                        'phone' => $customer->phone,
+                        'address' => $customer->physical_address,
+                        'plot' => $customer->plot_number,
+                        'has_meter' => false,
+                        'meter_count' => 0,
+                    ]
+                ]);
+            });
+        } catch (\Exception $e) {
+            Log::error('Quick customer creation error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error creating customer: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 
     /**
      * Search customers with meter assignment status
