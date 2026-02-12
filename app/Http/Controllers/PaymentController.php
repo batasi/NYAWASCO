@@ -570,7 +570,7 @@ class PaymentController extends Controller
                 Log::info("Generated transaction reference: {$transactionRef}");
             }
 
-            // Check for duplicate - only for non-generated references
+            // Check for duplicate transaction reference
             if ($transactionRef && !str_starts_with($transactionRef, 'IMP-')) {
                 $existingPayment = Payment::where('transaction_reference', $transactionRef)
                     ->where('payment_method', 'mpesa')
@@ -578,9 +578,10 @@ class PaymentController extends Controller
                     ->first();
 
                 if ($existingPayment) {
-                    // If duplicate found, append timestamp to make it unique
-                    $transactionRef = $transactionRef . '-' . Carbon::now()->format('His');
-                    Log::info("Duplicate reference found, modified to: {$transactionRef}");
+                    // This payment has already been imported - skip it
+                    $results['skipped']++;
+                    Log::info("Payment skipped - Transaction reference {$transactionRef} already exists for meter {$meterNumber}");
+                    return; // Exit the function, don't process this payment
                 }
             }
 
