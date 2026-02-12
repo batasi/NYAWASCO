@@ -978,7 +978,6 @@ class CustomerController extends Controller
         return $pdf->download($filename);
     }
 
-    // In CustomerController.php
     public function getCustomerDetails($id)
     {
         $customer = Customer::findOrFail($id);
@@ -987,29 +986,6 @@ class CustomerController extends Controller
             'id' => $customer->id,
             'text' => "{$customer->customer_number} - {$customer->first_name} {$customer->last_name} ({$customer->phone})"
         ]);
-    }
-    public function searchCustomers(Request $request)
-    {
-        $search = $request->get('q');
-
-        $customers = Customer::active()
-            ->where(function($query) use ($search) {
-                $query->where('customer_number', 'like', "%{$search}%")
-                    ->orWhere('first_name', 'like', "%{$search}%")
-                    ->orWhere('last_name', 'like', "%{$search}%")
-                    ->orWhere('phone', 'like', "%{$search}%");
-            })
-            ->select(['id', 'customer_number', 'first_name', 'last_name', 'phone'])
-            ->limit(10)
-            ->get()
-            ->map(function($customer) {
-                return [
-                    'id' => $customer->id,
-                    'text' => "{$customer->customer_number} - {$customer->first_name} {$customer->last_name} ({$customer->phone})"
-                ];
-            });
-
-        return response()->json(['results' => $customers]);
     }
 
     // Customer details + previous reading
@@ -1265,5 +1241,344 @@ class CustomerController extends Controller
         $filename = "Statement_{$customer->customer_number}_{$startDate->format('Y_m_d')}_to_{$endDate->format('Y_m_d')}.pdf";
 
         return $pdf->download($filename);
+    }
+    /**
+     * Show the unassign and reassign form for a meter
+     */
+    public function showUnassignReassignForm(Customer $customer, Meter $meter)
+    {
+        // Verify the meter belongs to this customer
+        if ($meter->customer_id !== $customer->id) {
+            return redirect()->back()->with('error', 'This meter is not assigned to this customer.');
+        }
+
+        $categories = MeterCategory::active()->ordered()->get();
+
+        return view('admin.customers.unassign-reassign', compact('customer', 'meter', 'categories'));
+    }
+
+    /**
+     * Unassign a meter from current customer and reassign to another customer
+     */
+    public function unassignAndReassign(Request $request, Customer $customer, Meter $meter)
+    {
+        $request->validate([
+            'action' => 'required|in:existing,new',
+            'customer_id' => 'required_if:action,existing|exists:customers,id',
+            'new_customer' => 'required_if:action,new|array',
+            'new_customer.first_name' => 'required_if:action,new|string|max:50',
+            'new_customer.last_name' => 'nullable|string|max:50',
+            'new_customer.email' => 'required_if:action,new|email|unique:customers,email',
+            'new_customer.phone' => 'required_if:action,new|string|max:20|unique:customers,phone',
+            'new_customer.id_number' => 'required_if:action,new|string|max:20|unique:customers,id_number',
+            'new_customer.physical_address' => 'required_if:action,new|string|max:500',
+            'new_customer.plot_number' => 'required_if:action,new|string|max:50',
+            'new_customer.house_number' => 'required_if:action,new|string|max:50',
+            'new_customer.property_owner' => 'required_if:action,new|string|max:100',
+            'new_customer.estate' => 'nullable|string|max:100',
+            'new_customer.kra_pin' => 'nullable|string|max:20|unique:customers,kra_pin',
+            'new_customer.expected_users' => 'nullable|integer|min:1|max:1000',
+            'unassignment_reason' => 'required|string|max:255',
+            'new_installation_date' => 'required_if:action,existing|date',
+            'new_initial_reading' => 'required_if:action,existing|numeric|min:0',
+            'new_balance_bf' => 'nullable|numeric|min:0',
+            'notes' => 'nullable|string|max:1000',
+        ], [
+            'customer_id.required_if' => 'Please select a customer to assign the meter to.',
+            'new_customer.first_name.required_if' => 'Customer first name is required.',
+            'new_customer.email.required_if' => 'Customer email is required.',
+            'new_customer.email.unique' => 'This email is already registered.',
+            'new_customer.phone.required_if' => 'Customer phone is required.',
+            'new_customer.phone.unique' => 'This phone number is already registered.',
+            'new_customer.id_number.required_if' => 'Customer ID number is required.',
+            'new_customer.id_number.unique' => 'This ID number is already registered.',
+            'new_customer.physical_address.required_if' => 'Physical address is required.',
+            'new_customer.plot_number.required_if' => 'Plot number is required.',
+            'new_customer.house_number.required_if' => 'House number is required.',
+            'new_customer.property_owner.required_if' => 'Property owner is required.',
+            'new_installation_date.required_if' => 'Installation date is required.',
+            'new_initial_reading.required_if' => 'Initial reading is required.',
+        ]);
+
+        try {
+            DB::transaction(function () use ($request, $customer, $meter) {
+                // 1. Record unassignment from current customer
+                $unassignmentNote = sprintf(
+                    "Meter %s unassigned from customer %s %s (ID: %s) on %s\nReason: %s",
+                    $meter->meter_number,
+                    $customer->first_name,
+                    $customer->last_name,
+                    $customer->customer_number,
+                    now()->format('Y-m-d H:i:s'),
+                    $request->unassignment_reason
+                );
+
+                // 2. Determine target customer
+                $targetCustomer = null;
+
+                if ($request->action === 'existing') {
+                    $targetCustomer = Customer::findOrFail($request->customer_id);
+
+                    // Check if customer already has a meter
+                    $hasMeter = $targetCustomer->meters()->exists();
+
+                    // Log the meter check
+                    Log::info('Checking customer for existing meter', [
+                        'customer_id' => $targetCustomer->id,
+                        'customer_number' => $targetCustomer->customer_number,
+                        'has_meter' => $hasMeter,
+                        'meter_count' => $targetCustomer->meters()->count()
+                    ]);
+
+                    // If customer has a meter, we're adding another one - that's fine
+                    // No restriction needed - customers can have multiple meters
+
+                } else {
+                    // Create new customer
+                    $customerData = $request->new_customer;
+                    $customerData['customer_number'] = $this->generateCustomerNumber();
+                    $customerData['status'] = 'active';
+                    $customerData['status_updated_at'] = now();
+                    $customerData['status_reason'] = 'Created during meter reassignment';
+                    $customerData['notes'] = "Customer created on " . now()->format('Y-m-d H:i:s') .
+                                             " for meter reassignment.\n" .
+                                             ($request->notes ?? '');
+
+                    $targetCustomer = Customer::create($customerData);
+
+                    Log::info('New customer created for meter reassignment', [
+                        'customer_id' => $targetCustomer->id,
+                        'customer_number' => $targetCustomer->customer_number,
+                        'meter_number' => $meter->meter_number
+                    ]);
+                }
+
+                // 3. Unassign from current customer
+                $meter->update([
+                    'customer_id' => null,
+                    'status' => Meter::STATUS_AVAILABLE,
+                    'installation_address' => null,
+                    'installation_date' => null,
+                ]);
+
+                // 4. Update current customer notes
+                $customer->update([
+                    'notes' => $customer->notes . "\n" . $unassignmentNote
+                ]);
+
+                // 5. Assign to target customer
+                $installationDate = $request->action === 'existing'
+                    ? $request->new_installation_date
+                    : now()->format('Y-m-d');
+
+                $initialReading = $request->action === 'existing'
+                    ? $request->new_initial_reading
+                    : $meter->current_reading; // Use current reading as initial
+
+                $balanceBf = $request->action === 'existing'
+                    ? ($request->new_balance_bf ?? 0)
+                    : 0;
+
+                $meter->update([
+                    'customer_id' => $targetCustomer->id,
+                    'installation_address' => $targetCustomer->physical_address,
+                    'installation_date' => $installationDate,
+                    'initial_reading' => $initialReading,
+                    'balance_bf' => $balanceBf,
+                    'current_balance' => $balanceBf,
+                    'status' => Meter::STATUS_ACTIVE,
+                    'notes' => $meter->notes . "\nReassigned to customer {$targetCustomer->customer_number} on " . now()->format('Y-m-d H:i:s')
+                ]);
+
+                // 6. Create initial meter reading for new assignment AND generate bill if necessary
+
+
+                // 7. Add assignment note to target customer
+                $assignmentNote = sprintf(
+                    "Meter %s assigned from customer %s %s (ID: %s) on %s\nInstallation Date: %s\nInitial Reading: %s m³",
+                    $meter->meter_number,
+                    $customer->first_name,
+                    $customer->last_name,
+                    $customer->customer_number,
+                    now()->format('Y-m-d H:i:s'),
+                    $installationDate,
+                    $initialReading
+                );
+
+                $targetCustomer->update([
+                    'notes' => $targetCustomer->notes . "\n" . $assignmentNote
+                ]);
+
+                Log::info('Meter reassigned successfully', [
+                    'meter_id' => $meter->id,
+                    'meter_number' => $meter->meter_number,
+                    'from_customer' => $customer->id,
+                    'to_customer' => $targetCustomer->id,
+                    'action' => $request->action
+                ]);
+            });
+
+            return redirect()->route('admin.customers.show', $customer)
+                ->with('success', 'Meter unassigned and reassigned successfully!');
+
+        } catch (\Exception $e) {
+            Log::error('Meter reassignment error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->except(['_token', 'new_customer'])
+            ]);
+
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Error reassigning meter: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Show quick customer creation form (AJAX)
+     */
+    public function quickCreateForm()
+    {
+        return view('admin.customers.quick-create-modal');
+    }
+
+    /**
+     * Quick create customer for meter assignment
+     */
+    public function quickCreate(Request $request)
+    {
+        $validated = $request->validate([
+            'first_name' => 'required|string|max:50',
+            'last_name' => 'nullable|string|max:50',
+            'email' => 'required|email|unique:customers,email',
+            'phone' => 'required|string|max:20|unique:customers,phone',
+            'id_number' => 'required|string|max:20|unique:customers,id_number',
+            'physical_address' => 'required|string|max:500',
+            'plot_number' => 'required|string|max:50',
+            'house_number' => 'required|string|max:50',
+            'estate' => 'nullable|string|max:100',
+            'kra_pin' => 'nullable|string|max:20|unique:customers,kra_pin',
+            'property_owner' => 'required|string|max:100',
+            'expected_users' => 'nullable|integer|min:1|max:1000',
+        ]);
+
+        try {
+            DB::transaction(function () use ($validated) {
+                $customer = Customer::create([
+                    'customer_number' => $this->generateCustomerNumber(),
+                    'first_name' => $validated['first_name'],
+                    'last_name' => $validated['last_name'] ?? null,
+                    'email' => $validated['email'],
+                    'phone' => $validated['phone'],
+                    'id_number' => $validated['id_number'],
+                    'physical_address' => $validated['physical_address'],
+                    'plot_number' => $validated['plot_number'],
+                    'house_number' => $validated['house_number'],
+                    'estate' => $validated['estate'] ?? null,
+                    'kra_pin' => $validated['kra_pin'] ?? null,
+                    'property_owner' => $validated['property_owner'],
+                    'expected_users' => $validated['expected_users'] ?? null,
+                    'status' => 'active',
+                    'status_updated_at' => now(),
+                    'status_reason' => 'Quick created for meter assignment',
+                    'notes' => "Customer created via quick create on " . now()->format('Y-m-d H:i:s'),
+                ]);
+
+                Log::info('Customer quick created', [
+                    'customer_id' => $customer->id,
+                    'customer_number' => $customer->customer_number
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'customer' => [
+                        'id' => $customer->id,
+                        'text' => "{$customer->customer_number} - {$customer->first_name} {$customer->last_name} ({$customer->phone})",
+                        'customer_number' => $customer->customer_number,
+                        'name' => $customer->first_name . ' ' . $customer->last_name,
+                        'phone' => $customer->phone,
+                        'address' => $customer->physical_address,
+                    ]
+                ]);
+            });
+        } catch (\Exception $e) {
+            Log::error('Quick customer creation error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error creating customer: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Search customers with meter assignment status
+     */
+    public function searchCustomers(Request $request)
+    {
+        $search = $request->get('q');
+        $includeMeterInfo = $request->get('include_meter_info', false);
+
+        $customers = Customer::query()
+            ->where(function($query) use ($search) {
+                $query->where('customer_number', 'like', "%{$search}%")
+                    ->orWhere('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('id_number', 'like', "%{$search}%")
+                    ->orWhere('plot_number', 'like', "%{$search}%");
+            })
+            ->withCount('meters')
+            ->limit(20)
+            ->get()
+            ->map(function($customer) use ($includeMeterInfo) {
+                $result = [
+                    'id' => $customer->id,
+                    'text' => "{$customer->customer_number} - {$customer->first_name} {$customer->last_name}",
+                    'customer_number' => $customer->customer_number,
+                    'name' => $customer->first_name . ' ' . $customer->last_name,
+                    'phone' => $customer->phone,
+                    'address' => $customer->physical_address,
+                    'plot' => $customer->plot_number,
+                    'status' => $customer->status,
+                ];
+
+                if ($includeMeterInfo) {
+                    $result['has_meter'] = $customer->meters_count > 0;
+                    $result['meter_count'] = $customer->meters_count;
+                    $result['meter_info'] = $customer->meters_count > 0
+                        ? "Has {$customer->meters_count} meter(s) assigned"
+                        : "No meters assigned";
+                }
+
+                return $result;
+            });
+
+        return response()->json([
+            'results' => $customers,
+            'pagination' => [
+                'more' => false
+            ]
+        ]);
+    }
+
+    /**
+     * Check if customer has meters
+     */
+    public function checkCustomerMeters(Request $request, Customer $customer)
+    {
+        $meters = $customer->meters()->get();
+
+        return response()->json([
+            'has_meters' => $meters->isNotEmpty(),
+            'meter_count' => $meters->count(),
+            'meters' => $meters->map(function($meter) {
+                return [
+                    'id' => $meter->id,
+                    'meter_number' => $meter->meter_number,
+                    'status' => $meter->status,
+                    'installation_date' => $meter->installation_date?->format('Y-m-d'),
+                ];
+            })
+        ]);
     }
 }

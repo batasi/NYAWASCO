@@ -678,6 +678,14 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(
             Route::post('/unassign-meter/{meter}', [CustomerController::class, 'unassignMeter'])->name('unassign-meter');
             Route::post('/unassign-all-meters', [CustomerController::class, 'unassignAllMeters'])->name('unassign-all-meters');
 
+            // Unassign and reassign meter with customer search/creation
+            Route::get('/unassign-and-reassign/{meter}', [CustomerController::class, 'showUnassignReassignForm'])->name('unassign-reassign-form');
+            Route::post('/unassign-and-reassign/{meter}', [CustomerController::class, 'unassignAndReassign'])->name('unassign-and-reassign');
+
+            // NEW: Quick customer creation for meter assignment
+            Route::get('/quick-create-form', [CustomerController::class, 'quickCreateForm'])->name('quick-create-form');
+            Route::post('/quick-create', [CustomerController::class, 'quickCreate'])->name('quick-create');
+
             // Document Upload
             Route::post('/upload-documents', [CustomerController::class, 'uploadDocuments'])->name('upload-documents');
 
@@ -696,6 +704,15 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(
         });
     });
 
+    Route::prefix('admin/customers')->name('admin.customers.')->group(function () {
+        // ... existing routes ...
+
+        // Customer search for AJAX
+        Route::get('/search', [CustomerController::class, 'searchCustomers'])->name('search');
+
+        // Check customer meters
+        Route::get('/{customer}/check-meters', [CustomerController::class, 'checkCustomerMeters'])->name('check-meters');
+    });
     // Meter Management
     Route::prefix('meters')->name('meters.')->group(function () {
         Route::get('/', [MeterController::class, 'index'])->name('index');

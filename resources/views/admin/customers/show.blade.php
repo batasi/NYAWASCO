@@ -348,16 +348,12 @@
                                     View Meter
                                 </a>
 
-                                <form method="POST" action="{{ route('admin.customers.unassign-meter', [$customer, $meter]) }}"
-                                    onsubmit="return confirmUnassignMeter('{{ $meter->meter_number }}')" class="inline">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit"
-                                            class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm transition duration-200 flex items-center">
-                                        <i class="fas fa-unlink mr-1"></i>
-                                        Unassign
-                                    </button>
-                                </form>
+                                <!-- Replace the existing unassign form with this: -->
+                                <a href="{{ route('admin.customers.unassign-reassign-form', [$customer, $meter]) }}"
+                                class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition duration-200 flex items-center">
+                                    <i class="fas fa-exchange-alt mr-1"></i>
+                                    Unassign & Reassign
+                                </a>
                             </div>
                         </div>
                         @endforeach
