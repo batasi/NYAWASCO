@@ -474,6 +474,7 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Period</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Consumption</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Current Balance</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Zone</th>
                             <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -522,6 +523,25 @@
                                 @if($bill->payments->count() > 0)
                                     <div class="text-xs text-green-600">
                                         Paid: KSh {{ number_format($bill->payments->sum('amount'), 2) }}
+                                    </div>
+                                @endif
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                @php
+                                    $currentBalance = $bill->meter->current_balance ?? 0;
+                                @endphp
+
+                                @if($currentBalance > 0)
+                                    <div class="text-sm font-semibold text-red-600">
+                                        KSh {{ number_format($currentBalance, 2) }}
+                                    </div>
+                                    <div class="text-xs text-gray-500">
+                                        <i class="fas fa-exclamation-circle text-red-500 mr-1"></i> Outstanding
+                                    </div>
+                                @else
+
+                                    <div class="text-xs text-gray-500">
+                                        <i class="fas fa-check-circle text-green-500 mr-1"></i> No balance
                                     </div>
                                 @endif
                             </td>
@@ -1004,6 +1024,28 @@ document.addEventListener('DOMContentLoaded', function () {
                         ? `<div class="text-xs text-green-600">Paid: KSh ${paidAmount.toLocaleString()}</div>`
                         : ''
                     }
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    ${(() => {
+                        const balance = bill.meter?.current_balance ?? 0;
+
+                        if (balance > 0) {
+                            return `
+                                <div class="text-sm font-semibold text-red-600">
+                                    KSh ${Number(balance).toLocaleString()}
+                                </div>
+                                <div class="text-xs text-gray-500">
+                                    <i class="fas fa-exclamation-circle text-red-500 mr-1"></i> Outstanding
+                                </div>
+                            `;
+                        } else {
+                            return `
+                                <div class="text-xs text-green-500">
+                                    <i class="fas fa-check-circle text-gray-500 mr-1"></i> No Balance
+                                </div>
+                            `;
+                        }
+                    })()}
                 </td>
 
                 <td class="px-6 py-4 whitespace-nowrap">
