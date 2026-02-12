@@ -267,7 +267,82 @@
                             </div>
                         </div>
                     </div>
+                    <!-- Billing History Transfer -->
+                    <div class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                            <i class="fas fa-file-invoice-dollar text-blue-600 mr-2"></i>
+                            Billing History Transfer
+                        </h3>
 
+                        <div class="space-y-3">
+                            <div class="flex items-start">
+                                <div class="flex items-center h-5">
+                                    <input type="checkbox"
+                                        name="transfer_billing_history"
+                                        id="transferBillingHistory"
+                                        value="1"
+                                        class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                </div>
+                                <div class="ml-3">
+                                    <label for="transferBillingHistory" class="font-medium text-gray-700">
+                                        Transfer all bills and meter readings to the new customer
+                                    </label>
+                                    <p class="text-sm text-gray-500">
+                                        If checked, all billing history and meter readings for this meter will be transferred to the new customer.
+                                        This is useful when a meter was mistakenly assigned to the wrong customer.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Warning message for transfer -->
+                            <div id="transferWarning" class="hidden bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 text-sm">
+                                <div class="flex items-start">
+                                    <i class="fas fa-exclamation-triangle mr-2 mt-0.5"></i>
+                                    <div>
+                                        <strong class="font-medium">Warning:</strong>
+                                        <span id="transferWarningMessage">
+                                            All bills and meter readings for meter {{ $meter->meter_number }} will be moved to the new customer.
+                                            The current customer will lose this billing history.
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Summary of items to be transferred -->
+                            @php
+                                $billsCount = $meter->bills()->where('customer_id', $customer->id)->count();
+                                $billsTotal = $meter->bills()->where('customer_id', $customer->id)->sum('total_amount');
+                                $readingsCount = $meter->meterReadings()->where('customer_id', $customer->id)->where('reading_status','initial')->count();
+                            @endphp
+
+                            @if($billsCount > 0 || $readingsCount > 0)
+                            <div class="mt-2 p-3 bg-white rounded border border-gray-200">
+                                <h4 class="text-sm font-medium text-gray-700 mb-2">Items to be transferred from {{ $customer->first_name }} {{ $customer->last_name }}:</h4>
+                                <ul class="text-sm space-y-1">
+                                    @if($billsCount > 0)
+                                    <li class="flex items-center text-gray-600">
+                                        <i class="fas fa-file-invoice mr-2 text-blue-500"></i>
+                                        {{ $billsCount }} bill(s) totaling KSh {{ number_format($billsTotal, 2) }}
+                                    </li>
+                                    @endif
+                                    @if($readingsCount > 0)
+                                    <li class="flex items-center text-gray-600">
+                                        <i class="fas fa-tachometer-alt mr-2 text-green-500"></i>
+                                        {{ $readingsCount }} meter reading(s)
+                                    </li>
+                                    @endif
+                                </ul>
+                            </div>
+                            @else
+                            <div class="mt-2 p-3 bg-gray-100 rounded border border-gray-200">
+                                <p class="text-sm text-gray-500 flex items-center">
+                                    <i class="fas fa-info-circle mr-2"></i>
+                                    No bills or meter readings found for this meter with the current customer.
+                                </p>
+                            </div>
+                            @endif
+                        </div>
+                    </div>
                     <!-- Additional Notes -->
                     <div class="mb-6">
                         <label class="block text-sm font-medium text-gray-700 mb-2">
