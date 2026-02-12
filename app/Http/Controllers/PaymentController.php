@@ -593,8 +593,8 @@ class PaymentController extends Controller
             }
 
             // ========== PROCESS PAYMENT ==========
-            DB::transaction(function () use ($meter, $amount, $transactionRef, $paymentDate, $meterNumber) {
-                $this->paymentService->processPayment(
+            $paymentResult = DB::transaction(function () use ($meter, $amount, $transactionRef, $paymentDate, $meterNumber) {
+                return $this->paymentService->processPayment(
                     $meter,
                     $amount,
                     'mpesa',
@@ -603,6 +603,22 @@ class PaymentController extends Controller
                     auth()->id()
                 );
             });
+
+            // Check if bills were actually paid
+            $totalApplied = $paymentResult['total_applied'] ?? 0;
+            $remainingCredit = $paymentResult['remaining_credit'] ?? 0;
+            $appliedBills = $paymentResult['applied_bills'] ?? [];
+
+            if ($totalApplied > 0) {
+                Log::info("Payment allocated to bills for meter {$meterNumber}", [
+                    'total_applied' => $totalApplied,
+                    'bills_count' => count($appliedBills),
+                    'remaining_credit' => $remainingCredit
+                ]);
+            }
+
+            $results['success']++;
+            Log::info("Payment processed successfully for meter {$meterNumber}, amount {$amount}, applied: {$totalApplied}, credit: {$remainingCredit}");
 
             $results['success']++;
             Log::info("Payment processed successfully for meter {$meterNumber}, amount {$amount}");

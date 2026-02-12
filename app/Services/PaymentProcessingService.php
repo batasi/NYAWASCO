@@ -108,38 +108,28 @@ class PaymentProcessingService
         }
 
         /* ============================
-        | 3. Handle Overpayment (Credit)
-        |============================*/
+         | 3. Handle Overpayment (Credit)
+         |============================*/
         $customer = Customer::lockForUpdate()->find($meter->customer_id);
 
         if ($remainingAmount > 0) {
             $customer->credit_balance += $remainingAmount;
-
-            // Update meter balance to reflect credit (negative value)
-            $meter->current_balance = $meter->current_balance - $remainingAmount;
+            $meter->current_balance -= $remainingAmount;
 
             $payment->update([
                 'notes' => trim(($payment->notes ?? '') . " | Credit: {$remainingAmount}")
             ]);
-
-            $meter->save(); // Save immediately so it's not overwritten
-
-            /* ============================
-            | 4. Recalculate Meter Balances
-            |    BUT SKIP IF WE HAVE CREDIT
-            |============================*/
-            // Only recalculate if NO credit was applied
-        } else {
-            // No overpayment, recalculate from bills
-            $meter->current_balance = Bill::where('meter_id', $meter->id)
-                ->whereColumn('paid_amount', '<', 'total_amount')
-                ->sum('balance');
-
-            $meter->paid_amount = Bill::where('meter_id', $meter->id)
-                ->sum('paid_amount');
-
-            $meter->save();
         }
+
+        /* ============================
+         | 4. Recalculate Meter Balances
+         |    (Derived, NOT Mutated)
+         |============================*/
+
+        $meter->paid_amount = Bill::where('meter_id', $meter->id)
+            ->sum('paid_amount');
+
+        $meter->save();
 
         /* ============================
          | 5. Update Customer Payment Info
