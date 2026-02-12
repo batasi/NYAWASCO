@@ -1248,9 +1248,7 @@ class CustomerController extends Controller
     public function showUnassignReassignForm(Customer $customer, Meter $meter)
     {
         // Verify the meter belongs to this customer
-        if ($meter->customer_id !== $customer->id) {
-            return redirect()->back()->with('error', 'This meter is not assigned to this customer.');
-        }
+
 
         $categories = MeterCategory::active()->ordered()->get();
 
