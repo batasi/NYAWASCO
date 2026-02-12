@@ -443,37 +443,37 @@ class PaymentController extends Controller
             }
 
             // ========== DATE PARSING ==========
-$paymentDate = null;
-try {
-    // Force interpretation as DD-MM-YYYY (this is your bank statement format)
-    $paymentDate = Carbon::createFromFormat('d-m-Y', $date);
-} catch (\Exception $e) {
-    try {
-        // Try DD/MM/YYYY format
-        $paymentDate = Carbon::createFromFormat('d/m/Y', $date);
-    } catch (\Exception $e2) {
-        // Try other formats as fallback
-        // Format: dd-mm-yyyy with single digits (6-2-2026)
-        if (preg_match('/(\d{1,2})-(\d{1,2})-(\d{4})/', $date, $matches)) {
-            $paymentDate = Carbon::create($matches[3], $matches[2], $matches[1]);
-        }
-        // Format: dd/mm/yyyy with single digits (6/2/2026)
-        elseif (preg_match('/(\d{1,2})\/(\d{1,2})\/(\d{4})/', $date, $matches)) {
-            $paymentDate = Carbon::create($matches[3], $matches[2], $matches[1]);
-        }
-        // Format: yyyy-mm-dd (2026-01-26)
-        elseif (preg_match('/(\d{4})-(\d{1,2})-(\d{1,2})/', $date, $matches)) {
-            $paymentDate = Carbon::create($matches[1], $matches[2], $matches[3]);
-        }
-        // Format: yyyy/mm/dd (2026/01/26)
-        elseif (preg_match('/(\d{4})\/(\d{1,2})\/(\d{1,2})/', $date, $matches)) {
-            $paymentDate = Carbon::create($matches[1], $matches[2], $matches[3]);
-        }
-        else {
-            throw new \Exception("Could not parse date: {$date}. Expected format: DD-MM-YYYY");
-        }
-    }
-}
+            $paymentDate = null;
+            try {
+                // Force interpretation as DD-MM-YYYY (this is your bank statement format)
+                $paymentDate = Carbon::createFromFormat('d-m-Y', $date);
+            } catch (\Exception $e) {
+                try {
+                    // Try DD/MM/YYYY format
+                    $paymentDate = Carbon::createFromFormat('d/m/Y', $date);
+                } catch (\Exception $e2) {
+                    // Try other formats as fallback
+                    // Format: dd-mm-yyyy with single digits (6-2-2026)
+                    if (preg_match('/(\d{1,2})-(\d{1,2})-(\d{4})/', $date, $matches)) {
+                        $paymentDate = Carbon::create($matches[3], $matches[2], $matches[1]);
+                    }
+                    // Format: dd/mm/yyyy with single digits (6/2/2026)
+                    elseif (preg_match('/(\d{1,2})\/(\d{1,2})\/(\d{4})/', $date, $matches)) {
+                        $paymentDate = Carbon::create($matches[3], $matches[2], $matches[1]);
+                    }
+                    // Format: yyyy-mm-dd (2026-01-26)
+                    elseif (preg_match('/(\d{4})-(\d{1,2})-(\d{1,2})/', $date, $matches)) {
+                        $paymentDate = Carbon::create($matches[1], $matches[2], $matches[3]);
+                    }
+                    // Format: yyyy/mm/dd (2026/01/26)
+                    elseif (preg_match('/(\d{4})\/(\d{1,2})\/(\d{1,2})/', $date, $matches)) {
+                        $paymentDate = Carbon::create($matches[1], $matches[2], $matches[3]);
+                    }
+                    else {
+                        throw new \Exception("Could not parse date: {$date}. Expected format: DD-MM-YYYY");
+                    }
+                }
+            }
             Log::info("Processing payment - Meter: {$meterNumber}, Amount: {$amount}, Date: {$paymentDate->format('Y-m-d')}");
 
             // ========== FIND METER ==========
