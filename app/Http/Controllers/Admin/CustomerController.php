@@ -1280,18 +1280,6 @@ class CustomerController extends Controller
             'new_customer.expected_users' => 'nullable|integer|min:1|max:1000',
             'unassignment_reason' => 'required|string|max:255',
             'transfer_billing_history' => 'nullable|in:1',
-
-            'new_initial_reading' => [
-                'nullable',
-                'numeric',
-                'min:0',
-                function ($attribute, $value, $fail) use ($request) {
-                    if ($request->action === 'existing' && empty($value) && $value !== '0') {
-                        $fail('Initial reading is required when assigning to an existing customer.');
-                    }
-                }
-            ],
-            'new_balance_bf' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string|max:1000',
         ], [
             'customer_id.required_if' => 'Please select a customer to assign the meter to.',
@@ -1372,8 +1360,7 @@ class CustomerController extends Controller
                 $meter->update([
                     'customer_id' => null,
                     'status' => Meter::STATUS_AVAILABLE,
-                    'installation_address' => null,
-                    'installation_date' => null,
+
                 ]);
 
                 // 4. Update current customer notes
@@ -1385,43 +1372,27 @@ class CustomerController extends Controller
                 //this is where we'll implement the loop for other options to customer-meter-balances
                 if ($request->action === 'existing') {
                     // For existing customer, use provided values
-                    // $installationDate = $request->new_installation_date;
-                    // $initialReading = $request->new_initial_reading;
-                    // $balanceBf = $request->new_balance_bf ?? 0;
+
+                    $currentReading = $meter->current_reading;
+                    $initialReading = $meter->initial_reading;
+
                 }
                  else {
-                    // For new customer, use current values or defaults
-                    $installationDate = now()->format('Y-m-d');
-                    $initialReading = $meter->current_reading; // Use current reading as initial
-                    // $balanceBf = 0;
+                    $currentReading = $meter->current_reading;
+                    $initialReading = $meter->initial_reading;
+
                 }
 
                 $meter->update([
                     'customer_id' => $targetCustomer->id,
                     'installation_address' => $targetCustomer->physical_address,
-                    'installation_date' => $installationDate,
-                    'initial_reading' => $initialReading,
-                    'balance_bf' => $balanceBf,
-                    'current_balance' => $balanceBf,
+
                     'status' => Meter::STATUS_ACTIVE,
                     'notes' => ($meter->notes ? $meter->notes . "\n\n" : '') .
                             "Reassigned to customer {$targetCustomer->customer_number} on " . now()->format('Y-m-d H:i:s')
                 ]);
 
                 // 6. Create initial meter reading for new assignment
-                MeterReading::create([
-                    'customer_id' => $targetCustomer->id,
-                    'meter_id' => $meter->id,
-                    'current_reading' => $initialReading,
-                    'previous_reading' => 0,
-                    'consumption' => $initialReading,
-                    'reading_date' => $installationDate,
-                    'reading_type' => 'initial',
-                    'reading_period' => 'Meter Reassignment',
-                    'billed' => false,
-                    'read_by' => auth()->id(),
-                    'notes' => "Initial reading after reassignment from customer {$customer->customer_number}",
-                ]);
 
                 // ========== BILLING HISTORY TRANSFER ==========
                 // Check if transfer billing history checkbox is checked
@@ -1500,15 +1471,13 @@ class CustomerController extends Controller
 
                 // 7. Add assignment note to target customer
                 $assignmentNote = sprintf(
-                    "Meter %s assigned from customer %s %s (ID: %s) on %s\nInstallation Date: %s\nInitial Reading: %s m³\nBalance B/F: KSh %s",
+                    "Meter %s assigned from customer %s %s (ID: %s) ",
                     $meter->meter_number,
                     $customer->first_name,
                     $customer->last_name,
                     $customer->customer_number,
                     now()->format('Y-m-d H:i:s'),
-                    $installationDate,
-                    $initialReading,
-                    number_format($balanceBf, 2)
+
                 );
 
                 $targetCustomer->update([
@@ -1527,8 +1496,6 @@ class CustomerController extends Controller
                     'from_customer' => $customer->id,
                     'to_customer' => $targetCustomer->id,
                     'action' => $request->action,
-                    'installation_date' => $installationDate,
-                    'initial_reading' => $initialReading
                 ]);
             });
 

@@ -117,8 +117,8 @@
                                                 </div>
                                             </div>
 
-                                            <!-- New Meter Installation Details -->
-                                            <div id="installationDetails" class="mt-4 p-4 bg-gray-50 rounded-lg">
+                                            <!-- New Meter Installation Details to be added soon -->
+                                            {{-- <div id="installationDetails" class="mt-4 p-4 bg-gray-50 rounded-lg">
                                                 <h4 class="text-sm font-medium text-gray-900 mb-3">Meter Installation Details</h4>
                                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     <div>
@@ -153,7 +153,7 @@
                                                                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                                     </div>
                                                 </div>
-                                            </div>
+                                            </div> --}}
                                         </div>
                                     </div>
                                 </div>
