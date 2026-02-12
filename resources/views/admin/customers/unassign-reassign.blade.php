@@ -180,7 +180,7 @@
                                                         First Name <span class="text-red-500">*</span>
                                                     </label>
                                                     <input type="text" name="new_customer[first_name]"
-                                                           class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                                           class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                                                 </div>
                                                 <div>
                                                     <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -191,7 +191,7 @@
                                                 </div>
                                                 <div>
                                                     <label class="block text-sm font-medium text-gray-700 mb-2">
-                                                        Email <span class="text-red-500">*</span>
+                                                        Email
                                                     </label>
                                                     <input type="email" name="new_customer[email]"
                                                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
@@ -201,14 +201,14 @@
                                                         Phone <span class="text-red-500">*</span>
                                                     </label>
                                                     <input type="text" name="new_customer[phone]"
-                                                           class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                                           class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                                                 </div>
                                                 <div>
                                                     <label class="block text-sm font-medium text-gray-700 mb-2">
                                                         ID Number <span class="text-red-500">*</span>
                                                     </label>
                                                     <input type="text" name="new_customer[id_number]"
-                                                           class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                                           class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                                                 </div>
                                                 <div>
                                                     <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -250,7 +250,7 @@
                                                         Physical Address <span class="text-red-500">*</span>
                                                     </label>
                                                     <textarea name="new_customer[physical_address]" rows="2"
-                                                              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                                                              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required></textarea>
                                                 </div>
                                                 <div>
                                                     <label class="block text-sm font-medium text-gray-700 mb-2">
