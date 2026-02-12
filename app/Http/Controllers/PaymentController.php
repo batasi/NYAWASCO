@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-
+use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Bill;
 use App\Models\User;
@@ -206,7 +206,6 @@ class PaymentController extends Controller
      * Store a newly created payment with proper transaction handling
      */
 
-
     public function import(Request $request)
     {
         $request->validate([
@@ -231,9 +230,9 @@ class PaymentController extends Controller
 
         Log::info('Headers found:', $headers);
 
-        // 🔒 Ensure required columns exist
-        $requiredColumns = ['Credit Amt.', 'Particulars'];
-        $dateColumns = ['Tran. Date', 'Value Date'];
+        // 🔒 Ensure required columns exist - ADJUSTED FOR YOUR ACTUAL HEADERS
+        $requiredColumns = ['Amount', 'Description']; // Changed from 'Credit Amt.', 'Particulars'
+        $dateColumns = ['Date']; // Changed from ['Tran. Date', 'Value Date']
 
         $foundDateColumn = null;
         foreach ($dateColumns as $dateCol) {
@@ -258,237 +257,114 @@ class PaymentController extends Controller
             'failed' => 0,
             'errors' => [],
             'skipped' => 0,
-            'not_found_meters' => [], // Changed from not_found_customers
+            'not_found_meters' => [],
             'empty_amounts' => 0
         ];
 
-        foreach ($rows as $rowNumber => $row) {
-            if ($rowNumber === 1) continue;
+        // ========== NEW: PROCESS TRANSACTIONS BY GROUPING ==========
+        $currentDate = null;
+        $currentMeterNumber = null;
+        $currentDescription = null;
+        $pendingTransactions = []; // Store incomplete transactions
 
-            // Skip empty rows or rows with empty particulars
-            if (empty($row[$headerMap['Particulars']])) {
-                $results['skipped']++;
-                continue;
-            }
+        for ($rowNumber = 2; $rowNumber <= $highestRow; $rowNumber++) {
+            $row = $rows[$rowNumber];
 
-            try {
-                // ========== AMOUNT CHECK FIRST ==========
-                // Get amount cell FIRST to check if it's empty
-                $amountColumnLetter = $headerMap['Credit Amt.'];
-                $amountCell = $sheet->getCell($amountColumnLetter . $rowNumber);
-                $excelAmountValue = $amountCell->getValue();
+            // Get cell values
+            $dateValue = trim($row[$headerMap['Date']] ?? '');
+            $amountValue = trim($row[$headerMap['Amount']] ?? '');
+            $descriptionValue = trim($row[$headerMap['Description']] ?? '');
 
-                // Check if amount is empty or null
-                $isAmountEmpty = false;
-                if ($excelAmountValue === null || $excelAmountValue === '' || $excelAmountValue === ' ') {
-                    $isAmountEmpty = true;
-                } elseif (is_string($excelAmountValue) && trim($excelAmountValue) === '') {
-                    $isAmountEmpty = true;
-                }
-
-                // Also check the array value
-                $arrayAmountValue = $rows[$rowNumber][$headerMap['Credit Amt.']];
-                if ($isAmountEmpty && ($arrayAmountValue === null || $arrayAmountValue === '' || trim($arrayAmountValue) === '')) {
-                    $isAmountEmpty = true;
-                } else {
-                    $isAmountEmpty = false;
-                }
-
-                // If amount is empty, skip this row - it's not a payment!
-                if ($isAmountEmpty) {
-                    $results['empty_amounts']++;
-                    Log::info("Row {$rowNumber} - Skipping: Empty amount field");
-                    continue;
-                }
-
-                // ========== DATE PARSING ==========
-                $dateColumnLetter = $headerMap[$foundDateColumn];
-                $dateCell = $sheet->getCell($dateColumnLetter . $rowNumber);
-                $excelDateValue = $dateCell->getValue();
-
-                // Handle date
-                if (is_numeric($excelDateValue)) {
-                    // Excel serial date - convert to DateTime
-                    $utcDays = $excelDateValue - 25569;
-                    $paymentDate = Carbon::createFromTimestamp($utcDays * 86400);
-                } else {
-                    try {
-                        $paymentDate = Carbon::parse($excelDateValue);
-                    } catch (\Exception $e) {
-                        $formattedValue = $dateCell->getFormattedValue();
-                        if (preg_match('/(\d{4})年(\d{1,2})月(\d{1,2})日/', $formattedValue, $matches)) {
-                            $paymentDate = Carbon::create($matches[1], $matches[2], $matches[3]);
-                        } else {
-                            throw new \Exception("Could not parse date: {$formattedValue}");
-                        }
-                    }
-                }
-
-                // ========== AMOUNT PARSING ==========
-                $amount = null;
-
-                // Try multiple parsing methods
-                if (is_numeric($excelAmountValue)) {
-                    $amount = (float) $excelAmountValue;
-                } elseif (is_string($excelAmountValue)) {
-                    $amount = (float) str_replace(',', '', $excelAmountValue);
-                } else {
-                    $formatted = $amountCell->getFormattedValue();
-                    if (preg_match('/[\d,]+\.?\d*/', $formatted, $matches)) {
-                        $amount = (float) str_replace(',', '', $matches[0]);
-                    }
-                }
-
-                // If still null, try array value
-                if ($amount === null && is_numeric($arrayAmountValue)) {
-                    $amount = (float) $arrayAmountValue;
-                }
-
-                // Validate amount
-                if ($amount === null || $amount <= 0) {
-                    throw new \Exception("Invalid amount. Raw: " . print_r($excelAmountValue, true) .
-                                        ", Formatted: " . $amountCell->getFormattedValue());
-                }
-
-                // ========== PARTICULAR PARSING ==========
-                $particulars = trim($rows[$rowNumber][$headerMap['Particulars']]);
-
-                // Extract METER number (not customer number)
-                $meterNumber = null;
-
-                // Pattern 1: # followed by numbers (most common: #13764)
-                if (preg_match('/#(\d{3,})/', $particulars, $matches)) {
-                    $meterNumber = $matches[1];
-                }
-                // Pattern 2: Look for standalone 3+ digit numbers
-                elseif (preg_match('/\b(\d{3,})\b/', $particulars, $matches)) {
-                    $meterNumber = $matches[1];
-                }
-
-                if (!$meterNumber) {
-                    // Check if this is a non-payment entry (like charges, withdrawals)
-                    $nonPaymentKeywords = [
-                        'Cash Withdrawal Charge',
-                        'Inward Clearing Charge',
-                        'Inter Sol Cash Wdrawal charge',
-                        'Cash Withdrawal Charge',
-                        'JARED ATEMBA', // These might be withdrawals by staff
-                        'ChequeNo',
-                        'Chq:'
-                    ];
-
-                    $isNonPayment = false;
-                    foreach ($nonPaymentKeywords as $keyword) {
-                        if (stripos($particulars, $keyword) !== false) {
-                            $isNonPayment = true;
-                            break;
-                        }
-                    }
-
-                    if ($isNonPayment) {
-                        $results['skipped']++;
-                        Log::info("Row {$rowNumber} - Skipping non-payment entry: " . substr($particulars, 0, 50));
-                        continue;
-                    } else {
-                        throw new \Exception('Meter number not found in particulars');
-                    }
-                }
-
-                Log::info("Row {$rowNumber} - Extracted meter number: {$meterNumber}, Amount: {$amount}");
-
-                // ========== FIND METER AND CUSTOMER ==========
-                // First, find the meter by meter_number
-                $meter = Meter::where('meter_number', $meterNumber)->first();
-
-                if (!$meter) {
-                    $results['not_found_meters'][] = [
-                        'row' => $rowNumber,
-                        'meter_number' => $meterNumber,
-                        'amount' => $amount,
-                        'date' => $paymentDate->format('Y-m-d'),
-                        'particulars' => substr($particulars, 0, 200)
-                    ];
-                    throw new \Exception("Meter {$meterNumber} not found - skipped");
-                }
-
-                // Check if meter is assigned to a customer
-                if (!$meter->customer_id) {
-                    throw new \Exception("Meter {$meterNumber} is not assigned to any customer");
-                }
-
-                // Get the customer from the meter
-                $customer = $meter->customer;
-
-                if (!$customer) {
-                    throw new \Exception("Customer for meter {$meterNumber} not found");
-                }
-
-                if ($customer->status !== 'active') {
-                    throw new \Exception("Customer for meter {$meterNumber} is {$customer->status}");
-                }
-
-                // ========== PAYMENT PROCESSING ==========
-                // Extract transaction reference
-                $transactionRef = $this->extractTransactionRef($particulars);
-
-                // Check for duplicate transaction reference
-                if ($transactionRef) {
-                    $existingPayment = Payment::where('transaction_reference', $transactionRef)
-                        ->where('payment_method', 'mpesa')
-                        ->where('payment_status', 'completed')
-                        ->first();
-
-                    if ($existingPayment) {
-                        throw new \Exception('Transaction reference has already been used');
-                    }
-                }
-
-                // Process payment within transaction
-                DB::transaction(function () use ($meter, $amount, $transactionRef, $paymentDate, $meterNumber, $rowNumber) {
-                    $this->paymentService->processPayment(
-                        $meter,
-                        $amount,
-                        'mpesa',
-                        $transactionRef,
-                        $paymentDate,
-                        auth()->id()
+            // ========== CHECK FOR DATE ==========
+            // If this row has a date, it starts a new transaction group
+            if (!empty($dateValue)) {
+                // Process any pending transaction from previous group
+                if ($currentDate !== null && $currentMeterNumber !== null) {
+                    $this->processPaymentTransaction(
+                        $currentDate,
+                        $currentMeterNumber,
+                        $currentDescription,
+                        $pendingTransactions,
+                        $results,
+                        $sheet,
+                        $headerMap
                     );
+                }
 
-                    Log::info("Row {$rowNumber} - Payment processed for meter {$meterNumber}");
-                });
+                // Reset for new transaction
+                $currentDate = $dateValue;
+                $currentMeterNumber = null;
+                $currentDescription = $descriptionValue;
+                $pendingTransactions = [];
 
-                $results['success']++;
+                // Add this row to pending transactions
+                $pendingTransactions[] = [
+                    'row' => $rowNumber,
+                    'date' => $dateValue,
+                    'amount' => $amountValue,
+                    'description' => $descriptionValue,
+                    'type' => 'header'
+                ];
 
-            } catch (\Exception $e) {
-                // Check error type
-                $errorMsg = $e->getMessage();
+                // Try to extract meter number from description
+                if (preg_match('/#(\d{3,})/', $descriptionValue, $matches)) {
+                    $currentMeterNumber = $matches[1];
+                    Log::info("Row {$rowNumber} - Found meter number: {$currentMeterNumber}");
+                }
+            }
+            else {
+                // This row belongs to the current transaction group
+                $pendingTransactions[] = [
+                    'row' => $rowNumber,
+                    'date' => $dateValue,
+                    'amount' => $amountValue,
+                    'description' => $descriptionValue,
+                    'type' => empty($amountValue) ? 'info' : 'payment'
+                ];
 
-                if (strpos($errorMsg, 'Meter') !== false &&
-                    strpos($errorMsg, 'not found') !== false &&
-                    strpos($errorMsg, 'skipped') !== false) {
-                    $results['skipped']++;
-                    Log::info("Row {$rowNumber} skipped: " . $errorMsg);
-                } elseif (strpos($errorMsg, 'Invalid amount') !== false) {
-                    $results['failed']++;
-                    $results['errors'][] = [
-                        'row' => $rowNumber,
-                        'reason' => $errorMsg
-                    ];
-                    Log::error("Row {$rowNumber} amount error: " . $errorMsg);
-                } else {
-                    $results['failed']++;
-                    $results['errors'][] = [
-                        'row' => $rowNumber,
-                        'reason' => $errorMsg
-                    ];
-                    Log::error("Row {$rowNumber} failed: " . $errorMsg);
+                // Check for meter number in this row
+                if (preg_match('/#(\d{3,})/', $descriptionValue, $matches)) {
+                    $currentMeterNumber = $matches[1];
+                    Log::info("Row {$rowNumber} - Found meter number: {$currentMeterNumber}");
+                }
+
+                // Check for amount in this row
+                if (!empty($amountValue) && is_numeric(str_replace(',', '', $amountValue))) {
+                    // This row contains a payment amount
+                    $amount = (float) str_replace(',', '', $amountValue);
+
+                    // If we have a meter number, process immediately
+                    if ($currentMeterNumber) {
+                        $this->processPaymentTransaction(
+                            $currentDate,
+                            $currentMeterNumber,
+                            $currentDescription,
+                            [$pendingTransactions[count($pendingTransactions)-1]],
+                            $results,
+                            $sheet,
+                            $headerMap
+                        );
+                    }
                 }
             }
         }
 
+        // Process the last transaction
+        if ($currentDate !== null && $currentMeterNumber !== null) {
+            $this->processPaymentTransaction(
+                $currentDate,
+                $currentMeterNumber,
+                $currentDescription,
+                $pendingTransactions,
+                $results,
+                $sheet,
+                $headerMap
+            );
+        }
+
         // Create summary
         $summary = [
-            'total_rows' => count($rows) - 1,
+            'total_rows' => $highestRow - 1,
             'successful' => $results['success'],
             'failed' => $results['failed'],
             'skipped' => $results['skipped'],
@@ -502,6 +378,130 @@ class PaymentController extends Controller
             'import_result' => $results,
             'import_summary' => $summary
         ]);
+    }
+
+    /**
+     * Process a complete payment transaction
+     */
+    private function processPaymentTransaction($date, $meterNumber, $description, $transactionRows, &$results, $sheet, $headerMap)
+    {
+        try {
+            // Find the payment amount in this transaction
+            $amount = null;
+            $paymentRow = null;
+
+            foreach ($transactionRows as $row) {
+                if (!empty($row['amount'])) {
+                    $amountValue = $row['amount'];
+                    $paymentRow = $row['row'];
+
+                    // Parse amount
+                    if (is_numeric($amountValue)) {
+                        $amount = (float) $amountValue;
+                    } else {
+                        $amount = (float) str_replace(',', '', $amountValue);
+                    }
+                    break;
+                }
+            }
+
+            if (!$amount || $amount <= 0) {
+                Log::info("Transaction for meter {$meterNumber} - No valid amount found");
+                $results['skipped']++;
+                return;
+            }
+
+            // ========== DATE PARSING ==========
+            $paymentDate = null;
+            try {
+                $paymentDate = Carbon::parse($date);
+            } catch (\Exception $e) {
+                // Try alternative formats
+                if (preg_match('/(\d{2})-(\d{2})-(\d{4})/', $date, $matches)) {
+                    $paymentDate = Carbon::create($matches[3], $matches[2], $matches[1]);
+                } else {
+                    throw new \Exception("Could not parse date: {$date}");
+                }
+            }
+
+            Log::info("Processing payment - Meter: {$meterNumber}, Amount: {$amount}, Date: {$paymentDate->format('Y-m-d')}");
+
+            // ========== FIND METER ==========
+            $meter = Meter::where('meter_number', $meterNumber)->first();
+
+            if (!$meter) {
+                $results['not_found_meters'][] = [
+                    'meter_number' => $meterNumber,
+                    'amount' => $amount,
+                    'date' => $paymentDate->format('Y-m-d'),
+                    'description' => substr($description, 0, 200)
+                ];
+                throw new \Exception("Meter {$meterNumber} not found in database");
+            }
+
+            // Check if meter is assigned to a customer
+            if (!$meter->customer_id) {
+                throw new \Exception("Meter {$meterNumber} is not assigned to any customer");
+            }
+
+            // Get the customer from the meter
+            $customer = $meter->customer;
+
+            if (!$customer) {
+                throw new \Exception("Customer for meter {$meterNumber} not found");
+            }
+
+            if ($customer->status !== 'active') {
+                throw new \Exception("Customer for meter {$meterNumber} is {$customer->status}");
+            }
+
+            // ========== EXTRACT TRANSACTION REFERENCE ==========
+            $transactionRef = null;
+
+            // Try to extract MPS reference
+            if (preg_match('/MPS\s+(\d{12})/', $description, $matches)) {
+                $transactionRef = $matches[1];
+            } elseif (preg_match('/UB\d?[A-Z0-9]+/', $description, $matches)) {
+                $transactionRef = $matches[0];
+            }
+
+            // Check for duplicate
+            if ($transactionRef) {
+                $existingPayment = Payment::where('transaction_reference', $transactionRef)
+                    ->where('payment_method', 'mpesa')
+                    ->where('payment_status', 'completed')
+                    ->first();
+
+                if ($existingPayment) {
+                    throw new \Exception("Transaction reference {$transactionRef} has already been used");
+                }
+            }
+
+            // ========== PROCESS PAYMENT ==========
+            DB::transaction(function () use ($meter, $amount, $transactionRef, $paymentDate, $meterNumber) {
+                $this->paymentService->processPayment(
+                    $meter,
+                    $amount,
+                    'mpesa',
+                    $transactionRef,
+                    $paymentDate,
+                    auth()->id()
+                );
+            });
+
+            $results['success']++;
+            Log::info("Payment processed successfully for meter {$meterNumber}, amount {$amount}");
+
+        } catch (\Exception $e) {
+            $results['failed']++;
+            $results['errors'][] = [
+                'meter_number' => $meterNumber,
+                'amount' => $amount ?? 'unknown',
+                'date' => $date,
+                'reason' => $e->getMessage()
+            ];
+            Log::error("Payment failed for meter {$meterNumber}: " . $e->getMessage());
+        }
     }
 
     private function extractTransactionRef(string $text): ?string
