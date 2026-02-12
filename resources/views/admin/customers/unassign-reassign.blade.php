@@ -56,6 +56,9 @@
                                 <option value="meter_fault">Meter Fault / Replacement</option>
                                 <option value="property_transfer">Property Transfer / Sale</option>
                                 <option value="tenant_change">Tenant Change</option>
+                                <option value="meter_incorrectly_assigned" class="font-semibold text-red-600 bg-red-50">
+                                    Meter Incorrectly Assigned
+                                </option>
                                 <option value="illegal_connection">Illegal Connection Detected</option>
                                 <option value="disconnection">Service Disconnection</option>
                                 <option value="other">Other</option>
@@ -485,6 +488,26 @@
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
+    // Auto-check billing history transfer when meter incorrectly assigned is selected
+$('#unassignmentReason').on('change', function() {
+    if ($(this).val() === 'meter_incorrectly_assigned') {
+        $('#transferBillingHistory').prop('checked', true);
+        $('#transferWarning').removeClass('hidden'); // Show warning when checked
+    }
+});
+
+// Also show warning when checkbox is manually checked
+$('#transferBillingHistory').on('change', function() {
+    if ($(this).is(':checked')) {
+        $('#transferWarning').removeClass('hidden');
+    } else {
+        $('#transferWarning').addClass('hidden');
+    }
+});
+
+// Trigger initial state
+$('#unassignmentReason').trigger('change');
+
 $(document).ready(function() {
     // Initialize Select2 for customer search
     const $customerSelect = $('#customerSearch');
