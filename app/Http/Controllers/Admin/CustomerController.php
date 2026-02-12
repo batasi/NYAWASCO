@@ -1280,15 +1280,7 @@ class CustomerController extends Controller
             'new_customer.expected_users' => 'nullable|integer|min:1|max:1000',
             'unassignment_reason' => 'required|string|max:255',
             'transfer_billing_history' => 'nullable|in:1',
-            'new_installation_date' => [
-                'nullable',
-                'date',
-                function ($attribute, $value, $fail) use ($request) {
-                    if ($request->action === 'existing' && empty($value)) {
-                        $fail('Installation date is required when assigning to an existing customer.');
-                    }
-                }
-            ],
+
             'new_initial_reading' => [
                 'nullable',
                 'numeric',
@@ -1390,17 +1382,18 @@ class CustomerController extends Controller
                 ]);
 
                 // 5. Assign to target customer - handle differently based on action
+                //this is where we'll implement the loop for other options to customer-meter-balances
                 if ($request->action === 'existing') {
                     // For existing customer, use provided values
-                    $installationDate = $request->new_installation_date;
-                    $initialReading = $request->new_initial_reading;
-                    $balanceBf = $request->new_balance_bf ?? 0;
+                    // $installationDate = $request->new_installation_date;
+                    // $initialReading = $request->new_initial_reading;
+                    // $balanceBf = $request->new_balance_bf ?? 0;
                 }
                  else {
                     // For new customer, use current values or defaults
                     $installationDate = now()->format('Y-m-d');
                     $initialReading = $meter->current_reading; // Use current reading as initial
-                    $balanceBf = 0;
+                    // $balanceBf = 0;
                 }
 
                 $meter->update([

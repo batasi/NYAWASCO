@@ -52,16 +52,16 @@
                             <select name="unassignment_reason" id="unassignmentReason" required
                                     class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 <option value="">Select reason...</option>
-                                <option value="customer_request">Customer Request</option>
+                                {{-- <option value="customer_request">Customer Request</option>
                                 <option value="meter_fault">Meter Fault / Replacement</option>
                                 <option value="property_transfer">Property Transfer / Sale</option>
-                                <option value="tenant_change">Tenant Change</option>
+                                <option value="tenant_change">Tenant Change</option> --}}
                                 <option value="meter_incorrectly_assigned" class="font-semibold text-red-600 bg-red-50">
                                     Meter Incorrectly Assigned
                                 </option>
-                                <option value="illegal_connection">Illegal Connection Detected</option>
+                                {{-- <option value="illegal_connection">Illegal Connection Detected</option>
                                 <option value="disconnection">Service Disconnection</option>
-                                <option value="other">Other</option>
+                                <option value="other">Other</option> --}}
                             </select>
                             @error('unassignment_reason')
                                 <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
