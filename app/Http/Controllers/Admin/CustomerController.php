@@ -1395,7 +1395,8 @@ class CustomerController extends Controller
                     $installationDate = $request->new_installation_date;
                     $initialReading = $request->new_initial_reading;
                     $balanceBf = $request->new_balance_bf ?? 0;
-                } else {
+                }
+                 else {
                     // For new customer, use current values or defaults
                     $installationDate = now()->format('Y-m-d');
                     $initialReading = $meter->current_reading; // Use current reading as initial

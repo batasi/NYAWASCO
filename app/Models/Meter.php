@@ -2,6 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Bill;
+use App\Models\Customer;
+use App\Models\CustomerMeterBalance;
+use App\Models\MeterCategory;
+use App\Models\MeterReading;
+use App\Models\WalkRoute;
+use App\Models\Zone;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -108,6 +115,15 @@ class Meter extends Model
         return $this->belongsTo(Customer::class, 'customer_id');
     }
 
+    public function customerBalances()
+    {
+        return $this->hasMany(CustomerMeterBalance::class);
+    }
+
+    public function activeCustomerBalance()
+    {
+        return $this->hasOne(CustomerMeterBalance::class)->where('status', 'active');
+    }
     public function meterCategory()
     {
         return $this->belongsTo(MeterCategory::class);

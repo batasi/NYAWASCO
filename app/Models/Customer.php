@@ -2,6 +2,12 @@
 
 namespace App\Models;
 
+use App\Models\Bill;
+use App\Models\CustomerMeterBalance;
+use App\Models\Meter;
+use App\Models\MeterReading;
+use App\Models\Payment;
+use App\Models\WaterConnectionApplication;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -81,6 +87,17 @@ class Customer extends Model
     {
         return $this->hasOne(WaterConnectionApplication::class);
     }
+
+    public function meterBalances()
+    {
+        return $this->hasMany(CustomerMeterBalance::class);
+    }
+
+    public function activeMeterBalances()
+    {
+        return $this->hasMany(CustomerMeterBalance::class)->where('status', 'active');
+    }
+
 
     public function meters()
     {
