@@ -223,16 +223,22 @@ class PaymentController extends Controller
         $rows = $sheet->rangeToArray('A1:' . $highestColumn . $highestRow, null, true, true, true);
 
         // First row = headers
-        $headers = array_map('trim', $rows[1]);
+        $headers = $rows[1];
 
-        // Map header names to column letters
-        $headerMap = array_flip($headers);
+        // Clean headers and map header names to column letters
+        $headerMap = [];
+        foreach ($headers as $columnLetter => $headerName) {
+            if (!empty($headerName)) {
+                $cleanHeader = trim($headerName);
+                $headerMap[$cleanHeader] = $columnLetter;
+            }
+        }
 
-        Log::info('Headers found:', $headers);
+        Log::info('Headers found:', array_keys($headerMap));
 
-        // 🔒 Ensure required columns exist - ADJUSTED FOR YOUR ACTUAL HEADERS
-        $requiredColumns = ['Amount', 'Description']; // Changed from 'Credit Amt.', 'Particulars'
-        $dateColumns = ['Date']; // Changed from ['Tran. Date', 'Value Date']
+        // 🔒 Ensure required columns exist
+        $requiredColumns = ['Credit Amt.', 'Particulars'];
+        $dateColumns = ['Tran. Date', 'Value Date'];
 
         $foundDateColumn = null;
         foreach ($dateColumns as $dateCol) {
