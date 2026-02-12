@@ -207,315 +207,181 @@ class PaymentController extends Controller
      */
 
     public function import(Request $request)
-{
-    $request->validate([
-        'file' => 'required|file|mimes:xlsx,xls'
-    ]);
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls'
+        ]);
 
-    $spreadsheet = IOFactory::load($request->file('file')->getPathname());
-    $sheet = $spreadsheet->getActiveSheet();
+        $spreadsheet = IOFactory::load($request->file('file')->getPathname());
+        $sheet = $spreadsheet->getActiveSheet();
 
-    // Get the highest row and column
-    $highestRow = $sheet->getHighestRow();
-    $highestColumn = $sheet->getHighestColumn();
+        // Get the highest row and column
+        $highestRow = $sheet->getHighestRow();
+        $highestColumn = $sheet->getHighestColumn();
 
-    // Get all cells as an array
-    $rows = $sheet->rangeToArray('A1:' . $highestColumn . $highestRow, null, true, true, true);
+        // Get all cells as an array
+        $rows = $sheet->rangeToArray('A1:' . $highestColumn . $highestRow, null, true, true, true);
 
-    // First row = headers
-    $headers = $rows[1];
+        // First row = headers
+        $headers = $rows[1];
 
-    // Map header names to column letters
-    $headerMap = [];
-    foreach ($headers as $columnLetter => $headerName) {
-        if (!empty($headerName)) {
-            $cleanHeader = trim($headerName);
-            $headerMap[$cleanHeader] = $columnLetter;
-        }
-    }
-
-    Log::info('Headers found:', array_keys($headerMap));
-
-    // 🔒 Ensure required columns exist - USE YOUR ACTUAL COLUMN NAMES
-    $requiredColumns = ['Credit Amt.', 'Particulars'];
-    $dateColumns = ['Tran. Date', 'Value Date'];
-
-    $foundDateColumn = null;
-    foreach ($dateColumns as $dateCol) {
-        if (isset($headerMap[$dateCol])) {
-            $foundDateColumn = $dateCol;
-            break;
-        }
-    }
-
-    if (!$foundDateColumn) {
-        throw new \Exception('No date column found. Available columns: ' . implode(', ', array_keys($headerMap)));
-    }
-
-    foreach ($requiredColumns as $requiredColumn) {
-        if (!isset($headerMap[$requiredColumn])) {
-            throw new \Exception("Missing column: {$requiredColumn}. Available: " . implode(', ', array_keys($headerMap)));
-        }
-    }
-
-    $results = [
-        'success' => 0,
-        'failed' => 0,
-        'errors' => [],
-        'skipped' => 0,
-        'not_found_meters' => [],
-        'empty_amounts' => 0
-    ];
-
-    // ========== PROCESS TRANSACTIONS BY GROUPING ==========
-    $currentDate = null;
-    $currentMeterNumber = null;
-    $currentParticulars = null;
-    $pendingTransactions = [];
-
-    for ($rowNumber = 2; $rowNumber <= $highestRow; $rowNumber++) {
-        $row = $rows[$rowNumber];
-
-        // Get cell values using the actual column names
-        $dateValue = trim($row[$headerMap['Tran. Date']] ?? '');
-        $particularsValue = trim($row[$headerMap['Particulars']] ?? '');
-        $amountValue = trim($row[$headerMap['Credit Amt.']] ?? '');
-        $valueDateValue = trim($row[$headerMap['Value Date']] ?? '');
-
-        // ========== CHECK FOR DATE ==========
-        // If this row has a date, it starts a new transaction group
-        if (!empty($dateValue)) {
-            // Process any pending transaction from previous group
-            if ($currentDate !== null && $currentMeterNumber !== null) {
-                $this->processPaymentTransaction(
-                    $currentDate,
-                    $currentMeterNumber,
-                    $currentParticulars,
-                    $pendingTransactions,
-                    $results
-                );
-            }
-
-            // Reset for new transaction
-            $currentDate = $dateValue;
-            $currentMeterNumber = null;
-            $currentParticulars = $particularsValue;
-            $pendingTransactions = [];
-
-            // Add this row to pending transactions
-            $pendingTransactions[] = [
-                'row' => $rowNumber,
-                'date' => $dateValue,
-                'amount' => $amountValue,
-                'particulars' => $particularsValue,
-                'value_date' => $valueDateValue,
-                'type' => 'header'
-            ];
-
-            // Try to extract meter number from particulars
-            if (preg_match('/#(\d{3,})/', $particularsValue, $matches)) {
-                $currentMeterNumber = $matches[1];
-                Log::info("Row {$rowNumber} - Found meter number: {$currentMeterNumber}");
+        // Map header names to column letters
+        $headerMap = [];
+        foreach ($headers as $columnLetter => $headerName) {
+            if (!empty($headerName)) {
+                $cleanHeader = trim($headerName);
+                $headerMap[$cleanHeader] = $columnLetter;
             }
         }
-        else {
-            // This row belongs to the current transaction group
-            $pendingTransactions[] = [
-                'row' => $rowNumber,
-                'date' => $dateValue,
-                'amount' => $amountValue,
-                'particulars' => $particularsValue,
-                'value_date' => $valueDateValue,
-                'type' => empty($amountValue) ? 'info' : 'payment'
-            ];
 
-            // Check for meter number in this row
-            if (preg_match('/#(\d{3,})/', $particularsValue, $matches)) {
-                $currentMeterNumber = $matches[1];
-                Log::info("Row {$rowNumber} - Found meter number: {$currentMeterNumber}");
-            }
+        Log::info('Headers found:', array_keys($headerMap));
 
-            // Check for amount in this row
-            if (!empty($amountValue)) {
-                $amount = $this->parseAmount($amountValue);
-                if ($amount > 0) {
-                    // This row contains a payment amount
-                    if ($currentMeterNumber) {
-                        $this->processPaymentTransaction(
-                            $currentDate,
-                            $currentMeterNumber,
-                            $currentParticulars,
-                            [$pendingTransactions[count($pendingTransactions)-1]],
-                            $results
-                        );
-                    }
-                }
-            }
-        }
-    }
+        // 🔒 Ensure required columns exist - USE YOUR ACTUAL COLUMN NAMES
+        $requiredColumns = ['Credit Amt.', 'Particulars'];
+        $dateColumns = ['Tran. Date', 'Value Date'];
 
-    // Process the last transaction
-    if ($currentDate !== null && $currentMeterNumber !== null) {
-        $this->processPaymentTransaction(
-            $currentDate,
-            $currentMeterNumber,
-            $currentParticulars,
-            $pendingTransactions,
-            $results
-        );
-    }
-
-    // Create summary
-    $summary = [
-        'total_rows' => $highestRow - 1,
-        'successful' => $results['success'],
-        'failed' => $results['failed'],
-        'skipped' => $results['skipped'],
-        'empty_amounts' => $results['empty_amounts'],
-        'not_found_meters' => count($results['not_found_meters'])
-    ];
-
-    Log::info('Import completed', $summary);
-
-    return back()->with([
-        'import_result' => $results,
-        'import_summary' => $summary
-    ]);
-}
-
-/**
- * Parse amount from string
- */
-private function parseAmount($amountValue)
-{
-    if (empty($amountValue)) {
-        return 0;
-    }
-
-    if (is_numeric($amountValue)) {
-        return (float) $amountValue;
-    }
-
-    // Remove commas and convert to float
-    return (float) str_replace(',', '', $amountValue);
-}
-
-/**
- * Process a complete payment transaction
- */
-private function processPaymentTransaction($date, $meterNumber, $particulars, $transactionRows, &$results)
-{
-    try {
-        // Find the payment amount in this transaction
-        $amount = 0;
-        $paymentRow = null;
-
-        foreach ($transactionRows as $row) {
-            if (!empty($row['amount'])) {
-                $amount = $this->parseAmount($row['amount']);
-                $paymentRow = $row['row'];
+        $foundDateColumn = null;
+        foreach ($dateColumns as $dateCol) {
+            if (isset($headerMap[$dateCol])) {
+                $foundDateColumn = $dateCol;
                 break;
             }
         }
 
-        if ($amount <= 0) {
-            Log::info("Transaction for meter {$meterNumber} - No valid amount found");
-            $results['skipped']++;
-            return;
+        if (!$foundDateColumn) {
+            throw new \Exception('No date column found. Available columns: ' . implode(', ', array_keys($headerMap)));
         }
 
-        // ========== DATE PARSING ==========
-        $paymentDate = null;
-        try {
-            $paymentDate = Carbon::parse($date);
-        } catch (\Exception $e) {
-            // Try alternative formats
-            if (preg_match('/(\d{2})-(\d{2})-(\d{4})/', $date, $matches)) {
-                $paymentDate = Carbon::create($matches[3], $matches[2], $matches[1]);
-            } else {
-                throw new \Exception("Could not parse date: {$date}");
+        foreach ($requiredColumns as $requiredColumn) {
+            if (!isset($headerMap[$requiredColumn])) {
+                throw new \Exception("Missing column: {$requiredColumn}. Available: " . implode(', ', array_keys($headerMap)));
             }
         }
 
-        Log::info("Processing payment - Meter: {$meterNumber}, Amount: {$amount}, Date: {$paymentDate->format('Y-m-d')}");
-
-        // ========== FIND METER ==========
-        $meter = Meter::where('meter_number', $meterNumber)->first();
-
-        if (!$meter) {
-            $results['not_found_meters'][] = [
-                'meter_number' => $meterNumber,
-                'amount' => $amount,
-                'date' => $paymentDate->format('Y-m-d'),
-                'particulars' => substr($particulars, 0, 200)
-            ];
-            throw new \Exception("Meter {$meterNumber} not found in database");
-        }
-
-        // Check if meter is assigned to a customer
-        if (!$meter->customer_id) {
-            throw new \Exception("Meter {$meterNumber} is not assigned to any customer");
-        }
-
-        // Get the customer from the meter
-        $customer = $meter->customer;
-
-        if (!$customer) {
-            throw new \Exception("Customer for meter {$meterNumber} not found");
-        }
-
-        if ($customer->status !== 'active') {
-            throw new \Exception("Customer for meter {$meterNumber} is {$customer->status}");
-        }
-
-        // ========== EXTRACT TRANSACTION REFERENCE ==========
-        $transactionRef = null;
-
-        // Try to extract MPS reference from the particulars
-        if (preg_match('/MPS\s+(\d{12})/', $particulars, $matches)) {
-            $transactionRef = $matches[1];
-        } elseif (preg_match('/UB\d?[A-Z0-9]+/', $particulars, $matches)) {
-            $transactionRef = $matches[0];
-        }
-
-        // Check for duplicate
-        if ($transactionRef) {
-            $existingPayment = Payment::where('transaction_reference', $transactionRef)
-                ->where('payment_method', 'mpesa')
-                ->where('payment_status', 'completed')
-                ->first();
-
-            if ($existingPayment) {
-                throw new \Exception("Transaction reference {$transactionRef} has already been used");
-            }
-        }
-
-        // ========== PROCESS PAYMENT ==========
-        DB::transaction(function () use ($meter, $amount, $transactionRef, $paymentDate, $meterNumber) {
-            $this->paymentService->processPayment(
-                $meter,
-                $amount,
-                'mpesa',
-                $transactionRef,
-                $paymentDate,
-                auth()->id()
-            );
-        });
-
-        $results['success']++;
-        Log::info("Payment processed successfully for meter {$meterNumber}, amount {$amount}");
-
-    } catch (\Exception $e) {
-        $results['failed']++;
-        $results['errors'][] = [
-            'meter_number' => $meterNumber,
-            'amount' => $amount ?? 0,
-            'date' => $date,
-            'reason' => $e->getMessage()
+        $results = [
+            'success' => 0,
+            'failed' => 0,
+            'errors' => [],
+            'skipped' => 0,
+            'not_found_meters' => [],
+            'empty_amounts' => 0
         ];
-        Log::error("Payment failed for meter {$meterNumber}: " . $e->getMessage());
+
+        // ========== PROCESS TRANSACTIONS BY GROUPING ==========
+        $currentDate = null;
+        $currentMeterNumber = null;
+        $currentParticulars = null;
+        $pendingTransactions = [];
+
+        for ($rowNumber = 2; $rowNumber <= $highestRow; $rowNumber++) {
+            $row = $rows[$rowNumber];
+
+            // Get cell values using the actual column names
+            $dateValue = trim($row[$headerMap['Tran. Date']] ?? '');
+            $particularsValue = trim($row[$headerMap['Particulars']] ?? '');
+            $amountValue = trim($row[$headerMap['Credit Amt.']] ?? '');
+            $valueDateValue = trim($row[$headerMap['Value Date']] ?? '');
+
+            // ========== CHECK FOR DATE ==========
+            // If this row has a date, it starts a new transaction group
+            if (!empty($dateValue)) {
+                // Process any pending transaction from previous group
+                if ($currentDate !== null && $currentMeterNumber !== null) {
+                    $this->processPaymentTransaction(
+                        $currentDate,
+                        $currentMeterNumber,
+                        $currentParticulars,
+                        $pendingTransactions,
+                        $results
+                    );
+                }
+
+                // Reset for new transaction
+                $currentDate = $dateValue;
+                $currentMeterNumber = null;
+                $currentParticulars = $particularsValue;
+                $pendingTransactions = [];
+
+                // Add this row to pending transactions
+                $pendingTransactions[] = [
+                    'row' => $rowNumber,
+                    'date' => $dateValue,
+                    'amount' => $amountValue,
+                    'particulars' => $particularsValue,
+                    'value_date' => $valueDateValue,
+                    'type' => 'header'
+                ];
+
+                // Try to extract meter number from particulars
+                if (preg_match('/#(\d{3,})/', $particularsValue, $matches)) {
+                    $currentMeterNumber = $matches[1];
+                    Log::info("Row {$rowNumber} - Found meter number: {$currentMeterNumber}");
+                }
+            }
+            else {
+                // This row belongs to the current transaction group
+                $pendingTransactions[] = [
+                    'row' => $rowNumber,
+                    'date' => $dateValue,
+                    'amount' => $amountValue,
+                    'particulars' => $particularsValue,
+                    'value_date' => $valueDateValue,
+                    'type' => empty($amountValue) ? 'info' : 'payment'
+                ];
+
+                // Check for meter number in this row
+                if (preg_match('/#(\d{3,})/', $particularsValue, $matches)) {
+                    $currentMeterNumber = $matches[1];
+                    Log::info("Row {$rowNumber} - Found meter number: {$currentMeterNumber}");
+                }
+
+                // Check for amount in this row
+                if (!empty($amountValue)) {
+                    $amount = $this->parseAmount($amountValue);
+                    if ($amount > 0) {
+                        // This row contains a payment amount
+                        if ($currentMeterNumber) {
+                            $this->processPaymentTransaction(
+                                $currentDate,
+                                $currentMeterNumber,
+                                $currentParticulars,
+                                [$pendingTransactions[count($pendingTransactions)-1]],
+                                $results
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
+        // Process the last transaction
+        if ($currentDate !== null && $currentMeterNumber !== null) {
+            $this->processPaymentTransaction(
+                $currentDate,
+                $currentMeterNumber,
+                $currentParticulars,
+                $pendingTransactions,
+                $results
+            );
+        }
+
+        // Create summary
+        $summary = [
+            'total_rows' => $highestRow - 1,
+            'successful' => $results['success'],
+            'failed' => $results['failed'],
+            'skipped' => $results['skipped'],
+            'empty_amounts' => $results['empty_amounts'],
+            'not_found_meters' => count($results['not_found_meters'])
+        ];
+
+        Log::info('Import completed', $summary);
+
+        return back()->with([
+            'import_result' => $results,
+            'import_summary' => $summary
+        ]);
     }
-}
 
     /**
      * Process a complete payment transaction
