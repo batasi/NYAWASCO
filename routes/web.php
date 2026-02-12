@@ -649,7 +649,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(
         Route::get('/{role}/permissions', [RoleController::class, 'getPermissions'])->name('permissions');
     });
 
-  // Customer Management
+    // Customer Management
     Route::prefix('customers')->name('customers.')->group(function () {
         // AJAX endpoints (should come BEFORE dynamic routes)
         Route::get('/get-available-meters', [CustomerController::class, 'getAvailableMeters'])->name('get-available-meters');
@@ -705,7 +705,6 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(
     });
 
     Route::prefix('admin/customers')->name('admin.customers.')->group(function () {
-        // ... existing routes ...
 
         // Customer search for AJAX
         Route::get('/search', [CustomerController::class, 'searchCustomers'])->name('search');

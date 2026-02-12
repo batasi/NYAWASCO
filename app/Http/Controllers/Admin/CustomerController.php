@@ -1279,8 +1279,26 @@ class CustomerController extends Controller
             'new_customer.kra_pin' => 'nullable|string|max:20|unique:customers,kra_pin',
             'new_customer.expected_users' => 'nullable|integer|min:1|max:1000',
             'unassignment_reason' => 'required|string|max:255',
-            'new_installation_date' => 'required_if:action,existing|date',
-            'new_initial_reading' => 'required_if:action,existing|numeric|min:0',
+            // Make these fields conditionally required based on action
+            'new_installation_date' => [
+                'nullable',
+                'date',
+                function ($attribute, $value, $fail) use ($request) {
+                    if ($request->action === 'existing' && empty($value)) {
+                        $fail('Installation date is required when assigning to an existing customer.');
+                    }
+                }
+            ],
+            'new_initial_reading' => [
+                'nullable',
+                'numeric',
+                'min:0',
+                function ($attribute, $value, $fail) use ($request) {
+                    if ($request->action === 'existing' && empty($value) && $value !== '0') {
+                        $fail('Initial reading is required when assigning to an existing customer.');
+                    }
+                }
+            ],
             'new_balance_bf' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string|max:1000',
         ], [
@@ -1296,12 +1314,13 @@ class CustomerController extends Controller
             'new_customer.plot_number.required_if' => 'Plot number is required.',
             'new_customer.house_number.required_if' => 'House number is required.',
             'new_customer.property_owner.required_if' => 'Property owner is required.',
-            'new_installation_date.required_if' => 'Installation date is required.',
-            'new_initial_reading.required_if' => 'Initial reading is required.',
         ]);
 
         try {
-            DB::transaction(function () use ($request, $customer, $meter) {
+            // Declare targetCustomer outside the transaction so it's accessible
+            $targetCustomer = null;
+
+            DB::transaction(function () use ($request, $customer, $meter, &$targetCustomer) {
                 // 1. Record unassignment from current customer
                 $unassignmentNote = sprintf(
                     "Meter %s unassigned from customer %s %s (ID: %s) on %s\nReason: %s",
@@ -1314,35 +1333,39 @@ class CustomerController extends Controller
                 );
 
                 // 2. Determine target customer
-                $targetCustomer = null;
-
                 if ($request->action === 'existing') {
                     $targetCustomer = Customer::findOrFail($request->customer_id);
 
-                    // Check if customer already has a meter
-                    $hasMeter = $targetCustomer->meters()->exists();
-
-                    // Log the meter check
-                    Log::info('Checking customer for existing meter', [
+                    Log::info('Assigning to existing customer', [
                         'customer_id' => $targetCustomer->id,
                         'customer_number' => $targetCustomer->customer_number,
-                        'has_meter' => $hasMeter,
                         'meter_count' => $targetCustomer->meters()->count()
                     ]);
-
-                    // If customer has a meter, we're adding another one - that's fine
-                    // No restriction needed - customers can have multiple meters
-
                 } else {
-                    // Create new customer
-                    $customerData = $request->new_customer;
-                    $customerData['customer_number'] = $this->generateCustomerNumber();
-                    $customerData['status'] = 'active';
-                    $customerData['status_updated_at'] = now();
-                    $customerData['status_reason'] = 'Created during meter reassignment';
-                    $customerData['notes'] = "Customer created on " . now()->format('Y-m-d H:i:s') .
-                                             " for meter reassignment.\n" .
-                                             ($request->notes ?? '');
+                    // Create new customer with proper field mapping
+                    $customerData = [
+                        'customer_number' => $this->generateCustomerNumber(),
+                        'first_name' => $request->new_customer['first_name'],
+                        'last_name' => $request->new_customer['last_name'] ?? null,
+                        'email' => $request->new_customer['email'],
+                        'phone' => $request->new_customer['phone'],
+                        'id_number' => $request->new_customer['id_number'],
+                        'physical_address' => $request->new_customer['physical_address'],
+                        'plot_number' => $request->new_customer['plot_number'],
+                        'house_number' => $request->new_customer['house_number'],
+                        'estate' => $request->new_customer['estate'] ?? null,
+                        'kra_pin' => $request->new_customer['kra_pin'] ?? null,
+                        'property_owner' => $request->new_customer['property_owner'],
+                        'expected_users' => $request->new_customer['expected_users'] ?? null,
+                        'status' => 'active',
+                        'status_updated_at' => now(),
+                        'status_reason' => 'Created during meter reassignment',
+                        'notes' => "Customer created on " . now()->format('Y-m-d H:i:s') .
+                                " for meter reassignment.\n" .
+                                ($request->notes ?? ''),
+                        'credit_balance' => 0,
+                        'total_payments' => 0,
+                    ];
 
                     $targetCustomer = Customer::create($customerData);
 
@@ -1363,21 +1386,21 @@ class CustomerController extends Controller
 
                 // 4. Update current customer notes
                 $customer->update([
-                    'notes' => $customer->notes . "\n" . $unassignmentNote
+                    'notes' => ($customer->notes ? $customer->notes . "\n\n" : '') . $unassignmentNote
                 ]);
 
-                // 5. Assign to target customer
-                $installationDate = $request->action === 'existing'
-                    ? $request->new_installation_date
-                    : now()->format('Y-m-d');
-
-                $initialReading = $request->action === 'existing'
-                    ? $request->new_initial_reading
-                    : $meter->current_reading; // Use current reading as initial
-
-                $balanceBf = $request->action === 'existing'
-                    ? ($request->new_balance_bf ?? 0)
-                    : 0;
+                // 5. Assign to target customer - handle differently based on action
+                if ($request->action === 'existing') {
+                    // For existing customer, use provided values
+                    $installationDate = $request->new_installation_date;
+                    $initialReading = $request->new_initial_reading;
+                    $balanceBf = $request->new_balance_bf ?? 0;
+                } else {
+                    // For new customer, use current values or defaults
+                    $installationDate = now()->format('Y-m-d');
+                    $initialReading = $meter->current_reading; // Use current reading as initial
+                    $balanceBf = 0;
+                }
 
                 $meter->update([
                     'customer_id' => $targetCustomer->id,
@@ -1387,40 +1410,70 @@ class CustomerController extends Controller
                     'balance_bf' => $balanceBf,
                     'current_balance' => $balanceBf,
                     'status' => Meter::STATUS_ACTIVE,
-                    'notes' => $meter->notes . "\nReassigned to customer {$targetCustomer->customer_number} on " . now()->format('Y-m-d H:i:s')
+                    'notes' => ($meter->notes ? $meter->notes . "\n\n" : '') .
+                            "Reassigned to customer {$targetCustomer->customer_number} on " . now()->format('Y-m-d H:i:s')
                 ]);
 
-                // 6. Create initial meter reading for new assignment AND generate bill if necessary
-
+                // 6. Create initial meter reading for new assignment
+                MeterReading::create([
+                    'customer_id' => $targetCustomer->id,
+                    'meter_id' => $meter->id,
+                    'current_reading' => $initialReading,
+                    'previous_reading' => 0,
+                    'consumption' => $initialReading,
+                    'reading_date' => $installationDate,
+                    'reading_type' => 'initial',
+                    'reading_period' => 'Meter Reassignment',
+                    'billed' => false,
+                    'read_by' => auth()->id(),
+                    'notes' => "Initial reading after reassignment from customer {$customer->customer_number}",
+                ]);
 
                 // 7. Add assignment note to target customer
                 $assignmentNote = sprintf(
-                    "Meter %s assigned from customer %s %s (ID: %s) on %s\nInstallation Date: %s\nInitial Reading: %s m³",
+                    "Meter %s assigned from customer %s %s (ID: %s) on %s\nInstallation Date: %s\nInitial Reading: %s m³\nBalance B/F: KSh %s",
                     $meter->meter_number,
                     $customer->first_name,
                     $customer->last_name,
                     $customer->customer_number,
                     now()->format('Y-m-d H:i:s'),
                     $installationDate,
-                    $initialReading
+                    $initialReading,
+                    number_format($balanceBf, 2)
                 );
 
                 $targetCustomer->update([
-                    'notes' => $targetCustomer->notes . "\n" . $assignmentNote
+                    'notes' => ($targetCustomer->notes ? $targetCustomer->notes . "\n\n" : '') . $assignmentNote
                 ]);
+
+                // 8. Optionally generate initial bill if needed
+                if ($request->action === 'new' && $meter->meterCategory) {
+                    // You can add logic here to generate an initial bill for the new customer
+                    // This is optional based on your business requirements
+                }
 
                 Log::info('Meter reassigned successfully', [
                     'meter_id' => $meter->id,
                     'meter_number' => $meter->meter_number,
                     'from_customer' => $customer->id,
                     'to_customer' => $targetCustomer->id,
-                    'action' => $request->action
+                    'action' => $request->action,
+                    'installation_date' => $installationDate,
+                    'initial_reading' => $initialReading
                 ]);
             });
+
+            // Redirect to the new customer's profile if it was a new customer
+            if ($request->action === 'new' && $targetCustomer) {
+                return redirect()->route('admin.customers.show', $targetCustomer)
+                    ->with('success', 'Meter unassigned and reassigned to new customer successfully!');
+            }
 
             return redirect()->route('admin.customers.show', $customer)
                 ->with('success', 'Meter unassigned and reassigned successfully!');
 
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             Log::error('Meter reassignment error: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString(),
@@ -1430,82 +1483,6 @@ class CustomerController extends Controller
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'Error reassigning meter: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Show quick customer creation form (AJAX)
-     */
-    public function quickCreateForm()
-    {
-        return view('admin.customers.quick-create-modal');
-    }
-
-    /**
-     * Quick create customer for meter assignment
-     */
-    public function quickCreate(Request $request)
-    {
-        $validated = $request->validate([
-            'first_name' => 'required|string|max:50',
-            'last_name' => 'nullable|string|max:50',
-            'email' => 'required|email|unique:customers,email',
-            'phone' => 'required|string|max:20|unique:customers,phone',
-            'id_number' => 'required|string|max:20|unique:customers,id_number',
-            'physical_address' => 'required|string|max:500',
-            'plot_number' => 'required|string|max:50',
-            'house_number' => 'required|string|max:50',
-            'estate' => 'nullable|string|max:100',
-            'kra_pin' => 'nullable|string|max:20|unique:customers,kra_pin',
-            'property_owner' => 'required|string|max:100',
-            'expected_users' => 'nullable|integer|min:1|max:1000',
-        ]);
-
-        try {
-            DB::transaction(function () use ($validated) {
-                $customer = Customer::create([
-                    'customer_number' => $this->generateCustomerNumber(),
-                    'first_name' => $validated['first_name'],
-                    'last_name' => $validated['last_name'] ?? null,
-                    'email' => $validated['email'],
-                    'phone' => $validated['phone'],
-                    'id_number' => $validated['id_number'],
-                    'physical_address' => $validated['physical_address'],
-                    'plot_number' => $validated['plot_number'],
-                    'house_number' => $validated['house_number'],
-                    'estate' => $validated['estate'] ?? null,
-                    'kra_pin' => $validated['kra_pin'] ?? null,
-                    'property_owner' => $validated['property_owner'],
-                    'expected_users' => $validated['expected_users'] ?? null,
-                    'status' => 'active',
-                    'status_updated_at' => now(),
-                    'status_reason' => 'Quick created for meter assignment',
-                    'notes' => "Customer created via quick create on " . now()->format('Y-m-d H:i:s'),
-                ]);
-
-                Log::info('Customer quick created', [
-                    'customer_id' => $customer->id,
-                    'customer_number' => $customer->customer_number
-                ]);
-
-                return response()->json([
-                    'success' => true,
-                    'customer' => [
-                        'id' => $customer->id,
-                        'text' => "{$customer->customer_number} - {$customer->first_name} {$customer->last_name} ({$customer->phone})",
-                        'customer_number' => $customer->customer_number,
-                        'name' => $customer->first_name . ' ' . $customer->last_name,
-                        'phone' => $customer->phone,
-                        'address' => $customer->physical_address,
-                    ]
-                ]);
-            });
-        } catch (\Exception $e) {
-            Log::error('Quick customer creation error: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Error creating customer: ' . $e->getMessage()
-            ], 500);
         }
     }
 
