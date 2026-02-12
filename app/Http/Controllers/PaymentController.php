@@ -236,8 +236,9 @@ class PaymentController extends Controller
 
         Log::info('Headers found:', array_keys($headerMap));
 
-        // 🔒 Ensure required columns exist - USE YOUR ACTUAL COLUMN NAMES
+        //  Ensure required columns exist
         $requiredColumns = ['Credit Amt.', 'Particulars'];
+        // Date columns - only need ONE of these to exist
         $dateColumns = ['Tran. Date', 'Value Date'];
 
         $foundDateColumn = null;
@@ -252,6 +253,7 @@ class PaymentController extends Controller
             throw new \Exception('No date column found. Available columns: ' . implode(', ', array_keys($headerMap)));
         }
 
+        // Don't require Value Date - it's optional
         foreach ($requiredColumns as $requiredColumn) {
             if (!isset($headerMap[$requiredColumn])) {
                 throw new \Exception("Missing column: {$requiredColumn}. Available: " . implode(', ', array_keys($headerMap)));
@@ -277,10 +279,15 @@ class PaymentController extends Controller
             $row = $rows[$rowNumber];
 
             // Get cell values using the actual column names
-            $dateValue = trim($row[$headerMap['Tran. Date']] ?? '');
+            $dateValue = trim($row[$headerMap['Tran. Date']] ?? ''); // Primary date column
             $particularsValue = trim($row[$headerMap['Particulars']] ?? '');
             $amountValue = trim($row[$headerMap['Credit Amt.']] ?? '');
-            $valueDateValue = trim($row[$headerMap['Value Date']] ?? '');
+
+            // Value Date is optional - check if it exists in header map
+            $valueDateValue = '';
+            if (isset($headerMap['Value Date'])) {
+                $valueDateValue = trim($row[$headerMap['Value Date']] ?? '');
+            }
 
             // ========== CHECK FOR DATE ==========
             // If this row has a date, it starts a new transaction group
