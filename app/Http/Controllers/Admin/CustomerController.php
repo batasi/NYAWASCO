@@ -1279,7 +1279,7 @@ class CustomerController extends Controller
             'new_customer.kra_pin' => 'nullable|string|max:20|unique:customers,kra_pin',
             'new_customer.expected_users' => 'nullable|integer|min:1|max:1000',
             'unassignment_reason' => 'required|string|max:255',
-            // Make these fields conditionally required based on action
+            'transfer_billing_history' => 'nullable|in:1',
             'new_installation_date' => [
                 'nullable',
                 'date',
@@ -1429,6 +1429,81 @@ class CustomerController extends Controller
                     'notes' => "Initial reading after reassignment from customer {$customer->customer_number}",
                 ]);
 
+                // ========== BILLING HISTORY TRANSFER ==========
+                // Check if transfer billing history checkbox is checked
+                if ($request->has('transfer_billing_history') && $request->transfer_billing_history == '1') {
+
+                    // Get counts before transfer for logging
+                    $billsTransferred = 0;
+                    $readingsTransferred = 0;
+
+                    // 6.5.1 Transfer bills that belong to this meter AND the current customer
+                    if ($meter->bills()->where('customer_id', $customer->id)->exists()) {
+                        $billsTransferred = $meter->bills()
+                            ->where('customer_id', $customer->id)
+                            ->update([
+                                'customer_id' => $targetCustomer->id
+                            ]);
+                    }
+
+                    // 6.5.2 Transfer meter readings that belong to this meter AND the current customer
+                    if ($meter->meterReadings()->where('customer_id', $customer->id)->exists()) {
+                        $readingsTransferred = $meter->meterReadings()
+                            ->where('customer_id', $customer->id)
+                            ->where('reading_status','recorded')
+                            ->update([
+                                'customer_id' => $targetCustomer->id
+                            ]);
+                    }
+
+                    // Log the transfer
+                    Log::info('Billing history transferred for incorrectly assigned meter', [
+                        'meter_id' => $meter->id,
+                        'meter_number' => $meter->meter_number,
+                        'from_customer' => $customer->id,
+                        'to_customer' => $targetCustomer->id,
+                        'bills_transferred' => $billsTransferred,
+                        'readings_transferred' => $readingsTransferred,
+                        'reason' => $request->unassignment_reason
+                    ]);
+
+                    // Add note about the transfer to current customer
+                    if ($billsTransferred > 0 || $readingsTransferred > 0) {
+                        $transferNote = sprintf(
+                            "\n\nBILLING HISTORY TRANSFERRED: %d bills and %d meter readings for meter %s were moved to customer %s %s (ID: %s) on %s",
+                            $billsTransferred,
+                            $readingsTransferred,
+                            $meter->meter_number,
+                            $targetCustomer->first_name,
+                            $targetCustomer->last_name,
+                            $targetCustomer->customer_number,
+                            now()->format('Y-m-d H:i:s')
+                        );
+
+                        $customer->update([
+                            'notes' => $customer->notes . $transferNote
+                        ]);
+
+                        // Add note about the transfer to target customer
+                        $targetTransferNote = sprintf(
+                            "\n\nBILLING HISTORY RECEIVED: %d bills and %d meter readings for meter %s were transferred from customer %s %s (ID: %s) on %s",
+                            $billsTransferred,
+                            $readingsTransferred,
+                            $meter->meter_number,
+                            $customer->first_name,
+                            $customer->last_name,
+                            $customer->customer_number,
+                            now()->format('Y-m-d H:i:s')
+                        );
+
+                        $targetCustomer->update([
+                            'notes' => $targetCustomer->notes . $targetTransferNote
+                        ]);
+                    }
+                }
+                // ========== END BILLING HISTORY TRANSFER ==========
+
+
                 // 7. Add assignment note to target customer
                 $assignmentNote = sprintf(
                     "Meter %s assigned from customer %s %s (ID: %s) on %s\nInstallation Date: %s\nInitial Reading: %s m³\nBalance B/F: KSh %s",
@@ -1572,13 +1647,26 @@ class CustomerController extends Controller
 
         $customers = Customer::query()
             ->where(function($query) use ($search) {
-                $query->where('customer_number', 'like', "%{$search}%")
-                    ->orWhere('first_name', 'like', "%{$search}%")
-                    ->orWhere('last_name', 'like', "%{$search}%")
-                    ->orWhere('phone', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('id_number', 'like', "%{$search}%")
-                    ->orWhere('plot_number', 'like', "%{$search}%");
+                // Check if search contains a space (likely first and last name)
+                if (str_contains($search, ' ')) {
+                    $nameParts = explode(' ', $search, 2);
+                    $firstName = $nameParts[0];
+                    $lastName = $nameParts[1];
+
+                    $query->where(function($q) use ($firstName, $lastName) {
+                        $q->where('first_name', 'like', "%{$firstName}%")
+                        ->where('last_name', 'like', "%{$lastName}%");
+                    });
+                } else {
+                    // Single word search - search in all fields
+                    $query->where('customer_number', 'like', "%{$search}%")
+                        ->orWhere('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('id_number', 'like', "%{$search}%")
+                        ->orWhere('plot_number', 'like', "%{$search}%");
+                }
             })
             ->withCount('meters')
             ->limit(20)
