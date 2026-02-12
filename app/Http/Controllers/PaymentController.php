@@ -213,14 +213,98 @@ class PaymentController extends Controller
         ]);
 
         $spreadsheet = IOFactory::load($request->file('file')->getPathname());
-        $sheet = $spreadsheet->getActiveSheet();
 
+        // Initialize results array for ALL sheets
+        $results = [
+            'success' => 0,
+            'failed' => 0,
+            'errors' => [],
+            'skipped' => 0,
+            'not_found_meters' => [],
+            'empty_amounts' => 0,
+            'sheets_processed' => 0,
+            'sheets_skipped' => []
+        ];
+
+        // Loop through ALL worksheets
+        foreach ($spreadsheet->getWorksheetIterator() as $sheetIndex => $sheet) {
+            $sheetName = $sheet->getTitle();
+            Log::info("Processing sheet: {$sheetName} (Index: {$sheetIndex})");
+
+            try {
+                $sheetResults = $this->processWorksheet($sheet);
+
+                // Merge results from this sheet
+                $results['success'] += $sheetResults['success'];
+                $results['failed'] += $sheetResults['failed'];
+                $results['skipped'] += $sheetResults['skipped'];
+                $results['empty_amounts'] += $sheetResults['empty_amounts'];
+                $results['not_found_meters'] = array_merge(
+                    $results['not_found_meters'],
+                    $sheetResults['not_found_meters']
+                );
+                $results['errors'] = array_merge($results['errors'], $sheetResults['errors']);
+                $results['sheets_processed']++;
+
+                Log::info("Sheet {$sheetName} processed", [
+                    'success' => $sheetResults['success'],
+                    'failed' => $sheetResults['failed'],
+                    'skipped' => $sheetResults['skipped']
+                ]);
+
+            } catch (\Exception $e) {
+                $results['sheets_skipped'][] = [
+                    'sheet_name' => $sheetName,
+                    'reason' => $e->getMessage()
+                ];
+                Log::error("Failed to process sheet {$sheetName}: " . $e->getMessage());
+            }
+        }
+
+        // Create summary
+        $summary = [
+            'total_sheets' => $spreadsheet->getSheetCount(),
+            'sheets_processed' => $results['sheets_processed'],
+            'sheets_skipped' => count($results['sheets_skipped']),
+            'total_rows_processed' => 'See sheet details',
+            'successful' => $results['success'],
+            'failed' => $results['failed'],
+            'skipped' => $results['skipped'],
+            'empty_amounts' => $results['empty_amounts'],
+            'not_found_meters' => count($results['not_found_meters'])
+        ];
+
+        Log::info('Import completed for all sheets', $summary);
+
+        return back()->with([
+            'import_result' => $results,
+            'import_summary' => $summary
+        ]);
+    }
+
+    /**
+     * Process a single worksheet
+     */
+    private function processWorksheet($sheet)
+    {
         // Get the highest row and column
         $highestRow = $sheet->getHighestRow();
         $highestColumn = $sheet->getHighestColumn();
 
         // Get all cells as an array
         $rows = $sheet->rangeToArray('A1:' . $highestColumn . $highestRow, null, true, true, true);
+
+        // Check if sheet is empty
+        if (empty($rows) || count($rows) < 2) {
+            return [
+                'success' => 0,
+                'failed' => 0,
+                'errors' => [],
+                'skipped' => 0,
+                'not_found_meters' => [],
+                'empty_amounts' => 0
+            ];
+        }
 
         // First row = headers
         $headers = $rows[1];
@@ -234,11 +318,10 @@ class PaymentController extends Controller
             }
         }
 
-        Log::info('Headers found:', array_keys($headerMap));
+        Log::info("Sheet {$sheet->getTitle()} headers:", array_keys($headerMap));
 
-        //  Ensure required columns exist
+        // Check if this sheet has the required columns
         $requiredColumns = ['Credit Amt.', 'Particulars'];
-        // Date columns - only need ONE of these to exist
         $dateColumns = ['Tran. Date', 'Value Date'];
 
         $foundDateColumn = null;
@@ -250,13 +333,28 @@ class PaymentController extends Controller
         }
 
         if (!$foundDateColumn) {
-            throw new \Exception('No date column found. Available columns: ' . implode(', ', array_keys($headerMap)));
+            Log::warning("Sheet {$sheet->getTitle()} skipped - No date column found");
+            return [
+                'success' => 0,
+                'failed' => 0,
+                'errors' => [],
+                'skipped' => 0,
+                'not_found_meters' => [],
+                'empty_amounts' => 0
+            ];
         }
 
-        // Don't require Value Date - it's optional
         foreach ($requiredColumns as $requiredColumn) {
             if (!isset($headerMap[$requiredColumn])) {
-                throw new \Exception("Missing column: {$requiredColumn}. Available: " . implode(', ', array_keys($headerMap)));
+                Log::warning("Sheet {$sheet->getTitle()} skipped - Missing column: {$requiredColumn}");
+                return [
+                    'success' => 0,
+                    'failed' => 0,
+                    'errors' => [],
+                    'skipped' => 0,
+                    'not_found_meters' => [],
+                    'empty_amounts' => 0
+                ];
             }
         }
 
@@ -276,21 +374,27 @@ class PaymentController extends Controller
         $pendingTransactions = [];
 
         for ($rowNumber = 2; $rowNumber <= $highestRow; $rowNumber++) {
+            if (!isset($rows[$rowNumber])) continue;
+
             $row = $rows[$rowNumber];
 
+            // Skip completely empty rows
+            if (empty(array_filter($row))) {
+                continue;
+            }
+
             // Get cell values using the actual column names
-            $dateValue = trim($row[$headerMap['Tran. Date']] ?? ''); // Primary date column
+            $dateValue = trim($row[$headerMap['Tran. Date']] ?? '');
             $particularsValue = trim($row[$headerMap['Particulars']] ?? '');
             $amountValue = trim($row[$headerMap['Credit Amt.']] ?? '');
 
-            // Value Date is optional - check if it exists in header map
+            // Value Date is optional
             $valueDateValue = '';
             if (isset($headerMap['Value Date'])) {
                 $valueDateValue = trim($row[$headerMap['Value Date']] ?? '');
             }
 
             // ========== CHECK FOR DATE ==========
-            // If this row has a date, it starts a new transaction group
             if (!empty($dateValue)) {
                 // Process any pending transaction from previous group
                 if ($currentDate !== null && $currentMeterNumber !== null) {
@@ -309,53 +413,47 @@ class PaymentController extends Controller
                 $currentParticulars = $particularsValue;
                 $pendingTransactions = [];
 
-                // Add this row to pending transactions
                 $pendingTransactions[] = [
                     'row' => $rowNumber,
                     'date' => $dateValue,
                     'amount' => $amountValue,
                     'particulars' => $particularsValue,
                     'value_date' => $valueDateValue,
-                    'type' => 'header'
+                    'type' => 'header',
+                    'sheet' => $sheet->getTitle()
                 ];
 
-                // Try to extract meter number from particulars
                 if (preg_match('/#(\d{3,})/', $particularsValue, $matches)) {
                     $currentMeterNumber = $matches[1];
-                    Log::info("Row {$rowNumber} - Found meter number: {$currentMeterNumber}");
+                    Log::info("Sheet {$sheet->getTitle()} - Row {$rowNumber} - Found meter number: {$currentMeterNumber}");
                 }
             }
             else {
-                // This row belongs to the current transaction group
                 $pendingTransactions[] = [
                     'row' => $rowNumber,
                     'date' => $dateValue,
                     'amount' => $amountValue,
                     'particulars' => $particularsValue,
                     'value_date' => $valueDateValue,
-                    'type' => empty($amountValue) ? 'info' : 'payment'
+                    'type' => empty($amountValue) ? 'info' : 'payment',
+                    'sheet' => $sheet->getTitle()
                 ];
 
-                // Check for meter number in this row
                 if (preg_match('/#(\d{3,})/', $particularsValue, $matches)) {
                     $currentMeterNumber = $matches[1];
-                    Log::info("Row {$rowNumber} - Found meter number: {$currentMeterNumber}");
+                    Log::info("Sheet {$sheet->getTitle()} - Row {$rowNumber} - Found meter number: {$currentMeterNumber}");
                 }
 
-                // Check for amount in this row
                 if (!empty($amountValue)) {
                     $amount = $this->parseAmount($amountValue);
-                    if ($amount > 0) {
-                        // This row contains a payment amount
-                        if ($currentMeterNumber) {
-                            $this->processPaymentTransaction(
-                                $currentDate,
-                                $currentMeterNumber,
-                                $currentParticulars,
-                                [$pendingTransactions[count($pendingTransactions)-1]],
-                                $results
-                            );
-                        }
+                    if ($amount > 0 && $currentMeterNumber) {
+                        $this->processPaymentTransaction(
+                            $currentDate,
+                            $currentMeterNumber,
+                            $currentParticulars,
+                            [$pendingTransactions[count($pendingTransactions)-1]],
+                            $results
+                        );
                     }
                 }
             }
@@ -372,22 +470,7 @@ class PaymentController extends Controller
             );
         }
 
-        // Create summary
-        $summary = [
-            'total_rows' => $highestRow - 1,
-            'successful' => $results['success'],
-            'failed' => $results['failed'],
-            'skipped' => $results['skipped'],
-            'empty_amounts' => $results['empty_amounts'],
-            'not_found_meters' => count($results['not_found_meters'])
-        ];
-
-        Log::info('Import completed', $summary);
-
-        return back()->with([
-            'import_result' => $results,
-            'import_summary' => $summary
-        ]);
+        return $results;
     }
     /**
      * Parse amount from string
