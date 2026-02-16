@@ -1262,7 +1262,7 @@ class ReportController extends Controller
             $billsRow = $billsStartRow;
 
             $headers = [
-                'Bill Number', 'Customer Name','Phone' 'Customer Acc',
+                'Bill Number', 'Customer Name','Phone', 'Customer Acc',
                 'Category', 'Zone', 'Billing Period', 'Consumption (m³)',
                 'Total Amount', 'Paid Amount', 'Balance', 'Status', 'Due Date', 'Overdue'
             ];
