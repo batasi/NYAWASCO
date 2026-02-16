@@ -1261,8 +1261,9 @@ class ReportController extends Controller
 
             $billsRow = $billsStartRow;
 
+            // Updated headers to include Phone Number
             $headers = [
-                'Bill Number', 'Customer Name','Phone', 'Customer Acc',
+                'Bill Number', 'Customer Name', 'Phone Number', 'Customer Acc',
                 'Category', 'Zone', 'Billing Period', 'Consumption (m³)',
                 'Total Amount', 'Paid Amount', 'Balance', 'Status', 'Due Date', 'Overdue'
             ];
@@ -1282,7 +1283,15 @@ class ReportController extends Controller
             foreach ($reportData['bills'] as $bill) {
                 $billsSheet->setCellValue('A' . $billsRow, $bill->bill_number);
                 $billsSheet->setCellValue('B' . $billsRow, $bill->customer->first_name . ' ' . $bill->customer->last_name);
-                $billsSheet->setCellValue('C' . $billsRow, $bill->customer->phone ?? '');
+
+                // Add phone number - adjust based on your customer model structure
+                // Option 1: If phone is directly on customer
+                $billsSheet->setCellValue('C' . $billsRow, $bill->customer->phone ?? $bill->customer->phone_number ?? '');
+
+                // Option 2: If phone is in a contact relationship (uncomment if needed)
+                // $phone = $bill->customer->contacts->where('type', 'phone')->first();
+                // $billsSheet->setCellValue('C' . $billsRow, $phone->value ?? '');
+
                 $billsSheet->setCellValue('D' . $billsRow, $bill->meter->meter_number ?? '');
                 $billsSheet->setCellValue('E' . $billsRow, $bill->meter->meterCategory->name ?? '');
                 $billsSheet->setCellValue('F' . $billsRow, $bill->meter->zone->name ?? 'Unassigned');
@@ -1298,14 +1307,14 @@ class ReportController extends Controller
                 $billsSheet->setCellValue('M' . $billsRow, $bill->due_date ? $bill->due_date->format('d/m/Y') : '');
                 $billsSheet->setCellValue('N' . $billsRow, $bill->is_overdue ? 'Yes' : 'No');
 
-                // Format numbers
-                $billsSheet->getStyle('G' . $billsRow)->getNumberFormat()->setFormatCode('#,##0.00');
-                $billsSheet->getStyle('I' . $billsRow . ':'K . $billsRow)->getNumberFormat()->setFormatCode('#,##0.00');
+                // Format numbers - update column ranges
+                $billsSheet->getStyle('H' . $billsRow)->getNumberFormat()->setFormatCode('#,##0.00');
+                $billsSheet->getStyle('I' . $billsRow . ':K' . $billsRow)->getNumberFormat()->setFormatCode('#,##0.00');
 
                 $billsRow++;
             }
 
-            // Add totals
+            // Add totals - update column ranges
             $billsSheet->setCellValue('A' . $billsRow, 'TOTAL:');
             $billsSheet->getStyle('A' . $billsRow)->getFont()->setBold(true);
             $billsSheet->setCellValue('H' . $billsRow, '=SUM(H' . $billsStartRow . ':H' . ($billsRow - 1) . ')');
@@ -1316,7 +1325,7 @@ class ReportController extends Controller
             $billsSheet->getStyle('H' . $billsRow . ':K' . $billsRow)->getBorders()->getTop()->setBorderStyle(Border::BORDER_DOUBLE);
             $billsSheet->getStyle('H' . $billsRow . ':K' . $billsRow)->getNumberFormat()->setFormatCode('#,##0.00');
 
-            // Auto-size columns
+            // Auto-size columns - update range to include new column N
             foreach (range('A', 'N') as $column) {
                 $billsSheet->getColumnDimension($column)->setAutoSize(true);
             }
