@@ -1262,7 +1262,7 @@ class ReportController extends Controller
             $billsRow = $billsStartRow;
 
             $headers = [
-                'Bill Number', 'Customer Name', 'Customer Acc',
+                'Bill Number', 'Customer Name','Phone' 'Customer Acc',
                 'Category', 'Zone', 'Billing Period', 'Consumption (m³)',
                 'Total Amount', 'Paid Amount', 'Balance', 'Status', 'Due Date', 'Overdue'
             ];
@@ -1282,24 +1282,25 @@ class ReportController extends Controller
             foreach ($reportData['bills'] as $bill) {
                 $billsSheet->setCellValue('A' . $billsRow, $bill->bill_number);
                 $billsSheet->setCellValue('B' . $billsRow, $bill->customer->first_name . ' ' . $bill->customer->last_name);
-                $billsSheet->setCellValue('C' . $billsRow, $bill->meter->meter_number ?? '');
-                $billsSheet->setCellValue('D' . $billsRow, $bill->meter->meterCategory->name ?? '');
-                $billsSheet->setCellValue('E' . $billsRow, $bill->meter->zone->name ?? 'Unassigned');
-                $billsSheet->setCellValue('F' . $billsRow,
+                $billsSheet->setCellValue('C' . $billsRow, $bill->customer->phone ?? '');
+                $billsSheet->setCellValue('D' . $billsRow, $bill->meter->meter_number ?? '');
+                $billsSheet->setCellValue('E' . $billsRow, $bill->meter->meterCategory->name ?? '');
+                $billsSheet->setCellValue('F' . $billsRow, $bill->meter->zone->name ?? 'Unassigned');
+                $billsSheet->setCellValue('G' . $billsRow,
                     ($bill->billing_period_start ? $bill->billing_period_start->format('d/m/Y') : '') . ' - ' .
                     ($bill->billing_period_end ? $bill->billing_period_end->format('d/m/Y') : '')
                 );
-                $billsSheet->setCellValue('G' . $billsRow, $bill->consumption);
-                $billsSheet->setCellValue('H' . $billsRow, $bill->total_amount);
-                $billsSheet->setCellValue('I' . $billsRow, $bill->paid_amount);
-                $billsSheet->setCellValue('J' . $billsRow, $bill->balance);
-                $billsSheet->setCellValue('K' . $billsRow, ucfirst($bill->bill_status));
-                $billsSheet->setCellValue('L' . $billsRow, $bill->due_date ? $bill->due_date->format('d/m/Y') : '');
-                $billsSheet->setCellValue('M' . $billsRow, $bill->is_overdue ? 'Yes' : 'No');
+                $billsSheet->setCellValue('H' . $billsRow, $bill->consumption);
+                $billsSheet->setCellValue('I' . $billsRow, $bill->total_amount);
+                $billsSheet->setCellValue('J' . $billsRow, $bill->paid_amount);
+                $billsSheet->setCellValue('K' . $billsRow, $bill->balance);
+                $billsSheet->setCellValue('L' . $billsRow, ucfirst($bill->bill_status));
+                $billsSheet->setCellValue('M' . $billsRow, $bill->due_date ? $bill->due_date->format('d/m/Y') : '');
+                $billsSheet->setCellValue('N' . $billsRow, $bill->is_overdue ? 'Yes' : 'No');
 
                 // Format numbers
                 $billsSheet->getStyle('G' . $billsRow)->getNumberFormat()->setFormatCode('#,##0.00');
-                $billsSheet->getStyle('H' . $billsRow . ':J' . $billsRow)->getNumberFormat()->setFormatCode('#,##0.00');
+                $billsSheet->getStyle('I' . $billsRow . ':'K . $billsRow)->getNumberFormat()->setFormatCode('#,##0.00');
 
                 $billsRow++;
             }
@@ -1307,16 +1308,16 @@ class ReportController extends Controller
             // Add totals
             $billsSheet->setCellValue('A' . $billsRow, 'TOTAL:');
             $billsSheet->getStyle('A' . $billsRow)->getFont()->setBold(true);
-            $billsSheet->setCellValue('G' . $billsRow, '=SUM(G' . $billsStartRow . ':G' . ($billsRow - 1) . ')');
             $billsSheet->setCellValue('H' . $billsRow, '=SUM(H' . $billsStartRow . ':H' . ($billsRow - 1) . ')');
             $billsSheet->setCellValue('I' . $billsRow, '=SUM(I' . $billsStartRow . ':I' . ($billsRow - 1) . ')');
             $billsSheet->setCellValue('J' . $billsRow, '=SUM(J' . $billsStartRow . ':J' . ($billsRow - 1) . ')');
-            $billsSheet->getStyle('G' . $billsRow . ':J' . $billsRow)->getFont()->setBold(true);
-            $billsSheet->getStyle('G' . $billsRow . ':J' . $billsRow)->getBorders()->getTop()->setBorderStyle(Border::BORDER_DOUBLE);
-            $billsSheet->getStyle('G' . $billsRow . ':J' . $billsRow)->getNumberFormat()->setFormatCode('#,##0.00');
+            $billsSheet->setCellValue('K' . $billsRow, '=SUM(K' . $billsStartRow . ':K' . ($billsRow - 1) . ')');
+            $billsSheet->getStyle('H' . $billsRow . ':K' . $billsRow)->getFont()->setBold(true);
+            $billsSheet->getStyle('H' . $billsRow . ':K' . $billsRow)->getBorders()->getTop()->setBorderStyle(Border::BORDER_DOUBLE);
+            $billsSheet->getStyle('H' . $billsRow . ':K' . $billsRow)->getNumberFormat()->setFormatCode('#,##0.00');
 
             // Auto-size columns
-            foreach (range('A', 'M') as $column) {
+            foreach (range('A', 'N') as $column) {
                 $billsSheet->getColumnDimension($column)->setAutoSize(true);
             }
         }
