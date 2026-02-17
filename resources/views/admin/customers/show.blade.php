@@ -287,17 +287,75 @@
                         </div>
                     </div>
 
-                    <!-- Multiple Meters Display -->
-                    <div class="space-y-4 mb-6">
+                    <!-- Meter Search and Filter Bar -->
+                    <div class="mb-6 no-print">
+                        <div class="flex flex-col sm:flex-row gap-4">
+                            <div class="flex-1 relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-search text-gray-400"></i>
+                                </div>
+                                <input type="text"
+                                    id="meterSearchInput"
+                                    placeholder="Search by meter number, type, status, or model..."
+                                    class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                                    onkeyup="filterMeters()">
+                            </div>
+                            <div class="sm:w-64">
+                                <select id="meterStatusFilter"
+                                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                                        onchange="filterMeters()">
+                                    <option value="all">All Statuses</option>
+                                    <option value="active">Active</option>
+                                    <option value="inactive">Inactive</option>
+                                    <option value="maintenance">Maintenance</option>
+                                    <option value="faulty">Faulty</option>
+                                </select>
+                            </div>
+                            <div class="sm:w-48">
+                                <select id="meterSortBy"
+                                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                                        onchange="filterMeters()">
+                                    <option value="meter_number">Sort by Meter Number</option>
+                                    <option value="installation_date">Sort by Installation Date</option>
+                                    <option value="consumption">Sort by Consumption</option>
+                                    <option value="balance">Sort by Balance</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Search Stats -->
+                        <div class="flex justify-between items-center mt-3 text-sm">
+                            <div class="text-gray-500">
+                                <span id="visibleMetersCount">{{ $customer->meters->count() }}</span> of <span id="totalMetersCount">{{ $customer->meters->count() }}</span> meters shown
+                            </div>
+                            <button onclick="clearMeterFilters()" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                <i class="fas fa-times mr-1"></i>Clear Filters
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Multiple Meters Display Container -->
+                    <div id="metersContainer" class="space-y-4 mb-6">
                         @foreach($customer->meters as $meter)
-                        <div class="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition duration-200">
+                        <div class="meter-item border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition duration-200"
+                            data-meter-number="{{ $meter->meter_number }}"
+                            data-meter-type="{{ $meter->meter_type }}"
+                            data-meter-status="{{ $meter->status }}"
+                            data-meter-model="{{ $meter->meter_model ?? '' }}"
+                            data-meter-category="{{ $meter->meterCategory->name ?? '' }}"
+                            data-installation-date="{{ $meter->installation_date?->format('Y-m-d') }}"
+                            data-consumption="{{ $meter->current_reading - $meter->initial_reading }}"
+                            data-balance="{{ $meter->current_balance }}">
                             <div class="flex justify-between items-start mb-3">
                                 <div>
                                     <h4 class="font-semibold text-gray-900 text-lg">{{ $meter->meter_number }}</h4>
                                     <p class="text-sm text-gray-600">{{ $meter->meterCategory->name ?? 'No Category' }} • {{ ucfirst($meter->meter_type) }}</p>
                                 </div>
                                 <div class="text-right">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                        {{ $meter->status === 'active' ? 'bg-green-100 text-green-800' :
+                                        ($meter->status === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
+                                        ($meter->status === 'faulty' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800')) }}">
                                         {{ ucfirst($meter->status) }}
                                     </span>
                                     <p class="text-xs text-gray-500 mt-1">Installed: {{ $meter->installation_date?->format('M d, Y') ?? 'N/A' }}</p>
@@ -348,7 +406,6 @@
                                     View Meter
                                 </a>
 
-                                <!-- Replace the existing unassign form with this: -->
                                 <a href="{{ route('admin.customers.unassign-reassign-form', [$customer, $meter]) }}"
                                 class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition duration-200 flex items-center">
                                     <i class="fas fa-exchange-alt mr-1"></i>
@@ -359,8 +416,15 @@
                         @endforeach
                     </div>
 
-                    <!-- Quick Actions for All Meters -->
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- No Results Message -->
+                    <div id="noMetersMessage" class="hidden text-center py-8 border border-dashed border-gray-300 rounded-lg">
+                        <i class="fas fa-search text-4xl text-gray-400 mb-3"></i>
+                        <h3 class="text-lg font-medium text-gray-900">No Matching Meters</h3>
+                        <p class="text-gray-500">No meters match your search criteria. Try adjusting your filters.</p>
+                    </div>
+
+                    <!-- Quick Actions for All Meters (Keep this outside the meters container) -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6 pt-6 border-t border-gray-200">
                         <!-- Meter Information Summary -->
                         <div class="space-y-4">
                             <h3 class="text-lg font-medium text-gray-900">Meter Summary</h3>
@@ -387,7 +451,6 @@
                                 </div>
                             </div>
                         </div>
-
 
                         <!-- Quick Actions -->
                         <div class="space-y-4">
@@ -450,7 +513,7 @@
                     </div>
                 </div>
                 @else
-                <!-- No Meter Assigned State -->
+                <!-- No Meter Assigned State (keep as is) -->
                 <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
                     <div class="flex items-start space-x-4">
                         <div class="p-3 bg-yellow-100 rounded-lg">
@@ -1170,6 +1233,131 @@
     </div>
 </div>
 <script>
+    // Enhanced meter filtering function
+function filterMeters() {
+    const searchInput = document.getElementById('meterSearchInput')?.value.toLowerCase() || '';
+    const statusFilter = document.getElementById('meterStatusFilter')?.value || 'all';
+    const sortBy = document.getElementById('meterSortBy')?.value || 'meter_number';
+
+    const meterItems = document.querySelectorAll('.meter-item');
+    let visibleCount = 0;
+
+    // Convert NodeList to array for sorting
+    const meterArray = Array.from(meterItems);
+
+    // Sort meters based on selected criteria
+    meterArray.sort((a, b) => {
+        let aVal, bVal;
+
+        switch(sortBy) {
+            case 'meter_number':
+                aVal = a.dataset.meterNumber || '';
+                bVal = b.dataset.meterNumber || '';
+                return aVal.localeCompare(bVal);
+
+            case 'installation_date':
+                aVal = a.dataset.installationDate || '0000-00-00';
+                bVal = b.dataset.installationDate || '0000-00-00';
+                return bVal.localeCompare(aVal); // Newest first
+
+            case 'consumption':
+                aVal = parseFloat(a.dataset.consumption) || 0;
+                bVal = parseFloat(b.dataset.consumption) || 0;
+                return bVal - aVal; // Highest first
+
+            case 'balance':
+                aVal = parseFloat(a.dataset.balance) || 0;
+                bVal = parseFloat(b.dataset.balance) || 0;
+                return bVal - aVal; // Highest first
+
+            default:
+                return 0;
+        }
+    });
+
+    // Reorder DOM elements
+    const container = document.getElementById('metersContainer');
+    meterArray.forEach(meter => container.appendChild(meter));
+
+    // Apply filters
+    meterArray.forEach(meter => {
+        const meterNumber = meter.dataset.meterNumber?.toLowerCase() || '';
+        const meterType = meter.dataset.meterType?.toLowerCase() || '';
+        const meterStatus = meter.dataset.meterStatus?.toLowerCase() || '';
+        const meterModel = meter.dataset.meterModel?.toLowerCase() || '';
+        const meterCategory = meter.dataset.meterCategory?.toLowerCase() || '';
+
+        // Combine all searchable fields
+        const searchableText = `${meterNumber} ${meterType} ${meterModel} ${meterCategory}`;
+
+        // Check if meter matches search
+        const matchesSearch = searchInput === '' || searchableText.includes(searchInput);
+
+        // Check if meter matches status filter
+        const matchesStatus = statusFilter === 'all' || meterStatus === statusFilter;
+
+        // Show/hide based on filters
+        if (matchesSearch && matchesStatus) {
+            meter.style.display = 'block';
+            visibleCount++;
+        } else {
+            meter.style.display = 'none';
+        }
+    });
+
+    // Update visible count
+    document.getElementById('visibleMetersCount').textContent = visibleCount;
+
+    // Show/hide no results message
+    const noResultsMsg = document.getElementById('noMetersMessage');
+    if (visibleCount === 0) {
+        noResultsMsg.classList.remove('hidden');
+    } else {
+        noResultsMsg.classList.add('hidden');
+    }
+}
+
+// Clear all filters
+function clearMeterFilters() {
+    const searchInput = document.getElementById('meterSearchInput');
+    const statusFilter = document.getElementById('meterStatusFilter');
+    const sortBy = document.getElementById('meterSortBy');
+
+    if (searchInput) searchInput.value = '';
+    if (statusFilter) statusFilter.value = 'all';
+    if (sortBy) sortBy.value = 'meter_number';
+
+    filterMeters();
+}
+
+// Add debounce to search input for better performance
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Apply debounce to search
+const searchInput = document.getElementById('meterSearchInput');
+if (searchInput) {
+    const debouncedFilter = debounce(function() {
+        filterMeters();
+    }, 300);
+
+    searchInput.addEventListener('keyup', debouncedFilter);
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    filterMeters();
+});
+
 function confirmUnassignMeter(meterNumber) {
     return confirm(`Are you sure you want to unassign meter ${meterNumber}? This action will disconnect the meter from the customer and may affect billing.`);
 }

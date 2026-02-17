@@ -711,6 +711,9 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(
 
         // Check customer meters
         Route::get('/{customer}/check-meters', [CustomerController::class, 'checkCustomerMeters'])->name('check-meters');
+
+        // meter search for secific customer
+        Route::get('/{customer}/meters/filter', [CustomerController::class, 'filterCustomerMeters'])->name('filter-meters');
     });
     // Meter Management
     Route::prefix('meters')->name('meters.')->group(function () {

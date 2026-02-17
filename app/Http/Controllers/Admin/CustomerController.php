@@ -1681,4 +1681,36 @@ class CustomerController extends Controller
             })
         ]);
     }
+    /**
+     * Filter customer meters via AJAX (for large datasets)
+     */
+    public function filterCustomerMeters(Request $request, Customer $customer)
+    {
+        $search = $request->get('search');
+        $status = $request->get('status');
+        $sortBy = $request->get('sort_by', 'meter_number');
+
+        $meters = $customer->meters()
+            ->with('meterCategory')
+            ->when($search, function($query) use ($search) {
+                $query->where(function($q) use ($search) {
+                    $q->where('meter_number', 'like', "%{$search}%")
+                    ->orWhere('meter_type', 'like', "%{$search}%")
+                    ->orWhere('meter_model', 'like', "%{$search}%")
+                    ->orWhereHas('meterCategory', function($cat) use ($search) {
+                        $cat->where('name', 'like', "%{$search}%");
+                    });
+                });
+            })
+            ->when($status && $status !== 'all', function($query) use ($status) {
+                $query->where('status', $status);
+            })
+            ->orderBy($sortBy)
+            ->paginate(20);
+
+        return response()->json([
+            'meters' => $meters,
+            'html' => view('admin.customers.partials.meter-items', compact('meters'))->render()
+        ]);
+    }
 }
