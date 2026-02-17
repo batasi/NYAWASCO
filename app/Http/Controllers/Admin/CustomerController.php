@@ -1681,16 +1681,42 @@ class CustomerController extends Controller
             })
         ]);
     }
-    /**
-     * Filter customer meters via AJAX (for large datasets)
+   /**
+     * Filter customer meters via AJAX (server-side filtering for large datasets)
      */
     public function filterCustomerMeters(Request $request, Customer $customer)
     {
-        $search = $request->get('search');
-        $status = $request->get('status');
+        $search = $request->get('search', '');
+        $status = $request->get('status', 'all');
         $sortBy = $request->get('sort_by', 'meter_number');
+        $page = $request->get('page', 1);
+        $perPage = 10; // Show 10 meters per page
 
-        $meters = $customer->meters()
+        // Define sort column and direction
+        $sortColumn = 'meter_number';
+        $sortDirection = 'asc';
+
+        switch($sortBy) {
+            case 'installation_date':
+                $sortColumn = 'installation_date';
+                $sortDirection = 'desc';
+                break;
+            case 'consumption':
+                // This is a calculated field, handle specially
+                $sortColumn = 'current_reading';
+                $sortDirection = 'desc';
+                break;
+            case 'balance':
+                $sortColumn = 'current_balance';
+                $sortDirection = 'desc';
+                break;
+            default:
+                $sortColumn = 'meter_number';
+                $sortDirection = 'asc';
+        }
+
+        // Build query
+        $query = $customer->meters()
             ->with('meterCategory')
             ->when($search, function($query) use ($search) {
                 $query->where(function($q) use ($search) {
@@ -1704,13 +1730,54 @@ class CustomerController extends Controller
             })
             ->when($status && $status !== 'all', function($query) use ($status) {
                 $query->where('status', $status);
-            })
-            ->orderBy($sortBy)
-            ->paginate(20);
+            });
+
+        // Handle special sorting for consumption (calculated field)
+        if ($sortBy === 'consumption') {
+            // Get all meters and sort by calculated consumption
+            $meters = $query->get();
+            $meters = $meters->sortByDesc(function($meter) {
+                return $meter->current_reading - $meter->initial_reading;
+            });
+
+            // Manual pagination
+            $total = $meters->count();
+            $meters = $meters->forPage($page, $perPage);
+
+            $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
+                $meters,
+                $total,
+                $perPage,
+                $page,
+                ['path' => $request->url(), 'query' => $request->query()]
+            );
+        } else {
+            // Regular database sorting
+            $paginator = $query->orderBy($sortColumn, $sortDirection)
+                ->paginate($perPage, ['*'], 'page', $page);
+        }
+
+        // Render the meter items partial
+        $html = view('admin.customers.partials.meter-items', [
+            'meters' => $paginator,
+            'customer' => $customer
+        ])->render();
 
         return response()->json([
-            'meters' => $meters,
-            'html' => view('admin.customers.partials.meter-items', compact('meters'))->render()
+            'success' => true,
+            'html' => $html,
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'from' => $paginator->firstItem(),
+                'to' => $paginator->lastItem(),
+            ],
+            'stats' => [
+                'total' => $customer->meters()->count(),
+                'visible' => $paginator->total()
+            ]
         ]);
     }
 }

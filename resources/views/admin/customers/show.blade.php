@@ -297,24 +297,25 @@
                                 <input type="text"
                                     id="meterSearchInput"
                                     placeholder="Search by meter number, type, status, or model..."
-                                    class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
-                                    onkeyup="filterMeters()">
-                            </div>
+                                    class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200">
+                                </div>
                             <div class="sm:w-64">
                                 <select id="meterStatusFilter"
-                                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
-                                        onchange="filterMeters()">
+                                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200">
+                                    <!-- Removed onchange="filterMeters()" -->
                                     <option value="all">All Statuses</option>
                                     <option value="active">Active</option>
                                     <option value="inactive">Inactive</option>
                                     <option value="maintenance">Maintenance</option>
                                     <option value="faulty">Faulty</option>
                                 </select>
+
+
                             </div>
                             <div class="sm:w-48">
                                 <select id="meterSortBy"
-                                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
-                                        onchange="filterMeters()">
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200">
+                                    <!-- Removed onchange="filterMeters()" -->
                                     <option value="meter_number">Sort by Meter Number</option>
                                     <option value="installation_date">Sort by Installation Date</option>
                                     <option value="consumption">Sort by Consumption</option>
@@ -336,83 +337,8 @@
 
                     <!-- Multiple Meters Display Container -->
                     <div id="metersContainer" class="space-y-4 mb-6">
-                        @foreach($customer->meters as $meter)
-                        <div class="meter-item border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition duration-200"
-                            data-meter-number="{{ $meter->meter_number }}"
-                            data-meter-type="{{ $meter->meter_type }}"
-                            data-meter-status="{{ $meter->status }}"
-                            data-meter-model="{{ $meter->meter_model ?? '' }}"
-                            data-meter-category="{{ $meter->meterCategory->name ?? '' }}"
-                            data-installation-date="{{ $meter->installation_date?->format('Y-m-d') }}"
-                            data-consumption="{{ $meter->current_reading - $meter->initial_reading }}"
-                            data-balance="{{ $meter->current_balance }}">
-                            <div class="flex justify-between items-start mb-3">
-                                <div>
-                                    <h4 class="font-semibold text-gray-900 text-lg">{{ $meter->meter_number }}</h4>
-                                    <p class="text-sm text-gray-600">{{ $meter->meterCategory->name ?? 'No Category' }} • {{ ucfirst($meter->meter_type) }}</p>
-                                </div>
-                                <div class="text-right">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                        {{ $meter->status === 'active' ? 'bg-green-100 text-green-800' :
-                                        ($meter->status === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
-                                        ($meter->status === 'faulty' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800')) }}">
-                                        {{ ucfirst($meter->status) }}
-                                    </span>
-                                    <p class="text-xs text-gray-500 mt-1">Installed: {{ $meter->installation_date?->format('M d, Y') ?? 'N/A' }}</p>
-                                </div>
-                            </div>
-
-                            <!-- Meter details -->
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                <div>
-                                    <span class="text-gray-500 block">Current Reading</span>
-                                    <span class="font-semibold text-green-600">{{ number_format($meter->current_reading, 2) }} m³</span>
-                                </div>
-                                <div>
-                                    <span class="text-gray-500 block">Initial Reading</span>
-                                    <span class="font-semibold">{{ number_format($meter->initial_reading, 2) }} m³</span>
-                                </div>
-                                <div>
-                                    <span class="text-gray-500 block">Total Consumption</span>
-                                    <span class="font-semibold text-blue-600">{{ number_format($meter->current_reading - $meter->initial_reading, 2) }} m³</span>
-                                </div>
-                                <div>
-                                    <span class="text-gray-500 block">Balance</span>
-                                    <span class="font-semibold {{ $meter->current_balance > 0 ? 'text-red-600' : 'text-green-600' }}">
-                                        KSh {{ number_format($meter->current_balance, 2) }}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <!-- Individual Meter Actions -->
-                            <div class="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-100">
-                                @if($customer->status === 'active')
-                                    <a href="{{ route('admin.meter-readings.create', ['customer' => $customer->id, 'meter_id' => $meter->id]) }}"
-                                    class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition duration-200 flex items-center">
-                                        <i class="fas fa-tachometer-alt mr-1"></i>
-                                        Record Reading
-                                    </a>
-                                @else
-                                    <button class="bg-gray-400 cursor-not-allowed text-white px-3 py-1 rounded text-sm flex items-center"
-                                            title="Cannot record reading - Customer status is {{ $customer->status }}">
-                                        <i class="fas fa-tachometer-alt mr-1"></i>
-                                        Record Reading
-                                    </button>
-                                @endif
-
-                                <a href="{{ route('admin.meters.show', $meter) }}"
-                                class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm transition duration-200 flex items-center">
-                                    <i class="fas fa-eye mr-1"></i>
-                                    View Meter
-                                </a>
-
-                                <a href="{{ route('admin.customers.unassign-reassign-form', [$customer, $meter]) }}"
-                                class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition duration-200 flex items-center">
-                                    <i class="fas fa-exchange-alt mr-1"></i>
-                                    Unassign & Reassign
-                                </a>
-                            </div>
-                        </div>
+                        @foreach($customer->meters->take(10) as $meter)
+                        @include('admin.customers.partials.meter-items', ['meters' => $customer->meters->take(10), 'customer' => $customer])
                         @endforeach
                     </div>
 
@@ -1233,326 +1159,345 @@
     </div>
 </div>
 <script>
-    // Enhanced meter filtering function
-function filterMeters() {
-    const searchInput = document.getElementById('meterSearchInput')?.value.toLowerCase() || '';
-    const statusFilter = document.getElementById('meterStatusFilter')?.value || 'all';
-    const sortBy = document.getElementById('meterSortBy')?.value || 'meter_number';
+    // Server-side filtering with debounce
+    let filterTimeout;
+    let currentPage = 1;
 
-    const meterItems = document.querySelectorAll('.meter-item');
-    let visibleCount = 0;
+    function filterMeters(page = 1) {
+        currentPage = page;
 
-    // Convert NodeList to array for sorting
-    const meterArray = Array.from(meterItems);
+        const searchInput = document.getElementById('meterSearchInput')?.value || '';
+        const statusFilter = document.getElementById('meterStatusFilter')?.value || 'all';
+        const sortBy = document.getElementById('meterSortBy')?.value || 'meter_number';
 
-    // Sort meters based on selected criteria
-    meterArray.sort((a, b) => {
-        let aVal, bVal;
+        // Show loading state
+        document.getElementById('metersContainer').innerHTML = `
+            <div class="flex items-center justify-center space-x-2 text-gray-500 py-12">
+                <i class="fas fa-spinner fa-spin text-2xl"></i>
+                <span>Loading meters...</span>
+            </div>
+        `;
 
-        switch(sortBy) {
-            case 'meter_number':
-                aVal = a.dataset.meterNumber || '';
-                bVal = b.dataset.meterNumber || '';
-                return aVal.localeCompare(bVal);
+        // Build query string
+        const params = new URLSearchParams({
+            search: searchInput,
+            status: statusFilter,
+            sort_by: sortBy,
+            page: page
+        });
 
-            case 'installation_date':
-                aVal = a.dataset.installationDate || '0000-00-00';
-                bVal = b.dataset.installationDate || '0000-00-00';
-                return bVal.localeCompare(aVal); // Newest first
+        // Make AJAX request using Laravel's named route helper
+        fetch(`{{ route('admin.customers.filter-meters', $customer) }}?${params}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Update meters container
+                    document.getElementById('metersContainer').innerHTML = data.html;
 
-            case 'consumption':
-                aVal = parseFloat(a.dataset.consumption) || 0;
-                bVal = parseFloat(b.dataset.consumption) || 0;
-                return bVal - aVal; // Highest first
+                    // Update stats
+                    document.getElementById('visibleMetersCount').textContent = data.stats.visible;
+                    document.getElementById('totalMetersCount').textContent = data.stats.total;
 
-            case 'balance':
-                aVal = parseFloat(a.dataset.balance) || 0;
-                bVal = parseFloat(b.dataset.balance) || 0;
-                return bVal - aVal; // Highest first
-
-            default:
-                return 0;
-        }
-    });
-
-    // Reorder DOM elements
-    const container = document.getElementById('metersContainer');
-    meterArray.forEach(meter => container.appendChild(meter));
-
-    // Apply filters
-    meterArray.forEach(meter => {
-        const meterNumber = meter.dataset.meterNumber?.toLowerCase() || '';
-        const meterType = meter.dataset.meterType?.toLowerCase() || '';
-        const meterStatus = meter.dataset.meterStatus?.toLowerCase() || '';
-        const meterModel = meter.dataset.meterModel?.toLowerCase() || '';
-        const meterCategory = meter.dataset.meterCategory?.toLowerCase() || '';
-
-        // Combine all searchable fields
-        const searchableText = `${meterNumber} ${meterType} ${meterModel} ${meterCategory}`;
-
-        // Check if meter matches search
-        const matchesSearch = searchInput === '' || searchableText.includes(searchInput);
-
-        // Check if meter matches status filter
-        const matchesStatus = statusFilter === 'all' || meterStatus === statusFilter;
-
-        // Show/hide based on filters
-        if (matchesSearch && matchesStatus) {
-            meter.style.display = 'block';
-            visibleCount++;
-        } else {
-            meter.style.display = 'none';
-        }
-    });
-
-    // Update visible count
-    document.getElementById('visibleMetersCount').textContent = visibleCount;
-
-    // Show/hide no results message
-    const noResultsMsg = document.getElementById('noMetersMessage');
-    if (visibleCount === 0) {
-        noResultsMsg.classList.remove('hidden');
-    } else {
-        noResultsMsg.classList.add('hidden');
-    }
-}
-
-// Clear all filters
-function clearMeterFilters() {
-    const searchInput = document.getElementById('meterSearchInput');
-    const statusFilter = document.getElementById('meterStatusFilter');
-    const sortBy = document.getElementById('meterSortBy');
-
-    if (searchInput) searchInput.value = '';
-    if (statusFilter) statusFilter.value = 'all';
-    if (sortBy) sortBy.value = 'meter_number';
-
-    filterMeters();
-}
-
-// Add debounce to search input for better performance
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-// Apply debounce to search
-const searchInput = document.getElementById('meterSearchInput');
-if (searchInput) {
-    const debouncedFilter = debounce(function() {
-        filterMeters();
-    }, 300);
-
-    searchInput.addEventListener('keyup', debouncedFilter);
-}
-
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', function() {
-    filterMeters();
-});
-
-function confirmUnassignMeter(meterNumber) {
-    return confirm(`Are you sure you want to unassign meter ${meterNumber}? This action will disconnect the meter from the customer and may affect billing.`);
-}
-
-function confirmUnassignAllMeters() {
-    return confirm('Are you sure you want to unassign ALL meters from this customer? This action cannot be undone and will affect all billing for this customer.');
-}
-
-// Enhanced meter assignment modal for multiple meters
-function showMeterAssignment() {
-    document.getElementById('meterAssignmentModal').classList.remove('hidden');
-    document.body.classList.add('overflow-hidden');
-    resetMeterSelection();
-}
-
-function closeMeterModal() {
-    document.getElementById('meterAssignmentModal').classList.add('hidden');
-    document.body.classList.remove('overflow-hidden');
-    resetMeterSelection();
-}
-
-function resetMeterSelection() {
-    const metersList = document.getElementById('availableMetersList');
-    const meterIdInput = document.getElementById('selectedMeterId');
-    const errorDiv = document.getElementById('meterSelectionError');
-    const assignButton = document.getElementById('assignMeterButton');
-
-    if (metersList) metersList.innerHTML = '<p class="text-gray-500 text-sm">Select a category to view available meters</p>';
-    if (meterIdInput) meterIdInput.value = '';
-    if (errorDiv) errorDiv.classList.add('hidden');
-    if (assignButton) assignButton.disabled = true;
-
-    // Reset category select
-    const categorySelect = document.getElementById('meterCategorySelect');
-    if (categorySelect) categorySelect.value = '';
-}
-
-// Enhanced meter loading with better error handling
-document.getElementById('meterCategorySelect')?.addEventListener('change', function() {
-    const categoryId = this.value;
-    const metersList = document.getElementById('availableMetersList');
-    const meterIdInput = document.getElementById('selectedMeterId');
-    const errorDiv = document.getElementById('meterSelectionError');
-    const assignButton = document.getElementById('assignMeterButton');
-
-    // Reset selection when category changes
-    if (meterIdInput) meterIdInput.value = '';
-    if (errorDiv) errorDiv.classList.add('hidden');
-    if (assignButton) assignButton.disabled = true;
-
-    if (!categoryId) {
-        metersList.innerHTML = '<p class="text-gray-500 text-sm">Select a category to view available meters</p>';
-        return;
-    }
-
-    metersList.innerHTML = `
-        <div class="flex items-center justify-center space-x-2 text-gray-500 py-8">
-            <i class="fas fa-spinner fa-spin"></i>
-            <span>Loading available meters...</span>
-        </div>
-    `;
-
-    fetch(`/admin/customers/get-available-meters?category_id=${categoryId}`)
-        .then(response => {
-            if (!response.ok) throw new Error('Network response was not ok');
-            return response.json();
-        })
-        .then(meters => {
-            if (meters.length === 0) {
-                metersList.innerHTML = `
-                    <div class="text-center text-gray-500 py-8">
-                        <i class="fas fa-inbox text-3xl mb-3 opacity-50"></i>
-                        <p class="font-medium">No meters available</p>
-                        <p class="text-sm mt-1">No available meters found in this category</p>
+                    // Update or create pagination
+                    updatePagination(data.pagination);
+                }
+            })
+            .catch(error => {
+                console.error('Error filtering meters:', error);
+                document.getElementById('metersContainer').innerHTML = `
+                    <div class="text-center text-red-500 py-8">
+                        <i class="fas fa-exclamation-triangle text-2xl mb-3"></i>
+                        <p class="font-medium">Error loading meters</p>
+                        <p class="text-sm mt-1">Please try again later. Check browser console for details.</p>
                     </div>
                 `;
-                return;
-            }
+            });
+    }
 
-            metersList.innerHTML = meters.map(meter => `
-                <div class="border border-gray-200 rounded-lg p-4 hover:border-blue-300 cursor-pointer transition duration-200 meter-option"
-                     data-meter-id="${meter.id}">
-                    <div class="flex justify-between items-start">
-                        <div class="flex-1">
-                            <div class="flex items-center space-x-3 mb-2">
-                                <div class="font-semibold text-gray-900">${meter.meter_number}</div>
-                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                    Available
-                                </span>
-                            </div>
-                            <div class="grid grid-cols-2 gap-2 text-sm text-gray-600">
-                                <div class="flex items-center space-x-1">
-                                    <i class="fas fa-tag text-gray-400"></i>
-                                    <span>${meter.meter_type}</span>
-                                </div>
-                                <div class="flex items-center space-x-1">
-                                    <i class="fas fa-cube text-gray-400"></i>
-                                    <span>${meter.meter_model || 'Standard'}</span>
-                                </div>
-                            </div>
+    // Add pagination function
+    function updatePagination(pagination) {
+        // Remove existing pagination if any
+        const existingPagination = document.getElementById('meterPagination');
+        if (existingPagination) {
+            existingPagination.remove();
+        }
+
+        if (pagination.last_page <= 1) return;
+
+        // Create pagination container
+        const paginationHtml = `
+            <div id="meterPagination" class="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
+                <div class="text-sm text-gray-500">
+                    Showing ${pagination.from} to ${pagination.to} of ${pagination.total} meters
+                </div>
+                <div class="flex space-x-2">
+                    <button onclick="filterMeters(${pagination.current_page - 1})"
+                        ${pagination.current_page === 1 ? 'disabled' : ''}
+                        class="px-3 py-1 rounded border ${pagination.current_page === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'hover:bg-gray-50 text-gray-700'}">
+                        Previous
+                    </button>
+                    <span class="px-3 py-1 bg-blue-600 text-white rounded">
+                        Page ${pagination.current_page} of ${pagination.last_page}
+                    </span>
+                    <button onclick="filterMeters(${pagination.current_page + 1})"
+                        ${pagination.current_page === pagination.last_page ? 'disabled' : ''}
+                        class="px-3 py-1 rounded border ${pagination.current_page === pagination.last_page ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'hover:bg-gray-50 text-gray-700'}">
+                        Next
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // Append pagination after meters container
+        document.getElementById('metersContainer').insertAdjacentHTML('afterend', paginationHtml);
+    }
+
+    // Debounced filter
+    function debouncedFilter() {
+        clearTimeout(filterTimeout);
+        filterTimeout = setTimeout(() => filterMeters(1), 500);
+    }
+
+    // Initialize event listeners when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('meterSearchInput');
+        const statusFilter = document.getElementById('meterStatusFilter');
+        const sortBy = document.getElementById('meterSortBy');
+
+        if (searchInput) {
+            searchInput.addEventListener('keyup', debouncedFilter);
+        }
+
+        if (statusFilter) {
+            statusFilter.addEventListener('change', () => filterMeters(1));
+        }
+
+        if (sortBy) {
+            sortBy.addEventListener('change', () => filterMeters(1));
+        }
+
+        // Remove the old inline onkeyup/onchange attributes
+        if (searchInput) searchInput.removeAttribute('onkeyup');
+        if (statusFilter) statusFilter.removeAttribute('onchange');
+        if (sortBy) sortBy.removeAttribute('onchange');
+
+        // Initial load
+        filterMeters(1);
+    });
+
+    // Clear filters
+    function clearMeterFilters() {
+        const searchInput = document.getElementById('meterSearchInput');
+        const statusFilter = document.getElementById('meterStatusFilter');
+        const sortBy = document.getElementById('meterSortBy');
+
+        if (searchInput) searchInput.value = '';
+        if (statusFilter) statusFilter.value = 'all';
+        if (sortBy) sortBy.value = 'meter_number';
+
+        filterMeters(1);
+    }
+
+    function confirmUnassignMeter(meterNumber) {
+        return confirm(`Are you sure you want to unassign meter ${meterNumber}? This action will disconnect the meter from the customer and may affect billing.`);
+    }
+
+    function confirmUnassignAllMeters() {
+        return confirm('Are you sure you want to unassign ALL meters from this customer? This action cannot be undone and will affect all billing for this customer.');
+    }
+
+    // Enhanced meter assignment modal for multiple meters
+    function showMeterAssignment() {
+        document.getElementById('meterAssignmentModal').classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+        resetMeterSelection();
+    }
+
+    function closeMeterModal() {
+        document.getElementById('meterAssignmentModal').classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+        resetMeterSelection();
+    }
+
+    function resetMeterSelection() {
+        const metersList = document.getElementById('availableMetersList');
+        const meterIdInput = document.getElementById('selectedMeterId');
+        const errorDiv = document.getElementById('meterSelectionError');
+        const assignButton = document.getElementById('assignMeterButton');
+
+        if (metersList) metersList.innerHTML = '<p class="text-gray-500 text-sm">Select a category to view available meters</p>';
+        if (meterIdInput) meterIdInput.value = '';
+        if (errorDiv) errorDiv.classList.add('hidden');
+        if (assignButton) assignButton.disabled = true;
+
+        // Reset category select
+        const categorySelect = document.getElementById('meterCategorySelect');
+        if (categorySelect) categorySelect.value = '';
+    }
+
+    // Enhanced meter loading with better error handling
+    document.getElementById('meterCategorySelect')?.addEventListener('change', function() {
+        const categoryId = this.value;
+        const metersList = document.getElementById('availableMetersList');
+        const meterIdInput = document.getElementById('selectedMeterId');
+        const errorDiv = document.getElementById('meterSelectionError');
+        const assignButton = document.getElementById('assignMeterButton');
+
+        // Reset selection when category changes
+        if (meterIdInput) meterIdInput.value = '';
+        if (errorDiv) errorDiv.classList.add('hidden');
+        if (assignButton) assignButton.disabled = true;
+
+        if (!categoryId) {
+            metersList.innerHTML = '<p class="text-gray-500 text-sm">Select a category to view available meters</p>';
+            return;
+        }
+
+        metersList.innerHTML = `
+            <div class="flex items-center justify-center space-x-2 text-gray-500 py-8">
+                <i class="fas fa-spinner fa-spin"></i>
+                <span>Loading available meters...</span>
+            </div>
+        `;
+
+        fetch(`/admin/customers/get-available-meters?category_id=${categoryId}`)
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
+            .then(meters => {
+                if (meters.length === 0) {
+                    metersList.innerHTML = `
+                        <div class="text-center text-gray-500 py-8">
+                            <i class="fas fa-inbox text-3xl mb-3 opacity-50"></i>
+                            <p class="font-medium">No meters available</p>
+                            <p class="text-sm mt-1">No available meters found in this category</p>
                         </div>
-                        <div class="text-right">
-                            <div class="text-sm font-medium text-gray-900">${meter.category_name}</div>
-                            <div class="text-xs text-gray-500 mt-1">Init: ${meter.initial_reading}m³</div>
+                    `;
+                    return;
+                }
+
+                metersList.innerHTML = meters.map(meter => `
+                    <div class="border border-gray-200 rounded-lg p-4 hover:border-blue-300 cursor-pointer transition duration-200 meter-option"
+                        data-meter-id="${meter.id}">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-3 mb-2">
+                                    <div class="font-semibold text-gray-900">${meter.meter_number}</div>
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        Available
+                                    </span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2 text-sm text-gray-600">
+                                    <div class="flex items-center space-x-1">
+                                        <i class="fas fa-tag text-gray-400"></i>
+                                        <span>${meter.meter_type}</span>
+                                    </div>
+                                    <div class="flex items-center space-x-1">
+                                        <i class="fas fa-cube text-gray-400"></i>
+                                        <span>${meter.meter_model || 'Standard'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-sm font-medium text-gray-900">${meter.category_name}</div>
+                                <div class="text-xs text-gray-500 mt-1">Init: ${meter.initial_reading}m³</div>
+                            </div>
                         </div>
                     </div>
-                </div>
-            `).join('');
+                `).join('');
 
-            // Add selection handlers
-            document.querySelectorAll('.meter-option').forEach(option => {
-                option.addEventListener('click', function() {
-                    // Remove selection from all options
-                    document.querySelectorAll('.meter-option').forEach(opt => {
-                        opt.classList.remove('border-blue-500', 'bg-blue-50', 'ring-2', 'ring-blue-200');
+                // Add selection handlers
+                document.querySelectorAll('.meter-option').forEach(option => {
+                    option.addEventListener('click', function() {
+                        // Remove selection from all options
+                        document.querySelectorAll('.meter-option').forEach(opt => {
+                            opt.classList.remove('border-blue-500', 'bg-blue-50', 'ring-2', 'ring-blue-200');
+                        });
+
+                        // Add selection to clicked option
+                        this.classList.add('border-blue-500', 'bg-blue-50', 'ring-2', 'ring-blue-200');
+
+                        // Set the hidden input value and enable submit button
+                        const meterId = this.dataset.meterId;
+                        document.getElementById('selectedMeterId').value = meterId;
+                        document.getElementById('meterSelectionError').classList.add('hidden');
+                        document.getElementById('assignMeterButton').disabled = false;
                     });
-
-                    // Add selection to clicked option
-                    this.classList.add('border-blue-500', 'bg-blue-50', 'ring-2', 'ring-blue-200');
-
-                    // Set the hidden input value and enable submit button
-                    const meterId = this.dataset.meterId;
-                    document.getElementById('selectedMeterId').value = meterId;
-                    document.getElementById('meterSelectionError').classList.add('hidden');
-                    document.getElementById('assignMeterButton').disabled = false;
                 });
+            })
+            .catch(error => {
+                console.error('Error loading meters:', error);
+                metersList.innerHTML = `
+                    <div class="text-center text-red-500 py-8">
+                        <i class="fas fa-exclamation-triangle text-2xl mb-3"></i>
+                        <p class="font-medium">Error loading meters</p>
+                        <p class="text-sm mt-1">Please try again later</p>
+                    </div>
+                `;
             });
-        })
-        .catch(error => {
-            console.error('Error loading meters:', error);
-            metersList.innerHTML = `
-                <div class="text-center text-red-500 py-8">
-                    <i class="fas fa-exclamation-triangle text-2xl mb-3"></i>
-                    <p class="font-medium">Error loading meters</p>
-                    <p class="text-sm mt-1">Please try again later</p>
-                </div>
-            `;
-        });
-});
+    });
 
-// Form validation before submission
-document.getElementById('meterAssignmentForm')?.addEventListener('submit', function(e) {
-    const meterId = document.getElementById('selectedMeterId').value;
-    const errorDiv = document.getElementById('meterSelectionError');
+    // Form validation before submission
+    document.getElementById('meterAssignmentForm')?.addEventListener('submit', function(e) {
+        const meterId = document.getElementById('selectedMeterId').value;
+        const errorDiv = document.getElementById('meterSelectionError');
 
-    if (!meterId) {
-        e.preventDefault();
-        errorDiv.classList.remove('hidden');
-        errorDiv.textContent = 'Please select a meter from the list above.';
-        return false;
-    }
-});
-
-// Close modal when clicking outside
-document.getElementById('meterAssignmentModal')?.addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeMeterModal();
-    }
-});
-
-// Status update form handling
-document.getElementById('statusSelect').addEventListener('change', function() {
-    const status = this.value;
-    const reasonField = document.getElementById('statusReasonField');
-    const notesField = document.getElementById('statusNotes');
-
-    // Show/Hide reason field
-    if (status) {
-        reasonField.classList.remove('hidden');
-        notesField.placeholder = "Document any additional notes for this status change...";
-    } else {
-        reasonField.classList.add('hidden');
-        notesField.placeholder = "Document the reason for this status change...";
-    }
-});
-
-// File upload validation
-document.querySelectorAll('input[type="file"]').forEach(input => {
-    input.addEventListener('change', function() {
-        const file = this.files[0];
-        if (file) {
-            const maxSize = 2 * 1024 * 1024; // 2MB
-            if (file.size > maxSize) {
-                alert('File size must be less than 2MB');
-                this.value = '';
-            }
-
-            const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
-            if (!allowedTypes.includes(file.type)) {
-                alert('Please upload PDF, JPG, or PNG files only');
-                this.value = '';
-            }
+        if (!meterId) {
+            e.preventDefault();
+            errorDiv.classList.remove('hidden');
+            errorDiv.textContent = 'Please select a meter from the list above.';
+            return false;
         }
     });
-});
+
+    // Close modal when clicking outside
+    document.getElementById('meterAssignmentModal')?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeMeterModal();
+        }
+    });
+
+    // Status update form handling
+    document.getElementById('statusSelect')?.addEventListener('change', function() {
+        const status = this.value;
+        const reasonField = document.getElementById('statusReasonField');
+        const notesField = document.getElementById('statusNotes');
+
+        // Show/Hide reason field
+        if (status) {
+            reasonField.classList.remove('hidden');
+            notesField.placeholder = "Document any additional notes for this status change...";
+        } else {
+            reasonField.classList.add('hidden');
+            notesField.placeholder = "Document the reason for this status change...";
+        }
+    });
+
+    // File upload validation
+    document.querySelectorAll('input[type="file"]').forEach(input => {
+        input.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                const maxSize = 2 * 1024 * 1024; // 2MB
+                if (file.size > maxSize) {
+                    alert('File size must be less than 2MB');
+                    this.value = '';
+                }
+
+                const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+                if (!allowedTypes.includes(file.type)) {
+                    alert('Please upload PDF, JPG, or PNG files only');
+                    this.value = '';
+                }
+            }
+        });
+    });
 </script>
 
 <style>

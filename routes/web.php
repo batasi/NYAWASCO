@@ -473,6 +473,9 @@ Route::middleware(['auth'])->group(function () {
     Route::post('admin/payments/dashboard/export', [PaymentDashboardController::class, 'exportDashboard'])
         ->name('admin.payments.dashboard.export');
 
+    Route::get('admin/customers/{customer}/meters/filter', [CustomerController::class, 'filterCustomerMeters'])->name('admin.customers.filter-meters');
+
+
 });
 
 // Bill Information Routes (Public)
@@ -633,6 +636,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
     // Role management
     Route::resource('roles', \App\Http\Controllers\Admin\RoleController::class);
 });
+
 Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(function () {
     // Dashboard
     Route::get('/dashboard', [UserController::class, 'index'])->name('dashboard');
@@ -712,9 +716,8 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(
         // Check customer meters
         Route::get('/{customer}/check-meters', [CustomerController::class, 'checkCustomerMeters'])->name('check-meters');
 
-        // meter search for secific customer
-        Route::get('/{customer}/meters/filter', [CustomerController::class, 'filterCustomerMeters'])->name('filter-meters');
     });
+
     // Meter Management
     Route::prefix('meters')->name('meters.')->group(function () {
         Route::get('/', [MeterController::class, 'index'])->name('index');
