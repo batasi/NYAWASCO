@@ -27,6 +27,13 @@
                     </svg>
                     Add Reading
                 </a>
+                <button onclick="exportUnreadList()"
+                        class="inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-700 active:bg-green-900 focus:outline-none focus:border-green-900 focus:ring ring-green-300 disabled:opacity-25 transition ease-in-out duration-150">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M16 12l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    Export
+                </button>
                 <a href="{{ route('meter-readings.index') }}"
                    class="inline-flex items-center px-4 py-2 bg-gray-200 border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-300 focus:outline-none focus:border-gray-400 focus:ring ring-gray-200 transition ease-in-out duration-150">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -158,6 +165,8 @@
                        class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors">
                         Reset
                     </a>
+
+
                 </div>
             </div>
         </form>
@@ -421,7 +430,7 @@ function exportUnreadList() {
     exportBtn.disabled = true;
 
     // Redirect to export endpoint
-    window.location.href = "{{ url('meter-readings.export-unread') }}?month=" + month + "&zone=" + zone + "&search=" + encodeURIComponent(search);
+    window.location.href = "{{ route('meter-readings.export-unread') }}?month=" + month + "&zone=" + zone + "&search=" + encodeURIComponent(search);
 
     // Reset button after a short delay (the export will cause page navigation anyway)
     setTimeout(() => {
@@ -429,25 +438,6 @@ function exportUnreadList() {
         exportBtn.disabled = false;
     }, 2000);
 }
-
-// Add keyboard shortcut (Ctrl/Cmd + F to focus search)
-document.addEventListener('keydown', function(e) {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
-        e.preventDefault();
-        document.querySelector('input[name="search"]')?.focus();
-    }
-});
-
-// Auto-submit form when month or zone changes (optional - uncomment if desired)
-/*
-document.querySelector('select[name="month"]').addEventListener('change', function() {
-    this.form.submit();
-});
-
-document.querySelector('select[name="zone"]').addEventListener('change', function() {
-    this.form.submit();
-});
-*/
 </script>
 
 <style>

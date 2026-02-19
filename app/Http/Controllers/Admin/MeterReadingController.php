@@ -3,18 +3,23 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Models\MeterReading;
-use App\Models\Zone;
-use App\Models\PricingTier;
+use App\Models\Bill;
 use App\Models\Customer;
 use App\Models\Meter;
-use App\Models\Bill;
+use App\Models\MeterReading;
+use App\Models\PricingTier;
+use App\Models\Zone;
 use App\Services\OCRService;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class MeterReadingController extends Controller
 {
@@ -1312,5 +1317,406 @@ class MeterReadingController extends Controller
             'stats',
             'previousMonths'
         ));
+    }
+    /**
+     * Export unread meters to Excel
+     */
+    public function exportUnread(Request $request)
+    {
+        ini_set('memory_limit', '512M');
+        ini_set('max_execution_time', 300);
+
+        $month = $request->get('month', Carbon::now()->format('Y-m'));
+        $zoneId = $request->get('zone', 'all');
+        $search = $request->get('search', '');
+
+        // Parse the selected month
+        $selectedDate = Carbon::parse($month . '-01');
+        $monthStart = $selectedDate->copy()->startOfMonth();
+        $monthEnd = $selectedDate->copy()->endOfMonth();
+        $monthName = $selectedDate->format('F Y');
+
+        // Build query for meters that DON'T have readings in the selected month
+        $query = Meter::with(['customer', 'zone', 'meterCategory'])
+            ->where('status', 'active')
+            ->whereNotNull('customer_id')
+            ->whereDoesntHave('meterReadings', function($q) use ($monthStart, $monthEnd) {
+                $q->whereBetween('reading_date', [$monthStart, $monthEnd])
+                ->whereIn('reading_status', ['recorded', 'estimated']);
+            });
+
+        // Apply zone filter
+        if ($zoneId !== 'all') {
+            $query->where('zone_id', $zoneId);
+        }
+
+        // Apply search filter
+        if (!empty($search)) {
+            $query->where(function($q) use ($search) {
+                $q->where('meter_number', 'like', "%{$search}%")
+                ->orWhere('meter_model', 'like', "%{$search}%")
+                ->orWhere('installation_address', 'like', "%{$search}%")
+                ->orWhereHas('customer', function($q) use ($search) {
+                    $q->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('customer_number', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%");
+                });
+            });
+        }
+
+        $meters = $query->orderBy('meter_number')->get();
+
+        // Get zone info for filename
+        $zoneInfo = null;
+        if ($zoneId !== 'all') {
+            $zoneInfo = Zone::find($zoneId);
+        }
+
+        // Create new spreadsheet
+        $spreadsheet = new Spreadsheet();
+        $spreadsheet->getDefaultStyle()->getFont()->setName('Arial')->setSize(10);
+
+        // Remove default sheet
+        $spreadsheet->removeSheetByIndex(0);
+
+        // Create Unread Meters sheet
+        $sheet = $spreadsheet->createSheet();
+        $sheet->setTitle('Unread Meters');
+
+        // Add header with report info
+        $currentRow = $this->addUnreadReportHeader($sheet, $monthName, $zoneInfo, $search, $meters->count());
+
+        // Add data table headers
+        $headers = [
+            'Meter Number',
+            'Meter Model',
+            'Manufacturer',
+            'Meter Type',
+            'Category',
+            'Customer Name',
+            'Customer Number',
+            'Phone Number',
+            'Zone',
+            'Walk Route',
+            'Installation Address',
+            'Installation Date',
+            'Initial Reading',
+            'Last Reading Date',
+            'Last Reading Value',
+            'Last Reading Status',
+            'Current Balance (KSh)',
+            'Recent Exceptions (3 months)',
+            'Status'
+        ];
+
+        // Add headers with styling
+        $col = 'A';
+        foreach ($headers as $header) {
+            $sheet->setCellValue($col . $currentRow, $header);
+            $sheet->getStyle($col . $currentRow)->getFont()->setBold(true);
+            $sheet->getStyle($col . $currentRow)->getFill()
+                ->setFillType(Fill::FILL_SOLID)
+                ->getStartColor()->setARGB('FF4F81BD');
+            $sheet->getStyle($col . $currentRow)->getFont()->getColor()->setARGB('FFFFFFFF');
+            $sheet->getStyle($col . $currentRow)->getBorders()
+                ->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+            $sheet->getStyle($col . $currentRow)->getAlignment()
+                ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+                ->setVertical(Alignment::VERTICAL_CENTER);
+            $col++;
+        }
+
+        $currentRow++;
+
+        // Add data rows
+        foreach ($meters as $meter) {
+            // Get last reading for this meter
+            $lastReading = MeterReading::where('meter_id', $meter->id)
+                ->whereIn('reading_status', ['recorded', 'estimated'])
+                ->latest('reading_date')
+                ->first();
+
+            $lastReadingDate = $lastReading ? $lastReading->reading_date : null;
+            $lastReadingValue = $lastReading ? $lastReading->current_reading : $meter->initial_reading;
+            $lastReadingStatus = $lastReading ? $lastReading->reading_status : null;
+
+            // Check recent exceptions
+            $recentExceptions = MeterReading::where('meter_id', $meter->id)
+                ->where('reading_status', 'exception')
+                ->where('reading_date', '>=', Carbon::now()->subMonths(3))
+                ->count();
+
+            $col = 'A';
+            $sheet->setCellValue($col++ . $currentRow, $meter->meter_number);
+            $sheet->setCellValue($col++ . $currentRow, $meter->meter_model ?? 'N/A');
+            $sheet->setCellValue($col++ . $currentRow, $meter->manufacturer ?? 'N/A');
+            $sheet->setCellValue($col++ . $currentRow, ucfirst($meter->meter_type));
+            $sheet->setCellValue($col++ . $currentRow, $meter->meterCategory->name ?? 'N/A');
+            $sheet->setCellValue($col++ . $currentRow, $meter->customer ? trim($meter->customer->first_name . ' ' . $meter->customer->last_name) : 'N/A');
+            $sheet->setCellValue($col++ . $currentRow, $meter->customer->customer_number ?? 'N/A');
+            $sheet->setCellValue($col++ . $currentRow, $meter->customer->phone ?? 'N/A');
+            $sheet->setCellValue($col++ . $currentRow, $meter->zone->name ?? 'Unassigned');
+            $sheet->setCellValue($col++ . $currentRow, $meter->walkRoute->name ?? 'N/A');
+            $sheet->setCellValue($col++ . $currentRow, $meter->installation_address ?? 'N/A');
+            $sheet->setCellValue($col++ . $currentRow, $meter->installation_date ? $meter->installation_date->format('d/m/Y') : 'N/A');
+            $sheet->setCellValue($col++ . $currentRow, $meter->initial_reading);
+            $sheet->setCellValue($col++ . $currentRow, $lastReadingDate ? $lastReadingDate->format('d/m/Y') : 'No Previous Reading');
+            $sheet->setCellValue($col++ . $currentRow, $lastReadingValue);
+            $sheet->setCellValue($col++ . $currentRow, $lastReadingStatus ? ucfirst($lastReadingStatus) : 'Initial');
+            $sheet->setCellValue($col++ . $currentRow, $meter->current_balance);
+            $sheet->setCellValue($col++ . $currentRow, $recentExceptions);
+            $sheet->setCellValue($col++ . $currentRow, ucfirst($meter->status));
+
+            // Style the row
+            $sheet->getStyle('A' . $currentRow . ':S' . $currentRow)->getBorders()
+                ->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+
+            // Format numbers
+            $sheet->getStyle('M' . $currentRow)->getNumberFormat()->setFormatCode('#,##0.00'); // Initial Reading
+            $sheet->getStyle('O' . $currentRow)->getNumberFormat()->setFormatCode('#,##0.00'); // Last Reading Value
+            $sheet->getStyle('Q' . $currentRow)->getNumberFormat()->setFormatCode('#,##0.00'); // Current Balance
+
+            // Highlight rows with recent exceptions
+            if ($recentExceptions > 0) {
+                $sheet->getStyle('A' . $currentRow . ':S' . $currentRow)->getFill()
+                    ->setFillType(Fill::FILL_SOLID)
+                    ->getStartColor()->setARGB('FFFFE6E6'); // Light red
+            }
+
+            $currentRow++;
+        }
+
+        // Add totals row
+        $sheet->setCellValue('A' . $currentRow, 'TOTAL UNREAD METERS:');
+        $sheet->getStyle('A' . $currentRow)->getFont()->setBold(true);
+        $sheet->setCellValue('B' . $currentRow, $meters->count());
+        $sheet->getStyle('B' . $currentRow)->getFont()->setBold(true);
+        $sheet->getStyle('A' . $currentRow . ':B' . $currentRow)->getBorders()
+            ->getTop()->setBorderStyle(Border::BORDER_DOUBLE);
+
+        // Auto-size columns
+        foreach (range('A', 'S') as $column) {
+            $sheet->getColumnDimension($column)->setAutoSize(true);
+        }
+
+        // Create Summary sheet
+        $summarySheet = $spreadsheet->createSheet();
+        $summarySheet->setTitle('Summary');
+
+        $this->addUnreadSummarySheet($summarySheet, $meters, $monthName, $zoneInfo, $search);
+
+        // Set active sheet
+        $spreadsheet->setActiveSheetIndex(0);
+
+        // Generate filename
+        $filename = 'NYAWASCO_Unread_Meters_' . $month .
+                    ($zoneInfo ? '_' . str_replace(' ', '_', $zoneInfo->name) : '') .
+                    '_' . now()->format('Y_m_d_His') . '.xlsx';
+
+        // Output
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+
+        $writer = new Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
+    }
+
+    /**
+     * Add header to unread report sheet
+     */
+    private function addUnreadReportHeader($sheet, $monthName, $zoneInfo = null, $search = '', $totalCount = 0)
+    {
+        $row = 1;
+
+        // Company Name
+        $sheet->mergeCells('A' . $row . ':S' . $row);
+        $sheet->setCellValue('A' . $row, 'NYAWASCO - UNREAD METERS REPORT');
+        $sheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $row++;
+
+        // Company Details
+        $sheet->mergeCells('A' . $row . ':S' . $row);
+        $sheet->setCellValue('A' . $row, 'P.O. Box 255 - 40500, NYAMIRA | Tel: 0787080455 | Email: info@nyawasco.co.ke');
+        $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $row++;
+
+        // Report Period
+        $sheet->mergeCells('A' . $row . ':S' . $row);
+        $sheet->setCellValue('A' . $row, 'Billing Month: ' . $monthName);
+        $sheet->getStyle('A' . $row)->getFont()->setBold(true);
+        $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $row++;
+
+        // Zone filter if applied
+        if ($zoneInfo) {
+            $sheet->mergeCells('A' . $row . ':S' . $row);
+            $sheet->setCellValue('A' . $row, 'Zone: ' . $zoneInfo->name . ' (Filtered)');
+            $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $row++;
+        }
+
+        // Search term if applied
+        if (!empty($search)) {
+            $sheet->mergeCells('A' . $row . ':S' . $row);
+            $sheet->setCellValue('A' . $row, 'Search: ' . $search);
+            $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $row++;
+        }
+
+        // Generated date
+        $sheet->mergeCells('A' . $row . ':S' . $row);
+        $sheet->setCellValue('A' . $row, 'Generated: ' . now()->format('d F Y H:i:s'));
+        $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $row++;
+
+        // Total count
+        $sheet->mergeCells('A' . $row . ':S' . $row);
+        $sheet->setCellValue('A' . $row, 'Total Unread Meters: ' . $totalCount);
+        $sheet->getStyle('A' . $row)->getFont()->setBold(true);
+        $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $row += 2;
+
+        return $row;
+    }
+
+    /**
+     * Add summary sheet for unread report
+     */
+    private function addUnreadSummarySheet($sheet, $meters, $monthName, $zoneInfo = null, $search = '')
+    {
+        $row = 1;
+
+        // Title
+        $sheet->mergeCells('A' . $row . ':D' . $row);
+        $sheet->setCellValue('A' . $row, 'NYAWASCO - UNREAD METERS SUMMARY');
+        $sheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $row += 2;
+
+        // Report Info
+        $info = [
+            ['Billing Month:', $monthName],
+            ['Generated:', now()->format('d F Y H:i:s')],
+            ['Total Unread Meters:', $meters->count()],
+        ];
+
+        if ($zoneInfo) {
+            $info[] = ['Zone Filter:', $zoneInfo->name];
+        }
+
+        if (!empty($search)) {
+            $info[] = ['Search Term:', $search];
+        }
+
+        foreach ($info as $item) {
+            $sheet->setCellValue('A' . $row, $item[0]);
+            $sheet->getStyle('A' . $row)->getFont()->setBold(true);
+            $sheet->setCellValue('B' . $row, $item[1]);
+            $row++;
+        }
+
+        $row += 2;
+
+        // Zone Breakdown
+        $zoneBreakdown = $meters->groupBy(function($meter) {
+            return $meter->zone->name ?? 'Unassigned';
+        })->map(function($group) {
+            return [
+                'count' => $group->count(),
+                'meters' => $group
+            ];
+        });
+
+        $sheet->setCellValue('A' . $row, 'BREAKDOWN BY ZONE');
+        $sheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(12);
+        $row += 2;
+
+        $sheet->setCellValue('A' . $row, 'Zone');
+        $sheet->setCellValue('B' . $row, 'Count');
+        $sheet->setCellValue('C' . $row, 'Percentage');
+        $sheet->getStyle('A' . $row . ':C' . $row)->getFont()->setBold(true);
+        $sheet->getStyle('A' . $row . ':C' . $row)->getFill()
+            ->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setARGB('FFE0E0E0');
+        $row++;
+
+        foreach ($zoneBreakdown as $zone => $data) {
+            $sheet->setCellValue('A' . $row, $zone);
+            $sheet->setCellValue('B' . $row, $data['count']);
+            $sheet->setCellValue('C' . $row, ($data['count'] / $meters->count()) * 100 . '%');
+            $sheet->getStyle('C' . $row)->getNumberFormat()->setFormatCode('0.00%');
+            $row++;
+        }
+
+        $row += 2;
+
+        // Category Breakdown
+        $categoryBreakdown = $meters->groupBy(function($meter) {
+            return $meter->meterCategory->name ?? 'Uncategorized';
+        })->map(function($group) {
+            return [
+                'count' => $group->count(),
+                'meters' => $group
+            ];
+        });
+
+        $sheet->setCellValue('A' . $row, 'BREAKDOWN BY CATEGORY');
+        $sheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(12);
+        $row += 2;
+
+        $sheet->setCellValue('A' . $row, 'Category');
+        $sheet->setCellValue('B' . $row, 'Count');
+        $sheet->setCellValue('C' . $row, 'Percentage');
+        $sheet->getStyle('A' . $row . ':C' . $row)->getFont()->setBold(true);
+        $sheet->getStyle('A' . $row . ':C' . $row)->getFill()
+            ->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setARGB('FFE0E0E0');
+        $row++;
+
+        foreach ($categoryBreakdown as $category => $data) {
+            $sheet->setCellValue('A' . $row, $category);
+            $sheet->setCellValue('B' . $row, $data['count']);
+            $sheet->setCellValue('C' . $row, ($data['count'] / $meters->count()) * 100 . '%');
+            $sheet->getStyle('C' . $row)->getNumberFormat()->setFormatCode('0.00%');
+            $row++;
+        }
+
+        $row += 2;
+
+        // Recent Exceptions Summary
+        $metersWithExceptions = $meters->filter(function($meter) {
+            return $meter->recent_exceptions > 0;
+        });
+
+        $sheet->setCellValue('A' . $row, 'METERS WITH RECENT EXCEPTIONS');
+        $sheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(12);
+        $row += 2;
+
+        $sheet->setCellValue('A' . $row, 'Meter Number');
+        $sheet->setCellValue('B' . $row, 'Customer');
+        $sheet->setCellValue('C' . $row, 'Zone');
+        $sheet->setCellValue('D' . $row, 'Exceptions Count');
+        $sheet->getStyle('A' . $row . ':D' . $row)->getFont()->setBold(true);
+        $sheet->getStyle('A' . $row . ':D' . $row)->getFill()
+            ->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setARGB('FFFFE6E6');
+        $row++;
+
+        foreach ($metersWithExceptions as $meter) {
+            $sheet->setCellValue('A' . $row, $meter->meter_number);
+            $sheet->setCellValue('B' . $row, $meter->customer ? trim($meter->customer->first_name . ' ' . $meter->customer->last_name) : 'N/A');
+            $sheet->setCellValue('C' . $row, $meter->zone->name ?? 'N/A');
+            $sheet->setCellValue('D' . $row, $meter->recent_exceptions);
+            $row++;
+        }
+
+        // Auto-size columns
+        foreach (range('A', 'D') as $column) {
+            $sheet->getColumnDimension($column)->setAutoSize(true);
+        }
     }
 }
