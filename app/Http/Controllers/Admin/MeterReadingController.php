@@ -1380,33 +1380,31 @@ class MeterReadingController extends Controller
         // Remove default sheet
         $spreadsheet->removeSheetByIndex(0);
 
-        // Create Unread Meters sheet
+        // FIRST - Create Summary sheet (will be index 0)
+        $summarySheet = $spreadsheet->createSheet();
+        $summarySheet->setTitle('Summary');
+        $this->addUnreadSummarySheet($summarySheet, $meters, $monthName, $zoneInfo, $search);
+
+        // SECOND - Create Unread Meters sheet
         $sheet = $spreadsheet->createSheet();
         $sheet->setTitle('Unread Meters');
 
         // Add header with report info
         $currentRow = $this->addUnreadReportHeader($sheet, $monthName, $zoneInfo, $search, $meters->count());
 
-        // Add data table headers
+        // Add data table headers - EXACTLY as requested
         $headers = [
             'Meter Number',
-            'Meter Model',
-            'Manufacturer',
             'Meter Type',
-            'Category',
             'Customer Name',
-            'Customer Number',
             'Phone Number',
             'Zone',
-            'Walk Route',
-            'Installation Address',
             'Installation Date',
             'Initial Reading',
             'Last Reading Date',
             'Last Reading Value',
-            'Last Reading Status',
             'Current Balance (KSh)',
-            'Recent Exceptions (3 months)',
+            'Reading Exceptions',
             'Status'
         ];
 
@@ -1439,9 +1437,8 @@ class MeterReadingController extends Controller
 
             $lastReadingDate = $lastReading ? $lastReading->reading_date : null;
             $lastReadingValue = $lastReading ? $lastReading->current_reading : $meter->initial_reading;
-            $lastReadingStatus = $lastReading ? $lastReading->reading_status : null;
 
-            // Check recent exceptions
+            // Check recent exceptions (last 3 months)
             $recentExceptions = MeterReading::where('meter_id', $meter->id)
                 ->where('reading_status', 'exception')
                 ->where('reading_date', '>=', Carbon::now()->subMonths(3))
@@ -1449,37 +1446,30 @@ class MeterReadingController extends Controller
 
             $col = 'A';
             $sheet->setCellValue($col++ . $currentRow, $meter->meter_number);
-            $sheet->setCellValue($col++ . $currentRow, $meter->meter_model ?? 'N/A');
-            $sheet->setCellValue($col++ . $currentRow, $meter->manufacturer ?? 'N/A');
             $sheet->setCellValue($col++ . $currentRow, ucfirst($meter->meter_type));
-            $sheet->setCellValue($col++ . $currentRow, $meter->meterCategory->name ?? 'N/A');
             $sheet->setCellValue($col++ . $currentRow, $meter->customer ? trim($meter->customer->first_name . ' ' . $meter->customer->last_name) : 'N/A');
-            $sheet->setCellValue($col++ . $currentRow, $meter->customer->customer_number ?? 'N/A');
             $sheet->setCellValue($col++ . $currentRow, $meter->customer->phone ?? 'N/A');
             $sheet->setCellValue($col++ . $currentRow, $meter->zone->name ?? 'Unassigned');
-            $sheet->setCellValue($col++ . $currentRow, $meter->walkRoute->name ?? 'N/A');
-            $sheet->setCellValue($col++ . $currentRow, $meter->installation_address ?? 'N/A');
             $sheet->setCellValue($col++ . $currentRow, $meter->installation_date ? $meter->installation_date->format('d/m/Y') : 'N/A');
             $sheet->setCellValue($col++ . $currentRow, $meter->initial_reading);
             $sheet->setCellValue($col++ . $currentRow, $lastReadingDate ? $lastReadingDate->format('d/m/Y') : 'No Previous Reading');
             $sheet->setCellValue($col++ . $currentRow, $lastReadingValue);
-            $sheet->setCellValue($col++ . $currentRow, $lastReadingStatus ? ucfirst($lastReadingStatus) : 'Initial');
             $sheet->setCellValue($col++ . $currentRow, $meter->current_balance);
-            $sheet->setCellValue($col++ . $currentRow, $recentExceptions);
+            $sheet->setCellValue($col++ . $currentRow, $recentExceptions > 0 ? $recentExceptions . ' exception(s)' : 'None');
             $sheet->setCellValue($col++ . $currentRow, ucfirst($meter->status));
 
             // Style the row
-            $sheet->getStyle('A' . $currentRow . ':S' . $currentRow)->getBorders()
+            $sheet->getStyle('A' . $currentRow . ':L' . $currentRow)->getBorders()
                 ->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
 
             // Format numbers
-            $sheet->getStyle('M' . $currentRow)->getNumberFormat()->setFormatCode('#,##0.00'); // Initial Reading
-            $sheet->getStyle('O' . $currentRow)->getNumberFormat()->setFormatCode('#,##0.00'); // Last Reading Value
-            $sheet->getStyle('Q' . $currentRow)->getNumberFormat()->setFormatCode('#,##0.00'); // Current Balance
+            $sheet->getStyle('G' . $currentRow)->getNumberFormat()->setFormatCode('#,##0.00'); // Initial Reading
+            $sheet->getStyle('I' . $currentRow)->getNumberFormat()->setFormatCode('#,##0.00'); // Last Reading Value
+            $sheet->getStyle('J' . $currentRow)->getNumberFormat()->setFormatCode('#,##0.00'); // Current Balance
 
             // Highlight rows with recent exceptions
             if ($recentExceptions > 0) {
-                $sheet->getStyle('A' . $currentRow . ':S' . $currentRow)->getFill()
+                $sheet->getStyle('A' . $currentRow . ':L' . $currentRow)->getFill()
                     ->setFillType(Fill::FILL_SOLID)
                     ->getStartColor()->setARGB('FFFFE6E6'); // Light red
             }
@@ -1496,17 +1486,11 @@ class MeterReadingController extends Controller
             ->getTop()->setBorderStyle(Border::BORDER_DOUBLE);
 
         // Auto-size columns
-        foreach (range('A', 'S') as $column) {
+        foreach (range('A', 'L') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
 
-        // Create Summary sheet
-        $summarySheet = $spreadsheet->createSheet();
-        $summarySheet->setTitle('Summary');
-
-        $this->addUnreadSummarySheet($summarySheet, $meters, $monthName, $zoneInfo, $search);
-
-        // Set active sheet
+        // Set active sheet to Summary (first sheet)
         $spreadsheet->setActiveSheetIndex(0);
 
         // Generate filename
