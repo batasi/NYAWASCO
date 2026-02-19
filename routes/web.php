@@ -352,7 +352,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/create', [MeterReadingController::class, 'create'])->name('create');
         Route::post('/', [MeterReadingController::class, 'store'])->name('store');
         Route::get('/last-reading', [MeterReadingController::class, 'getLastReading'])->name('last-reading');
-
+        Route::get('/unread', [MeterReadingController::class, 'unread'])->name('unread');
     });
 
     // Meter reading estimation

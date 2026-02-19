@@ -1229,4 +1229,88 @@ class MeterReadingController extends Controller
             return back()->with('error', 'Error deleting meter reading: ' . $e->getMessage());
         }
     }
+    /**
+     * Display meters that don't have readings for the selected month
+     */
+    public function unread(Request $request)
+    {
+        $month = $request->get('month', Carbon::now()->format('Y-m'));
+        $zoneId = $request->get('zone', 'all');
+
+        // Parse the selected month
+        $selectedDate = Carbon::parse($month . '-01');
+        $monthStart = $selectedDate->copy()->startOfMonth();
+        $monthEnd = $selectedDate->copy()->endOfMonth();
+        $monthName = $selectedDate->format('F Y');
+
+        // Build query for meters that DON'T have readings in the selected month
+        $query = Meter::with(['customer', 'zone', 'meterCategory'])
+            ->where('status', 'active') // Only active meters
+            ->whereNotNull('customer_id') // Only meters assigned to customers
+            ->whereDoesntHave('meterReadings', function($q) use ($monthStart, $monthEnd) {
+                $q->whereBetween('reading_date', [$monthStart, $monthEnd])
+                ->whereIn('reading_status', ['recorded', 'estimated']); // Count both recorded and estimated as "read"
+            });
+
+        // Apply zone filter
+        if ($zoneId !== 'all') {
+            $query->where('zone_id', $zoneId);
+        }
+
+        // Get the unread meters with pagination
+        $unreadMeters = $query->orderBy('meter_number')->paginate(20);
+
+        // Get additional stats for each meter
+        foreach ($unreadMeters as $meter) {
+            // Get last reading for this meter
+            $lastReading = MeterReading::where('meter_id', $meter->id)
+                ->whereIn('reading_status', ['recorded', 'estimated'])
+                ->latest('reading_date')
+                ->first();
+
+            $meter->last_reading_date = $lastReading ? $lastReading->reading_date : null;
+            $meter->last_reading_value = $lastReading ? $lastReading->current_reading : $meter->initial_reading;
+            $meter->last_reading_status = $lastReading ? $lastReading->reading_status : null;
+
+            // Check if meter has any exception in the last 3 months
+            $recentExceptions = MeterReading::where('meter_id', $meter->id)
+                ->where('reading_status', 'exception')
+                ->where('reading_date', '>=', Carbon::now()->subMonths(3))
+                ->count();
+
+            $meter->recent_exceptions = $recentExceptions;
+        }
+
+        // Get zones for filter dropdown
+        $zones = Zone::orderBy('name')->get();
+
+        // Calculate summary statistics
+        $stats = [
+            'total_unread' => $unreadMeters->total(),
+            'total_meters' => Meter::where('status', 'active')->whereNotNull('customer_id')->count(),
+            'with_previous_readings' => $unreadMeters->filter(function($meter) {
+                return !is_null($meter->last_reading_date);
+            })->count(),
+            'with_exceptions' => $unreadMeters->filter(function($meter) {
+                return $meter->recent_exceptions > 0;
+            })->count(),
+        ];
+
+        // Get previous months for dropdown
+        $previousMonths = [];
+        for ($i = 0; $i < 12; $i++) {
+            $date = Carbon::now()->subMonths($i);
+            $previousMonths[$date->format('Y-m')] = $date->format('F Y');
+        }
+
+        return view('admin.meter-readings.unread', compact(
+            'unreadMeters',
+            'zones',
+            'month',
+            'monthName',
+            'zoneId',
+            'stats',
+            'previousMonths'
+        ));
+    }
 }
