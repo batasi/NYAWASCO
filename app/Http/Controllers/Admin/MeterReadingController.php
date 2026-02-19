@@ -1721,4 +1721,626 @@ class MeterReadingController extends Controller
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
     }
+
+    /**
+     * Display detailed reading history for a specific meter with bill information
+     */
+    public function meterHistory(Request $request, $meterId)
+    {
+        $meter = Meter::with(['customer', 'zone', 'meterCategory', 'walkRoute'])
+            ->findOrFail($meterId);
+
+        $customer = $meter->customer;
+
+        if (!$customer) {
+            return redirect()->back()->with('error', 'This meter is not assigned to any customer.');
+        }
+
+        // Get all readings for this meter with related data
+        $readings = MeterReading::with(['reader', 'bill'])
+            ->where('meter_id', $meter->id)
+            ->orderBy('reading_date', 'desc')
+            ->get();
+
+        // Calculate statistics
+        $stats = [
+            'total_readings' => $readings->count(),
+            'recorded_readings' => $readings->where('reading_status', 'recorded')->count(),
+            'estimated_readings' => $readings->where('reading_status', 'estimated')->count(),
+            'exception_readings' => $readings->where('reading_status', 'exception')->count(),
+            'total_consumption' => $readings->sum('consumption'),
+            'average_consumption' => $readings->where('reading_status', 'recorded')->avg('consumption'),
+            'total_billed' => $readings->where('billed', true)->count(),
+            'total_unbilled' => $readings->where('billed', false)->count(),
+            'first_reading_date' => $readings->isNotEmpty() ? $readings->last()->reading_date : null,
+            'last_reading_date' => $readings->isNotEmpty() ? $readings->first()->reading_date : null,
+        ];
+
+        // Get bills associated with this meter
+        $bills = Bill::where('meter_id', $meter->id)
+            ->with(['payments'])
+            ->orderBy('billing_period_end', 'desc')
+            ->get();
+
+        $billStats = [
+            'total_bills' => $bills->count(),
+            'total_amount' => $bills->sum('total_amount'),
+            'total_paid' => $bills->sum('paid_amount'),
+            'total_balance' => $bills->sum('balance'),
+            'paid_bills' => $bills->where('bill_status', 'paid')->count(),
+            'unpaid_bills' => $bills->where('bill_status', 'unpaid')->count(),
+            'partial_bills' => $bills->where('bill_status', 'partial')->count(),
+            'overdue_bills' => $bills->where('is_overdue', true)->count(),
+        ];
+
+        // Get previous months for filter if needed
+        $previousMonths = [];
+        for ($i = 0; $i < 12; $i++) {
+            $date = Carbon::now()->subMonths($i);
+            $previousMonths[$date->format('Y-m')] = $date->format('F Y');
+        }
+
+        return view('admin.meter-readings.history', compact(
+            'meter',
+            'customer',
+            'readings',
+            'stats',
+            'bills',
+            'billStats',
+            'previousMonths'
+        ));
+    }
+/**
+ * Export meter reading history with bill details to Excel
+ */
+public function exportMeterHistory(Request $request, $meterId)
+{
+    ini_set('memory_limit', '512M');
+    ini_set('max_execution_time', 300);
+
+    $meter = Meter::with(['customer', 'zone', 'meterCategory', 'walkRoute'])
+        ->findOrFail($meterId);
+
+    $customer = $meter->customer;
+
+    if (!$customer) {
+        return redirect()->back()->with('error', 'This meter is not assigned to any customer.');
+    }
+
+    // Get all readings for this meter with related data
+    $readings = MeterReading::with(['reader', 'bill'])
+        ->where('meter_id', $meter->id)
+        ->orderBy('reading_date', 'desc')
+        ->get();
+
+    // Get bills associated with this meter - EAGER LOAD the meterReading relationship
+    $bills = Bill::where('meter_id', $meter->id)
+        ->with(['payments', 'meterReading'])  // Added meterReading here
+        ->orderBy('billing_period_end', 'desc')
+        ->get();
+
+    // Create new spreadsheet
+    $spreadsheet = new Spreadsheet();
+    $spreadsheet->getDefaultStyle()->getFont()->setName('Arial')->setSize(10);
+
+    // Remove default sheet
+    $spreadsheet->removeSheetByIndex(0);
+
+    // SHEET 1: Summary Information
+    $summarySheet = $spreadsheet->createSheet();
+    $summarySheet->setTitle('Summary');
+    $this->addMeterHistorySummarySheet($summarySheet, $meter, $customer, $readings, $bills);
+
+    // SHEET 2: Reading History
+    $readingsSheet = $spreadsheet->createSheet();
+    $readingsSheet->setTitle('Reading History');
+    $this->addMeterHistoryReadingsSheet($readingsSheet, $meter, $customer, $readings);
+
+    // SHEET 3: Bills Details
+    if ($bills->count() > 0) {
+        $billsSheet = $spreadsheet->createSheet();
+        $billsSheet->setTitle('Bills Details');
+        $this->addMeterHistoryBillsSheet($billsSheet, $meter, $customer, $bills);
+    }
+
+    // SHEET 4: Payment History (if bills have payments)
+    $payments = $bills->flatMap(function($bill) {
+        return $bill->payments->map(function($payment) use ($bill) {
+            $payment->bill_number = $bill->bill_number;
+            $payment->bill_amount = $bill->total_amount;
+            return $payment;
+        });
+    });
+
+    if ($payments->count() > 0) {
+        $paymentsSheet = $spreadsheet->createSheet();
+        $paymentsSheet->setTitle('Payment History');
+        $this->addMeterHistoryPaymentsSheet($paymentsSheet, $meter, $customer, $payments);
+    }
+
+    // Set active sheet to Summary
+    $spreadsheet->setActiveSheetIndex(0);
+
+    // Generate filename
+    $filename = 'NYAWASCO_Meter_History_' . $meter->meter_number .
+                '_' . now()->format('Y_m_d_His') . '.xlsx';
+
+    // Output
+    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    header('Content-Disposition: attachment;filename="' . $filename . '"');
+    header('Cache-Control: max-age=0');
+
+    $writer = new Xlsx($spreadsheet);
+    $writer->save('php://output');
+    exit;
+}
+
+/**
+ * Add summary sheet for meter history export
+ */
+private function addMeterHistorySummarySheet($sheet, $meter, $customer, $readings, $bills)
+{
+    $row = 1;
+
+    // Title
+    $sheet->mergeCells('A' . $row . ':F' . $row);
+    $sheet->setCellValue('A' . $row, 'NYAWASCO - METER READING HISTORY REPORT');
+    $sheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(14);
+    $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+    $row += 2;
+
+    // Meter Information
+    $sheet->setCellValue('A' . $row, 'METER INFORMATION');
+    $sheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(12);
+    $row += 2;
+
+    $meterInfo = [
+        ['Meter Number:', $meter->meter_number],
+        ['Meter Type:', ucfirst($meter->meter_type)],
+        ['Meter Model:', $meter->meter_model ?? 'N/A'],
+        ['Manufacturer:', $meter->manufacturer ?? 'N/A'],
+        ['Category:', $meter->meterCategory->name ?? 'N/A'],
+        ['Status:', ucfirst($meter->status)],
+        ['Installation Date:', $meter->installation_date ? $meter->installation_date->format('d/m/Y') : 'N/A'],
+        ['Installation Address:', $meter->installation_address ?? 'N/A'],
+        ['Initial Reading:', number_format($meter->initial_reading, 2) . ' m³'],
+        ['Current Balance:', 'KSh ' . number_format($meter->current_balance, 2)],
+    ];
+
+    foreach ($meterInfo as $info) {
+        $sheet->setCellValue('A' . $row, $info[0]);
+        $sheet->getStyle('A' . $row)->getFont()->setBold(true);
+        $sheet->setCellValue('B' . $row, $info[1]);
+        $row++;
+    }
+
+    $row += 2;
+
+    // Customer Information
+    $sheet->setCellValue('A' . $row, 'CUSTOMER INFORMATION');
+    $sheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(12);
+    $row += 2;
+
+    $customerInfo = [
+        ['Customer Name:', $customer->full_name],
+        ['Customer Number:', $customer->customer_number],
+        ['Phone:', $customer->phone ?? 'N/A'],
+        ['Email:', $customer->email ?? 'N/A'],
+        ['ID Number:', $customer->id_number ?? 'N/A'],
+        ['Physical Address:', $customer->physical_address ?? 'N/A'],
+        ['Zone:', $meter->zone->name ?? 'N/A'],
+        ['Walk Route:', $meter->walkRoute->name ?? 'N/A'],
+    ];
+
+    foreach ($customerInfo as $info) {
+        $sheet->setCellValue('A' . $row, $info[0]);
+        $sheet->getStyle('A' . $row)->getFont()->setBold(true);
+        $sheet->setCellValue('B' . $row, $info[1]);
+        $row++;
+    }
+
+    $row += 2;
+
+    // Statistics
+    $stats = [
+        'total_readings' => $readings->count(),
+        'recorded_readings' => $readings->where('reading_status', 'recorded')->count(),
+        'estimated_readings' => $readings->where('reading_status', 'estimated')->count(),
+        'exception_readings' => $readings->where('reading_status', 'exception')->count(),
+        'total_consumption' => $readings->sum('consumption'),
+        'average_consumption' => $readings->where('reading_status', 'recorded')->avg('consumption'),
+        'total_bills' => $bills->count(),
+        'total_billed_amount' => $bills->sum('total_amount'),
+        'total_paid' => $bills->sum('paid_amount'),
+        'total_balance' => $bills->sum('balance'),
+        'paid_bills' => $bills->where('bill_status', 'paid')->count(),
+        'unpaid_bills' => $bills->where('bill_status', 'unpaid')->count(),
+        'partial_bills' => $bills->where('bill_status', 'partial')->count(),
+    ];
+
+    $sheet->setCellValue('A' . $row, 'READING STATISTICS');
+    $sheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(12);
+    $row += 2;
+
+    $statItems = [
+        ['Total Readings:', $stats['total_readings']],
+        ['Recorded Readings:', $stats['recorded_readings']],
+        ['Estimated Readings:', $stats['estimated_readings']],
+        ['Exception Readings:', $stats['exception_readings']],
+        ['Total Consumption:', number_format($stats['total_consumption'], 2) . ' m³'],
+        ['Average Consumption:', number_format($stats['average_consumption'] ?? 0, 2) . ' m³'],
+    ];
+
+    foreach ($statItems as $item) {
+        $sheet->setCellValue('A' . $row, $item[0]);
+        $sheet->getStyle('A' . $row)->getFont()->setBold(true);
+        $sheet->setCellValue('B' . $row, $item[1]);
+        $row++;
+    }
+
+    $row += 2;
+
+    $sheet->setCellValue('A' . $row, 'BILLING STATISTICS');
+    $sheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(12);
+    $row += 2;
+
+    $billStatItems = [
+        ['Total Bills:', $stats['total_bills']],
+        ['Total Billed Amount:', 'KSh ' . number_format($stats['total_billed_amount'], 2)],
+        ['Total Paid:', 'KSh ' . number_format($stats['total_paid'], 2)],
+        ['Outstanding Balance:', 'KSh ' . number_format($stats['total_balance'], 2)],
+        ['Paid Bills:', $stats['paid_bills']],
+        ['Unpaid Bills:', $stats['unpaid_bills']],
+        ['Partially Paid Bills:', $stats['partial_bills']],
+    ];
+
+    foreach ($billStatItems as $item) {
+        $sheet->setCellValue('A' . $row, $item[0]);
+        $sheet->getStyle('A' . $row)->getFont()->setBold(true);
+        $sheet->setCellValue('B' . $row, $item[1]);
+        $row++;
+    }
+
+    $row += 2;
+
+    // Generated date
+    $sheet->setCellValue('A' . $row, 'Report Generated:');
+    $sheet->getStyle('A' . $row)->getFont()->setBold(true);
+    $sheet->setCellValue('B' . $row, now()->format('d F Y H:i:s'));
+
+    // Auto-size columns
+    $sheet->getColumnDimension('A')->setWidth(25);
+    $sheet->getColumnDimension('B')->setWidth(40);
+}
+
+/**
+ * Add readings sheet for meter history export
+ */
+private function addMeterHistoryReadingsSheet($sheet, $meter, $customer, $readings)
+{
+    $row = 1;
+
+    // Header
+    $sheet->mergeCells('A' . $row . ':R' . $row);
+    $sheet->setCellValue('A' . $row, 'READING HISTORY - Meter: ' . $meter->meter_number . ' | Customer: ' . $customer->full_name);
+    $sheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(12);
+    $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+    $row += 2;
+
+    // Table Headers
+    $headers = [
+        'Reading Date',
+        'Day',
+        'Reading Period',
+        'Reading Type',
+        'Previous Reading (m³)',
+        'Current Reading (m³)',
+        'Consumption (m³)',
+        'Reading Status',
+        'Estimated Consumption (m³)',
+        'Exception Type',
+        'Exception Reason',
+        'Billed',
+        'Billed Date',
+        'Bill Number',
+        'Bill Amount (KSh)',
+        'Bill Status',
+        'Read By',
+        'Notes'
+    ];
+
+    $col = 'A';
+    foreach ($headers as $header) {
+        $sheet->setCellValue($col . $row, $header);
+        $sheet->getStyle($col . $row)->getFont()->setBold(true);
+        $sheet->getStyle($col . $row)->getFill()
+            ->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setARGB('FF4F81BD');
+        $sheet->getStyle($col . $row)->getFont()->getColor()->setARGB('FFFFFFFF');
+        $sheet->getStyle($col . $row)->getBorders()
+            ->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+        $col++;
+    }
+
+    $row++;
+
+    // Data rows
+    foreach ($readings as $reading) {
+        $col = 'A';
+        $sheet->setCellValue($col++ . $row, $reading->reading_date->format('d/m/Y'));
+        $sheet->setCellValue($col++ . $row, $reading->reading_date->format('l'));
+        $sheet->setCellValue($col++ . $row, $reading->reading_period);
+        $sheet->setCellValue($col++ . $row, ucfirst($reading->reading_type));
+        $sheet->setCellValue($col++ . $row, $reading->previous_reading);
+        $sheet->setCellValue($col++ . $row, $reading->current_reading);
+        $sheet->setCellValue($col++ . $row, $reading->consumption);
+        $sheet->setCellValue($col++ . $row, ucfirst($reading->reading_status));
+        $sheet->setCellValue($col++ . $row, $reading->estimated_consumption);
+        $sheet->setCellValue($col++ . $row, $reading->exception_type ?? 'N/A');
+        $sheet->setCellValue($col++ . $row, $reading->exception_reason ?? 'N/A');
+        $sheet->setCellValue($col++ . $row, $reading->billed ? 'Yes' : 'No');
+        $sheet->setCellValue($col++ . $row, $reading->billed_at ? $reading->billed_at->format('d/m/Y H:i') : 'N/A');
+        $sheet->setCellValue($col++ . $row, $reading->bill->bill_number ?? 'N/A');
+        $sheet->setCellValue($col++ . $row, $reading->bill->total_amount ?? 0);
+        $sheet->setCellValue($col++ . $row, $reading->bill ? ucfirst($reading->bill->bill_status) : 'N/A');
+        $sheet->setCellValue($col++ . $row, $reading->reader->name ?? 'System');
+        $sheet->setCellValue($col++ . $row, $reading->notes ?? 'N/A');
+
+        // Style the row
+        $sheet->getStyle('A' . $row . ':R' . $row)->getBorders()
+            ->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+
+        // Format numbers
+        $sheet->getStyle('E' . $row . ':G' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+        $sheet->getStyle('I' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+        $sheet->getStyle('O' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+
+        // Color code based on status
+        if ($reading->reading_status === 'exception') {
+            $sheet->getStyle('A' . $row . ':R' . $row)->getFill()
+                ->setFillType(Fill::FILL_SOLID)
+                ->getStartColor()->setARGB('FFFFE6E6'); // Light red for exceptions
+        } elseif ($reading->reading_status === 'estimated') {
+            $sheet->getStyle('A' . $row . ':R' . $row)->getFill()
+                ->setFillType(Fill::FILL_SOLID)
+                ->getStartColor()->setARGB('FFFFF2CC'); // Light yellow for estimated
+        }
+
+        $row++;
+    }
+
+    // Add totals row
+    $sheet->setCellValue('A' . $row, 'TOTALS:');
+    $sheet->getStyle('A' . $row)->getFont()->setBold(true);
+    $sheet->setCellValue('G' . $row, '=SUM(G2:G' . ($row - 1) . ')');
+    $sheet->getStyle('G' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+    $sheet->getStyle('G' . $row)->getFont()->setBold(true);
+    $sheet->getStyle('G' . $row)->getBorders()->getTop()->setBorderStyle(Border::BORDER_DOUBLE);
+
+    // Auto-size columns
+    foreach (range('A', 'R') as $column) {
+        $sheet->getColumnDimension($column)->setAutoSize(true);
+    }
+}
+
+/**
+ * Add bills sheet for meter history export
+ */
+private function addMeterHistoryBillsSheet($sheet, $meter, $customer, $bills)
+{
+    $row = 1;
+
+    // Header
+    $sheet->mergeCells('A' . $row . ':Q' . $row); // Updated to Q (17 columns)
+    $sheet->setCellValue('A' . $row, 'BILLS DETAILS - Meter: ' . $meter->meter_number . ' | Customer: ' . $customer->full_name);
+    $sheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(12);
+    $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+    $row += 2;
+
+    // Table Headers
+    $headers = [
+        'Bill Number',
+        'Billing Period Start',
+        'Billing Period End',
+        'Reading Date',
+        'Consumption (m³)',
+        'Base Charge (KSh)',
+        'Consumption Charge (KSh)',
+        'Meter Rent (KSh)',
+        'Tax Amount (KSh)',
+        'Total Amount (KSh)',
+        'Paid Amount (KSh)',
+        'Balance (KSh)',
+        'Due Date',
+        'Bill Status',
+        'Payment Status',
+        'Created Date',
+        'Notes'
+    ];
+
+    $col = 'A';
+    foreach ($headers as $header) {
+        $sheet->setCellValue($col . $row, $header);
+        $sheet->getStyle($col . $row)->getFont()->setBold(true);
+        $sheet->getStyle($col . $row)->getFill()
+            ->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setARGB('FF4F81BD');
+        $sheet->getStyle($col . $row)->getFont()->getColor()->setARGB('FFFFFFFF');
+        $sheet->getStyle($col . $row)->getBorders()
+            ->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+        $col++;
+    }
+
+    $row++;
+
+    // Data rows
+    foreach ($bills as $bill) {
+        $col = 'A';
+
+        // Safely get reading date with null check
+        $readingDate = 'N/A';
+        if ($bill->meterReading) {
+            $readingDate = $bill->meterReading->reading_date instanceof \Carbon\Carbon
+                ? $bill->meterReading->reading_date->format('d/m/Y')
+                : 'N/A';
+        }
+
+        $sheet->setCellValue($col++ . $row, $bill->bill_number);
+        $sheet->setCellValue($col++ . $row, $bill->billing_period_start ? $bill->billing_period_start->format('d/m/Y') : 'N/A');
+        $sheet->setCellValue($col++ . $row, $bill->billing_period_end ? $bill->billing_period_end->format('d/m/Y') : 'N/A');
+        $sheet->setCellValue($col++ . $row, $readingDate);
+        $sheet->setCellValue($col++ . $row, $bill->consumption);
+        $sheet->setCellValue($col++ . $row, $bill->base_charge);
+        $sheet->setCellValue($col++ . $row, $bill->consumption_charge);
+        $sheet->setCellValue($col++ . $row, $bill->meter_rent ?? 0);
+        $sheet->setCellValue($col++ . $row, $bill->tax_amount);
+        $sheet->setCellValue($col++ . $row, $bill->total_amount);
+        $sheet->setCellValue($col++ . $row, $bill->paid_amount);
+        $sheet->setCellValue($col++ . $row, $bill->balance);
+        $sheet->setCellValue($col++ . $row, $bill->due_date ? $bill->due_date->format('d/m/Y') : 'N/A');
+        $sheet->setCellValue($col++ . $row, ucfirst($bill->bill_status));
+
+        // Payment status summary
+        $paymentStatus = $bill->balance == 0 ? 'Fully Paid' : ($bill->paid_amount > 0 ? 'Partial' : 'No Payment');
+        $sheet->setCellValue($col++ . $row, $paymentStatus);
+
+        $sheet->setCellValue($col++ . $row, $bill->created_at->format('d/m/Y H:i'));
+        $sheet->setCellValue($col++ . $row, $bill->notes ?? 'N/A');
+
+        // Style the row
+        $sheet->getStyle('A' . $row . ':Q' . $row)->getBorders()
+            ->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+
+        // Format numbers
+        $sheet->getStyle('E' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+        $sheet->getStyle('F' . $row . ':L' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+
+        // Color code based on bill status
+        if ($bill->bill_status === 'paid') {
+            $sheet->getStyle('A' . $row . ':Q' . $row)->getFill()
+                ->setFillType(Fill::FILL_SOLID)
+                ->getStartColor()->setARGB('FFE6F0E6'); // Light green for paid
+        } elseif ($bill->bill_status === 'unpaid' && isset($bill->is_overdue) && $bill->is_overdue) {
+            $sheet->getStyle('A' . $row . ':Q' . $row)->getFill()
+                ->setFillType(Fill::FILL_SOLID)
+                ->getStartColor()->setARGB('FFFFE6E6'); // Light red for overdue
+        }
+
+        $row++;
+    }
+
+    // Add totals row
+    $sheet->setCellValue('A' . $row, 'TOTALS:');
+    $sheet->getStyle('A' . $row)->getFont()->setBold(true);
+    $sheet->setCellValue('E' . $row, '=SUM(E2:E' . ($row - 1) . ')');
+    $sheet->setCellValue('J' . $row, '=SUM(J2:J' . ($row - 1) . ')');
+    $sheet->setCellValue('K' . $row, '=SUM(K2:K' . ($row - 1) . ')');
+    $sheet->setCellValue('L' . $row, '=SUM(L2:L' . ($row - 1) . ')');
+
+    // Apply number formatting - FIXED: Apply separately instead of combined
+    $sheet->getStyle('E' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+    $sheet->getStyle('J' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+    $sheet->getStyle('K' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+    $sheet->getStyle('L' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+
+    // Apply bold font - FIXED: Apply separately
+    $sheet->getStyle('E' . $row)->getFont()->setBold(true);
+    $sheet->getStyle('J' . $row)->getFont()->setBold(true);
+    $sheet->getStyle('K' . $row)->getFont()->setBold(true);
+    $sheet->getStyle('L' . $row)->getFont()->setBold(true);
+
+    // Apply top border - FIXED: Apply separately
+    $sheet->getStyle('E' . $row)->getBorders()->getTop()->setBorderStyle(Border::BORDER_DOUBLE);
+    $sheet->getStyle('J' . $row)->getBorders()->getTop()->setBorderStyle(Border::BORDER_DOUBLE);
+    $sheet->getStyle('K' . $row)->getBorders()->getTop()->setBorderStyle(Border::BORDER_DOUBLE);
+    $sheet->getStyle('L' . $row)->getBorders()->getTop()->setBorderStyle(Border::BORDER_DOUBLE);
+
+    // Auto-size columns
+    foreach (range('A', 'Q') as $column) {
+        $sheet->getColumnDimension($column)->setAutoSize(true);
+    }
+}
+
+/**
+ * Add payments sheet for meter history export
+ */
+private function addMeterHistoryPaymentsSheet($sheet, $meter, $customer, $payments)
+{
+    $row = 1;
+
+    // Header
+    $sheet->mergeCells('A' . $row . ':I' . $row);
+    $sheet->setCellValue('A' . $row, 'PAYMENT HISTORY - Meter: ' . $meter->meter_number . ' | Customer: ' . $customer->full_name);
+    $sheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(12);
+    $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+    $row += 2;
+
+    // Table Headers
+    $headers = [
+        'Payment Date',
+        'Payment Number',
+        'Receipt Number',
+        'Bill Number',
+        'Bill Amount (KSh)',
+        'Payment Amount (KSh)',
+        'Payment Method',
+        'Transaction Reference',
+        'Payment Status',
+        'Collected By',
+        'Notes'
+    ];
+
+    $col = 'A';
+    foreach ($headers as $header) {
+        $sheet->setCellValue($col . $row, $header);
+        $sheet->getStyle($col . $row)->getFont()->setBold(true);
+        $sheet->getStyle($col . $row)->getFill()
+            ->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setARGB('FF4F81BD');
+        $sheet->getStyle($col . $row)->getFont()->getColor()->setARGB('FFFFFFFF');
+        $sheet->getStyle($col . $row)->getBorders()
+            ->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+        $col++;
+    }
+
+    $row++;
+
+    // Data rows
+    foreach ($payments as $payment) {
+        $col = 'A';
+        $sheet->setCellValue($col++ . $row, $payment->payment_date->format('d/m/Y H:i'));
+        $sheet->setCellValue($col++ . $row, $payment->payment_no);
+        $sheet->setCellValue($col++ . $row, $payment->receipt_number ?? 'N/A');
+        $sheet->setCellValue($col++ . $row, $payment->bill_number ?? 'N/A');
+        $sheet->setCellValue($col++ . $row, $payment->bill_amount ?? 0);
+        $sheet->setCellValue($col++ . $row, $payment->amount);
+        $sheet->setCellValue($col++ . $row, ucfirst($payment->payment_method));
+        $sheet->setCellValue($col++ . $row, $payment->transaction_reference ?? 'N/A');
+        $sheet->setCellValue($col++ . $row, ucfirst($payment->payment_status));
+        $sheet->setCellValue($col++ . $row, $payment->collector->name ?? 'System');
+        $sheet->setCellValue($col++ . $row, $payment->notes ?? 'N/A');
+
+        // Style the row
+        $sheet->getStyle('A' . $row . ':K' . $row)->getBorders()
+            ->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+
+        // Format numbers
+        $sheet->getStyle('E' . $row . ':F' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+
+        $row++;
+    }
+
+    // Add totals row
+    $sheet->setCellValue('A' . $row, 'TOTAL PAYMENTS:');
+    $sheet->getStyle('A' . $row)->getFont()->setBold(true);
+    $sheet->setCellValue('F' . $row, '=SUM(F2:F' . ($row - 1) . ')');
+    $sheet->getStyle('F' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+    $sheet->getStyle('F' . $row)->getFont()->setBold(true);
+    $sheet->getStyle('F' . $row)->getBorders()->getTop()->setBorderStyle(Border::BORDER_DOUBLE);
+
+    // Auto-size columns
+    foreach (range('A', 'K') as $column) {
+        $sheet->getColumnDimension($column)->setAutoSize(true);
+    }
+}
 }

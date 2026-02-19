@@ -354,6 +354,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/last-reading', [MeterReadingController::class, 'getLastReading'])->name('last-reading');
         Route::get('/unread', [MeterReadingController::class, 'unread'])->name('unread');
         Route::get('/export-unread', [MeterReadingController::class, 'exportUnread'])->name('export-unread');
+        Route::get('/meter/{meter}/history', [MeterReadingController::class, 'meterHistory'])->name('meter.history');
+        Route::get('/meter/{meter}/export-history', [MeterReadingController::class, 'exportMeterHistory'])->name('meter.export-history');
     });
 
     // Meter reading estimation
