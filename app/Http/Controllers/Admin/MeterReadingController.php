@@ -1241,6 +1241,7 @@ class MeterReadingController extends Controller
     {
         $month = $request->get('month', Carbon::now()->format('Y-m'));
         $zoneId = $request->get('zone', 'all');
+        $search = $request->get('search', ''); // Add this line to get search parameter
 
         // Parse the selected month
         $selectedDate = Carbon::parse($month . '-01');
@@ -1260,6 +1261,21 @@ class MeterReadingController extends Controller
         // Apply zone filter
         if ($zoneId !== 'all') {
             $query->where('zone_id', $zoneId);
+        }
+
+        // Apply search filter - THIS WAS MISSING
+        if (!empty($search)) {
+            $query->where(function($q) use ($search) {
+                $q->where('meter_number', 'like', "%{$search}%")
+                ->orWhere('meter_model', 'like', "%{$search}%")
+                ->orWhere('installation_address', 'like', "%{$search}%")
+                ->orWhereHas('customer', function($q) use ($search) {
+                    $q->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('customer_number', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%");
+                });
+            });
         }
 
         // Get the unread meters with pagination
@@ -1289,14 +1305,16 @@ class MeterReadingController extends Controller
         // Get zones for filter dropdown
         $zones = Zone::orderBy('name')->get();
 
-        // Calculate summary statistics
+        // Calculate summary statistics - FIX THIS PART TO USE COLLECTION AFTER PAGINATION
+        $unreadMetersCollection = collect($unreadMeters->items());
+
         $stats = [
             'total_unread' => $unreadMeters->total(),
             'total_meters' => Meter::where('status', 'active')->whereNotNull('customer_id')->count(),
-            'with_previous_readings' => $unreadMeters->filter(function($meter) {
+            'with_previous_readings' => $unreadMetersCollection->filter(function($meter) {
                 return !is_null($meter->last_reading_date);
             })->count(),
-            'with_exceptions' => $unreadMeters->filter(function($meter) {
+            'with_exceptions' => $unreadMetersCollection->filter(function($meter) {
                 return $meter->recent_exceptions > 0;
             })->count(),
         ];
