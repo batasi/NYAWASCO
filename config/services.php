@@ -49,9 +49,11 @@ return [
         'notification_id' => env('PESAPAL_NOTIFICATION_ID'),
     ],
     'hostpinnacle' => [
-        'api_key'   => env('HOSTPINNACLE_API_KEY'),
+        'username' => env('HOSTPINNACLE_USERNAME'),
+        'password' => env('HOSTPINNACLE_PASSWORD'),
+        'api_key' => env('HOSTPINNACLE_API_KEY'),
         'sender_id' => env('HOSTPINNACLE_SENDER_ID'),
-        'base_url'  => env('HOSTPINNACLE_BASE_URL'),
+        'base_url' => env('HOSTPINNACLE_BASE_URL', 'https://smsportal.hostpinnacle.co.ke'),
     ],
 
 ];
