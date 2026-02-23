@@ -1,44 +1,45 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use Illuminate\Foundation\Auth\EmailVerificationRequest;
-use Illuminate\Http\Request;
+use App\Http\Controllers\Admin\AccountsReceivableController;
+use App\Http\Controllers\Admin\AttendeeController;
+use App\Http\Controllers\Admin\CustomerController;
 
 // Controllers
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\ReportController;
-use App\Http\Controllers\HomeController;
-use App\Http\Controllers\EventController;
-use App\Http\Controllers\VotingController;
-use App\Http\Controllers\TicketController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\OrganizerController;
-use App\Http\Controllers\SearchController;
+use App\Http\Controllers\Admin\MeterCategoryController;
+use App\Http\Controllers\Admin\MeterController;
+use App\Http\Controllers\Admin\MeterReadingController;
+use App\Http\Controllers\Admin\PaymentAllocationController;
+use App\Http\Controllers\Admin\PaymentDashboardController;
+use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\SmsController;
+use App\Http\Controllers\Admin\SystemManagementController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\VendorController;
+use App\Http\Controllers\Admin\WaterConnectionController;
 use App\Http\Controllers\Api\LiveActivityController;
 use App\Http\Controllers\Api\SearchApiController;
-use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Auth\GoogleController;
-use App\Http\Controllers\Admin\AttendeeController;
-use App\Http\Controllers\Admin\VendorController;
-use App\Http\Controllers\VotingCategoryController;
-use App\Http\Controllers\PesapalController;
-use App\Http\Controllers\NomineeCategoryController;
-use App\Http\Controllers\BookingController;
-use App\Http\Controllers\PaymentController;
-use App\Http\Controllers\MpesaPaymentController;
-use App\Http\Controllers\Admin\CustomerController;
-use App\Http\Controllers\Admin\MeterController;
 use App\Http\Controllers\BillController;
+use App\Http\Controllers\BookingController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EventController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\MpesaPaymentController;
+use App\Http\Controllers\NomineeCategoryController;
+use App\Http\Controllers\OrganizerController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PesapalController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QuickBillController;
-use App\Http\Controllers\Admin\MeterReadingController;
-use App\Http\Controllers\Admin\WaterConnectionController;
-use App\Http\Controllers\Admin\MeterCategoryController;
-use App\Http\Controllers\Admin\SystemManagementController;
-use App\Http\Controllers\Admin\PaymentAllocationController;
-use App\Http\Controllers\Admin\AccountsReceivableController;
-use App\Http\Controllers\Admin\PaymentDashboardController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SearchController;
+use App\Http\Controllers\TicketController;
+use App\Http\Controllers\VotingCategoryController;
+use App\Http\Controllers\VotingController;
 use App\Models\Customer;
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -777,5 +778,44 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(
         Route::get('/{application}', [WaterConnectionController::class, 'show'])->name('show');
         Route::post('/{application}/approve', [WaterConnectionController::class, 'approve'])->name('approve');
         Route::post('/{application}/decline', [WaterConnectionController::class, 'decline'])->name('decline');
+    });
+});
+/*
+|--------------------------------------------------------------------------
+| SMS ROUTES (ROLE-BASED)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
+    // SMS Routes
+    Route::prefix('sms')->name('sms.')->group(function () {
+        Route::get('/', [SmsController::class, 'index'])->name('index');
+        Route::get('/create', [SmsController::class, 'create'])->name('create');
+        Route::post('/send', [SmsController::class, 'send'])->name('send');
+
+        // Bulk SMS
+        Route::get('/bulk', [SmsController::class, 'bulkCreate'])->name('bulk');
+        Route::post('/bulk-send', [SmsController::class, 'bulkSend'])->name('bulk.send');
+
+        // Templates
+        Route::prefix('templates')->name('templates.')->group(function () {
+            Route::get('/', [SmsController::class, 'templates'])->name('index');
+            Route::get('/create', [SmsController::class, 'createTemplate'])->name('create');
+            Route::post('/', [SmsController::class, 'storeTemplate'])->name('store');
+            Route::get('/{template}/edit', [SmsController::class, 'editTemplate'])->name('edit');
+            Route::put('/{template}', [SmsController::class, 'updateTemplate'])->name('update');
+            Route::delete('/{template}', [SmsController::class, 'destroyTemplate'])->name('destroy');
+            Route::post('/preview', [SmsController::class, 'previewTemplate'])->name('preview');
+        });
+
+        // Individual SMS
+        Route::get('/{smsLog}', [SmsController::class, 'show'])->name('show');
+        Route::post('/{smsLog}/retry', [SmsController::class, 'retry'])->name('retry');
+
+        // AJAX endpoints
+        Route::get('/get-customer-phone', [SmsController::class, 'getCustomerPhone'])->name('get-customer-phone');
+        Route::get('/get-meter-customer', [SmsController::class, 'getMeterCustomer'])->name('get-meter-customer');
+
+        // Export
+        Route::get('/export', [SmsController::class, 'export'])->name('export');
     });
 });

@@ -48,5 +48,10 @@ return [
         'notification_url' => env('PESAPAL_NOTIFICATION_URL'),
         'notification_id' => env('PESAPAL_NOTIFICATION_ID'),
     ],
+    'hostpinnacle' => [
+        'api_key'   => env('HOSTPINNACLE_API_KEY'),
+        'sender_id' => env('HOSTPINNACLE_SENDER_ID'),
+        'base_url'  => env('HOSTPINNACLE_BASE_URL'),
+    ],
 
 ];

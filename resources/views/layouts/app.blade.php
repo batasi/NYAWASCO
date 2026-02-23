@@ -1617,6 +1617,95 @@ use Illuminate\Support\Facades\Route;
                         </li>
                     </ul>
                     @endcan
+                    <div class="px-3 md:px-4 py-2">
+                        <h3 class="text-xs md:text-sm font-bold text-gray-700 uppercase tracking-wider">COMMUNICATION</h3>
+                    </div>
+                    <a href="#" onclick="toggleSubmenu('sms-menu'); event.preventDefault();" class="sidebar-link group flex items-center justify-between py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-blue-300/30 hover:shadow-lg {{ request()->routeIs('admin.sms.*') ? 'bg-blue-300/50 shadow-lg border-l-4 border-green-600' : '' }}" data-route="sms-menu">
+                        <div class="flex items-center">
+                            <svg class="w-4 h-4 md:w-5 md:h-5 mr-3 {{ request()->routeIs('admin.sms.*') ? 'text-green-600' : 'text-blue-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+                            </svg>
+                            <span class="font-medium">SMS</span>
+                        </div>
+                        <svg id="sms-menu-arrow" class="w-4 h-4 transform transition-transform duration-200 {{ request()->routeIs('admin.sms.*') ? 'rotate-180' : '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </a>
+
+                    {{-- SMS Submenu --}}
+                    <ul id="sms-menu-submenu" class="ml-8 mt-1 space-y-1 {{ request()->routeIs('admin.sms.*') ? '' : 'hidden' }}">
+                        <li>
+                            <a href="{{ route('admin.sms.index') }}"
+                            onclick="handleSidebarLink(this); if (window.innerWidth < 768) toggleSidebar()"
+                            class="sidebar-link group flex items-center py-2 px-4 rounded-lg transition-all duration-200 hover:bg-blue-200/30 text-sm {{ request()->routeIs('admin.sms.index') ? 'bg-blue-200/50' : '' }}"
+                            data-route="admin.sms.index">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                                </svg>
+                                SMS History
+                                @php
+                                    $pendingCount = \App\Models\SmsLog::where('status', 'pending')->count();
+                                @endphp
+                                @if($pendingCount > 0)
+                                    <span class="ml-auto bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded-full">
+                                        {{ $pendingCount }}
+                                    </span>
+                                @endif
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('admin.sms.create') }}"
+                            onclick="handleSidebarLink(this); if (window.innerWidth < 768) toggleSidebar()"
+                            class="sidebar-link group flex items-center py-2 px-4 rounded-lg transition-all duration-200 hover:bg-blue-200/30 text-sm {{ request()->routeIs('admin.sms.create') ? 'bg-blue-200/50' : '' }}"
+                            data-route="admin.sms.create">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                                </svg>
+                                Single SMS
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('admin.sms.bulk') }}"
+                            onclick="handleSidebarLink(this); if (window.innerWidth < 768) toggleSidebar()"
+                            class="sidebar-link group flex items-center py-2 px-4 rounded-lg transition-all duration-200 hover:bg-blue-200/30 text-sm {{ request()->routeIs('admin.sms.bulk') ? 'bg-blue-200/50' : '' }}"
+                            data-route="admin.sms.bulk">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                                </svg>
+                                Bulk SMS
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('admin.sms.templates.index') }}"
+                            onclick="handleSidebarLink(this); if (window.innerWidth < 768) toggleSidebar()"
+                            class="sidebar-link group flex items-center py-2 px-4 rounded-lg transition-all duration-200 hover:bg-blue-200/30 text-sm {{ request()->routeIs('admin.sms.templates.*') ? 'bg-blue-200/50' : '' }}"
+                            data-route="admin.sms.templates">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path>
+                                </svg>
+                                Templates
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('admin.sms.index', ['status' => 'failed']) }}"
+                            onclick="handleSidebarLink(this); if (window.innerWidth < 768) toggleSidebar()"
+                            class="sidebar-link group flex items-center py-2 px-4 rounded-lg transition-all duration-200 hover:bg-blue-200/30 text-sm"
+                            data-route="admin.sms.failed">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                Failed Messages
+                                @php
+                                    $failedCount = \App\Models\SmsLog::where('status', 'failed')->count();
+                                @endphp
+                                @if($failedCount > 0)
+                                    <span class="ml-auto bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded-full">
+                                        {{ $failedCount }}
+                                    </span>
+                                @endif
+                            </a>
+                        </li>
+                    </ul>
                     @can('view users')
                     <div class="px-3 md:px-4 py-2">
                         <h3 class="text-xs md:text-sm font-bold text-gray-700 uppercase tracking-wider">System Administration</h3>
