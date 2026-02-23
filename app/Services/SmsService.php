@@ -4,9 +4,11 @@
 namespace App\Services;
 
 use App\Models\SmsLog;
+use App\Models\SmsTemplate;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class SmsService
 {
@@ -23,7 +25,7 @@ class SmsService
         $this->password = config('services.hostpinnacle.password');
         $this->apiKey = config('services.hostpinnacle.api_key');
         $this->senderId = config('services.hostpinnacle.sender_id');
-        $this->baseUrl = config('services.hostpinnacle.base_url');
+        $this->baseUrl = config('services.hostpinnacle.base_url', 'https://smsportal.hostpinnacle.co.ke');
     }
 
     /**
@@ -38,7 +40,7 @@ class SmsService
     /**
      * Get or create API key
      */
-    protected function getApiKey()
+    public function getApiKey()
     {
         // If API key is provided in config, use it
         if ($this->apiKey) {
@@ -168,6 +170,60 @@ class SmsService
     }
 
     /**
+     * Send SMS to a customer
+     */
+    public function sendToCustomer($customer, $message, $type = 'manual', $metadata = [])
+    {
+        if (!$customer->phone) {
+            return [
+                'success' => false,
+                'message' => 'Customer has no phone number'
+            ];
+        }
+
+        return $this->send(
+            $customer->phone,
+            $message,
+            $type,
+            $customer->id,
+            null,
+            array_merge($metadata, ['customer_name' => $customer->first_name . ' ' . $customer->last_name])
+        );
+    }
+
+    /**
+     * Send SMS to a customer via their meter
+     */
+    public function sendToMeterCustomer($meter, $message, $type = 'manual', $metadata = [])
+    {
+        if (!$meter->customer) {
+            return [
+                'success' => false,
+                'message' => 'Meter has no assigned customer'
+            ];
+        }
+
+        if (!$meter->customer->phone) {
+            return [
+                'success' => false,
+                'message' => 'Customer has no phone number'
+            ];
+        }
+
+        return $this->send(
+            $meter->customer->phone,
+            $message,
+            $type,
+            $meter->customer->id,
+            $meter->id,
+            array_merge($metadata, [
+                'customer_name' => $meter->customer->first_name . ' ' . $meter->customer->last_name,
+                'meter_number' => $meter->meter_number
+            ])
+        );
+    }
+
+    /**
      * Send SMS to multiple recipients
      */
     public function sendBulk($recipients, $message, $type = 'bulk', $metadata = [])
@@ -199,7 +255,7 @@ class SmsService
         }
 
         try {
-            // Create a bulk log entry (optional - you might want to create a bulk record)
+            // Create a bulk log entry
             $bulkLog = SmsLog::create([
                 'recipient_phone' => implode(',', array_slice($phones, 0, 5)) . (count($phones) > 5 ? '...' : ''),
                 'message' => $message,
@@ -209,7 +265,7 @@ class SmsService
                 'metadata' => array_merge($metadata, ['total_recipients' => count($phones)])
             ]);
 
-            // Prepare request according to their API
+            // Get API key
             $apiKey = $this->getApiKey();
 
             // Join multiple mobiles with comma
@@ -249,7 +305,7 @@ class SmsService
                     'sent_at' => now(),
                 ]);
 
-                // Create individual logs for each recipient (optional)
+                // Create individual logs for each recipient
                 foreach ($phones as $phone) {
                     SmsLog::create([
                         'recipient_phone' => $phone,
@@ -272,7 +328,9 @@ class SmsService
                     'log_id' => $bulkLog->id,
                     'recipient_count' => count($phones),
                     'invalid' => $responseData['invalidMobile'] ?? null,
-                    'transaction_id' => $responseData['transactionId'] ?? null
+                    'transaction_id' => $responseData['transactionId'] ?? null,
+                    'success_count' => count($phones),
+                    'fail_count' => 0
                 ];
             } else {
                 $errorMsg = $responseData['reason'] ?? 'Unknown error';
@@ -286,7 +344,9 @@ class SmsService
                 return [
                     'success' => false,
                     'message' => 'Failed to send bulk SMS: ' . $errorMsg,
-                    'log_id' => $bulkLog->id
+                    'log_id' => $bulkLog->id,
+                    'success_count' => 0,
+                    'fail_count' => count($phones)
                 ];
             }
 
@@ -302,7 +362,9 @@ class SmsService
 
             return [
                 'success' => false,
-                'message' => 'Bulk SMS Error: ' . $e->getMessage()
+                'message' => 'Bulk SMS Error: ' . $e->getMessage(),
+                'success_count' => 0,
+                'fail_count' => count($phones)
             ];
         }
     }
@@ -361,7 +423,7 @@ class SmsService
      */
     public function sendUsingTemplate($phone, $templateSlug, $data = [], $type = 'template', $customerId = null, $meterId = null)
     {
-        $template = \App\Models\SmsTemplate::getBySlug($templateSlug);
+        $template = SmsTemplate::getBySlug($templateSlug);
 
         if (!$template) {
             return [
@@ -376,6 +438,153 @@ class SmsService
             'template' => $templateSlug,
             'template_data' => $data
         ]);
+    }
+
+    /**
+     * Send bill reminder to a customer
+     */
+    public function sendBillReminder($customer, $bill)
+    {
+        $data = [
+            'customer_name' => $customer->first_name . ' ' . $customer->last_name,
+            'bill_number' => $bill->bill_number,
+            'bill_amount' => number_format($bill->total_amount, 2),
+            'due_date' => $bill->due_date->format('d/m/Y'),
+            'balance' => number_format($bill->balance, 2),
+            'meter_number' => $bill->meter->meter_number ?? 'N/A',
+            'billing_period' => $bill->billing_period_start->format('M Y')
+        ];
+
+        return $this->sendUsingTemplate(
+            $customer->phone,
+            'bill_reminder',
+            $data,
+            'bill_reminder',
+            $customer->id,
+            $bill->meter_id
+        );
+    }
+
+    /**
+     * Send payment receipt
+     */
+    public function sendPaymentReceipt($customer, $payment, $bill)
+    {
+        $data = [
+            'customer_name' => $customer->first_name . ' ' . $customer->last_name,
+            'payment_amount' => number_format($payment->amount, 2),
+            'payment_date' => $payment->payment_date->format('d/m/Y H:i'),
+            'receipt_number' => $payment->receipt_number ?? $payment->payment_no,
+            'bill_number' => $bill->bill_number,
+            'meter_number' => $bill->meter->meter_number ?? 'N/A',
+            'balance' => number_format($bill->balance, 2)
+        ];
+
+        return $this->sendUsingTemplate(
+            $customer->phone,
+            'payment_receipt',
+            $data,
+            'payment_receipt',
+            $customer->id,
+            $bill->meter_id
+        );
+    }
+
+    /**
+     * Send meter reading confirmation
+     */
+    public function sendReadingConfirmation($customer, $meter, $reading)
+    {
+        $data = [
+            'customer_name' => $customer->first_name . ' ' . $customer->last_name,
+            'meter_number' => $meter->meter_number,
+            'reading_date' => $reading->reading_date->format('d/m/Y'),
+            'current_reading' => number_format($reading->current_reading, 2),
+            'consumption' => number_format($reading->consumption, 2),
+            'reading_period' => $reading->reading_period
+        ];
+
+        return $this->sendUsingTemplate(
+            $customer->phone,
+            'reading_confirmation',
+            $data,
+            'reading_confirmation',
+            $customer->id,
+            $meter->id
+        );
+    }
+
+    /**
+     * Get SMS statistics
+     */
+    public function getStats($startDate = null, $endDate = null)
+    {
+        $query = SmsLog::query();
+
+        if ($startDate && $endDate) {
+            $query->whereBetween('created_at', [$startDate, $endDate]);
+        }
+
+        $total = $query->count();
+        $sent = (clone $query)->where('status', 'sent')->count();
+        $failed = (clone $query)->where('status', 'failed')->count();
+        $pending = (clone $query)->where('status', 'pending')->count();
+
+        // Get counts by message type
+        $byType = (clone $query)
+            ->select('message_type', DB::raw('count(*) as count'))
+            ->groupBy('message_type')
+            ->pluck('count', 'message_type')
+            ->toArray();
+
+        // Get total cost
+        $totalCost = (clone $query)->where('status', 'sent')->sum('cost');
+
+        // Get today's count
+        $today = (clone $query)->whereDate('created_at', now()->toDateString())->count();
+
+        // Get this month's count
+        $thisMonth = (clone $query)
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->count();
+
+        return [
+            'total' => $total,
+            'sent' => $sent,
+            'failed' => $failed,
+            'pending' => $pending,
+            'by_type' => $byType,
+            'total_cost' => $totalCost,
+            'today' => $today,
+            'this_month' => $thisMonth,
+        ];
+    }
+
+    /**
+     * Retry failed SMS
+     */
+    public function retry($smsLogId)
+    {
+        $smsLog = SmsLog::findOrFail($smsLogId);
+
+        if ($smsLog->status !== 'failed') {
+            return [
+                'success' => false,
+                'message' => 'Only failed SMS can be retried'
+            ];
+        }
+
+        $smsLog->increment('retry_count');
+
+        return $this->send(
+            $smsLog->recipient_phone,
+            $smsLog->message,
+            $smsLog->message_type . '_retry',
+            $smsLog->customer_id,
+            $smsLog->meter_id,
+            $smsLog->metadata
+        );
     }
 
     /**
