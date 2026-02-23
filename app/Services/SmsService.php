@@ -370,22 +370,24 @@ class SmsService
     }
 
     /**
-     * Send to HostPinnacle API (single SMS)
+     * Send to HostPinnacle API (single SMS) - FIXED VERSION
      */
     protected function sendToHostPinnacle($phone, $message, $smsLog = null)
     {
         try {
             $apiKey = $this->getApiKey();
 
-            Log::info('HostPinnacle API Request', [
-                'api_key_exists' => !empty($apiKey),
-                'api_key_prefix' => substr($apiKey, 0, 10) . '...',
-                'phone' => $phone,
-                'sender_id' => $this->senderId,
-                'message_length' => strlen($message)
-            ]);
+            // Clean and prepare the message - remove extra line breaks and encode properly
+            $message = preg_replace('/\s+/', ' ', trim($message)); // Replace multiple spaces/newlines with single space
+            $message = substr($message, 0, 1600); // Ensure not too long
 
+            // According to their documentation, they use apikey in header AND userId/password in POSTFIELDS?
+            // Let's try both approaches
+
+            // Approach 1: Using userId/password in POSTFIELDS (like their sample)
             $requestData = [
+                'userid' => $this->username,
+                'password' => $this->password,
                 'sendMethod' => 'quick',
                 'mobile' => $phone,
                 'msg' => $message,
@@ -395,45 +397,80 @@ class SmsService
                 'output' => 'json'
             ];
 
-            // Log the full request (without sensitive data)
-            Log::info('HostPinnacle Request Data', [
+            Log::info('HostPinnacle Sending with userId/password', [
                 'url' => $this->baseUrl . '/SMSApi/send',
-                'params' => array_merge($requestData, ['apikey' => '***hidden***'])
+                'phone' => $phone,
+                'message_length' => strlen($message)
             ]);
 
-            // Make the request with API key in header
-            $response = Http::withHeaders([
-                'apikey' => $apiKey,
-                'cache-control' => 'no-cache',
-                'content-type' => 'application/x-www-form-urlencoded',
-                'user-agent' => 'NYAWASCO-SMS-Service/1.0'
-            ])->asForm()->post($this->baseUrl . '/SMSApi/send', $requestData);
+            // Use curl directly for maximum control
+            $ch = curl_init();
 
-            // Log the raw response
-            Log::info('HostPinnacle Raw Response', [
-                'status' => $response->status(),
-                'body' => $response->body(),
-                'headers' => $response->headers()
+            curl_setopt_array($ch, [
+                CURLOPT_URL => $this->baseUrl . '/SMSApi/send',
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_ENCODING => '',
+                CURLOPT_MAXREDIRS => 10,
+                CURLOPT_TIMEOUT => 30,
+                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                CURLOPT_CUSTOMREQUEST => 'POST',
+                CURLOPT_POSTFIELDS => http_build_query($requestData, '', '&', PHP_QUERY_RFC1738),
+                CURLOPT_HTTPHEADER => [
+                    'apikey: ' . $apiKey, // Include API key in header as per their sample
+                    'cache-control: no-cache',
+                    'content-type: application/x-www-form-urlencoded',
+                    'Accept: application/json'
+                ],
+                CURLOPT_SSL_VERIFYPEER => false, // Disable SSL verification for testing
+                CURLOPT_SSL_VERIFYHOST => false,
+                CURLOPT_VERBOSE => true,
+                CURLOPT_HEADER => true // Include headers in output for debugging
             ]);
 
-            $responseData = $response->json();
+            $response = curl_exec($ch);
+            $err = curl_error($ch);
+            $info = curl_getinfo($ch);
+            $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
 
-            Log::info('HostPinnacle Parsed Response', ['response' => $responseData]);
+            // Separate headers and body
+            $responseHeaders = substr($response, 0, $headerSize);
+            $responseBody = substr($response, $headerSize);
 
-            // Check if successful based on their response format
-            if ($response->successful() && isset($responseData['status']) && $responseData['status'] === 'success') {
+            curl_close($ch);
+
+            Log::info('HostPinnacle CURL Response', [
+                'http_code' => $info['http_code'],
+                'response_headers' => $responseHeaders,
+                'response_body' => $responseBody,
+                'error' => $err,
+                'total_time' => $info['total_time'] ?? null
+            ]);
+
+            if ($err) {
+                throw new \Exception('CURL Error: ' . $err);
+            }
+
+            // Try to parse JSON response
+            $responseData = json_decode($responseBody, true);
+
+            if (!$responseData && !empty($responseBody)) {
+                // If not JSON, maybe it's plain text
+                $responseData = ['raw_response' => $responseBody];
+            }
+
+            // Check if successful based on HTTP code and response
+            if ($info['http_code'] == 200 && isset($responseData['status']) && $responseData['status'] === 'success') {
                 return [
                     'success' => true,
                     'status' => $responseData['status'],
                     'mobile' => $responseData['mobile'] ?? $phone,
-                    'invalid_mobile' => $responseData['invalidMobile'] ?? null,
                     'transaction_id' => $responseData['transactionId'] ?? null,
                     'status_code' => $responseData['statusCode'] ?? '200',
                     'reason' => $responseData['reason'] ?? 'Success',
                     'full_response' => $responseData
                 ];
             } else {
-                // Try to get error message from response
+                // Try to get error message
                 $errorMsg = 'Unknown error';
                 if (isset($responseData['reason'])) {
                     $errorMsg = $responseData['reason'];
@@ -441,18 +478,21 @@ class SmsService
                     $errorMsg = $responseData['message'];
                 } elseif (isset($responseData['error'])) {
                     $errorMsg = $responseData['error'];
+                } elseif (!empty($responseBody)) {
+                    $errorMsg = 'API Error: ' . $responseBody;
                 }
 
                 return [
                     'success' => false,
-                    'status' => $responseData['status'] ?? 'error',
-                    'status_code' => $responseData['statusCode'] ?? $response->status(),
+                    'status' => 'error',
+                    'status_code' => $info['http_code'] ?? '500',
                     'reason' => $errorMsg,
-                    'full_response' => $responseData
+                    'full_response' => $responseData ?: ['raw' => $responseBody]
                 ];
             }
+
         } catch (\Exception $e) {
-            Log::error('HostPinnacle API Exception', [
+            Log::error('HostPinnacle Exception', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
