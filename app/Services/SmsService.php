@@ -374,46 +374,95 @@ class SmsService
      */
     protected function sendToHostPinnacle($phone, $message, $smsLog = null)
     {
-        $apiKey = $this->getApiKey();
+        try {
+            $apiKey = $this->getApiKey();
 
-        $requestData = [
-            'sendMethod' => 'quick',
-            'mobile' => $phone,
-            'msg' => $message,
-            'senderid' => $this->senderId,
-            'msgType' => 'text',
-            'duplicatecheck' => 'true',
-            'output' => 'json'
-        ];
+            Log::info('HostPinnacle API Request', [
+                'api_key_exists' => !empty($apiKey),
+                'api_key_prefix' => substr($apiKey, 0, 10) . '...',
+                'phone' => $phone,
+                'sender_id' => $this->senderId,
+                'message_length' => strlen($message)
+            ]);
 
-        // Make the request with API key in header
-        $response = Http::withHeaders([
-            'apikey' => $apiKey,
-            'cache-control' => 'no-cache',
-            'content-type' => 'application/x-www-form-urlencoded'
-        ])->asForm()->post($this->baseUrl . '/SMSApi/send', $requestData);
-
-        $responseData = $response->json();
-
-        // Check if successful based on their response format
-        if ($response->successful() && isset($responseData['status']) && $responseData['status'] === 'success') {
-            return [
-                'success' => true,
-                'status' => $responseData['status'],
-                'mobile' => $responseData['mobile'] ?? $phone,
-                'invalid_mobile' => $responseData['invalidMobile'] ?? null,
-                'transaction_id' => $responseData['transactionId'] ?? null,
-                'status_code' => $responseData['statusCode'] ?? '200',
-                'reason' => $responseData['reason'] ?? 'Success',
-                'full_response' => $responseData
+            $requestData = [
+                'sendMethod' => 'quick',
+                'mobile' => $phone,
+                'msg' => $message,
+                'senderid' => $this->senderId,
+                'msgType' => 'text',
+                'duplicatecheck' => 'true',
+                'output' => 'json'
             ];
-        } else {
+
+            // Log the full request (without sensitive data)
+            Log::info('HostPinnacle Request Data', [
+                'url' => $this->baseUrl . '/SMSApi/send',
+                'params' => array_merge($requestData, ['apikey' => '***hidden***'])
+            ]);
+
+            // Make the request with API key in header
+            $response = Http::withHeaders([
+                'apikey' => $apiKey,
+                'cache-control' => 'no-cache',
+                'content-type' => 'application/x-www-form-urlencoded',
+                'user-agent' => 'NYAWASCO-SMS-Service/1.0'
+            ])->asForm()->post($this->baseUrl . '/SMSApi/send', $requestData);
+
+            // Log the raw response
+            Log::info('HostPinnacle Raw Response', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+                'headers' => $response->headers()
+            ]);
+
+            $responseData = $response->json();
+
+            Log::info('HostPinnacle Parsed Response', ['response' => $responseData]);
+
+            // Check if successful based on their response format
+            if ($response->successful() && isset($responseData['status']) && $responseData['status'] === 'success') {
+                return [
+                    'success' => true,
+                    'status' => $responseData['status'],
+                    'mobile' => $responseData['mobile'] ?? $phone,
+                    'invalid_mobile' => $responseData['invalidMobile'] ?? null,
+                    'transaction_id' => $responseData['transactionId'] ?? null,
+                    'status_code' => $responseData['statusCode'] ?? '200',
+                    'reason' => $responseData['reason'] ?? 'Success',
+                    'full_response' => $responseData
+                ];
+            } else {
+                // Try to get error message from response
+                $errorMsg = 'Unknown error';
+                if (isset($responseData['reason'])) {
+                    $errorMsg = $responseData['reason'];
+                } elseif (isset($responseData['message'])) {
+                    $errorMsg = $responseData['message'];
+                } elseif (isset($responseData['error'])) {
+                    $errorMsg = $responseData['error'];
+                }
+
+                return [
+                    'success' => false,
+                    'status' => $responseData['status'] ?? 'error',
+                    'status_code' => $responseData['statusCode'] ?? $response->status(),
+                    'reason' => $errorMsg,
+                    'full_response' => $responseData
+                ];
+            }
+        } catch (\Exception $e) {
+            Log::error('HostPinnacle API Exception', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
             return [
                 'success' => false,
-                'status' => $responseData['status'] ?? 'error',
-                'status_code' => $responseData['statusCode'] ?? '500',
-                'reason' => $responseData['reason'] ?? 'Unknown error',
-                'full_response' => $responseData
+                'status' => 'error',
+                'status_code' => '500',
+                'reason' => 'Exception: ' . $e->getMessage(),
+                'full_response' => ['error' => $e->getMessage()]
             ];
         }
     }
