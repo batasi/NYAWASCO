@@ -73,7 +73,7 @@
                             <div class="flex flex-wrap gap-1">
                                 @foreach($template->placeholders as $placeholder)
                                     <span class="px-2 py-1 bg-blue-50 text-blue-600 text-xs rounded-full border border-blue-200">
-                                        {{'{{' . $placeholder . '}}'}}
+                                       {{ '{' }}{{ '{' }}{{ $placeholder }}{{ '}' }}{{ '}' }}
                                     </span>
                                 @endforeach
                             </div>
