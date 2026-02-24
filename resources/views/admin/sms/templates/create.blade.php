@@ -119,20 +119,21 @@
                     <label for="message" class="block text-sm font-medium text-gray-700 mb-2">
                         Message Template <span class="text-red-500">*</span>
                     </label>
+                    </label>
                     <textarea name="message"
-                              id="message"
-                              rows="6"
-                              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                              placeholder="Dear {{customer_name}}, your bill of {{amount}} is due on {{due_date}}..."
-                              onkeyup="updateCharCount()"
-                              required>{{ old('message') }}</textarea>
+                            id="message"
+                            rows="6"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Dear @{{customer_name}}, your bill of @{{amount}} is due on @{{due_date}}..."
+                            onkeyup="updateCharCount()"
+                            required>{{ old('message') }}</textarea>
                     <div class="mt-2 flex justify-between items-center">
                         <div>
                             <span id="char-count">0</span> characters |
                             <span id="sms-count">1</span> SMS part(s)
                         </div>
                         <div class="text-xs text-gray-500">
-                            Use {{variable_name}} for placeholders
+                            Use @{{variable_name}} for placeholders
                         </div>
                     </div>
                     @error('message')

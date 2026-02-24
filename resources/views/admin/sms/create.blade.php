@@ -255,40 +255,7 @@
                 </div>
             </div>
 
-            <!-- Quick Tips -->
-            <div class="bg-white rounded-lg shadow mt-4">
-                <div class="p-4 border-b">
-                    <h3 class="font-semibold">Quick Tips</h3>
-                </div>
-                <div class="p-4">
-                    <ul class="space-y-2 text-sm text-gray-600">
-                        <li class="flex items-start">
-                            <svg class="w-4 h-4 mr-2 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                            Use templates for common messages
-                        </li>
-                        <li class="flex items-start">
-                            <svg class="w-4 h-4 mr-2 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                            1 SMS part = 160 characters
-                        </li>
-                        <li class="flex items-start">
-                            <svg class="w-4 h-4 mr-2 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                            Messages longer than 160 chars are concatenated
-                        </li>
-                        <li class="flex items-start">
-                            <svg class="w-4 h-4 mr-2 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                            Always include your company name
-                        </li>
-                    </ul>
-                </div>
-            </div>
+
         </div>
     </div>
 </div>

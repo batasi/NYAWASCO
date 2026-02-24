@@ -129,7 +129,7 @@
                             <span id="sms-count">{{ ceil(strlen(old('message', $template->message)) / 160) ?: 1 }}</span> SMS part(s)
                         </div>
                         <div class="text-xs text-gray-500">
-                            Use {{variable_name}} for placeholders
+                           Use @{{variable_name}} for placeholders
                         </div>
                     </div>
                     @error('message')
