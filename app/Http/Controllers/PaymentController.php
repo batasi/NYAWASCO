@@ -192,9 +192,6 @@ class PaymentController extends Controller
         return response()->json($meters);
     }
 
-
-
-
     protected $paymentService;
 
     public function __construct(PaymentProcessingService $paymentService)
@@ -370,8 +367,10 @@ class PaymentController extends Controller
         // ========== PROCESS TRANSACTIONS BY GROUPING ==========
         $currentDate = null;
         $currentMeterNumber = null;
+        $currentCustomerName = null;
         $currentParticulars = null;
         $pendingTransactions = [];
+        $isChequeTransaction = false;
 
         for ($rowNumber = 2; $rowNumber <= $highestRow; $rowNumber++) {
             if (!isset($rows[$rowNumber])) continue;
@@ -397,21 +396,25 @@ class PaymentController extends Controller
             // ========== CHECK FOR DATE ==========
             if (!empty($dateValue)) {
                 // Process any pending transaction from previous group
-                if ($currentDate !== null && $currentMeterNumber !== null) {
+                if ($currentDate !== null && !empty($pendingTransactions)) {
                     $this->processPaymentTransaction(
                         $currentDate,
                         $currentMeterNumber,
+                        $currentCustomerName,
                         $currentParticulars,
                         $pendingTransactions,
-                        $results
+                        $results,
+                        $isChequeTransaction
                     );
                 }
 
                 // Reset for new transaction
                 $currentDate = $dateValue;
                 $currentMeterNumber = null;
+                $currentCustomerName = null;
                 $currentParticulars = $particularsValue;
                 $pendingTransactions = [];
+                $isChequeTransaction = false;
 
                 $pendingTransactions[] = [
                     'row' => $rowNumber,
@@ -423,12 +426,22 @@ class PaymentController extends Controller
                     'sheet' => $sheet->getTitle()
                 ];
 
+                // Check if this is a cheque transaction
+                if (strpos($particularsValue, 'Chq:') !== false) {
+                    $isChequeTransaction = true;
+                    // Extract customer name from cheque line
+                    $currentCustomerName = $this->extractCustomerNameFromString($particularsValue);
+                    Log::info("Sheet {$sheet->getTitle()} - Row {$rowNumber} - Cheque transaction detected. Customer: {$currentCustomerName}");
+                }
+
+                // Try to find meter number in the header
                 if (preg_match('/#(\d{3,})/', $particularsValue, $matches)) {
                     $currentMeterNumber = $matches[1];
                     Log::info("Sheet {$sheet->getTitle()} - Row {$rowNumber} - Found meter number: {$currentMeterNumber}");
                 }
             }
             else {
+                // This is a continuation row (no date)
                 $pendingTransactions[] = [
                     'row' => $rowNumber,
                     'date' => $dateValue,
@@ -439,39 +452,411 @@ class PaymentController extends Controller
                     'sheet' => $sheet->getTitle()
                 ];
 
+                // Try to find meter number in continuation rows
                 if (preg_match('/#(\d{3,})/', $particularsValue, $matches)) {
                     $currentMeterNumber = $matches[1];
                     Log::info("Sheet {$sheet->getTitle()} - Row {$rowNumber} - Found meter number: {$currentMeterNumber}");
                 }
 
+                // Try to extract customer name from continuation rows for cheque transactions
+                if ($isChequeTransaction && !$currentCustomerName) {
+                    $extractedName = $this->extractCustomerNameFromString($particularsValue);
+                    if ($extractedName) {
+                        $currentCustomerName = $extractedName;
+                    }
+                }
+
+                // If this row has an amount, it might be the payment row
                 if (!empty($amountValue)) {
                     $amount = $this->parseAmount($amountValue);
-                    if ($amount > 0 && $currentMeterNumber) {
-                        $this->processPaymentTransaction(
-                            $currentDate,
-                            $currentMeterNumber,
-                            $currentParticulars,
-                            [$pendingTransactions[count($pendingTransactions)-1]],
-                            $results
-                        );
+                    if ($amount > 0) {
+                        // Process immediately if we have either meter number or customer name
+                        if ($currentMeterNumber || $currentCustomerName) {
+                            $this->processPaymentTransaction(
+                                $currentDate,
+                                $currentMeterNumber,
+                                $currentCustomerName,
+                                $currentParticulars,
+                                [$pendingTransactions[count($pendingTransactions)-1]],
+                                $results,
+                                $isChequeTransaction
+                            );
+                        } else {
+                            Log::warning("Row {$rowNumber} has amount but no meter number or customer name");
+                            $results['skipped']++;
+                        }
                     }
                 }
             }
         }
 
         // Process the last transaction
-        if ($currentDate !== null && $currentMeterNumber !== null) {
+        if ($currentDate !== null && !empty($pendingTransactions)) {
             $this->processPaymentTransaction(
                 $currentDate,
                 $currentMeterNumber,
+                $currentCustomerName,
                 $currentParticulars,
                 $pendingTransactions,
-                $results
+                $results,
+                $isChequeTransaction
             );
         }
 
         return $results;
     }
+
+    /**
+     * Process a complete payment transaction
+     */
+    private function processPaymentTransaction($date, $meterNumber, $customerName, $description, $transactionRows, &$results, $isCheque = false)
+    {
+        try {
+            // Find the payment amount in this transaction
+            $amount = null;
+            $paymentRow = null;
+
+            foreach ($transactionRows as $row) {
+                if (!empty($row['amount'])) {
+                    $amountValue = $row['amount'];
+                    $paymentRow = $row['row'];
+
+                    // Parse amount
+                    if (is_numeric($amountValue)) {
+                        $amount = (float) $amountValue;
+                    } else {
+                        $amount = (float) str_replace(',', '', $amountValue);
+                    }
+                    break;
+                }
+            }
+
+            if (!$amount || $amount <= 0) {
+                Log::info("Transaction - No valid amount found");
+                $results['skipped']++;
+                return;
+            }
+
+            // ========== DATE PARSING ==========
+            $paymentDate = null;
+
+            // Clean the date string
+            $date = trim($date);
+            Log::info("Parsing date: {$date}");
+
+            try {
+                // Try DD/MM/YYYY format first (from the log, this is what we're getting)
+                if (strpos($date, '/') !== false) {
+                    $paymentDate = Carbon::createFromFormat('d/m/Y', $date);
+                }
+                // Try DD-MM-YYYY format
+                elseif (strpos($date, '-') !== false) {
+                    $paymentDate = Carbon::createFromFormat('d-m-Y', $date);
+                }
+                // Try other formats
+                else {
+                    $paymentDate = Carbon::parse($date);
+                }
+            } catch (\Exception $e) {
+                // Try manual parsing as fallback
+                try {
+                    // Format: dd/mm/yyyy with possible single digits (13/01/2026)
+                    if (preg_match('/(\d{1,2})\/(\d{1,2})\/(\d{4})/', $date, $matches)) {
+                        $paymentDate = Carbon::create($matches[3], $matches[2], $matches[1], 0, 0, 0);
+                    }
+                    // Format: dd-mm-yyyy with possible single digits (13-01-2026)
+                    elseif (preg_match('/(\d{1,2})-(\d{1,2})-(\d{4})/', $date, $matches)) {
+                        $paymentDate = Carbon::create($matches[3], $matches[2], $matches[1], 0, 0, 0);
+                    }
+                    // Format: yyyy-mm-dd (2026-01-26)
+                    elseif (preg_match('/(\d{4})-(\d{1,2})-(\d{1,2})/', $date, $matches)) {
+                        $paymentDate = Carbon::create($matches[1], $matches[2], $matches[3], 0, 0, 0);
+                    }
+                    // Format: yyyy/mm/dd (2026/01/26)
+                    elseif (preg_match('/(\d{4})\/(\d{1,2})\/(\d{1,2})/', $date, $matches)) {
+                        $paymentDate = Carbon::create($matches[1], $matches[2], $matches[3], 0, 0, 0);
+                    }
+                    else {
+                        throw new \Exception("Could not parse date: {$date}");
+                    }
+                } catch (\Exception $e2) {
+                    throw new \Exception("Could not parse date: {$date}. Expected format: DD/MM/YYYY or DD-MM-YYYY");
+                }
+            }
+
+            if (!$paymentDate) {
+                throw new \Exception("Failed to parse date: {$date}");
+            }
+
+            Log::info("Successfully parsed date: {$paymentDate->format('Y-m-d')}");
+
+            // ========== FIND METER ==========
+            $meter = null;
+            $foundVia = 'meter_number';
+
+            // First, try to find by meter number if provided
+            if (!empty($meterNumber)) {
+                $meter = Meter::where('meter_number', $meterNumber)->first();
+                if ($meter) {
+                    Log::info("Found meter by number: {$meterNumber}");
+                }
+            }
+
+            // If meter not found by number and this is a cheque transaction or we have a customer name
+            if (!$meter && ($isCheque || !empty($customerName))) {
+                // If we don't have a customer name yet, try to extract from transaction rows
+                if (empty($customerName)) {
+                    $customerName = $this->extractCustomerNameFromTransaction($transactionRows, $description);
+                }
+
+                if ($customerName) {
+                    Log::info("Attempting to find customer by name: {$customerName}");
+
+                    // Search for customer by name
+                    $customer = $this->findCustomerByName($customerName);
+
+                    if ($customer) {
+                        Log::info("Found customer ID: {$customer->id}, Name: {$customer->first_name} {$customer->last_name}");
+
+                        // Get all active meters for this customer
+                        $customerMeters = Meter::where('customer_id', $customer->id)
+                            ->where('status', 'active')
+                            ->get();
+
+                        if ($customerMeters->count() == 1) {
+                            // Only one meter - use it
+                            $meter = $customerMeters->first();
+                            $foundVia = 'customer_name_single_meter';
+                            Log::info("Using single meter: {$meter->meter_number}");
+                        } elseif ($customerMeters->count() > 1) {
+                            // Multiple meters - find the one with most recent bill
+                            $meter = $this->findMostRecentMeterForCustomer($customer);
+                            if ($meter) {
+                                $foundVia = 'customer_name_recent_activity';
+                                Log::info("Using most recent meter: {$meter->meter_number}");
+                            }
+                        }
+                    } else {
+                        Log::warning("No customer found with name: {$customerName}");
+                    }
+                }
+            }
+
+            // Handle not found cases
+            if (!$meter) {
+                $notFoundRecord = [
+                    'meter_number' => $meterNumber ?: 'N/A',
+                    'amount' => $amount,
+                    'date' => $paymentDate->format('Y-m-d'),
+                    'description' => substr($description, 0, 200)
+                ];
+
+                if ($customerName) {
+                    $notFoundRecord['customer_name'] = $customerName;
+                }
+
+                $results['not_found_meters'][] = $notFoundRecord;
+
+                throw new \Exception("Meter not found" .
+                    ($customerName ? " for customer: {$customerName}" : " with number: " . ($meterNumber ?: 'unknown')));
+            }
+
+            // Check if meter is assigned to a customer
+            if (!$meter->customer_id) {
+                throw new \Exception("Meter {$meter->meter_number} is not assigned to any customer");
+            }
+
+            // Get the customer from the meter
+            $customer = $meter->customer;
+
+            if (!$customer) {
+                throw new \Exception("Customer for meter {$meter->meter_number} not found");
+            }
+
+            if ($customer->status !== 'active') {
+                throw new \Exception("Customer for meter {$meter->meter_number} is {$customer->status}");
+            }
+
+            // ========== EXTRACT TRANSACTION REFERENCE ==========
+            $transactionRef = $this->extractTransactionReference($transactionRows, $description, $meter->meter_number, $paymentDate, $isCheque);
+
+            // Check for duplicate transaction reference
+            if ($transactionRef && !str_starts_with($transactionRef, 'IMP-')) {
+                $existingPayment = Payment::where('transaction_reference', $transactionRef)
+                    ->where('payment_method', $isCheque ? 'bank' : 'mpesa')
+                    ->where('payment_status', 'completed')
+                    ->first();
+
+                if ($existingPayment) {
+                    // This payment has already been imported - skip it
+                    $results['skipped']++;
+                    Log::info("Payment skipped - Transaction reference {$transactionRef} already exists for meter {$meter->meter_number}");
+                    return;
+                }
+            }
+
+            // ========== PROCESS PAYMENT ==========
+            $paymentResult = DB::transaction(function () use ($meter, $amount, $transactionRef, $paymentDate, $isCheque) {
+                return $this->paymentService->processPayment(
+                    $meter,
+                    $amount,
+                    $isCheque ? 'bank' : 'mpesa', // Use 'bank' for cheque payments
+                    $transactionRef,
+                    $paymentDate,
+                    auth()->id() ?? 1 // Use system user if no auth
+                );
+            });
+
+            $results['success']++;
+            Log::info("Payment processed successfully for meter {$meter->meter_number}, amount {$amount}, found via: {$foundVia}");
+
+        } catch (\Exception $e) {
+            $results['failed']++;
+            $results['errors'][] = [
+                'meter_number' => $meterNumber ?? 'unknown',
+                'customer_name' => $customerName ?? 'unknown',
+                'amount' => $amount ?? 'unknown',
+                'date' => $date,
+                'reason' => $e->getMessage()
+            ];
+            Log::error("Payment failed: " . $e->getMessage());
+        }
+    }
+
+
+    /**
+     * Extract customer name from a string (for cheque transactions)
+     */
+    private function extractCustomerNameFromString($text)
+    {
+        // Remove cheque number pattern
+        $text = preg_replace('/Chq:\d+\s*/', '', $text);
+
+        // Remove trailing codes like -OPERATIO, etc.
+        $text = preg_replace('/\s*[-–—].*$/', '', $text);
+
+        // Remove any reference numbers or codes
+        $text = preg_replace('/\s+#\d+.*$/', '', $text);
+        $text = preg_replace('/\s+[A-Z0-9]{5,}$/', '', $text);
+
+        // Clean up and return
+        $text = trim($text);
+
+        // Only return if it looks like a name (not empty and not just numbers)
+        if (!empty($text) && !preg_match('/^\d+$/', $text)) {
+            return $text;
+        }
+
+        return null;
+    }
+
+    /**
+     * Extract customer name from transaction rows
+     */
+    private function extractCustomerNameFromTransaction($transactionRows, $mainDescription)
+    {
+        // First, check the main description
+        $name = $this->extractCustomerNameFromString($mainDescription);
+        if ($name) {
+            return $name;
+        }
+
+        // Then check all transaction rows
+        foreach ($transactionRows as $row) {
+            $particulars = $row['particulars'] ?? '';
+            $name = $this->extractCustomerNameFromString($particulars);
+            if ($name) {
+                return $name;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Extract transaction reference
+     */
+    private function extractTransactionReference($transactionRows, $description, $meterNumber, $paymentDate, $isCheque)
+    {
+        $transactionRef = null;
+
+        // For cheque transactions, create a cheque reference
+        if ($isCheque) {
+            if (preg_match('/Chq:(\d+)/', $description, $matches)) {
+                $chequeNumber = $matches[1];
+                $datePart = $paymentDate->format('Ymd');
+                $transactionRef = "CHQ-{$chequeNumber}-{$datePart}";
+                Log::info("Generated cheque reference: {$transactionRef}");
+                return $transactionRef;
+            }
+        }
+
+        // For MPS transactions, find the reference
+        foreach ($transactionRows as $row) {
+            $particularsToCheck = $row['particulars'] ?? '';
+
+            // Pattern: MPS followed by numbers and then alphanumeric code
+            if (preg_match('/MPS\s+\d+\s+([A-Z0-9]{5,20})\b/', $particularsToCheck, $matches)) {
+                $transactionRef = $matches[1];
+                Log::info("Found MPS transaction reference: {$transactionRef}");
+                break;
+            }
+
+            // Pattern: Any alphanumeric code followed by #
+            if (preg_match('/([A-Z0-9]{5,20})\s+\d{3,}#/', $particularsToCheck, $matches)) {
+                $transactionRef = $matches[1];
+                Log::info("Found transaction reference from meter row: {$transactionRef}");
+                break;
+            }
+        }
+
+        // Last resort: generate a unique reference
+        if (!$transactionRef) {
+            $datePart = $paymentDate->format('Ymd');
+            $randomPart = strtoupper(substr(uniqid(), -6));
+            $transactionRef = "IMP-{$datePart}-{$meterNumber}-{$randomPart}";
+            Log::info("Generated transaction reference: {$transactionRef}");
+        }
+
+        return $transactionRef;
+    }
+    /**
+     * Find customer by name with fuzzy matching
+     */
+    private function findCustomerByName($name)
+    {
+        // Clean up the name
+        $searchName = trim(preg_replace('/\s+/', ' ', $name));
+
+        // Try exact match first
+        $customer = Customer::where('first_name', $searchName)
+            ->orWhere('last_name', $searchName)
+            ->orWhereRaw("CONCAT(first_name, ' ', last_name) = ?", [$searchName])
+            ->where('status', 'active')
+            ->first();
+
+        if ($customer) {
+            return $customer;
+        }
+
+        // Try partial match with different combinations
+        $nameParts = explode(' ', $searchName);
+        $firstName = $nameParts[0] ?? '';
+        $lastName = implode(' ', array_slice($nameParts, 1)) ?: $firstName;
+
+        $customer = Customer::where(function($query) use ($firstName, $lastName, $searchName) {
+            $query->where('first_name', 'LIKE', "%{$firstName}%")
+                ->orWhere('last_name', 'LIKE', "%{$lastName}%")
+                ->orWhere('first_name', 'LIKE', "%{$searchName}%")
+                ->orWhere('last_name', 'LIKE', "%{$searchName}%")
+                ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$searchName}%"]);
+        })
+        ->where('status', 'active')
+        ->first();
+
+        return $customer;
+    }
+
     /**
      * Parse amount from string
      */
@@ -501,222 +886,7 @@ class PaymentController extends Controller
 
         return 0;
     }
-    /**
-     * Process a complete payment transaction
-     */
-    private function processPaymentTransaction($date, $meterNumber, $description, $transactionRows, &$results)
-    {
-        try {
-            // Find the payment amount in this transaction
-            $amount = null;
-            $paymentRow = null;
 
-            foreach ($transactionRows as $row) {
-                if (!empty($row['amount'])) {
-                    $amountValue = $row['amount'];
-                    $paymentRow = $row['row'];
-
-                    // Parse amount
-                    if (is_numeric($amountValue)) {
-                        $amount = (float) $amountValue;
-                    } else {
-                        $amount = (float) str_replace(',', '', $amountValue);
-                    }
-                    break;
-                }
-            }
-
-            if (!$amount || $amount <= 0) {
-                Log::info("Transaction for meter {$meterNumber} - No valid amount found");
-                $results['skipped']++;
-                return;
-            }
-
-            // ========== DATE PARSING ==========
-            $paymentDate = null;
-            try {
-                // Force interpretation as DD-MM-YYYY (this is your bank statement format)
-                $paymentDate = Carbon::createFromFormat('d-m-Y', $date);
-            } catch (\Exception $e) {
-                try {
-                    // Try DD/MM/YYYY format
-                    $paymentDate = Carbon::createFromFormat('d/m/Y', $date);
-                } catch (\Exception $e2) {
-                    // Try other formats as fallback
-                    // Format: dd-mm-yyyy with single digits (6-2-2026)
-                    if (preg_match('/(\d{1,2})-(\d{1,2})-(\d{4})/', $date, $matches)) {
-                        $paymentDate = Carbon::create($matches[3], $matches[2], $matches[1]);
-                    }
-                    // Format: dd/mm/yyyy with single digits (6/2/2026)
-                    elseif (preg_match('/(\d{1,2})\/(\d{1,2})\/(\d{4})/', $date, $matches)) {
-                        $paymentDate = Carbon::create($matches[3], $matches[2], $matches[1]);
-                    }
-                    // Format: yyyy-mm-dd (2026-01-26)
-                    elseif (preg_match('/(\d{4})-(\d{1,2})-(\d{1,2})/', $date, $matches)) {
-                        $paymentDate = Carbon::create($matches[1], $matches[2], $matches[3]);
-                    }
-                    // Format: yyyy/mm/dd (2026/01/26)
-                    elseif (preg_match('/(\d{4})\/(\d{1,2})\/(\d{1,2})/', $date, $matches)) {
-                        $paymentDate = Carbon::create($matches[1], $matches[2], $matches[3]);
-                    }
-                    else {
-                        throw new \Exception("Could not parse date: {$date}. Expected format: DD-MM-YYYY");
-                    }
-                }
-            }
-            Log::info("Processing payment - Meter: {$meterNumber}, Amount: {$amount}, Date: {$paymentDate->format('Y-m-d')}");
-
-            // ========== FIND METER ==========
-            $meter = Meter::where('meter_number', $meterNumber)->first();
-
-            if (!$meter) {
-                $results['not_found_meters'][] = [
-                    'meter_number' => $meterNumber,
-                    'amount' => $amount,
-                    'date' => $paymentDate->format('Y-m-d'),
-                    'description' => substr($description, 0, 200)
-                ];
-                throw new \Exception("Meter {$meterNumber} not found in database");
-            }
-
-            // Check if meter is assigned to a customer
-            if (!$meter->customer_id) {
-                throw new \Exception("Meter {$meterNumber} is not assigned to any customer");
-            }
-
-            // Get the customer from the meter
-            $customer = $meter->customer;
-
-            if (!$customer) {
-                throw new \Exception("Customer for meter {$meterNumber} not found");
-            }
-
-            if ($customer->status !== 'active') {
-                throw new \Exception("Customer for meter {$meterNumber} is {$customer->status}");
-            }
-
-            // ========== EXTRACT TRANSACTION REFERENCE ==========
-            $transactionRef = null;
-
-            // First, find the row that contains the meter number (the one with #)
-            foreach ($transactionRows as $row) {
-                $particularsToCheck = $row['particulars'] ?? '';
-
-                // This row contains the meter number (has #)
-                if (strpos($particularsToCheck, '#') !== false) {
-                    // Pattern: Any alphanumeric code (5-20 chars) followed by spaces and then numbers#
-                    if (preg_match('/([A-Z0-9]{5,20})\s+\d{3,}#/', $particularsToCheck, $matches)) {
-                        $transactionRef = $matches[1];
-                        Log::info("Found transaction reference from meter row: {$transactionRef}");
-                        break;
-                    }
-                    // Pattern: Any alphanumeric code at the beginning of the string
-                    elseif (preg_match('/^([A-Z0-9]{5,20})\s+\d{3,}#/', $particularsToCheck, $matches)) {
-                        $transactionRef = $matches[1];
-                        Log::info("Found transaction reference at start: {$transactionRef}");
-                        break;
-                    }
-                }
-            }
-
-            // If not found in meter row, check the first row (MPS row)
-            if (!$transactionRef && !empty($transactionRows[0]['particulars'])) {
-                $firstRowParticulars = $transactionRows[0]['particulars'];
-
-                // Pattern: MPS followed by a code (UB, UAN, TL1, etc.)
-                if (preg_match('/MPS\s+([A-Z0-9]{5,20})/', $firstRowParticulars, $matches)) {
-                    // Make sure it's not all digits (skip MPS numbers)
-                    if (!preg_match('/^\d+$/', $matches[1])) {
-                        $transactionRef = $matches[1];
-                        Log::info("Found transaction reference from MPS row: {$transactionRef}");
-                    }
-                }
-            }
-
-            // If still not found, check all rows for any alphanumeric code that's not all digits
-            if (!$transactionRef) {
-                foreach ($transactionRows as $row) {
-                    $particularsToCheck = $row['particulars'] ?? '';
-
-                    // Look for alphanumeric codes 5-20 chars that are not all digits
-                    if (preg_match_all('/\b([A-Z0-9]{5,20})\b/', $particularsToCheck, $matches)) {
-                        foreach ($matches[1] as $code) {
-                            // Skip if it's all digits (likely an MPS number or meter number)
-                            if (!preg_match('/^\d+$/', $code)) {
-                                $transactionRef = $code;
-                                Log::info("Found transaction reference from row {$row['row']}: {$transactionRef}");
-                                break 2;
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Last resort: generate a unique reference
-            if (!$transactionRef) {
-                $datePart = Carbon::parse($date)->format('Ymd');
-                $randomPart = strtoupper(substr(uniqid(), -6));
-                $transactionRef = "IMP-{$datePart}-{$meterNumber}-{$randomPart}";
-                Log::info("Generated transaction reference: {$transactionRef}");
-            }
-
-            // Check for duplicate transaction reference
-            if ($transactionRef && !str_starts_with($transactionRef, 'IMP-')) {
-                $existingPayment = Payment::where('transaction_reference', $transactionRef)
-                    ->where('payment_method', 'mpesa')
-                    ->where('payment_status', 'completed')
-                    ->first();
-
-                if ($existingPayment) {
-                    // This payment has already been imported - skip it
-                    $results['skipped']++;
-                    Log::info("Payment skipped - Transaction reference {$transactionRef} already exists for meter {$meterNumber}");
-                    return; // Exit the function, don't process this payment
-                }
-            }
-
-            // ========== PROCESS PAYMENT ==========
-            $paymentResult = DB::transaction(function () use ($meter, $amount, $transactionRef, $paymentDate, $meterNumber) {
-                return $this->paymentService->processPayment(
-                    $meter,
-                    $amount,
-                    'mpesa',
-                    $transactionRef,
-                    $paymentDate,
-                    auth()->id()
-                );
-            });
-
-            // Check if bills were actually paid
-            $totalApplied = $paymentResult['total_applied'] ?? 0;
-            $remainingCredit = $paymentResult['remaining_credit'] ?? 0;
-            $appliedBills = $paymentResult['applied_bills'] ?? [];
-
-            if ($totalApplied > 0) {
-                Log::info("Payment allocated to bills for meter {$meterNumber}", [
-                    'total_applied' => $totalApplied,
-                    'bills_count' => count($appliedBills),
-                    'remaining_credit' => $remainingCredit
-                ]);
-            }
-
-            $results['success']++;
-            Log::info("Payment processed successfully for meter {$meterNumber}, amount {$amount}, applied: {$totalApplied}, credit: {$remainingCredit}");
-
-            $results['success']++;
-            Log::info("Payment processed successfully for meter {$meterNumber}, amount {$amount}");
-
-        } catch (\Exception $e) {
-            $results['failed']++;
-            $results['errors'][] = [
-                'meter_number' => $meterNumber,
-                'amount' => $amount ?? 'unknown',
-                'date' => $date,
-                'reason' => $e->getMessage()
-            ];
-            Log::error("Payment failed for meter {$meterNumber}: " . $e->getMessage());
-        }
-    }
 
     private function extractTransactionRef(string $text): ?string
     {
