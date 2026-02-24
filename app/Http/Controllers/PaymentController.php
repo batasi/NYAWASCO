@@ -593,6 +593,7 @@ class PaymentController extends Controller
             // ========== FIND METER ==========
             $meter = null;
             $foundVia = 'meter_number';
+            $customer = null;
 
             // First, try to find by meter number if provided
             if (!empty($meterNumber)) {
@@ -680,19 +681,37 @@ class PaymentController extends Controller
             // ========== EXTRACT TRANSACTION REFERENCE ==========
             $transactionRef = $this->extractTransactionReference($transactionRows, $description, $meter->meter_number, $paymentDate, $isCheque);
 
-            // Check for duplicate transaction reference
-            if ($transactionRef && !str_starts_with($transactionRef, 'IMP-')) {
-                $existingPayment = Payment::where('transaction_reference', $transactionRef)
-                    ->where('payment_method', $isCheque ? 'bank' : 'mpesa')
-                    ->where('payment_status', 'completed')
-                    ->first();
+            // ========== CHECK FOR DUPLICATES ==========
+            // Create a unique key for this transaction to prevent duplicates
+            $uniqueKey = $this->generateUniqueTransactionKey($meter->id, $amount, $paymentDate, $transactionRef, $isCheque);
 
-                if ($existingPayment) {
-                    // This payment has already been imported - skip it
-                    $results['skipped']++;
-                    Log::info("Payment skipped - Transaction reference {$transactionRef} already exists for meter {$meter->meter_number}");
-                    return;
-                }
+            // Check if we've already processed this transaction in the current import session
+            static $processedTransactions = [];
+            if (isset($processedTransactions[$uniqueKey])) {
+                Log::info("Skipping duplicate transaction - already processed in this session", [
+                    'meter' => $meter->meter_number,
+                    'amount' => $amount,
+                    'date' => $paymentDate->format('Y-m-d'),
+                    'ref' => $transactionRef
+                ]);
+                $results['skipped']++;
+                return;
+            }
+            $processedTransactions[$uniqueKey] = true;
+
+            // Check database for existing payments with similar characteristics
+            $existingPayment = $this->findExistingPayment($meter->id, $amount, $paymentDate, $transactionRef, $isCheque);
+
+            if ($existingPayment) {
+                Log::info("Payment skipped - Already exists in database", [
+                    'meter' => $meter->meter_number,
+                    'amount' => $amount,
+                    'date' => $paymentDate->format('Y-m-d'),
+                    'existing_ref' => $existingPayment->transaction_reference,
+                    'existing_id' => $existingPayment->id
+                ]);
+                $results['skipped']++;
+                return;
             }
 
             // ========== PROCESS PAYMENT ==========
@@ -700,10 +719,10 @@ class PaymentController extends Controller
                 return $this->paymentService->processPayment(
                     $meter,
                     $amount,
-                    $isCheque ? 'bank' : 'mpesa', // Use 'bank' for cheque payments
+                    $isCheque ? 'bank' : 'mpesa',
                     $transactionRef,
                     $paymentDate,
-                    auth()->id() ?? 1 // Use system user if no auth
+                    auth()->id() ?? 1
                 );
             });
 
@@ -723,6 +742,136 @@ class PaymentController extends Controller
         }
     }
 
+    /**
+     * Generate a unique key for a transaction to prevent duplicates in the same session
+     */
+    private function generateUniqueTransactionKey($meterId, $amount, $paymentDate, $transactionRef, $isCheque)
+    {
+        // Use meter_id, amount, date, and a normalized version of the reference
+        $normalizedRef = $transactionRef;
+
+        // For IMP-generated references, they might be different each run
+        if (str_starts_with($transactionRef, 'IMP-')) {
+            // Use the part before the random suffix
+            if (preg_match('/^(IMP-\d{8}-\d+-)/', $transactionRef, $matches)) {
+                $normalizedRef = $matches[1];
+            }
+        }
+
+        return md5($meterId . '|' . $amount . '|' . $paymentDate->format('Y-m-d') . '|' . $normalizedRef);
+    }
+
+    /**
+     * Find existing payment in database
+     */
+    private function findExistingPayment($meterId, $amount, $paymentDate, $transactionRef, $isCheque)
+    {
+        // First, try exact transaction reference match
+        if ($transactionRef && !str_starts_with($transactionRef, 'IMP-')) {
+            $payment = Payment::where('transaction_reference', $transactionRef)
+                ->where('meter_id', $meterId)
+                ->where('payment_status', 'completed')
+                ->first();
+
+            if ($payment) {
+                return $payment;
+            }
+        }
+
+        // For cheque payments, check by cheque number and date
+        if ($isCheque && preg_match('/CHQ-(\d+)-(\d{8})/', $transactionRef, $matches)) {
+            $chequeNumber = $matches[1];
+            $datePart = $matches[2];
+
+            $payment = Payment::where('transaction_reference', 'LIKE', "CHQ-{$chequeNumber}-%")
+                ->where('meter_id', $meterId)
+                ->where('amount', $amount)
+                ->whereDate('payment_date', $paymentDate->format('Y-m-d'))
+                ->where('payment_status', 'completed')
+                ->first();
+
+            if ($payment) {
+                return $payment;
+            }
+        }
+
+        // Check by meter, amount, and date (within 1 day tolerance)
+        $payment = Payment::where('meter_id', $meterId)
+            ->where('amount', $amount)
+            ->whereDate('payment_date', $paymentDate->format('Y-m-d'))
+            ->where('payment_status', 'completed')
+            ->first();
+
+        if ($payment) {
+            return $payment;
+        }
+
+        // Check with date range (sometimes dates might be off by 1 day)
+        $payment = Payment::where('meter_id', $meterId)
+            ->where('amount', $amount)
+            ->whereBetween('payment_date', [
+                $paymentDate->copy()->subDay()->startOfDay(),
+                $paymentDate->copy()->addDay()->endOfDay()
+            ])
+            ->where('payment_status', 'completed')
+            ->first();
+
+        return $payment;
+    }
+
+    /**
+     * Extract transaction reference with better duplicate prevention
+     */
+    private function extractTransactionReference($transactionRows, $description, $meterNumber, $paymentDate, $isCheque)
+    {
+        $transactionRef = null;
+
+        // For cheque transactions, create a cheque reference with a unique suffix
+        if ($isCheque) {
+            if (preg_match('/Chq:(\d+)/', $description, $matches)) {
+                $chequeNumber = $matches[1];
+                $datePart = $paymentDate->format('Ymd');
+                // Add meter number to make it unique per meter
+                $transactionRef = "CHQ-{$chequeNumber}-{$datePart}-{$meterNumber}";
+                Log::info("Generated cheque reference: {$transactionRef}");
+                return $transactionRef;
+            }
+        }
+
+        // For MPS transactions, find the reference
+        foreach ($transactionRows as $row) {
+            $particularsToCheck = $row['particulars'] ?? '';
+
+            // Pattern: MPS followed by numbers and then alphanumeric code
+            if (preg_match('/MPS\s+\d+\s+([A-Z0-9]{5,20})\b/', $particularsToCheck, $matches)) {
+                $transactionRef = $matches[1];
+                Log::info("Found MPS transaction reference: {$transactionRef}");
+                break;
+            }
+
+            // Pattern: Any alphanumeric code followed by #
+            if (preg_match('/([A-Z0-9]{5,20})\s+\d{3,}#/', $particularsToCheck, $matches)) {
+                $transactionRef = $matches[1];
+                Log::info("Found transaction reference from meter row: {$transactionRef}");
+                break;
+            }
+        }
+
+        // If we found a reference, add meter number to make it unique per meter
+        if ($transactionRef && !str_starts_with($transactionRef, 'IMP-')) {
+            $transactionRef = $transactionRef . '-' . $meterNumber;
+        }
+
+        // Last resort: generate a unique reference with more entropy
+        if (!$transactionRef) {
+            $datePart = $paymentDate->format('Ymd');
+            $uniqueId = uniqid('', true); // More entropy
+            $transactionRef = "IMP-{$datePart}-{$meterNumber}-" . strtoupper(substr(md5($uniqueId), 0, 8));
+            Log::info("Generated transaction reference: {$transactionRef}");
+        }
+
+        return $transactionRef;
+    }
 
     /**
      * Extract customer name from a string (for cheque transactions)
@@ -773,53 +922,7 @@ class PaymentController extends Controller
         return null;
     }
 
-    /**
-     * Extract transaction reference
-     */
-    private function extractTransactionReference($transactionRows, $description, $meterNumber, $paymentDate, $isCheque)
-    {
-        $transactionRef = null;
 
-        // For cheque transactions, create a cheque reference
-        if ($isCheque) {
-            if (preg_match('/Chq:(\d+)/', $description, $matches)) {
-                $chequeNumber = $matches[1];
-                $datePart = $paymentDate->format('Ymd');
-                $transactionRef = "CHQ-{$chequeNumber}-{$datePart}";
-                Log::info("Generated cheque reference: {$transactionRef}");
-                return $transactionRef;
-            }
-        }
-
-        // For MPS transactions, find the reference
-        foreach ($transactionRows as $row) {
-            $particularsToCheck = $row['particulars'] ?? '';
-
-            // Pattern: MPS followed by numbers and then alphanumeric code
-            if (preg_match('/MPS\s+\d+\s+([A-Z0-9]{5,20})\b/', $particularsToCheck, $matches)) {
-                $transactionRef = $matches[1];
-                Log::info("Found MPS transaction reference: {$transactionRef}");
-                break;
-            }
-
-            // Pattern: Any alphanumeric code followed by #
-            if (preg_match('/([A-Z0-9]{5,20})\s+\d{3,}#/', $particularsToCheck, $matches)) {
-                $transactionRef = $matches[1];
-                Log::info("Found transaction reference from meter row: {$transactionRef}");
-                break;
-            }
-        }
-
-        // Last resort: generate a unique reference
-        if (!$transactionRef) {
-            $datePart = $paymentDate->format('Ymd');
-            $randomPart = strtoupper(substr(uniqid(), -6));
-            $transactionRef = "IMP-{$datePart}-{$meterNumber}-{$randomPart}";
-            Log::info("Generated transaction reference: {$transactionRef}");
-        }
-
-        return $transactionRef;
-    }
     /**
      * Find customer by name with fuzzy matching
      */

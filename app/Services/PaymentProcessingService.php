@@ -96,14 +96,13 @@ class PaymentProcessingService
                 'payment_date' => $balance == 0 ? $paymentDate : null,
             ]);
 
-
             $remainingAmount -= $amountToApply;
 
             $appliedBills[] = [
                 'bill_id' => $bill->id,
                 'bill_number' => $bill->bill_number,
                 'applied_amount' => $amountToApply,
-                'new_bill_balance' => $bill->balance,
+                'new_bill_balance' => $bill->fresh()->balance,
             ];
         }
 
@@ -114,20 +113,25 @@ class PaymentProcessingService
 
         if ($remainingAmount > 0) {
             $customer->credit_balance += $remainingAmount;
-            $meter->current_balance -= $remainingAmount;
-
             $payment->update([
                 'notes' => trim(($payment->notes ?? '') . " | Credit: {$remainingAmount}")
             ]);
         }
 
         /* ============================
-         | 4. Recalculate Meter Balances
-         |    (Derived, NOT Mutated)
+         | 4. Update Meter Balances - SIMPLE!
+         |    Add the paid amount and subtract from current balance
          |============================*/
 
-        $meter->paid_amount = Bill::where('meter_id', $meter->id)
-            ->sum('paid_amount');
+        // Calculate how much was actually applied to bills (not credit)
+        $amountAppliedToBills = $amount - $remainingAmount;
+
+        // Update meter paid_amount (total payments received)
+        $meter->paid_amount += $amount;
+
+        // Update meter current_balance (decrease by amount applied to bills)
+        // Only decrease by what was applied to bills, not the credit portion
+        $meter->current_balance -= $amountAppliedToBills;
 
         $meter->save();
 
@@ -137,18 +141,20 @@ class PaymentProcessingService
         $customer->update([
             'last_payment_date' => $paymentDate,
             'last_payment_amount' => $amount,
+            'total_payments' => ($customer->total_payments ?? 0) + $amount,
         ]);
 
         return [
             'payment' => $payment,
             'applied_bills' => $appliedBills,
             'remaining_credit' => $remainingAmount,
-            'total_applied' => $amount - $remainingAmount,
-            'new_meter_balance' => $meter->current_balance,
+            'total_applied' => $amountAppliedToBills,
+            'new_meter_balance' => $meter->fresh()->current_balance,
+            'new_meter_paid_amount' => $meter->fresh()->paid_amount,
+            'customer_credit_balance' => $customer->fresh()->credit_balance,
         ];
     });
 }
-
 
     /**
      * Calculate late fee for a bill at payment time
@@ -189,9 +195,11 @@ class PaymentProcessingService
             // 2. Reverse bill allocations
             $allocations = $payment->allocations()->with('bill')->get();
             $reversedBills = [];
+            $totalAppliedToBills = 0;
 
             foreach ($allocations as $allocation) {
                 $bill = $allocation->bill;
+                $totalAppliedToBills += $allocation->allocated_to_principal;
 
                 $bill->update([
                     'paid_amount' => $bill->paid_amount - $allocation->allocated_to_principal,
@@ -208,13 +216,31 @@ class PaymentProcessingService
                 ];
             }
 
-            // 3. Reverse meter balance
+            // 3. Extract credit portion from notes if any
+            $creditPortion = 0;
+            if ($payment->notes && preg_match('/Credit:\s*([\d,]+(?:\.\d{2})?)/', $payment->notes, $matches)) {
+                $creditPortion = (float) str_replace(',', '', $matches[1]);
+            }
+
+            // 4. Reverse meter balance - SIMPLE!
             $meter = $payment->meter;
-            $meter->current_balance += $payment->amount; // reduce debt (reduce credit)
-            $meter->paid_amount -= $payment->amount; // reduce debt (reduce credit)
+
+            // Remove the payment from paid_amount
+            $meter->paid_amount -= $payment->amount;
+
+            // Add back to current_balance only what was applied to bills (not credit)
+            $meter->current_balance += ($payment->amount - $creditPortion);
+
             $meter->save();
 
-            // 4. Mark payment as voided
+            // 5. Reverse customer credit if any
+            if ($creditPortion > 0) {
+                $customer = $payment->customer;
+                $customer->credit_balance -= $creditPortion;
+                $customer->save();
+            }
+
+            // 6. Mark payment as voided
             $payment->update([
                 'payment_status' => 'voided',
                 'voided_at' => now(),
@@ -224,7 +250,7 @@ class PaymentProcessingService
                 'notes' => ($payment->notes ?? '') . ' | VOIDED: ' . $reason
             ]);
 
-            // 5. Log the reversal
+            // 7. Log the reversal
             $reversal = $payment->reversal()->create([
                 'original_payment_id' => $payment->id,
                 'reversal_amount' => $payment->amount,
@@ -238,7 +264,9 @@ class PaymentProcessingService
             return [
                 'reversal' => $reversal,
                 'reversed_bills' => $reversedBills,
-                'new_meter_balance' => $meter->current_balance
+                'new_meter_balance' => $meter->fresh()->current_balance,
+                'new_meter_paid_amount' => $meter->fresh()->paid_amount,
+                'customer_credit_balance' => $payment->customer->fresh()->credit_balance,
             ];
         });
     }
