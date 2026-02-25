@@ -579,7 +579,7 @@ class MeterReadingController extends Controller
         ]);
     }
 
-        /**
+    /**
      * Calculate estimated consumption based on history
      */
     public function estimateConsumption(Customer $customer, Meter $meter)
@@ -871,7 +871,7 @@ class MeterReadingController extends Controller
                 $bill = Bill::where('meter_reading_id', $meterReading->id)->first();
 
                 // STEP 1: REVERSE EXISTING EFFECTS
-                if ($oldReadingStatus !== 'exception' && $oldConsumption > 0 && $bill) {
+                if ($oldReadingStatus !== 'exception' && $bill){
                     $this->reverseBillEffects($bill, $meter, $customer);
                 }
 
@@ -1022,15 +1022,6 @@ class MeterReadingController extends Controller
                         'balance' => $billBalance,
                         'bill_status' => $billStatus,
                         'paid_amount' => $amountPaid,
-                    ]);
-                }
-
-                // STEP 9: DELETE OLD BILL if reading changed to exception
-                if ($oldReadingStatus !== 'exception' && $request->reading_status === 'exception' && $bill) {
-                    $bill->delete();
-                    Log::info("Old bill deleted as reading changed to exception", [
-                        'bill_id' => $bill->id,
-                        'reading_id' => $meterReading->id
                     ]);
                 }
 

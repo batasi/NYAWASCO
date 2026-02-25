@@ -449,7 +449,7 @@ function updateEstimate() {
 
     const smsParts = parseInt(document.getElementById('sms-count').textContent) || 1;
     const totalParts = recipientCount * smsParts;
-    const costPerSms = 0.50; // Example cost - adjust based on your actual rate
+    const costPerSms = 1.00; // Example cost - adjust based on your actual rate
     const totalCost = totalParts * costPerSms;
 
     document.getElementById('estimate-count').textContent = recipientCount;

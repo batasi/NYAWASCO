@@ -133,7 +133,7 @@ class SmsController extends Controller
         $recentCustomers = Customer::whereNotNull('phone')
             ->where('phone', '!=', '')
             ->latest()
-            ->limit(20)
+            ->limit(7)
             ->get();
 
         return view('admin.sms.create', compact('customer', 'meter', 'templates', 'recentCustomers'));
