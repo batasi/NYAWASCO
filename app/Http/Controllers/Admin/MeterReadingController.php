@@ -301,7 +301,7 @@ class MeterReadingController extends Controller
                 }
 
                 // AUTO-GENERATE BILL FOR NORMAL AND ESTIMATED READINGS
-                if ($request->reading_status !== 'exception' && $consumption > 0) {
+                if ($request->reading_status !== 'exception') {
                     $bill = $this->generateBill($reading, $customer, $meter, $consumption, $request->reading_status);
 
                     // UPDATE METER AND CUSTOMER BALANCES
@@ -426,19 +426,40 @@ class MeterReadingController extends Controller
             ->orderBy('sort_order')
             ->get();
 
+        if ($tiers->isEmpty()) {
+            return 0;
+        }
+
         $totalCharge = 0;
         $previousMax = 0;
 
-        foreach ($tiers as $tier) {
+        foreach ($tiers as $index => $tier) {
+
+            $tierMax = $tier->max_consumption;
+
+            // FIRST TIER (Minimum Block Enforcement)
+            if ($index === 0) {
+
+                $blockSize = $tierMax - $previousMax;
+
+                if ($consumption <= $tierMax) {
+                    // Charge full minimum block EVEN IF consumption = 0
+                    return $blockSize * $tier->rate_per_unit;
+                }
+
+                // Otherwise charge full first block and continue
+                $totalCharge += $blockSize * $tier->rate_per_unit;
+                $consumption -= $blockSize;
+                $previousMax = $tierMax;
+
+                continue;
+            }
 
             if ($consumption <= 0) {
                 break;
             }
 
-            $tierMax = $tier->max_consumption;
-
             if (is_null($tierMax)) {
-                // Unlimited last tier
                 $unitsInTier = $consumption;
             } else {
                 $blockSize = $tierMax - $previousMax;
@@ -447,7 +468,6 @@ class MeterReadingController extends Controller
 
             $totalCharge += $unitsInTier * $tier->rate_per_unit;
             $consumption -= $unitsInTier;
-
             $previousMax = $tierMax;
         }
 
