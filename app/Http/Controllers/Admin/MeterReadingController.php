@@ -371,7 +371,8 @@ class MeterReadingController extends Controller
 
         if ($tieredCharge !== null) {
             $consumptionCharge = $tieredCharge;
-        } else {
+        }
+        else {
             // No tiers → use flat rate
             $consumptionRate = $category->default_rate ?? 50;
             $consumptionCharge = $consumption * $consumptionRate;
@@ -382,8 +383,8 @@ class MeterReadingController extends Controller
 
         // Compute charges before tax
 
-        $taxAmount = ($baseCharge + $consumptionCharge + $meterRent) * $taxRate;
-        $totalAmount = $baseCharge + $consumptionCharge + $meterRent;
+        $taxAmount = ($consumptionCharge + $meterRent) * $taxRate;
+        $totalAmount = $consumptionCharge + $meterRent;
 
         // Create bill without bill_number first
         $bill = Bill::create([
@@ -420,18 +421,37 @@ class MeterReadingController extends Controller
 
     public function calculateTieredCharge($categoryId, $consumption)
     {
-        $tier = PricingTier::where('meter_category_id', $categoryId)
-            ->where('min_consumption', '<=', $consumption)
-            ->where(function($query) use ($consumption) {
-                $query->whereNull('max_consumption')
-                    ->orWhere('max_consumption', '>=', $consumption);
-            })
+        $tiers = PricingTier::where('meter_category_id', $categoryId)
+            ->where('is_active', 1)
             ->orderBy('sort_order')
-            ->first();
+            ->get();
 
-        if (!$tier) return 0;
+        $totalCharge = 0;
+        $previousMax = 0;
 
-        return $consumption * $tier->rate_per_unit;
+        foreach ($tiers as $tier) {
+
+            if ($consumption <= 0) {
+                break;
+            }
+
+            $tierMax = $tier->max_consumption;
+
+            if (is_null($tierMax)) {
+                // Unlimited last tier
+                $unitsInTier = $consumption;
+            } else {
+                $blockSize = $tierMax - $previousMax;
+                $unitsInTier = min($consumption, $blockSize);
+            }
+
+            $totalCharge += $unitsInTier * $tier->rate_per_unit;
+            $consumption -= $unitsInTier;
+
+            $previousMax = $tierMax;
+        }
+
+        return $totalCharge;
     }
 
 
