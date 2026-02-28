@@ -9,9 +9,7 @@ use App\Models\Bill;
 use App\Models\Customer;
 use App\Models\Zone;
 use App\Models\Meter;
-use App\Models\PaymentAllocation;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class PaymentDashboardController extends Controller
