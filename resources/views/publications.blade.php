@@ -17,35 +17,31 @@
     <!-- Featured Publication Card -->
     <section class="mb-16">
         <div class="flex items-center mb-8">
-
             <div class="ml-4">
                 <h2 class="text-2xl md:text-3xl font-bold text-gray-900">Featured Publication</h2>
                 <p class="text-gray-600">Latest official announcement from NYAWASCO</p>
             </div>
         </div>
 
-        <!-- Featured Publication Card -->
-        <a href="{{ route('publication.show', 'nyamira-unveils-nyawasco-board') }}"
+        <!-- Featured Publication Card - Update to show the most recent -->
+        <a href="{{ route('publication.show', 'nyamira-water-project-solar-upgrade') }}"
            class="block bg-white shadow-lg rounded-xl overflow-hidden border border-gray-100 hover:shadow-xl transition duration-300">
             <div class="md:flex">
                 <!-- Publication Image/Thumbnail -->
                 <div class="md:w-2/5">
                     <div class="relative h-64 md:h-full">
-                        <!-- Main Image -->
-                        <img src="/img/water-hero-1.jpeg"
-                             alt="NYAWASCO Board Inauguration Ceremony"
+                        <!-- Main Image - You may want to add a solar panels image -->
+                        <img src="/img/np/1.jpeg"
+                             alt="Nyamira Water Project Solar Upgrade Plans"
                              class="w-full h-full object-cover">
 
                         <!-- Overlay Gradient -->
                         <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
 
-                        <!-- Image Badge -->
-
-
                         <!-- Image Caption -->
                         <div class="absolute bottom-4 left-4 right-4">
                             <p class="text-white text-sm font-medium">
-                                Governor Amos Nyaribo inaugurating the NYAWASCO Board
+                                Governor Nyaribo announces solarization partnership with LVSWWDA
                             </p>
                         </div>
                     </div>
@@ -57,24 +53,24 @@
                         <span class="px-3 py-1 bg-blue-600 text-white text-xs font-semibold rounded-full">
                             Featured
                         </span>
-                        <span class="ml-2 px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
+                        <span class="ml-2 px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
                             Press Release
                         </span>
-                        <span class="ml-2 text-xs text-gray-500">8th January, 2026</span>
+                        <span class="ml-2 text-xs text-gray-500">19th March, 2026</span>
                     </div>
 
                     <h3 class="text-2xl font-bold text-gray-900 mb-3">
-                        Nyamira County Unveils NYAWASCO Board, Paves Way for Universal Water Access
+                        Nyamira Water Project Set for Solar Upgrade Plans
                     </h3>
 
                     <p class="text-gray-600 mb-6 leading-relaxed">
-                        Nyamira County has made a significant step towards achieving universal access to clean and safe water for the people with the inauguration of the Nyamira Water and Sanitation Company (NYAWASCO) Board.
+                        Nyamira County and Lake Victoria South Water Works Development Agency are partnering in solarising the water supply infrastructure, with an initial allocation of KSh 150 million expected to start off the solarization.
                     </p>
 
                     <div class="flex items-center justify-between">
                         <div class="flex items-center text-sm text-gray-500">
                             <i class="fas fa-clock mr-2"></i>
-                            <span>5 min read</span>
+                            <span>4 min read</span>
                         </div>
                         <div class="flex items-center text-blue-600 font-semibold">
                             Read Full Story
@@ -89,7 +85,6 @@
     <!-- All Publications -->
     <section class="mb-20">
         <div class="flex items-center mb-8">
-
             <div class="ml-4">
                 <h2 class="text-2xl md:text-3xl font-bold text-gray-900">All Publications</h2>
                 <p class="text-gray-600">Browse through our collection of official documents and reports</p>
@@ -97,7 +92,29 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <!-- Publication 1 - Board Inauguration -->
+            <!-- NEW Publication 1 - Solar Upgrade Project (March 2026) -->
+            <a href="{{ route('publication.show', 'nyamira-water-project-solar-upgrade') }}"
+               class="block bg-white shadow-md rounded-xl p-6 border border-gray-100 hover:shadow-lg transition hover:-translate-y-1">
+                <div class="flex items-center mb-4">
+                    <span class="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
+                        Press Release
+                    </span>
+                    <span class="ml-2 text-xs text-gray-500">19th Mar, 2026</span>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-3">Nyamira Water Project Set for Solar Upgrade</h3>
+                <p class="text-gray-600 text-sm mb-4 leading-relaxed">
+                    County partners with LVSWWDA on KSh 150M solarization project to reduce electricity costs and ensure sustainable water supply.
+                </p>
+                <div class="flex items-center justify-between text-sm text-gray-500">
+                    <div class="flex items-center">
+                        <i class="fas fa-clock mr-2"></i>
+                        <span>4 min read</span>
+                    </div>
+                    <span class="text-blue-600 font-semibold">Read →</span>
+                </div>
+            </a>
+
+            <!-- Publication 2 - Board Inauguration (January 2026) -->
             <a href="{{ route('publication.show', 'nyamira-unveils-nyawasco-board') }}"
                class="block bg-white shadow-md rounded-xl p-6 border border-gray-100 hover:shadow-lg transition hover:-translate-y-1">
                 <div class="flex items-center mb-4">
@@ -119,7 +136,7 @@
                 </div>
             </a>
 
-            <!-- Publication 2 (Coming Soon) -->
+            <!-- Publication 3 (Coming Soon) -->
             <div class="bg-white shadow-md rounded-xl p-6 border border-gray-100">
                 <div class="flex items-center mb-4">
                     <span class="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
@@ -137,7 +154,7 @@
                 </div>
             </div>
 
-            <!-- Publication 3 (Coming Soon) -->
+            <!-- Publication 4 (Coming Soon) -->
             <div class="bg-white shadow-md rounded-xl p-6 border border-gray-100">
                 <div class="flex items-center mb-4">
                     <span class="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
@@ -155,7 +172,7 @@
                 </div>
             </div>
 
-            <!-- Publication 4 (Coming Soon) -->
+            <!-- Publication 5 (Coming Soon) -->
             <div class="bg-white shadow-md rounded-xl p-6 border border-gray-100">
                 <div class="flex items-center mb-4">
                     <span class="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">
@@ -173,7 +190,7 @@
                 </div>
             </div>
 
-            <!-- Publication 5 (Coming Soon) -->
+            <!-- Publication 6 (Coming Soon) -->
             <div class="bg-white shadow-md rounded-xl p-6 border border-gray-100">
                 <div class="flex items-center mb-4">
                     <span class="px-3 py-1 bg-orange-100 text-orange-700 text-xs font-semibold rounded-full">
@@ -188,24 +205,6 @@
                 <div class="flex items-center text-sm text-gray-500">
                     <i class="fas fa-calendar-alt mr-2"></i>
                     <span>Expected: January 2025</span>
-                </div>
-            </div>
-
-            <!-- Publication 6 (Coming Soon) -->
-            <div class="bg-white shadow-md rounded-xl p-6 border border-gray-100">
-                <div class="flex items-center mb-4">
-                    <span class="px-3 py-1 bg-teal-100 text-teal-700 text-xs font-semibold rounded-full">
-                        Sustainability Report
-                    </span>
-                    <span class="ml-2 text-xs text-gray-500">Coming Soon</span>
-                </div>
-                <h3 class="text-xl font-semibold text-gray-900 mb-3">Environmental Sustainability Report</h3>
-                <p class="text-gray-600 text-sm mb-4 leading-relaxed">
-                    Assessment of our environmental impact and sustainability initiatives.
-                </p>
-                <div class="flex items-center text-sm text-gray-500">
-                    <i class="fas fa-calendar-alt mr-2"></i>
-                    <span>Expected: May 2025</span>
                 </div>
             </div>
         </div>
@@ -229,7 +228,6 @@
                     For media inquiries, interview requests, or additional information about NYAWASCO publications, please contact our Communications Department.
                 </p>
                 <div class="flex flex-wrap gap-6">
-
                     <div class="flex items-center">
                         <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mr-4">
                             <i class="fas fa-phone-alt"></i>
