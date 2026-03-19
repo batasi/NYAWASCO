@@ -1617,6 +1617,19 @@ use Illuminate\Support\Facades\Route;
                         </li>
                     </ul>
                     @endcan
+                    @can('view users')
+                    <div class="px-3 md:px-4 py-2">
+                        <h3 class="text-xs md:text-sm font-bold text-gray-700 uppercase tracking-wider">NON-REVENUE</h3>
+                    </div>
+                    <a href="#"  class="sidebar-link group flex items-center justify-between py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all duration-200 hover:bg-blue-300/30 hover:shadow-lg">
+                        <div class="flex items-center">
+
+                            <span class="font-medium">Reconciliations</span>
+                        </div>
+
+                    </a>
+                    @endcan
+                    @can('view users')
                     <div class="px-3 md:px-4 py-2">
                         <h3 class="text-xs md:text-sm font-bold text-gray-700 uppercase tracking-wider">COMMUNICATION</h3>
                     </div>
@@ -1706,6 +1719,7 @@ use Illuminate\Support\Facades\Route;
                             </a>
                         </li>
                     </ul>
+                    @endcan
                     @can('view users')
                     <div class="px-3 md:px-4 py-2">
                         <h3 class="text-xs md:text-sm font-bold text-gray-700 uppercase tracking-wider">System Administration</h3>
